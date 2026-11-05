@@ -1,0 +1,151 @@
+table_name,pos,column_name,data_type,is_nullable,column_default,chaves
+api_cliente,1,id,uuid,NO,gen_random_uuid(),PRIMARY KEY
+api_cliente,2,nome,text,NO,null,null
+api_cliente,3,descricao,text,YES,null,null
+api_cliente,4,escopos,ARRAY,NO,'{}'::text[],null
+api_cliente,5,escritorios,ARRAY,NO,'{}'::text[],null
+api_cliente,6,ativo,boolean,NO,true,null
+api_cliente,7,tokens_validos_desde,timestamp with time zone,YES,null,null
+api_cliente,8,criado_em,timestamp with time zone,NO,now(),null
+api_refresh_token,1,id,uuid,NO,gen_random_uuid(),PRIMARY KEY
+api_refresh_token,2,cliente_id,uuid,NO,null,FOREIGN KEY -> api_cliente.id
+api_refresh_token,3,token_hash,text,NO,null,UNIQUE
+api_refresh_token,4,criado_em,timestamp with time zone,NO,now(),null
+api_refresh_token,5,expira_em,timestamp with time zone,NO,null,null
+api_refresh_token,6,usado_em,timestamp with time zone,YES,null,null
+api_refresh_token,7,revogado_em,timestamp with time zone,YES,null,null
+api_refresh_token,8,substituido_por,uuid,YES,null,FOREIGN KEY -> api_refresh_token.id
+cargo,1,id,bigint,NO,null,PRIMARY KEY
+cargo,2,nome,text,NO,null,UNIQUE
+cargo,3,ativo,boolean,NO,true,null
+cargo,4,created_at,timestamp without time zone,NO,(now() AT TIME ZONE 'America/Manaus'::text),null
+cargo,5,updated_at,timestamp without time zone,NO,(now() AT TIME ZONE 'America/Manaus'::text),null
+companhia,1,id,bigint,NO,null,PRIMARY KEY
+companhia,2,nome,text,NO,null,UNIQUE
+companhia,3,sigla,text,YES,null,UNIQUE
+companhia,4,ativo,boolean,NO,true,null
+companhia,5,foto_url,text,YES,null,null
+companhia,6,created_at,timestamp without time zone,NO,(now() AT TIME ZONE 'America/Manaus'::text),null
+companhia,7,updated_at,timestamp without time zone,NO,(now() AT TIME ZONE 'America/Manaus'::text),null
+conta_azul_config,1,id,integer,NO,nextval('conta_azul_config_id_seq'::regclass),PRIMARY KEY
+conta_azul_config,2,client_id,text,NO,null,null
+conta_azul_config,3,client_secret,text,NO,null,null
+conta_azul_config,4,redirect_uri,text,NO,'https://contaazul.com'::text,null
+conta_azul_config,5,cron_secret,text,NO,"encode(gen_random_bytes(32), 'hex'::text)",null
+conta_azul_config,6,updated_at,timestamp with time zone,NO,now(),null
+conta_azul_config,7,companhia_id,bigint,YES,null,FOREIGN KEY -> companhia.id
+conta_azul_config,8,enabled,boolean,NO,true,null
+conta_azul_config,9,label,text,YES,null,null
+conta_azul_config,10,oauth_username,text,YES,null,null
+conta_azul_config,11,is_dev_account,boolean,NO,false,null
+conta_azul_contas_pagar,1,id,text,NO,null,PRIMARY KEY
+conta_azul_contas_pagar,2,descricao,text,YES,null,null
+conta_azul_contas_pagar,3,fornecedor_id,text,YES,null,null
+conta_azul_contas_pagar,4,fornecedor_nome,text,YES,null,null
+conta_azul_contas_pagar,5,data_vencimento,date,NO,null,null
+conta_azul_contas_pagar,6,data_competencia,date,YES,null,null
+conta_azul_contas_pagar,7,data_pagamento,date,YES,null,null
+conta_azul_contas_pagar,8,valor_total,numeric,NO,0,null
+conta_azul_contas_pagar,9,valor_pago,numeric,NO,0,null
+conta_azul_contas_pagar,10,valor_aberto,numeric,NO,0,null
+conta_azul_contas_pagar,11,status,text,YES,null,null
+conta_azul_contas_pagar,12,status_label,text,YES,null,null
+conta_azul_contas_pagar,13,categorias,jsonb,NO,'[]'::jsonb,null
+conta_azul_contas_pagar,14,centros_custo,jsonb,NO,'[]'::jsonb,null
+conta_azul_contas_pagar,15,synced_at,timestamp with time zone,NO,now(),null
+conta_azul_contas_pagar,16,updated_at,timestamp with time zone,NO,now(),null
+conta_azul_contas_pagar,17,companhia_id,bigint,NO,null,"FOREIGN KEY -> companhia.id, PRIMARY KEY"
+conta_azul_contas_receber,1,id,text,NO,null,PRIMARY KEY
+conta_azul_contas_receber,2,descricao,text,YES,null,null
+conta_azul_contas_receber,3,cliente_id,text,YES,null,null
+conta_azul_contas_receber,4,cliente_nome,text,YES,null,null
+conta_azul_contas_receber,5,data_vencimento,date,NO,null,null
+conta_azul_contas_receber,6,data_competencia,date,YES,null,null
+conta_azul_contas_receber,7,data_pagamento,date,YES,null,null
+conta_azul_contas_receber,8,valor_total,numeric,NO,0,null
+conta_azul_contas_receber,9,valor_pago,numeric,NO,0,null
+conta_azul_contas_receber,10,valor_aberto,numeric,NO,0,null
+conta_azul_contas_receber,11,status,text,YES,null,null
+conta_azul_contas_receber,12,status_label,text,YES,null,null
+conta_azul_contas_receber,13,categorias,jsonb,NO,'[]'::jsonb,null
+conta_azul_contas_receber,14,centros_custo,jsonb,NO,'[]'::jsonb,null
+conta_azul_contas_receber,15,synced_at,timestamp with time zone,NO,now(),null
+conta_azul_contas_receber,16,updated_at,timestamp with time zone,NO,now(),null
+conta_azul_contas_receber,17,companhia_id,bigint,NO,null,"FOREIGN KEY -> companhia.id, PRIMARY KEY"
+conta_azul_cron,1,id,integer,NO,1,PRIMARY KEY
+conta_azul_cron,2,cron_secret,text,NO,null,null
+conta_azul_cron,3,updated_at,timestamp with time zone,NO,now(),null
+conta_azul_sync_runs,1,id,bigint,NO,null,PRIMARY KEY
+conta_azul_sync_runs,2,started_at,timestamp with time zone,NO,now(),null
+conta_azul_sync_runs,3,finished_at,timestamp with time zone,YES,null,null
+conta_azul_sync_runs,4,status,text,NO,'running'::text,null
+conta_azul_sync_runs,5,payables_count,integer,NO,0,null
+conta_azul_sync_runs,6,receivables_count,integer,NO,0,null
+conta_azul_sync_runs,7,error,text,YES,null,null
+conta_azul_sync_runs,8,companhia_id,bigint,YES,null,FOREIGN KEY -> companhia.id
+conta_azul_tokens,1,id,integer,NO,nextval('conta_azul_tokens_id_seq'::regclass),PRIMARY KEY
+conta_azul_tokens,2,access_token,text,NO,null,null
+conta_azul_tokens,3,refresh_token,text,NO,null,null
+conta_azul_tokens,4,token_type,text,NO,'Bearer'::text,null
+conta_azul_tokens,5,expires_at,timestamp with time zone,NO,null,null
+conta_azul_tokens,6,last_refresh_at,timestamp with time zone,YES,null,null
+conta_azul_tokens,7,last_error,text,YES,null,null
+conta_azul_tokens,8,updated_at,timestamp with time zone,NO,now(),null
+conta_azul_tokens,9,oauth_username,text,YES,null,null
+conta_azul_tokens,10,config_id,bigint,YES,null,FOREIGN KEY -> conta_azul_config.id
+dashboard_status,1,dashboard_id,text,NO,null,PRIMARY KEY
+dashboard_status,2,ativo,boolean,NO,true,null
+dashboard_status,3,atualizado_em,timestamp with time zone,NO,now(),null
+dashboard_status,4,atualizado_por,uuid,YES,null,FOREIGN KEY -> usuario.id
+dominio_login_permitido,1,id,bigint,NO,null,PRIMARY KEY
+dominio_login_permitido,2,dominio,text,NO,null,UNIQUE
+dominio_login_permitido,3,ativo,boolean,NO,true,null
+dominio_login_permitido,4,criado_em,timestamp with time zone,NO,now(),null
+dominio_login_permitido,5,atualizado_em,timestamp with time zone,NO,now(),null
+dominio_login_permitido,6,atualizado_por,uuid,YES,null,FOREIGN KEY -> usuario.id
+setor,1,id,bigint,NO,null,PRIMARY KEY
+setor,2,nome,text,NO,null,UNIQUE
+setor,3,ativo,boolean,NO,true,null
+setor,4,created_at,timestamp without time zone,NO,(now() AT TIME ZONE 'America/Manaus'::text),null
+setor,5,updated_at,timestamp without time zone,NO,(now() AT TIME ZONE 'America/Manaus'::text),null
+usuario,1,id_int,bigint,NO,null,UNIQUE
+usuario,2,id,uuid,NO,auth.uid(),"FOREIGN KEY, PRIMARY KEY"
+usuario,3,nome,text,NO,null,null
+usuario,4,email,text,NO,null,UNIQUE
+usuario,5,companhia_id,bigint,YES,null,FOREIGN KEY -> companhia.id
+usuario,6,setor_id,bigint,NO,null,FOREIGN KEY -> setor.id
+usuario,7,cargo_id,bigint,NO,null,FOREIGN KEY -> cargo.id
+usuario,8,ativo,boolean,NO,true,null
+usuario,9,foto_url,text,YES,null,null
+usuario,10,created_at,timestamp without time zone,NO,(now() AT TIME ZONE 'America/Manaus'::text),null
+usuario,11,updated_at,timestamp without time zone,NO,(now() AT TIME ZONE 'America/Manaus'::text),null
+usuario,12,ultimo_acesso,timestamp with time zone,YES,null,null
+usuario_atendente_comercial,1,usuario_id,uuid,NO,null,"PRIMARY KEY, FOREIGN KEY -> usuario.id"
+usuario_atendente_comercial,2,atendente_nome,text,NO,null,null
+usuario_atendente_comercial,3,created_at,timestamp with time zone,NO,now(),null
+usuario_atendente_comercial,4,updated_at,timestamp with time zone,NO,now(),null
+usuario_companhia,1,usuario_id,uuid,NO,null,"PRIMARY KEY, FOREIGN KEY -> usuario.id"
+usuario_companhia,2,companhia_id,bigint,NO,null,"FOREIGN KEY -> companhia.id, PRIMARY KEY"
+usuario_companhia,3,created_at,timestamp with time zone,NO,now(),null
+usuario_dashboard_favorito,1,usuario_id,uuid,NO,null,"PRIMARY KEY, FOREIGN KEY -> usuario.id"
+usuario_dashboard_favorito,2,dashboard_id,text,NO,null,PRIMARY KEY
+usuario_dashboard_favorito,3,created_at,timestamp with time zone,NO,now(),null
+usuario_dashboard_ordem,1,usuario_id,uuid,NO,null,"PRIMARY KEY, FOREIGN KEY -> usuario.id"
+usuario_dashboard_ordem,2,grupo,text,NO,null,PRIMARY KEY
+usuario_dashboard_ordem,3,ordem,jsonb,NO,'[]'::jsonb,null
+usuario_dashboard_ordem,4,updated_at,timestamp with time zone,NO,now(),null
+usuario_login_historico,1,id,bigint,NO,null,PRIMARY KEY
+usuario_login_historico,2,usuario_id,uuid,NO,null,FOREIGN KEY -> usuario.id
+usuario_login_historico,3,login_em,timestamp with time zone,NO,now(),null
+usuario_login_historico,4,tipo_dispositivo,text,YES,null,null
+usuario_login_historico,5,sistema_operacional,text,YES,null,null
+usuario_login_historico,6,navegador,text,YES,null,null
+usuario_login_historico,7,user_agent,text,YES,null,null
+usuario_login_historico,8,created_at,timestamp with time zone,NO,now(),null
+usuario_solicitacao_acesso,1,usuario_id,uuid,NO,null,"PRIMARY KEY, FOREIGN KEY"
+usuario_solicitacao_acesso,2,email,text,NO,null,null
+usuario_solicitacao_acesso,3,nome,text,YES,null,null
+usuario_solicitacao_acesso,4,foto_url,text,YES,null,null
+usuario_solicitacao_acesso,5,tentativas,integer,NO,1,null
+usuario_solicitacao_acesso,6,solicitado_em,timestamp with time zone,NO,now(),null
+usuario_solicitacao_acesso,7,ultima_tentativa_em,timestamp with time zone,NO,now(),null

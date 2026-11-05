@@ -1,0 +1,34 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Node / front
+node_modules/
+dist/
+.vite/
+*.local
+
+# segredos: nunca versionar (vale para qualquer pasta)
+.env
+.env.*
+!.env.example
+
+# Supabase CLI (arquivos locais)
+supabase/.temp/
+supabase/.branches/
+
+# backups e dumps de banco (podem ter dados reais)
+backup*/
+*.dump
+*.backup
+data.sql
+
+# editor / sistema
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
