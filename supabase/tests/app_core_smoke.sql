@@ -13,6 +13,7 @@ insert into auth.users (id, email) values
     ('00000000-0000-0000-0000-0000000000a4', 'semacesso.ng@a.test'),
     ('00000000-0000-0000-0000-0000000000a5', 'inativo@a.test'),
     ('00000000-0000-0000-0000-0000000000a6', 'leitor.ng@a.test'),
+    ('00000000-0000-0000-0000-0000000000a7', 'controller.ng@a.test'),
     ('00000000-0000-0000-0000-0000000000b1', 'admin@b.test');
 
 insert into app.organizations (id, slug, name) values
@@ -27,26 +28,32 @@ insert into app.units (id, org_id, code, name) values
 insert into app.teams (id, org_id, unit_id, name) values
     ('30000000-0000-0000-0000-0000000000a1', '10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', 'Protocolo'),
     ('30000000-0000-0000-0000-0000000000a2', '10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', 'Pendências'),
+    ('30000000-0000-0000-0000-0000000000a3', '10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a2', 'Protocolo LA'),
     ('30000000-0000-0000-0000-0000000000b1', '10000000-0000-0000-0000-00000000000b', '20000000-0000-0000-0000-0000000000b1', 'Equipe B');
 
 insert into app.memberships (id, org_id, user_id, full_name, email, role_key, status) values
     ('40000000-0000-0000-0000-0000000000a1', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a1', 'Admin A',    'admin@a.test',        'admin',       'active'),
-    ('40000000-0000-0000-0000-0000000000a2', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a2', 'Gestor NG',  'gestor.ng@a.test',    'gestor',      'active'),
-    ('40000000-0000-0000-0000-0000000000a3', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a3', 'Protocolo',  'protocolo.ng@a.test', 'colaborador', 'active'),
-    ('40000000-0000-0000-0000-0000000000a4', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a4', 'Sem acesso', 'semacesso.ng@a.test', 'colaborador', 'active'),
+    ('40000000-0000-0000-0000-0000000000a2', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a2', 'Gestor NG',  'gestor.ng@a.test',    'member',      'active'),
+    ('40000000-0000-0000-0000-0000000000a3', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a3', 'Protocolo',  'protocolo.ng@a.test', 'member',      'active'),
+    ('40000000-0000-0000-0000-0000000000a4', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a4', 'Sem acesso', 'semacesso.ng@a.test', 'member',      'active'),
     ('40000000-0000-0000-0000-0000000000a5', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a5', 'Inativo',    'inativo@a.test',      'admin',       'disabled'),
-    ('40000000-0000-0000-0000-0000000000a6', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a6', 'Leitor',     'leitor.ng@a.test',    'leitor',      'active'),
+    ('40000000-0000-0000-0000-0000000000a6', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a6', 'Leitor',     'leitor.ng@a.test',    'member',      'active'),
+    ('40000000-0000-0000-0000-0000000000a7', '10000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-0000000000a7', 'Controller', 'controller.ng@a.test', 'member',      'active'),
     ('40000000-0000-0000-0000-0000000000b1', '10000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-0000000000b1', 'Admin B',    'admin@b.test',        'admin',       'active');
 
-insert into app.membership_units (org_id, unit_id, membership_id) values
-    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a2'),
-    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a3'),
-    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a4'),
-    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a6');
+-- cargo POR COMPANHIA (Controller é controller na NG e leitor na LA)
+insert into app.membership_units (org_id, unit_id, membership_id, role_key) values
+    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a2', 'gestor'),
+    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a3', 'colaborador'),
+    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a4', 'colaborador'),
+    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a6', 'leitor'),
+    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a7', 'controller'),
+    ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a2', '40000000-0000-0000-0000-0000000000a7', 'leitor');
 
 insert into app.membership_teams (org_id, team_id, membership_id) values
     ('10000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-0000000000a1', '40000000-0000-0000-0000-0000000000a3'),
-    ('10000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-0000000000a2', '40000000-0000-0000-0000-0000000000a6');
+    ('10000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-0000000000a2', '40000000-0000-0000-0000-0000000000a6'),
+    ('10000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-0000000000a3', '40000000-0000-0000-0000-0000000000a7');
 
 insert into app.org_dashboards (org_id, unit_id, dashboard_key) values
     ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', 'protocolo-lexpre'),
@@ -56,7 +63,8 @@ insert into app.org_dashboards (org_id, unit_id, dashboard_key) values
 
 insert into app.access_rules (org_id, team_id, dashboard_key, scope) values
     ('10000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-0000000000a1', 'protocolo-lexpre', 'all'),
-    ('10000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-0000000000a2', 'pendencias',       'own');
+    ('10000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-0000000000a2', 'pendencias',       'own'),
+    ('10000000-0000-0000-0000-00000000000a', '30000000-0000-0000-0000-0000000000a3', 'protocolo-lexpre', 'all');
 
 insert into app.invitations (org_id, email, role_key, token_hash) values
     ('10000000-0000-0000-0000-00000000000a', 'novo@a.test', 'colaborador', 'hash-de-teste');
@@ -107,10 +115,21 @@ begin
     assert app_private.dashboard_scope('00000000-0000-0000-0000-0000000000a5', ng, 'protocolo-lexpre') is null, 'desativado não vê';
     assert app_private.dashboard_scope('00000000-0000-0000-0000-0000000000a1', ub, 'protocolo-lexpre') is null, 'admin A não vê Org B';
     assert app_private.dashboard_scope('00000000-0000-0000-0000-0000000000b1', ng, 'protocolo-lexpre') is null, 'admin B não vê Org A';
-    assert app_private.has_permission('00000000-0000-0000-0000-0000000000a3', '10000000-0000-0000-0000-00000000000a', 'dashboards.export'),     'colaborador exporta';
-    assert not app_private.has_permission('00000000-0000-0000-0000-0000000000a6', '10000000-0000-0000-0000-00000000000a', 'dashboards.export'), 'leitor não exporta';
-    assert not app_private.has_permission('00000000-0000-0000-0000-0000000000a2', '10000000-0000-0000-0000-00000000000a', 'members.manage'),    'gestor não gerencia membros';
-    raise notice 'OK: regra de acesso a dashboards (13 casos)';
+    assert app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a3', ng, 'dashboards.export'),     'colaborador exporta';
+    assert not app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a6', ng, 'dashboards.export'), 'leitor não exporta';
+    assert not app_private.has_permission('00000000-0000-0000-0000-0000000000a2', '10000000-0000-0000-0000-00000000000a', 'members.manage'),    'gestor não gerencia a organização inteira';
+    -- cargo por companhia
+    assert app_private.dashboard_scope('00000000-0000-0000-0000-0000000000a7', ng, 'pendencias') = 'all',       'controller vê tudo da NG';
+    assert app_private.dashboard_scope('00000000-0000-0000-0000-0000000000a7', la, 'protocolo-lexpre') = 'all', 'controller (leitor na LA) vê o que o setor libera';
+    assert app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', ng, 'unit.members.manage'),     'controller atribui na NG';
+    assert not app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', la, 'unit.members.manage'), 'controller não atribui na LA';
+    assert app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', ng, 'dashboards.export'),       'controller exporta na NG';
+    assert not app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', la, 'dashboards.export'),   'controller não exporta na LA (leitor)';
+    assert app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a2', ng, 'unit.members.manage'),     'gestor atribui na NG';
+    assert not app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a2', la, 'unit.members.manage'), 'gestor NG não atribui na LA';
+    assert app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a1', la, 'unit.members.manage'),     'Desenvolvedor atribui em todas';
+    assert not app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a3', ng, 'unit.members.manage'), 'colaborador não atribui';
+    raise notice 'OK: regra de acesso a dashboards (23 casos)';
 end $$;
 
 -- ---------- RLS: colaborador "Protocolo NG" logado ----------
@@ -155,10 +174,21 @@ end $$;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
 do $$
 begin
-    assert (select count(*) from app.memberships) = 6,  'admin A vê as 6 associações da Org A';
-    assert (select count(*) from app.access_rules) = 2, 'admin A vê as regras da Org A';
+    assert (select count(*) from app.memberships) = 7,  'admin A vê as 7 associações da Org A';
+    assert (select count(*) from app.access_rules) = 3, 'admin A vê as regras da Org A';
     assert (select count(*) from app.invitations) = 1,  'admin A vê o convite';
     raise notice 'OK: RLS do admin';
+end $$;
+
+-- ---------- RLS: controller da NG (leitor na LA) ----------
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a7","role":"authenticated"}', true);
+do $$
+begin
+    assert (select count(*) from app.memberships) = 5,      'controller vê as associações da NG (e a própria)';
+    assert (select count(*) from app.membership_units) = 6, 'controller vê os cargos da NG + o próprio na LA';
+    assert (select count(*) from app.access_rules) = 2,     'controller vê só as regras da NG';
+    assert (select count(*) from app.my_dashboards()) = 3,  'hub: 2 da NG + 1 da LA';
+    raise notice 'OK: RLS do controller por companhia';
 end $$;
 
 -- ---------- RLS: admin da Org B ----------

@@ -10,6 +10,7 @@ supabase/
   migrations/20261105120000_app_core.sql   organização > unidade > equipe > membro, dashboards, liberações, auditoria, RLS
   migrations/20261105150000_...            chave do dashboard = módulo (não unidade)
   migrations/20261105170000_...            alinhamento ao plano: memberships, papéis, access_rules, convites, app_private
+  migrations/20261105190000_...            cargo por companhia (unidade) + Controller
   tests/app_core_smoke.sql                 teste de isolamento e regra de acesso (roda e desfaz tudo)
   tests/ci/                                só para o CI (simula Supabase e V1) — não rodar no Supabase
   scripts/import_v1.sql                    importa usuários/estrutura da V1 (public) para o app
@@ -20,20 +21,32 @@ docs/v1_schema_colunas.csv                 estrutura da V1 (referência, sem dad
 
 ## Regra de acesso a dashboard
 
-Papéis (`app.roles` / `app.role_permissions`):
+A pessoa tem **um papel na organização** e **um cargo em cada companhia (unidade)** em que está.
+O usuário vê uma companhia por vez (a ativa, `?unit=` na URL).
 
-| Papel | Vê | Exporta | Gerencia membros/acesso |
+Papel na organização (`memberships.role_key`):
+
+| Papel | Vê | Atribui cargos/setores |
+|---|---|---|
+| owner, admin (Desenvolvedor) | todas as companhias, todos os dashboards | em todas as companhias |
+| member | depende do cargo em cada companhia | depende do cargo |
+
+Cargo na companhia (`membership_units.role_key`):
+
+| Cargo | Vê na companhia | Exporta | Atribui cargos/setores nela |
 |---|---|---|---|
-| owner, admin | todos os dashboards de todas as unidades da organização | sim | sim |
-| gestor | todos os dashboards das **suas** unidades | sim | não |
-| colaborador | só o que as regras (`app.access_rules`) liberam para a equipe dele | sim | não |
+| gestor | tudo | sim | sim |
+| controller | tudo | sim | sim |
+| colaborador | o que as regras (`app.access_rules`) liberam para os setores dele | sim | não |
 | leitor | idem colaborador | não | não |
-| desativado, outra organização, `anon` | nada | — | — |
+
+Ex.: Controller na NG e Leitor na LA. Uma pessoa pode estar em vários setores de uma companhia para ler mais dashboards.
+Desativado, outra organização ou `anon`: nada. Importação da V1: companhia principal = cargo da V1; companhias extras = leitor.
 
 `access_rules.scope`: `all` (todos os registros da unidade) ou `own` (só os do próprio usuário). Nega quando nada casa.
 
 Funções: `app.dashboard_scope(unit, key)`, `app.can_view_dashboard(unit, key)`, `app.my_dashboards()` (usuário logado);
-`app_private.dashboard_scope(user, unit, key)` e `app_private.has_permission(user, org, perm)` só para a API (service_role).
+`app_private.dashboard_scope(user, unit, key)`, `app_private.has_permission(user, org, perm)` e `app_private.has_unit_permission(user, unit, perm)` só para a API (service_role).
 
 ## Como aplicar (SEMPRE na staging primeiro)
 

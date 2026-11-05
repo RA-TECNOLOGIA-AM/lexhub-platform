@@ -7,9 +7,11 @@
 --   public.usuario + usuario_companhia -> app.membership_units (unidades de cada pessoa)
 --   public.setor (por unidade)    -> app.teams
 --   public.usuario                -> app.memberships    (mesmo id do login: auth.users)
---   cargo Desenvolvedor           -> papel admin       (vê tudo da organização)
---   cargo Gestor                  -> papel gestor      (vê tudo das SUAS unidades)
---   cargo Colaborador             -> papel colaborador (vê só o liberado para a equipe)
+--   cargo Desenvolvedor           -> papel admin na organização (vê todas as companhias)
+--   demais                        -> papel member na organização + cargo POR COMPANHIA:
+--       companhia principal (usuario.companhia_id): Gestor -> gestor; Colaborador -> colaborador
+--       companhias extras (usuario_companhia):      leitor (só o que o setor libera, sem exportar)
+--   Controller não existe na V1: é atribuído na V2 por quem gerencia a companhia.
 --   Unidade NG                    -> dashboards do MVP: protocolo-lexpre, pendencias
 --   Regras de acesso (mesma regra da V1, dashboardAccess.ts, unidade NG), escopo "all":
 --       protocolo-lexpre: Protocolo, Controladoria, Tecnologia, Diretoria
@@ -70,15 +72,19 @@ on conflict (org_id, code) do update
 
 -- 3. Unidades de cada usuário (companhia principal + extras) -----------------
 create temp table v_user_units on commit drop as
-    select u.id as user_id, un.id as unit_id
-    from public.usuario u
-    join app.units un on un.legacy_companhia_id = u.companhia_id
-                     and un.org_id = (select id from v_org)
-    union
-    select uc.usuario_id, un.id
-    from public.usuario_companhia uc
-    join app.units un on un.legacy_companhia_id = uc.companhia_id
-                     and un.org_id = (select id from v_org);
+    select user_id, unit_id, bool_or(principal) as principal
+    from (
+        select u.id as user_id, un.id as unit_id, true as principal
+        from public.usuario u
+        join app.units un on un.legacy_companhia_id = u.companhia_id
+                         and un.org_id = (select id from v_org)
+        union all
+        select uc.usuario_id, un.id, false
+        from public.usuario_companhia uc
+        join app.units un on un.legacy_companhia_id = uc.companhia_id
+                         and un.org_id = (select id from v_org)
+    ) x
+    group by user_id, unit_id;
 
 -- 4. Associações (memberships) -------------------------------------------------
 insert into app.memberships (org_id, user_id, full_name, email, role_key, status)
@@ -87,11 +93,7 @@ select
     u.id,
     coalesce(nullif(trim(u.nome), ''), u.email),
     lower(trim(u.email)),
-    case pg_temp.norm(c.nome)
-        when 'desenvolvedor' then 'admin'
-        when 'gestor' then 'gestor'
-        else 'colaborador'
-    end,
+    case when pg_temp.norm(c.nome) = 'desenvolvedor' then 'admin' else 'member' end,
     case when u.ativo then 'active' else 'disabled' end::app.member_status
 from public.usuario u
 join public.cargo c on c.id = u.cargo_id
@@ -101,12 +103,22 @@ on conflict (org_id, user_id) do update
         role_key = excluded.role_key,
         status = excluded.status;
 
--- 5. Associação x unidade --------------------------------------------------------
-insert into app.membership_units (org_id, unit_id, membership_id)
-select m.org_id, uu.unit_id, m.id
+-- 5. Cargo em cada companhia --------------------------------------------------------
+insert into app.membership_units (org_id, unit_id, membership_id, role_key)
+select
+    m.org_id,
+    uu.unit_id,
+    m.id,
+    case
+        when not uu.principal then 'leitor'
+        when pg_temp.norm(c.nome) in ('gestor', 'desenvolvedor') then 'gestor'
+        else 'colaborador'
+    end
 from v_user_units uu
 join app.memberships m on m.user_id = uu.user_id and m.org_id = (select id from v_org)
-on conflict (unit_id, membership_id) do nothing;
+join public.usuario u on u.id = uu.user_id
+join public.cargo c on c.id = u.cargo_id
+on conflict (unit_id, membership_id) do update set role_key = excluded.role_key;
 
 -- 6. Equipes (setor dentro de cada unidade onde há gente dele) -----------------
 insert into app.teams (org_id, unit_id, name, active, legacy_setor_id)
@@ -192,8 +204,11 @@ select item, quantidade, detalhe from (
     select 5, 'admins (Desenvolvedor)', count(*), null
     from app.memberships where org_id = (select id from o) and role_key = 'admin'
     union all
-    select 6, 'gestores', count(*), null
-    from app.memberships where org_id = (select id from o) and role_key = 'gestor'
+    select 6, 'gestores (em alguma companhia)', count(distinct membership_id), null
+    from app.membership_units where org_id = (select id from o) and role_key = 'gestor'
+    union all
+    select 6.5, 'vínculos como leitor (companhias extras)', count(*), null
+    from app.membership_units where org_id = (select id from o) and role_key = 'leitor'
     union all
     select 7, 'regras de acesso (NG)', count(*),
            string_agg(distinct r.dashboard_key || ' -> ' || t.name, '; ')

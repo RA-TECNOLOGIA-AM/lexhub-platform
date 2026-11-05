@@ -18,8 +18,18 @@ begin
     assert (select email from app.memberships where full_name = 'Pendencias NG') = 'pendencias.ng@x.test',
         'e-mail deveria ser normalizado para minúsculas';
     assert (select role_key from app.memberships where email = 'dev@x.test') = 'admin', 'Desenvolvedor -> admin';
-    assert (select role_key from app.memberships where email = 'gestor.ng@x.test') = 'gestor', 'Gestor -> gestor';
-    assert (select role_key from app.memberships where email = 'protocolo.ng@x.test') = 'colaborador', 'Colaborador -> colaborador';
+    assert (select role_key from app.memberships where email = 'gestor.ng@x.test') = 'member', 'Gestor: papel member na org';
+    assert (select mu.role_key from app.membership_units mu join app.memberships m on m.id = mu.membership_id
+            where m.email = 'gestor.ng@x.test' and mu.unit_id = ng) = 'gestor', 'Gestor -> gestor na companhia principal';
+    assert (select mu.role_key from app.membership_units mu join app.memberships m on m.id = mu.membership_id
+            where m.email = 'protocolo.ng@x.test' and mu.unit_id = ng) = 'colaborador', 'Colaborador -> colaborador';
+    assert (select mu.role_key from app.membership_units mu join app.memberships m on m.id = mu.membership_id
+            where m.email = 'pendencias.ng@x.test' and mu.unit_id = la) = 'colaborador', 'companhia principal (LA) -> colaborador';
+    assert (select mu.role_key from app.membership_units mu join app.memberships m on m.id = mu.membership_id
+            where m.email = 'pendencias.ng@x.test' and mu.unit_id = ng) = 'leitor', 'companhia extra (NG) -> leitor';
+    assert not app_private.has_unit_permission('a0000000-0000-0000-0000-000000000004', ng, 'dashboards.export'), 'leitor na NG não exporta';
+    assert app_private.has_unit_permission('a0000000-0000-0000-0000-000000000002', ng, 'unit.members.manage'), 'gestor NG atribui na NG';
+    assert not app_private.has_unit_permission('a0000000-0000-0000-0000-000000000002', la, 'unit.members.manage'), 'gestor NG não atribui na LA';
     assert (select status from app.memberships where email = 'inativo.ng@x.test') = 'disabled', 'inativo -> disabled';
 
     assert (select count(*) from app.membership_units mu join app.memberships m on m.id = mu.membership_id
