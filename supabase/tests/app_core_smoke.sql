@@ -45,7 +45,7 @@ insert into app.team_members (org_id, team_id, member_id) values
 
 insert into app.unit_dashboards (org_id, unit_id, dashboard_key) values
   ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', 'protocolo-lexpre'),
-  ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', 'pendencias-ng'),
+  ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a1', 'pendencias'),
   ('10000000-0000-0000-0000-00000000000a', '20000000-0000-0000-0000-0000000000a2', 'protocolo-lexpre'),
   ('10000000-0000-0000-0000-00000000000b', '20000000-0000-0000-0000-0000000000b1', 'protocolo-lexpre');
 
@@ -83,10 +83,10 @@ declare
   ub uuid := '20000000-0000-0000-0000-0000000000b1';
 begin
   assert app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a1', la, 'protocolo-lexpre'), 'admin A deveria ver LA';
-  assert app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a2', ng, 'pendencias-ng'),    'gestor NG deveria ver tudo de NG';
+  assert app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a2', ng, 'pendencias'),    'gestor NG deveria ver tudo de NG';
   assert not app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a2', la, 'protocolo-lexpre'), 'gestor NG não deveria ver LA';
   assert app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a3', ng, 'protocolo-lexpre'),  'equipe Protocolo deveria ver protocolo NG';
-  assert not app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a3', ng, 'pendencias-ng'), 'equipe Protocolo não deveria ver pendências';
+  assert not app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a3', ng, 'pendencias'), 'equipe Protocolo não deveria ver pendências';
   assert not app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a4', ng, 'protocolo-lexpre'), 'membro sem liberação não deveria ver';
   assert not app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a5', ng, 'protocolo-lexpre'), 'membro desativado não deveria ver';
   assert not app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a1', ub, 'protocolo-lexpre'), 'admin A não deveria ver Org B';
@@ -114,7 +114,7 @@ begin
     raise notice 'OK: usuário logado não escreve';
   end;
   begin
-    perform app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a1', '20000000-0000-0000-0000-0000000000a1', 'pendencias-ng');
+    perform app.user_can_view_dashboard('00000000-0000-0000-0000-0000000000a1', '20000000-0000-0000-0000-0000000000a1', 'pendencias');
     raise exception 'FALHOU: usuário logado consultou acesso de outra pessoa';
   exception when insufficient_privilege then
     raise notice 'OK: user_can_view_dashboard é só da API';

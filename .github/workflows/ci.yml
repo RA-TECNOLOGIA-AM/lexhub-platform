@@ -64,3 +64,10 @@ jobs:
                         echo "==> $f"
                         psql -v ON_ERROR_STOP=1 -q -f "$f"
                     done
+            -   name: Teste da importação V1 -> app
+                run: |
+                    psql -v ON_ERROR_STOP=1 -q -f supabase/tests/ci/v1_fixture.sql
+                    sed 's/^rollback;.*$/commit;/' supabase/scripts/import_v1.sql > /tmp/import_v1_commit.sql
+                    psql -v ON_ERROR_STOP=1 -q -f /tmp/import_v1_commit.sql
+                    psql -v ON_ERROR_STOP=1 -q -f /tmp/import_v1_commit.sql
+                    psql -v ON_ERROR_STOP=1 -q -f supabase/tests/ci/import_v1_assert.sql
