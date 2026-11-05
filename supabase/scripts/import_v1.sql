@@ -4,16 +4,16 @@
 -- O QUE FAZ (só LÊ o public; só ESCREVE no app):
 --   Lexgroup                      -> app.organizations (slug 'lexgroup')
 --   public.companhia              -> app.units          (NG, LAADVAM->LA, LAADVRJ->RJ, demais pela sigla)
---   public.usuario + usuario_companhia -> app.unit_members (unidades de cada pessoa)
+--   public.usuario + usuario_companhia -> app.membership_units (unidades de cada pessoa)
 --   public.setor (por unidade)    -> app.teams
---   public.usuario                -> app.members        (mesmo id do login: auth.users)
---   cargo Desenvolvedor           -> members.role = admin  (vê tudo da organização)
---   cargo Gestor                  -> unit_members.role = manager (vê tudo das SUAS unidades)
---   cargo Colaborador             -> member (vê só o liberado para a equipe)
---   Unidade NG                    -> dashboards do MVP: protocolo-lexpre, pendencias-ng
---   Liberações (mesma regra da V1, dashboardAccess.ts, unidade NG):
+--   public.usuario                -> app.memberships    (mesmo id do login: auth.users)
+--   cargo Desenvolvedor           -> papel admin       (vê tudo da organização)
+--   cargo Gestor                  -> papel gestor      (vê tudo das SUAS unidades)
+--   cargo Colaborador             -> papel colaborador (vê só o liberado para a equipe)
+--   Unidade NG                    -> dashboards do MVP: protocolo-lexpre, pendencias
+--   Regras de acesso (mesma regra da V1, dashboardAccess.ts, unidade NG), escopo "all":
 --       protocolo-lexpre: Protocolo, Controladoria, Tecnologia, Diretoria
---       pendencias-ng:    Pendências Iniciais, Controladoria, Tecnologia, Diretoria
+--       pendencias:       Pendências Iniciais, Controladoria, Tecnologia, Diretoria
 --
 -- COMO USAR:
 --   1. Rode como está: é um ENSAIO. Mostra o relatório e desfaz tudo (rollback na última linha).
@@ -80,35 +80,33 @@ create temp table v_user_units on commit drop as
     join app.units un on un.legacy_companhia_id = uc.companhia_id
                      and un.org_id = (select id from v_org);
 
--- 4. Membros -----------------------------------------------------------------
-insert into app.members (org_id, user_id, full_name, email, role, status)
+-- 4. Associações (memberships) -------------------------------------------------
+insert into app.memberships (org_id, user_id, full_name, email, role_key, status)
 select
     (select id from v_org),
     u.id,
     coalesce(nullif(trim(u.nome), ''), u.email),
     lower(trim(u.email)),
-    case when pg_temp.norm(c.nome) = 'desenvolvedor' then 'admin' else 'member' end::app.org_role,
+    case pg_temp.norm(c.nome)
+        when 'desenvolvedor' then 'admin'
+        when 'gestor' then 'gestor'
+        else 'colaborador'
+    end,
     case when u.ativo then 'active' else 'disabled' end::app.member_status
 from public.usuario u
 join public.cargo c on c.id = u.cargo_id
 on conflict (org_id, user_id) do update
     set full_name = excluded.full_name,
         email = excluded.email,
-        role = excluded.role,
+        role_key = excluded.role_key,
         status = excluded.status;
 
--- 5. Membro x unidade (Gestor = manager) --------------------------------------
-insert into app.unit_members (org_id, unit_id, member_id, role)
-select
-    m.org_id,
-    uu.unit_id,
-    m.id,
-    case when pg_temp.norm(c.nome) = 'gestor' then 'manager' else 'member' end::app.unit_role
+-- 5. Associação x unidade --------------------------------------------------------
+insert into app.membership_units (org_id, unit_id, membership_id)
+select m.org_id, uu.unit_id, m.id
 from v_user_units uu
-join app.members m on m.user_id = uu.user_id and m.org_id = (select id from v_org)
-join public.usuario u on u.id = uu.user_id
-join public.cargo c on c.id = u.cargo_id
-on conflict (unit_id, member_id) do update set role = excluded.role;
+join app.memberships m on m.user_id = uu.user_id and m.org_id = (select id from v_org)
+on conflict (unit_id, membership_id) do nothing;
 
 -- 6. Equipes (setor dentro de cada unidade onde há gente dele) -----------------
 insert into app.teams (org_id, unit_id, name, active, legacy_setor_id)
@@ -125,26 +123,26 @@ on conflict (unit_id, name) do update
     set active = excluded.active,
         legacy_setor_id = excluded.legacy_setor_id;
 
--- 7. Membro x equipe ------------------------------------------------------------
-insert into app.team_members (org_id, team_id, member_id)
+-- 7. Associação x equipe ---------------------------------------------------------
+insert into app.membership_teams (org_id, team_id, membership_id)
 select t.org_id, t.id, m.id
 from v_user_units uu
 join public.usuario u on u.id = uu.user_id
 join app.teams t on t.unit_id = uu.unit_id and t.legacy_setor_id = u.setor_id
-join app.members m on m.user_id = u.id and m.org_id = t.org_id
+join app.memberships m on m.user_id = u.id and m.org_id = t.org_id
 on conflict do nothing;
 
 -- 8. Dashboards do MVP ligados na NG --------------------------------------------
-insert into app.unit_dashboards (org_id, unit_id, dashboard_key)
+insert into app.org_dashboards (org_id, unit_id, dashboard_key)
 select un.org_id, un.id, d.key
 from app.units un
-cross join app.dashboards d
+cross join app.dashboard_catalog d
 where un.org_id = (select id from v_org)
   and un.code = 'NG'
   and d.key in ('protocolo-lexpre', 'pendencias')
 on conflict do nothing;
 
--- 9. Liberações por equipe (regra da V1, unidade NG) -----------------------------
+-- 9. Regras de acesso por equipe (regra da V1, unidade NG) -------------------------
 with regra (setor, dashboard_key) as (
     values
         ('protocolo',           'protocolo-lexpre'),
@@ -156,8 +154,8 @@ with regra (setor, dashboard_key) as (
         ('tecnologia',          'pendencias'),
         ('diretoria',           'pendencias')
 )
-insert into app.dashboard_grants (org_id, unit_id, dashboard_key, team_id)
-select t.org_id, t.unit_id, r.dashboard_key, t.id
+insert into app.access_rules (org_id, team_id, dashboard_key, scope)
+select t.org_id, t.id, r.dashboard_key, 'all'
 from app.teams t
 join app.units un on un.id = t.unit_id and un.code = 'NG'
 join regra r on pg_temp.norm(t.name) = r.setor
@@ -172,7 +170,7 @@ select
     'organization',
     jsonb_build_object(
         'units',   (select count(*) from app.units   where org_id = (select id from v_org)),
-        'members', (select count(*) from app.members where org_id = (select id from v_org))
+        'members', (select count(*) from app.memberships where org_id = (select id from v_org))
     );
 
 -- 11. Relatório (é o resultado que aparece no SQL Editor) -------------------------
@@ -186,41 +184,41 @@ select item, quantidade, detalhe from (
     from app.teams where org_id = (select id from o)
     union all
     select 3, 'membros ativos', count(*), null
-    from app.members where org_id = (select id from o) and status = 'active'
+    from app.memberships where org_id = (select id from o) and status = 'active'
     union all
     select 4, 'membros desativados', count(*), null
-    from app.members where org_id = (select id from o) and status = 'disabled'
+    from app.memberships where org_id = (select id from o) and status = 'disabled'
     union all
     select 5, 'admins (Desenvolvedor)', count(*), null
-    from app.members where org_id = (select id from o) and role = 'admin'
+    from app.memberships where org_id = (select id from o) and role_key = 'admin'
     union all
-    select 6, 'gestores (manager de unidade)', count(distinct member_id), null
-    from app.unit_members where org_id = (select id from o) and role = 'manager'
+    select 6, 'gestores', count(*), null
+    from app.memberships where org_id = (select id from o) and role_key = 'gestor'
     union all
-    select 7, 'liberações de dashboard (NG)', count(*),
-           string_agg(distinct g.dashboard_key || ' -> ' || t.name, '; ')
-    from app.dashboard_grants g join app.teams t on t.id = g.team_id
-    where g.org_id = (select id from o)
+    select 7, 'regras de acesso (NG)', count(*),
+           string_agg(distinct r.dashboard_key || ' -> ' || t.name, '; ')
+    from app.access_rules r join app.teams t on t.id = r.team_id
+    where r.org_id = (select id from o)
     union all
     select 8, 'membros que veem algum dashboard', count(distinct m.id), null
-    from app.members m
-    join app.unit_dashboards ud on ud.org_id = m.org_id
+    from app.memberships m
+    join app.org_dashboards od on od.org_id = m.org_id and od.unit_id is not null
     where m.org_id = (select id from o)
-      and app.user_can_view_dashboard(m.user_id, ud.unit_id, ud.dashboard_key)
+      and app_private.dashboard_scope(m.user_id, od.unit_id, od.dashboard_key) is not null
     union all
     select 9, 'ATENÇÃO: membros sem nenhuma unidade', count(*),
            string_agg(m.email, ', ' order by m.email)
-    from app.members m
+    from app.memberships m
     where m.org_id = (select id from o)
-      and m.role <> 'admin'
-      and not exists (select 1 from app.unit_members um where um.member_id = m.id)
+      and m.role_key not in ('owner', 'admin')
+      and not exists (select 1 from app.membership_units mu where mu.membership_id = m.id)
     union all
     select 10, 'ATENÇÃO: equipes da NG sem liberação', count(*),
            string_agg(t.name, ', ' order by t.name)
     from app.teams t
     join app.units un on un.id = t.unit_id and un.code = 'NG'
     where t.org_id = (select id from o)
-      and not exists (select 1 from app.dashboard_grants g where g.team_id = t.id)
+      and not exists (select 1 from app.access_rules r where r.team_id = t.id)
 ) r
 order by ordem;
 

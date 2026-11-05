@@ -8,6 +8,8 @@ O schema `public` (V1) não é tocado. Usuários do login (`auth.users`) são re
 ```
 supabase/
   migrations/20261105120000_app_core.sql   organização > unidade > equipe > membro, dashboards, liberações, auditoria, RLS
+  migrations/20261105150000_...            chave do dashboard = módulo (não unidade)
+  migrations/20261105170000_...            alinhamento ao plano: memberships, papéis, access_rules, convites, app_private
   tests/app_core_smoke.sql                 teste de isolamento e regra de acesso (roda e desfaz tudo)
   tests/ci/                                só para o CI (simula Supabase e V1) — não rodar no Supabase
   scripts/import_v1.sql                    importa usuários/estrutura da V1 (public) para o app
@@ -18,15 +20,20 @@ docs/v1_schema_colunas.csv                 estrutura da V1 (referência, sem dad
 
 ## Regra de acesso a dashboard
 
-| Quem | Vê |
-|---|---|
-| owner/admin da organização | todos os dashboards de todas as unidades da organização |
-| manager da unidade (o "Gestor" da V1) | todos os dashboards ligados naquela unidade |
-| member da unidade | só os liberados para ele ou para uma equipe dele (`dashboard_grants`) |
-| membro `disabled`, outra organização, `anon` | nada |
+Papéis (`app.roles` / `app.role_permissions`):
 
-Funções: `app.can_view_dashboard(unit, key)` e `app.my_dashboards()` (usuário logado);
-`app.user_can_view_dashboard(user, unit, key)` só para a API (service_role).
+| Papel | Vê | Exporta | Gerencia membros/acesso |
+|---|---|---|---|
+| owner, admin | todos os dashboards de todas as unidades da organização | sim | sim |
+| gestor | todos os dashboards das **suas** unidades | sim | não |
+| colaborador | só o que as regras (`app.access_rules`) liberam para a equipe dele | sim | não |
+| leitor | idem colaborador | não | não |
+| desativado, outra organização, `anon` | nada | — | — |
+
+`access_rules.scope`: `all` (todos os registros da unidade) ou `own` (só os do próprio usuário). Nega quando nada casa.
+
+Funções: `app.dashboard_scope(unit, key)`, `app.can_view_dashboard(unit, key)`, `app.my_dashboards()` (usuário logado);
+`app_private.dashboard_scope(user, unit, key)` e `app_private.has_permission(user, org, perm)` só para a API (service_role).
 
 ## Como aplicar (SEMPRE na staging primeiro)
 
