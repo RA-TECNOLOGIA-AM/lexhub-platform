@@ -14,7 +14,6 @@ export function timeAgo(iso: string, now: number = Date.now()): string {
     return h < 24 ? `há ${h} h` : `há ${Math.round(h / 24)} d`
 }
 
-
 // Números no padrão brasileiro (1.284 · R$ 14.355,72 · 8,2%).
 const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 })
 const nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })

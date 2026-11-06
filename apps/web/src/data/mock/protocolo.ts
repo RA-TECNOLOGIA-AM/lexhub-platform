@@ -35,7 +35,9 @@ export function protocoloFor(unit: string): ProtocoloResponse {
             ['Outras', 87],
         ]),
         protocolados_por_funcionario: funcionarios.map((name, i) => ({ name, value: porFunc[i] })),
-        represados_por_funcionario: named(funcionarios.map((name, i): [string, number] => [name, REPRESADOS_POR_FUNC[i]])),
+        represados_por_funcionario: named(
+            funcionarios.map((name, i): [string, number] => [name, REPRESADOS_POR_FUNC[i]]),
+        ),
         comissionamento_por_funcionario: funcionarios.map((name, i) => ({
             funcionario: name,
             qtd_protocolados: porFunc[i],

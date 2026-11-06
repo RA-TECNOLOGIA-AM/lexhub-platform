@@ -18,5 +18,6 @@ export function RequireAuth() {
     if (!me) {
         const state = rememberLocation ? { from: location.pathname + location.search } : undefined
         return <Navigate to="/login" replace state={state} />
-    }    return <Outlet />
+    }
+    return <Outlet />
 }

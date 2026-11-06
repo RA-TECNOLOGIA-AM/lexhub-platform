@@ -47,11 +47,9 @@ async function dashboardResponse<T extends { meta: Meta }>(
 export function createMockClient(): DataClient {
     return {
         // Confere contra os usuários de teste de mock/users.ts (o Supabase fará isso de verdade).
-            async signIn(email, password) {
+        async signIn(email, password) {
             await wait()
-            const ok = testUsers.some(
-                (u) => u.email === email.trim().toLowerCase() && u.password === password,
-            )
+            const ok = testUsers.some((u) => u.email === email.trim().toLowerCase() && u.password === password)
             if (!ok) {
                 throw new DataError(401, 'E-mail ou senha incorretos.')
             }
@@ -76,5 +74,5 @@ export function createMockClient(): DataClient {
 
         getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),
         getPendencias: (query) => dashboardResponse('pendencias', query, pendenciasFor),
-        }
     }
+}

@@ -40,4 +40,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRememberLocation(returnHere)
         setMe(null)
     }
-    return <AuthContext value={{ me, loading, rememberLocation, signIn, signOut }}>{children}</AuthContext>}
+    return <AuthContext value={{ me, loading, rememberLocation, signIn, signOut }}>{children}</AuthContext>
+}

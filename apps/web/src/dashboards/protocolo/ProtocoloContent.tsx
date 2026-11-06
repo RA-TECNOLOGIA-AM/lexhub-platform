@@ -40,8 +40,16 @@ export function ProtocoloContent({ data }: { data: ProtocoloResponse }) {
 
             <KpiSection id="agora" title="Situação atual do setor" subtitle="Não dependem do período selecionado.">
                 <Kpi label="Represados agora" value={fmt.int(s.represados)} note="Ainda no setor, sem protocolo" />
-                <Kpi label="Devolvidos p/ Peticionamento" value={fmt.int(s.devolvido_peticionamento)} note="Total histórico" />
-                <Kpi label="Devolvidos p/ Org. de documentos" value={fmt.int(s.devolvido_org_doc)} note="Total histórico" />
+                <Kpi
+                    label="Devolvidos p/ Peticionamento"
+                    value={fmt.int(s.devolvido_peticionamento)}
+                    note="Total histórico"
+                />
+                <Kpi
+                    label="Devolvidos p/ Org. de documentos"
+                    value={fmt.int(s.devolvido_org_doc)}
+                    note="Total histórico"
+                />
                 <Kpi label="Devolvidos p/ Pendências" value={fmt.int(s.devolvido_pendencia)} note="Total histórico" />
             </KpiSection>
         </>

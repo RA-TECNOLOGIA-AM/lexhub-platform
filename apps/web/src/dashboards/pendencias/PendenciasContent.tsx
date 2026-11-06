@@ -11,7 +11,11 @@ export function PendenciasContent({ data }: { data: PendenciasResponse }) {
     return (
         <>
             <KpiSection id="periodo" title="No período" subtitle="Pela data de entrada no setor, como na v1.">
-                <Kpi label="Pendências no período" value={fmt.int(s.pendencias_total)} note="Entraram no setor no período" />
+                <Kpi
+                    label="Pendências no período"
+                    value={fmt.int(s.pendencias_total)}
+                    note="Entraram no setor no período"
+                />
                 <Kpi
                     label="Resolvidas"
                     value={fmt.int(s.pendencias_resolvidas)}

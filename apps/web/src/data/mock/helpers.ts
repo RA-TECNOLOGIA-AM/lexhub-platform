@@ -19,7 +19,14 @@ function porDia(base: number, amp: number, dias: number): Point[] {
     return out
 }
 
-export const funcionarios = ['Carla Souza', 'Bruno Melo', 'Diego Rocha', 'Fernanda Lopes', 'Gabriel Torres', 'Helena Dias']
+export const funcionarios = [
+    'Carla Souza',
+    'Bruno Melo',
+    'Diego Rocha',
+    'Fernanda Lopes',
+    'Gabriel Torres',
+    'Helena Dias',
+]
 
 // Bloco `meta` de uma resposta: de onde e de quando são os dados da unidade.
 export function metaFor(unit: string, source = 'LexPre'): Meta {

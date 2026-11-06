@@ -11,6 +11,10 @@
     color: var(--text-2);
     text-decoration: none;
 }
-.back-link:hover { color: var(--text); }
+.back-link:hover {
+    color: var(--text);
+}
 /* KPI em destaque de alerta (ex.: pendências atrasadas). */
-.kpi-v.danger { color: var(--danger); }
+.kpi-v.danger {
+    color: var(--danger);
+}

@@ -16,13 +16,13 @@ npm run dev
 Abre em http://localhost:5173 (porta fixa: é a que a API libera em `CORS_ORIGINS`).
 O navegador atualiza sozinho a cada arquivo salvo. `Ctrl+C` no terminal para parar.
 
-| Comando | O que faz |
-|---|---|
-| `npm run dev` | Servidor de desenvolvimento |
-| `npx tsc -b` | Checa os tipos (sem saída = sem erro) |
-| `npm run lint` | Oxlint |
-| `npm run build` | Checa os tipos e gera o `dist/` |
-| `npm run preview` | Serve o `dist/` gerado pelo build |
+| Comando           | O que faz                             |
+| ----------------- | ------------------------------------- |
+| `npm run dev`     | Servidor de desenvolvimento           |
+| `npx tsc -b`      | Checa os tipos (sem saída = sem erro) |
+| `npm run lint`    | Oxlint                                |
+| `npm run build`   | Checa os tipos e gera o `dist/`       |
+| `npm run preview` | Serve o `dist/` gerado pelo build     |
 
 Se o editor acusar erro que o `npx tsc -b` não acusa: `Ctrl+Shift+P` → **TypeScript: Restart TS Server**.
 
@@ -31,12 +31,12 @@ Se o editor acusar erro que o `npx tsc -b` não acusa: `Ctrl+Shift+P` → **Type
 Por enquanto é **fictício**: o `mockClient.ts` confere e-mail e senha contra a lista `testUsers` do `mock-data.ts`
 (sem banco; esses usuários só existem no navegador).
 
-| Para testar | E-mail | Senha | Resultado |
-|---|---|---|---|
-| Login com sucesso | `controller@lexgroup.com.br` | `lexhub123` | entra (o e-mail ignora maiúsculas) |
-| Credencial errada (401) | outro e-mail ou outra senha | — | "E-mail ou senha incorretos." |
-| E-mail mal formatado | ex.: `abc` | qualquer | "Digite um e-mail válido." (validado na tela) |
-| Campos vazios | — | — | "Preencha e-mail e senha." |
+| Para testar             | E-mail                       | Senha       | Resultado                                     |
+| ----------------------- | ---------------------------- | ----------- | --------------------------------------------- |
+| Login com sucesso       | `controller@lexgroup.com.br` | `lexhub123` | entra (o e-mail ignora maiúsculas)            |
+| Credencial errada (401) | outro e-mail ou outra senha  | —           | "E-mail ou senha incorretos."                 |
+| E-mail mal formatado    | ex.: `abc`                   | qualquer    | "Digite um e-mail válido." (validado na tela) |
+| Campos vazios           | —                            | —           | "Preencha e-mail e senha."                    |
 
 Para outro usuário de teste, acrescente na lista `testUsers`. O usuário exibido depois de entrar é sempre o `me` do `mock-data.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`):
 sobrevive ao F5 e some ao fechar a aba. Para deslogar pelo console: `sessionStorage.clear()` + F5.
@@ -54,12 +54,12 @@ No final, troca pelo Supabase Auth, com usuários de teste no projeto de staging
 
 ## Rotas
 
-| URL | Tela | Moldura |
-|---|---|---|
-| `/login` | Login (única rota aberta sem sessão) | não |
-| `/:org/dashboards` | Hub de dashboards (ex.: `/lexgroup/dashboards`) | sim |
-| `/:org/:unit/dashboards/:dashboardKey` | Dashboard (ex.: `/lexgroup/NG/dashboards/protocolo-lexpre`) | sim |
-| qualquer outra | redireciona para o hub da organização de quem está logado | — |
+| URL                                    | Tela                                                        | Moldura |
+| -------------------------------------- | ----------------------------------------------------------- | ------- |
+| `/login`                               | Login (única rota aberta sem sessão)                        | não     |
+| `/:org/dashboards`                     | Hub de dashboards (ex.: `/lexgroup/dashboards`)             | sim     |
+| `/:org/:unit/dashboards/:dashboardKey` | Dashboard (ex.: `/lexgroup/NG/dashboards/protocolo-lexpre`) | sim     |
+| qualquer outra                         | redireciona para o hub da organização de quem está logado   | —       |
 
 As rotas de dashboard seguem a API: `GET /orgs/{org}/units/{unit}/dashboards/{key}`.
 A moldura (barra lateral + cabeçalho) é o `<AppLayout>`, uma rota de layout sem `path`; a tela filha entra no `<Outlet />`.
@@ -89,13 +89,13 @@ telas  →  dataClient (interface DataClient)  →  mockClient  →  mock-data.t
                                              →  apiClient   →  FastAPI   (a fazer)
 ```
 
-| Arquivo | O que é |
-|---|---|
-| `client.ts` | Interface `DataClient` (sessão + dados) e escolha da implementação por `VITE_DATA_SOURCE` |
-| `types.ts` | Formato das respostas (campos da v1 + bloco `meta` da V2) |
+| Arquivo         | O que é                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------- |
+| `client.ts`     | Interface `DataClient` (sessão + dados) e escolha da implementação por `VITE_DATA_SOURCE`               |
+| `types.ts`      | Formato das respostas (campos da v1 + bloco `meta` da V2)                                               |
 | `mockClient.ts` | Implementação atual: lê o mock, espera 300 ms, devolve 401 sem sessão e 403 fora das unidades liberadas |
-| `mock-data.ts` | Dados fictícios (porte do `template/mock-data.js`) e usuários de teste (`testUsers`) |
-| `errors.ts` | `DataError` com o status HTTP (401, 403...) |
+| `mock-data.ts`  | Dados fictícios (porte do `template/mock-data.js`) e usuários de teste (`testUsers`)                    |
+| `errors.ts`     | `DataError` com o status HTTP (401, 403...)                                                             |
 
 Para trocar pela API real: escrever um `apiClient.ts` que implemente `DataClient` e escolhê-lo em `createDataClient()`.
 Nenhuma tela muda.
@@ -106,8 +106,8 @@ Opcionais por enquanto. Ficam em `apps/web/.env.local` (não versionado).
 Só variáveis com prefixo `VITE_` chegam ao navegador, e qualquer uma delas fica visível para quem abrir o site:
 **nunca colocar segredo em `VITE_*`**.
 
-| Variável | Padrão | Uso |
-|---|---|---|
+| Variável           | Padrão | Uso                                                 |
+| ------------------ | ------ | --------------------------------------------------- |
 | `VITE_DATA_SOURCE` | `mock` | `mock` = dados fictícios; outro valor ainda dá erro |
 
 ## Estado atual

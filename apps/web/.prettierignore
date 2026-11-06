@@ -1,0 +1,5 @@
+# tokens.css fica idêntico ao do template (para comparar e atualizar)
+src/styles/tokens.css
+template/
+dist/
+package-lock.json
