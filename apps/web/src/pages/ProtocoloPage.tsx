@@ -1,47 +1,27 @@
-import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
-
 import { DashboardHeader } from '../components/DashboardHeader.tsx'
 import { Delta } from '../components/Delta.tsx'
 import { Kpi } from '../components/Kpi.tsx'
 import { dataClient } from '../data/client.ts'
-import { DataError } from '../data/errors.ts'
-import type { DashboardSummary, ProtocoloResponse } from '../data/types.ts'
+import { useAsync } from '../hooks/useAsync.ts'
 import { fmt } from '../lib/format.ts'
 
 const DASHBOARD_KEY = 'protocolo-lexpre'
 
 export function ProtocoloPage() {
     const { org = '', unit = '' } = useParams()
-    const [data, setData] = useState<ProtocoloResponse | null>(null)
-    const [dashboard, setDashboard] = useState<DashboardSummary | null>(null)
-    const [error, setError] = useState<DataError | null>(null)
-
-    // Busca os dados da unidade e o item do catálogo ao mesmo tempo; roda de novo ao trocar de unidade.
-    useEffect(() => {
-        let ignore = false
-
-        Promise.all([dataClient.getProtocolo({ org, unit }), dataClient.listDashboards(org)])
-            .then(([res, catalog]) => {
-                if (ignore) return
-
-                setData(res)
-                setDashboard(catalog.available.find((d) => d.key === DASHBOARD_KEY) ?? null)
-                setError(null)
-            })
-            .catch((err: unknown) => {
-                if (!ignore) {
-                    setError(err instanceof DataError ? err : new DataError(0, 'Erro inesperado.'))
-                }
-            })
-
-        return () => {
-            ignore = true
-        }
-    }, [org, unit])
+    // Dados da unidade e catálogo ao mesmo tempo; o useAsync busca de novo quando org ou unit mudam.
+    const { data: result, error } = useAsync(
+        () => Promise.all([dataClient.getProtocolo({ org, unit }), dataClient.listDashboards(org)]),
+        [org, unit],
+    )
 
     if (error) return <p className="muted">{error.message}</p>
-    if (!data || !dashboard) return <p className="muted">Carregando…</p>
+    if (!result) return <p className="muted">Carregando…</p>
+
+    const [data, catalog] = result
+    const dashboard = catalog.available.find((d) => d.key === DASHBOARD_KEY)
+    if (!dashboard) return <p className="muted">Dashboard não encontrado no catálogo.</p>
 
     const s = data.stats
 

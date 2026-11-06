@@ -8,3 +8,7 @@ export class DataError extends Error {
         this.status = status
     }
 }
+// Qualquer erro vira DataError: as telas lidam com um tipo só (status 0 = erro fora da API).
+export function toDataError(err: unknown): DataError {
+    return err instanceof DataError ? err : new DataError(0, 'Erro inesperado. Tente de novo.')
+}

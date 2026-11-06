@@ -1,25 +1,15 @@
-import { useEffect, useState } from 'react'
 import { useParams } from 'react-router'
 import { useAuth } from '../auth/auth-context.ts'
 import { DashboardCard } from '../components/DashboardCard.tsx'
 import { dataClient } from '../data/client.ts'
-import type { DashboardCatalog } from '../data/types.ts'
+import { useAsync } from '../hooks/useAsync.ts'
 
 export function HubPage() {
     const { org = '' } = useParams()
     const { me } = useAuth()
-    const [catalog, setCatalog] = useState<DashboardCatalog | null>(null)
+    const { data: catalog, error } = useAsync(() => dataClient.listDashboards(org), [org])
 
-    useEffect(() => {
-        let ignore = false
-        dataClient.listDashboards(org).then((data) => {
-            if (!ignore) setCatalog(data)
-        })
-        return () => {
-            ignore = true
-        }
-    }, [org])
-
+    if (error) return <p className="muted">{error.message}</p>
     if (!catalog) return <p className="muted">Carregando…</p>
 
     const dashboards = catalog.available
