@@ -61,6 +61,18 @@ const PATHS = {
         </>
     ),
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+    lock: (
+        <>
+            <rect x="4" y="11" width="16" height="10" rx="2" />
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+        </>
+    ),
+    inbox: (
+        <>
+            <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+            <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z" />
+        </>
+    ),
     arrowLeft: <path d="M19 12H5M12 19l-7-7 7-7" />,
     logout: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
 } satisfies Record<string, ReactNode>

@@ -5,23 +5,27 @@ import { Kpi } from '../components/Kpi.tsx'
 import { dataClient } from '../data/client.ts'
 import { useAsync } from '../hooks/useAsync.ts'
 import { fmt } from '../lib/format.ts'
+import { ErrorState } from '../components/states/ErrorState.tsx'
+import { LoadingState } from '../components/states/LoadingState.tsx'
+import { DataError } from '../data/errors.ts'
 
 const DASHBOARD_KEY = 'protocolo-lexpre'
 
 export function ProtocoloPage() {
     const { org = '', unit = '' } = useParams()
+    const hub = `/${org}/dashboards`
     // Dados da unidade e catálogo ao mesmo tempo; o useAsync busca de novo quando org ou unit mudam.
     const { data: result, error } = useAsync(
         () => Promise.all([dataClient.getProtocolo({ org, unit }), dataClient.listDashboards(org)]),
         [org, unit],
     )
 
-    if (error) return <p className="muted">{error.message}</p>
-    if (!result) return <p className="muted">Carregando…</p>
+    if (error) return <ErrorState error={error} backTo={hub} />
+    if (!result) return <LoadingState variant="dashboard" />
 
     const [data, catalog] = result
     const dashboard = catalog.available.find((d) => d.key === DASHBOARD_KEY)
-    if (!dashboard) return <p className="muted">Dashboard não encontrado no catálogo.</p>
+    if (!dashboard) return <ErrorState error={new DataError(404, 'Dashboard não encontrado')} backTo={hub} />
 
     const s = data.stats
 

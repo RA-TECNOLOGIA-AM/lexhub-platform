@@ -3,14 +3,16 @@ import { useAuth } from '../auth/auth-context.ts'
 import { DashboardCard } from '../components/DashboardCard.tsx'
 import { dataClient } from '../data/client.ts'
 import { useAsync } from '../hooks/useAsync.ts'
+import { ErrorState } from '../components/states/ErrorState.tsx'
+import { LoadingState } from '../components/states/LoadingState.tsx'
 
 export function HubPage() {
     const { org = '' } = useParams()
     const { me } = useAuth()
     const { data: catalog, error } = useAsync(() => dataClient.listDashboards(org), [org])
 
-    if (error) return <p className="muted">{error.message}</p>
-    if (!catalog) return <p className="muted">Carregando…</p>
+    if (error) return <ErrorState error={error} />
+    if (!catalog) return <LoadingState />
 
     const dashboards = catalog.available
     // Áreas sem repetição, na ordem em que aparecem: ['Operação jurídica', ...]
