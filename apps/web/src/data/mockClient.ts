@@ -1,6 +1,8 @@
 import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
-import { catalog, me, pendencias, protocoloFor, testUsers } from './mock-data.ts'
+import { catalog, me, pendenciasFor, protocoloFor, testUsers } from './mock/index.ts'
+import type { DashboardQuery, Meta } from './types.ts'
+
 // Simula a rede: um pouco de espera faz o "carregando" aparecer de verdade.
 const LATENCY_MS = 300
 const wait = () => new Promise((resolve) => setTimeout(resolve, LATENCY_MS))
@@ -25,10 +27,27 @@ function checkAccess(dashboardKey: string, unit: string) {
     }
 }
 
+// Módulo: o caminho de toda resposta de dashboard no mock (como a API fará):
+// espera, confere sessão (401) e acesso (403), monta os dados da unidade e aplica o período.
+// Parâmetros: a key do dashboard, a consulta e a função que monta os dados de uma unidade.
+async function dashboardResponse<T extends { meta: Meta }>(
+    dashboardKey: string,
+    query: DashboardQuery,
+    build: (unit: string) => T,
+): Promise<T> {
+    await wait()
+    requireSession()
+    checkAccess(dashboardKey, query.unit)
+    const data = build(query.unit)
+    data.meta.from = query.from ?? data.meta.from
+    data.meta.to = query.to ?? data.meta.to
+    return data
+}
+
 export function createMockClient(): DataClient {
     return {
-           // Confere contra os usuários de teste do mock-data.ts (o Supabase fará isso de verdade).
-        async signIn(email, password) {
+        // Confere contra os usuários de teste de mock/users.ts (o Supabase fará isso de verdade).
+            async signIn(email, password) {
             await wait()
             const ok = testUsers.some(
                 (u) => u.email === email.trim().toLowerCase() && u.password === password,
@@ -55,21 +74,7 @@ export function createMockClient(): DataClient {
             return copy(catalog)
         },
 
-        async getProtocolo(query) {
-            await wait()
-            requireSession()
-            checkAccess('protocolo-lexpre', query.unit)
-            const data = protocoloFor(query.unit)
-            data.meta.from = query.from ?? data.meta.from
-            data.meta.to = query.to ?? data.meta.to
-            return data
-        },
-        async getPendencias(query) {
-            await wait()
-            requireSession()
-            checkAccess('pendencias', query.unit)
-            const meta = { ...pendencias.meta, unit: query.unit, from: query.from ?? pendencias.meta.from, to: query.to ?? pendencias.meta.to }
-            return copy({ ...pendencias, meta })
-        },
+        getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),
+        getPendencias: (query) => dashboardResponse('pendencias', query, pendenciasFor),
+        }
     }
-}
