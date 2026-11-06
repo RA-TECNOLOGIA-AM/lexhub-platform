@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Protocolo · LexHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <script src="mock-data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<!-- Rota no React: /:org/:unit/dashboards/protocolo-lexpre  ·  API: GET /orgs/{org}/units/{unit}/dashboards/protocolo-lexpre -->
+<body data-page="protocolo" data-crumb="Dashboards / Protocolo" data-path="/NG/dashboards/protocolo-lexpre">
+  <main id="content">
+    <!-- cabeçalho do dashboard -->
+    <section class="stack">
+      <div class="row">
+        <div class="stack" style="gap:4px">
+          <a href="hub.html" class="small">← Dashboards</a>
+          <h1 class="h1" data-dash-title>Protocolo</h1>
+          <div data-dash-fresh></div>
+        </div>
+        <button class="btn spacer" type="button" data-export>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>
+          Exportar
+        </button>
+      </div>
+      <div class="pills" role="group" aria-label="Unidade" data-units></div>
+    </section>
+
+    <!-- filtros: mesmos parâmetros da v1 (from, to, materia[], funcionario[], uf[]) -->
+    <form class="card card-pad filters" aria-label="Filtros" onsubmit="return false">
+      <div><label class="lbl" for="f-from">De</label><input class="field" id="f-from" type="date" data-from></div>
+      <div><label class="lbl" for="f-to">Até</label><input class="field" id="f-to" type="date" data-to></div>
+      <div>
+        <label class="lbl" for="f-materia">Matéria</label>
+        <select class="field" id="f-materia"><option>Todas</option><option>Bancário - empréstimo</option><option>Consumidor - telefonia</option></select>
+      </div>
+      <div>
+        <label class="lbl" for="f-func">Funcionário</label>
+        <select class="field" id="f-func"><option>Todos</option><option>Carla Souza</option><option>Bruno Melo</option></select>
+      </div>
+      <div>
+        <label class="lbl" for="f-uf">UF do cliente</label>
+        <select class="field" id="f-uf"><option>Todas</option><option>AM</option><option>PA</option><option>RJ</option></select>
+      </div>
+      <div class="actions"><button class="btn btn-primary" type="submit" data-apply>Aplicar</button></div>
+    </form>
+
+    <!-- corpo: substituído pelos estados (?estado=carregando|sem-acesso|vazio|atrasado) -->
+    <div class="stack" style="gap:20px" data-dash-body>
+      <section class="stack" aria-labelledby="periodo">
+        <h2 class="h2" id="periodo">No período</h2>
+        <div class="grid grid-kpi" data-kpis></div>
+      </section>
+
+      <section class="stack" aria-labelledby="agora">
+        <div>
+          <h2 class="h2" id="agora">Situação atual do setor</h2>
+          <p class="muted small">Não dependem do período selecionado.</p>
+        </div>
+        <div class="grid grid-kpi" data-kpis-stock></div>
+      </section>
+
+      <section class="card" aria-labelledby="g-dia">
+        <div class="card-head"><h2 class="h2" id="g-dia">Protocolados por dia</h2><span class="muted small">dias úteis</span></div>
+        <div class="card-body" data-chart-dia></div>
+      </section>
+
+      <div class="grid grid-2">
+        <section class="card" aria-labelledby="g-func">
+          <div class="card-head"><h2 class="h2" id="g-func">Protocolados por funcionário</h2></div>
+          <div class="card-body" data-chart-func></div>
+        </section>
+        <section class="card" aria-labelledby="g-mat">
+          <div class="card-head"><h2 class="h2" id="g-mat">Protocolados por matéria</h2></div>
+          <div class="card-body" data-chart-materia></div>
+        </section>
+      </div>
+
+      <div class="grid grid-2">
+        <section class="card" aria-labelledby="g-rep">
+          <div class="card-head"><h2 class="h2" id="g-rep">Represados por funcionário</h2><span class="muted small">agora</span></div>
+          <div class="card-body" data-chart-represados></div>
+        </section>
+        <!-- só aparece para quem pode ver comissão (decisão pendente do gestor) -->
+        <section class="card" aria-labelledby="g-com">
+          <div class="card-head"><h2 class="h2" id="g-com">Comissionamento</h2><span class="muted small">R$ 1,00 por protocolado</span></div>
+          <div class="tblwrap" data-comissao>
+            <table class="tbl">
+              <thead><tr><th>Funcionário</th><th class="num">Protocolados</th><th class="num">Comissão</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

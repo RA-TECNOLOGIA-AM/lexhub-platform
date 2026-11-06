@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboards · LexHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <script src="mock-data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body data-page="hub" data-crumb="Dashboards" data-path="/dashboards">
+  <main id="content">
+    <section class="stack">
+      <div class="stack" style="gap:6px">
+        <h1 class="h1">Dashboards</h1>
+        <p class="muted" data-hub-count></p>
+      </div>
+      <div class="pills" role="group" aria-label="Filtrar por unidade" data-hub-units></div>
+    </section>
+
+    <div class="stack" style="gap:22px" data-hub-groups></div>
+
+    <section class="stack" aria-labelledby="soon-title">
+      <div>
+        <h2 class="h2" id="soon-title">Chegando na V2</h2>
+        <p class="muted small">Seguem na v1 até migrarem. Cada um entra aqui depois que os números baterem com a v1.</p>
+      </div>
+      <div class="grid grid-cards" data-hub-soon></div>
+    </section>
+  </main>
+</body>
+</html>

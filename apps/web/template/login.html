@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · LexHub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <script src="mock-data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<!-- MVP: e-mail + senha e entrada por convite (?convite=<token>). Google e MFA ficam para depois.
+     Estados: ?estado=sessao-expirada (veio de um 401 da API). -->
+<body data-page="login">
+  <main class="auth">
+    <div class="card auth-card">
+      <div class="brand"><span class="brand-mark">LH</span><span>LexHub</span></div>
+      <div class="stack" style="gap:4px">
+        <h1 class="h1" style="font-size:22px" data-login-title>Entrar</h1>
+        <p class="muted small">Use o e-mail da sua organização.</p>
+      </div>
+
+      <div class="notice info" data-invite hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <div class="small">Você foi convidado para <strong>LexGroup · NG</strong>. Defina uma senha para entrar.</div>
+      </div>
+
+      <div class="notice danger" role="alert" data-login-error hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <div class="small" data-msg></div>
+      </div>
+
+      <form class="stack" data-login novalidate>
+        <div>
+          <label class="lbl" for="email">E-mail</label>
+          <input class="field" id="email" name="email" type="email" autocomplete="username" placeholder="nome@lexgroup.com.br">
+        </div>
+        <div>
+          <div class="row" style="justify-content:space-between;margin-bottom:6px">
+            <label class="lbl" for="senha" style="margin:0">Senha</label>
+            <a href="#" class="small">Esqueci a senha</a>
+          </div>
+          <input class="field" id="senha" name="senha" type="password" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary" type="submit" style="width:100%">Entrar</button>
+      </form>
+
+      <p class="muted small">Sem acesso? Peça um convite ao gestor da sua unidade.</p>
+    </div>
+  </main>
+</body>
+</html>

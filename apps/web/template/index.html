@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Template · LexHub V2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+</head>
+<body>
+  <main class="content" style="margin:0 auto;max-width:820px">
+    <div class="stack" style="gap:6px">
+      <div class="brand" style="color:var(--text);padding:0"><span class="brand-mark">LH</span><span>LexHub V2 · template</span></div>
+      <p class="muted">Páginas estáticas do MVP (piloto NG), com dados fictícios. Base visual: protótipo "LexHub v2 — app navegável".
+        No React, <code>tokens.css</code> entra inteiro; o markup vira componentes e <code>mock-data.js</code> vira chamadas à API.</p>
+    </div>
+
+    <section class="card">
+      <div class="card-head"><h2 class="h2">Páginas</h2></div>
+      <div class="tblwrap">
+        <table class="tbl">
+          <thead><tr><th>Página</th><th>Estados para revisar</th></tr></thead>
+          <tbody>
+            <tr><td><a href="login.html">Login</a></td>
+              <td><a href="login.html?convite=demo">convite</a> · <a href="login.html?estado=sessao-expirada">sessão expirada (401)</a></td></tr>
+            <tr><td><a href="hub.html">Hub de dashboards</a></td>
+              <td><a href="hub.html?unit=NG">filtro NG</a> · <a href="hub.html?unit=LA_AM">unidade sem dashboards</a></td></tr>
+            <tr><td><a href="protocolo.html">Protocolo (LexPre)</a></td>
+              <td><a href="protocolo.html?estado=carregando">carregando</a> · <a href="protocolo.html?estado=atrasado">fonte atrasada</a> ·
+                <a href="protocolo.html?estado=vazio">sem dados</a> · <a href="protocolo.html?estado=sem-acesso">sem acesso (403)</a></td></tr>
+            <tr><td><a href="pendencias.html">Pendências (LexPre)</a></td>
+              <td><a href="pendencias.html?estado=carregando">carregando</a> · <a href="pendencias.html?estado=atrasado">fonte atrasada</a> ·
+                <a href="pendencias.html?estado=vazio">sem dados</a> · <a href="pendencias.html?estado=sem-acesso">sem acesso (403)</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card card-pad stack small">
+      <h2 class="h2">Fora do MVP (ficam do protótipo para depois)</h2>
+      <p class="muted">Plano e cobrança, console da plataforma (Clientes), troca e criação de organização, login com Google, MFA
+        e edição em Membros/Acesso (no MVP a administração é só leitura).</p>
+    </section>
+  </main>
+</body>
+</html>
