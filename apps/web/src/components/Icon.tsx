@@ -48,6 +48,18 @@ const PATHS = {
             <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
         </>
     ),
+    alert: (
+        <>
+            <path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3Z" />
+            <path d="M12 9v4M12 17h.01" />
+        </>
+    ),
+    info: (
+        <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 16v-4M12 8h.01" />
+        </>
+    ),
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
     logout: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
 } satisfies Record<string, ReactNode>

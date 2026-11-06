@@ -4,7 +4,11 @@ import type { DashboardCatalog, DashboardQuery, Me, PendenciasResponse, Protocol
 // A única porta de entrada para dados. As telas só conhecem esta interface;
 // trocar o mock pela API real = escrever outra implementação e mudar createDataClient.
 export interface DataClient {
+    // Sessão. Sem sessão, os outros métodos rejeitam com DataError 401.
+    signIn(email: string, password: string): Promise<void>
+    signOut(): Promise<void>
     getMe(): Promise<Me>
+
     listDashboards(org: string): Promise<DashboardCatalog>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>

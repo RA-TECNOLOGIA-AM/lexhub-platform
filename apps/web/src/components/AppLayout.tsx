@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
+import { useAuth } from '../auth/auth-context.ts'
 import { Icon, type IconName } from './Icon.tsx'
-
-// Provisório: no passo da camada de dados, org e usuário vêm do cliente de dados.
-const ORG = { slug: 'lexgroup', name: 'LexGroup', sub: 'Piloto V2 · 1 unidade' }
-const USER = { name: 'Luís Tápia', initials: 'LT', roleLabel: 'Controller · NG' }
 
 // Administração no MVP: só leitura, ainda "em breve".
 const ADMIN_SOON: { label: string; icon: IconName }[] = [
@@ -18,6 +15,7 @@ export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
     const menuButton = useRef<HTMLButtonElement>(null)
     const { pathname } = useLocation()
+    const { me, signOut } = useAuth()
 
     // Hub e dashboards ficam todos sob "Dashboards" na barra lateral.
     const inDashboards = pathname.includes('/dashboards')
@@ -45,6 +43,11 @@ export function AppLayout() {
         }
     }, [menuOpen])
 
+    // O <RequireAuth> só deixa chegar aqui com alguém logado; o if é para o TypeScript.
+    // Fica depois de todos os hooks (regra dos hooks: mesma ordem em toda renderização).
+    if (!me) return null
+    const { org, user } = me
+
     const closeMenu = () => setMenuOpen(false)
 
     return (
@@ -57,15 +60,15 @@ export function AppLayout() {
                 <div className="org">
                     <span className="org-mark">LG</span>
                     <span>
-                        <span className="org-name">{ORG.name}</span>
-                        <span className="org-sub">{ORG.sub}</span>
+                        <span className="org-name">{org.name}</span>
+                        <span className="org-sub">{org.sub}</span>
                     </span>
                 </div>
 
                 <span className="side-label">Espaço de trabalho</span>
                 <Link
                     className="nav"
-                    to={`/${ORG.slug}/dashboards`}
+                    to={`/${org.slug}/dashboards`}
                     aria-current={inDashboards ? 'page' : undefined}
                     onClick={closeMenu}
                 >
@@ -83,19 +86,21 @@ export function AppLayout() {
                 ))}
 
                 <div className="side-user">
-                    <span className="av">{USER.initials}</span>
+                    <span className="av">{user.initials}</span>
                     <span>
-                        <span className="name">{USER.name}</span>
-                        <span className="sub">{USER.roleLabel}</span>
+                        <span className="name">{user.name}</span>
+                        <span className="sub">{user.roleLabel}</span>
                     </span>
-                    <Link
+                    {/* Sair só apaga a sessão; o <RequireAuth> é quem manda para o /login. */}
+                    <button
                         className="nav"
-                        to="/login"
+                        type="button"
                         aria-label="Sair"
                         style={{ width: 'auto', marginLeft: 'auto', padding: 8 }}
+                        onClick={signOut}
                     >
                         <Icon name="logout" />
-                    </Link>
+                    </button>
                 </div>
             </aside>
 
@@ -113,7 +118,7 @@ export function AppLayout() {
                     </button>
                     <div className="crumb">
                         <span className="small muted">
-                            {ORG.name} / {crumb}
+                            {org.name} / {crumb}
                         </span>
                         <span className="path">lexhub.app{pathname}</span>
                     </div>

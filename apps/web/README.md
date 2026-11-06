@@ -28,18 +28,35 @@ Se o editor acusar erro que o `npx tsc -b` não acusa: `Ctrl+Shift+P` → **Type
 
 ## Login
 
-Ainda não existe: `/login` é só uma tela provisória e as páginas abrem sem login.
-Próximo passo: login fictício no cliente de dados (qualquer e-mail e senha entram, como no template).
-No final, troca pelo Supabase Auth, com usuário de teste no projeto de staging.
+Por enquanto é **fictício** (`mockClient.ts`), sem banco e sem usuário cadastrado:
+
+| Para testar | E-mail | Senha |
+|---|---|---|
+| Login com sucesso | qualquer | qualquer uma, menos `errada` |
+| Login com erro (401) | qualquer | `errada` |
+
+O usuário exibido é sempre o do `mock-data.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`):
+sobrevive ao F5 e some ao fechar a aba. Para deslogar pelo console: `sessionStorage.clear()` + F5.
+
+Estados do login: `/login?convite=abc` e `/login?estado=sessao-expirada`.
+
+No final, troca pelo Supabase Auth, com usuários de teste no projeto de staging
+(com vínculo à NG = sucesso; sem vínculo = 403).
+
+### Como funciona
+
+- `auth/AuthProvider.tsx` guarda quem está logado (`me`) e oferece `signIn`/`signOut` via contexto; `useAuth()` lê.
+- `auth/RequireAuth.tsx` é a rota "porteiro": sem sessão, manda para `/login` levando o endereço de origem (`from`).
+- Depois de entrar, o login volta para o `from` (ou para o hub). Sair só apaga a sessão; o porteiro redireciona.
 
 ## Rotas
 
 | URL | Tela | Moldura |
 |---|---|---|
-| `/login` | Login | não |
+| `/login` | Login (única rota aberta sem sessão) | não |
 | `/:org/dashboards` | Hub de dashboards (ex.: `/lexgroup/dashboards`) | sim |
 | `/:org/:unit/dashboards/:dashboardKey` | Dashboard (ex.: `/lexgroup/NG/dashboards/protocolo-lexpre`) | sim |
-| qualquer outra | redireciona para `/lexgroup/dashboards` | — |
+| qualquer outra | redireciona para o hub da organização de quem está logado | — |
 
 As rotas de dashboard seguem a API: `GET /orgs/{org}/units/{unit}/dashboards/{key}`.
 A moldura (barra lateral + cabeçalho) é o `<AppLayout>`, uma rota de layout sem `path`; a tela filha entra no `<Outlet />`.
@@ -51,6 +68,7 @@ src/
   main.tsx            ponto de entrada: importa o tokens.css e desenha o <App />
   App.tsx             tabela de rotas
   styles/tokens.css   cópia inteira do template (cores, tipografia, componentes)
+  auth/               sessão: AuthProvider, useAuth() e o porteiro RequireAuth
   components/
     AppLayout.tsx     barra lateral + cabeçalho (vem do template/app.js)
     Icon.tsx          ícones de traço do template
@@ -70,9 +88,9 @@ telas  →  dataClient (interface DataClient)  →  mockClient  →  mock-data.t
 
 | Arquivo | O que é |
 |---|---|
-| `client.ts` | Interface `DataClient` e escolha da implementação por `VITE_DATA_SOURCE` |
+| `client.ts` | Interface `DataClient` (sessão + dados) e escolha da implementação por `VITE_DATA_SOURCE` |
 | `types.ts` | Formato das respostas (campos da v1 + bloco `meta` da V2) |
-| `mockClient.ts` | Implementação atual: lê o mock, espera 300 ms e devolve 403 fora das unidades liberadas |
+| `mockClient.ts` | Implementação atual: lê o mock, espera 300 ms, devolve 401 sem sessão e 403 fora das unidades liberadas |
 | `mock-data.ts` | Dados fictícios (porte do `template/mock-data.js`) |
 | `errors.ts` | `DataError` com o status HTTP (401, 403...) |
 
@@ -94,7 +112,7 @@ Só variáveis com prefixo `VITE_` chegam ao navegador, e qualquer uma delas fic
 - [x] Base: Vite + React + TS, `tokens.css` inteiro, fonte Inter
 - [x] Rotas e `<AppLayout>` (inclui menu do celular)
 - [x] Cliente de dados com mock; o hub já lista os dashboards por ele
-- [ ] `<AppLayout>` usar `getMe()` (org e usuário ainda fixos no componente)
-- [ ] Login fictício e rotas protegidas
+- [x] `<AppLayout>` com org e usuário do `getMe()`
+- [x] Login fictício, rotas protegidas e botão Sair
 - [ ] Telas de verdade (hub, Protocolo, Pendências) e estados (carregando, vazio, atrasado, 403)
 - [ ] `apiClient` + Supabase Auth
