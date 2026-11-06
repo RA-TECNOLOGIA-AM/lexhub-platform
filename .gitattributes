@@ -1,0 +1,7 @@
+# Fim de linha: o repositório guarda LF para todos (CI, Docker e Cloud Run rodam em Linux).
+# No Windows, o checkout entrega CRLF (core.autocrlf=true + .editorconfig).
+* text=auto
+
+# Rodam no Linux e quebram com CRLF: sempre LF, em qualquer sistema.
+Makefile text eol=lf
+*.sh text eol=lf

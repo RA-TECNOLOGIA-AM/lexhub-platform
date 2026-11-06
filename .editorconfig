@@ -2,7 +2,8 @@ root = true
 
 [*]
 charset = utf-8
-end_of_line = lf
+# CRLF na cópia de trabalho (padrão Windows). O repositório guarda LF: ver .gitattributes.
+end_of_line = crlf
 insert_final_newline = true
 trim_trailing_whitespace = true
 indent_style = space
@@ -10,3 +11,11 @@ indent_size = 4
 
 [*.md]
 trim_trailing_whitespace = false
+
+# Makefile: receitas exigem TAB, e o make no Linux (CI) não aceita CRLF.
+[Makefile]
+end_of_line = lf
+indent_style = tab
+
+[*.sh]
+end_of_line = lf
