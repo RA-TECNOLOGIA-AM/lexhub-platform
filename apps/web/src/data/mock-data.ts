@@ -36,59 +36,63 @@ export const catalog: DashboardCatalog = {
         {
             key: 'protocolo-lexpre', title: 'Protocolo', area: 'Operação jurídica',
             desc: 'Protocolados, represados e devoluções do setor Protocolo.',
-            units: ['NG'], source: 'LexPre', synced_at: minAgo(4), max_delay_min: 60,
+            units: ['NG', 'LA_AM', 'LA_RJ'], source: 'LexPre', synced_at: minAgo(4), max_delay_min: 60,
         },
         {
             key: 'pendencias', title: 'Pendências', area: 'Operação jurídica',
             desc: 'Pendências abertas, resolvidas e tempo de resolução.',
-            units: ['NG'], source: 'LexPre', synced_at: minAgo(4), max_delay_min: 60,
-        },
-        {
-            key: 'peticionamento', title: 'Peticionamento', area: 'Operação jurídica',
-            desc: 'Petições elaboradas, prazos e devoluções do setor Peticionamento.',
-            units: ['NG'], source: 'LexPre', synced_at: minAgo(4), max_delay_min: 60,
+            units: ['NG', 'LA_AM', 'LA_RJ'], source: 'LexPre', synced_at: minAgo(4), max_delay_min: 60,
         },
     ],
     // Só para comunicar o roteiro no hub; não são clicáveis.
     upcoming: [
-        // { title: 'Peticionamento', area: 'Operação jurídica' },
+        { title: 'Peticionamento', area: 'Operação jurídica' },
         { title: 'Organização de documentos', area: 'Operação jurídica' },
         { title: 'Execução', area: 'Execução e recursal' },
         { title: 'Comercial', area: 'Comercial' },
     ],
 }
 
-export const protocolo: ProtocoloResponse = {
-    meta: { unit: 'NG', from: '2026-10-01', to: '2026-10-31', source: 'LexPre', synced_at: minAgo(4) },
-    stats: {
-        protocolados_total: { total: 1284, comparativo: 8.2 },
-        valor_causa_protocolado: { total: 18432750.4, comparativo: 5.1 },
-        ticket_medio_protocolado: { total: 14355.72, comparativo: -2.8 },
-        media_tempo_protocolado: 2.4,
-        mediana_tempo_protocolado: 1.6,
-        comparativo_tempo_medio_protocolado: -12.0,
-        comparativo_mediana_tempo_protocolado: -6.5,
-        represados: 96,
-        devolvido_peticionamento: 41,
-        devolvido_org_doc: 17,
-        devolvido_pendencia: 23,
-    },
-    protocolados_por_dia: porDia(58, 14, 31),
-    protocolados_por_materia: [
-        { name: 'Bancário - empréstimo', value: 412 },
-        { name: 'Consumidor - telefonia', value: 287 },
-        { name: 'Aéreo - atraso de voo', value: 214 },
-        { name: 'Previdenciário', value: 163 },
-        { name: 'Bancário - cartão', value: 121 },
-        { name: 'Outras', value: 87 },
-    ],
-    protocolados_por_funcionario: funcionarios.map((n, i) => ({ name: n, value: protocoladosPorFunc[i] })),
-    represados_por_funcionario: funcionarios.map((n, i) => ({ name: n, value: [21, 18, 17, 15, 14, 11][i] })),
-    comissionamento_por_funcionario: funcionarios.map((n, i) => ({
-        funcionario: n,
-        qtd_protocolados: protocoladosPorFunc[i],
-        valor_comissao: protocoladosPorFunc[i] * 1.0,
-    })),
+// "Tamanho" de cada unidade no mock: trocar de unidade muda os números (NG = base).
+const UNIT_SIZE: Record<string, number> = { NG: 1, LA_AM: 0.62, LA_RJ: 0.38 }
+
+// Protocolo de uma unidade. Contagens e valores escalam com o tamanho; tempos e % não.
+export function protocoloFor(unit: string): ProtocoloResponse {
+    const k = UNIT_SIZE[unit] ?? 1
+    const n = (v: number) => Math.round(v * k)
+    const porFunc = protocoladosPorFunc.map(n)
+    return {
+        meta: { unit, from: '2026-10-01', to: '2026-10-31', source: 'LexPre', synced_at: minAgo(4) },
+        stats: {
+            protocolados_total: { total: n(1284), comparativo: 8.2 },
+            valor_causa_protocolado: { total: 18432750.4 * k, comparativo: 5.1 },
+            ticket_medio_protocolado: { total: 14355.72, comparativo: -2.8 },
+            media_tempo_protocolado: 2.4,
+            mediana_tempo_protocolado: 1.6,
+            comparativo_tempo_medio_protocolado: -12.0,
+            comparativo_mediana_tempo_protocolado: -6.5,
+            represados: n(96),
+            devolvido_peticionamento: n(41),
+            devolvido_org_doc: n(17),
+            devolvido_pendencia: n(23),
+        },
+        protocolados_por_dia: porDia(58 * k, 14 * k, 31),
+        protocolados_por_materia: [
+            { name: 'Bancário - empréstimo', value: n(412) },
+            { name: 'Consumidor - telefonia', value: n(287) },
+            { name: 'Aéreo - atraso de voo', value: n(214) },
+            { name: 'Previdenciário', value: n(163) },
+            { name: 'Bancário - cartão', value: n(121) },
+            { name: 'Outras', value: n(87) },
+        ],
+        protocolados_por_funcionario: funcionarios.map((name, i) => ({ name, value: porFunc[i] })),
+        represados_por_funcionario: funcionarios.map((name, i) => ({ name, value: n([21, 18, 17, 15, 14, 11][i]) })),
+        comissionamento_por_funcionario: funcionarios.map((name, i) => ({
+            funcionario: name,
+            qtd_protocolados: porFunc[i],
+            valor_comissao: porFunc[i] * 1.0,
+        })),
+    }
 }
 
 export const pendencias: PendenciasResponse = {

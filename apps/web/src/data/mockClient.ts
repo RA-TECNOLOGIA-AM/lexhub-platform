@@ -1,7 +1,6 @@
 import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
-import { catalog, me, pendencias, protocolo, testUsers} from './mock-data.ts'
-
+import { catalog, me, pendencias, protocoloFor, testUsers } from './mock-data.ts'
 // Simula a rede: um pouco de espera faz o "carregando" aparecer de verdade.
 const LATENCY_MS = 300
 const wait = () => new Promise((resolve) => setTimeout(resolve, LATENCY_MS))
@@ -60,10 +59,11 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             checkAccess('protocolo-lexpre', query.unit)
-            const meta = { ...protocolo.meta, unit: query.unit, from: query.from ?? protocolo.meta.from, to: query.to ?? protocolo.meta.to }
-            return copy({ ...protocolo, meta })
+            const data = protocoloFor(query.unit)
+            data.meta.from = query.from ?? data.meta.from
+            data.meta.to = query.to ?? data.meta.to
+            return data
         },
-
         async getPendencias(query) {
             await wait()
             requireSession()

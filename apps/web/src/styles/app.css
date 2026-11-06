@@ -1,0 +1,14 @@
+/* Estilos do app React que não existem no template.
+   O tokens.css fica igual ao do template; o que é novo entra aqui. */
+
+/* "← Dashboards": discreto, com ícone, sem sublinhado (como no protótipo). */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+    text-decoration: none;
+}
+.back-link:hover { color: var(--text); }
