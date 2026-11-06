@@ -6,7 +6,7 @@ O front só fala com a API; a API decide o acesso e lê o banco.
 ```
 apps/
   api/        FastAPI (Python 3.12)            -> Google Cloud Run
-  web/        React + Vite + TypeScript        -> Vercel        (a criar)
+  web/        React + Vite + TypeScript        -> Vercel        (em construção, dados fictícios)
 workers/      sync dos bancos de origem -> raw_* (a criar)
 supabase/
   migrations/ schema "app" (V2) — aplicar SEMPRE na branch staging primeiro
@@ -22,6 +22,10 @@ Detalhes e como aplicar: [supabase/README.md](supabase/README.md).
 ## API
 
 Setup e execução: [apps/api/README.md](apps/api/README.md).
+
+## Front
+
+Setup e execução: [apps/web/README.md](apps/web/README.md).
 
 ## Regras do repositório
 
