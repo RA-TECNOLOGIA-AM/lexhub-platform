@@ -1,19 +1,18 @@
 import { useParams } from 'react-router'
-import { ProtocoloPage } from './ProtocoloPage.tsx'
+import { StateMessage } from '../components/states/StateMessage.tsx'
+import { DASHBOARD_PAGES } from '../dashboards/registry.tsx'
 
-// A rota é uma só (/:org/:unit/dashboards/:dashboardKey); aqui se escolhe a página de cada dashboard.
+// Rota /:org/:unit/dashboards/:dashboardKey: procura a página do dashboard no registro.
 export function DashboardPage() {
-    const { dashboardKey } = useParams()
+    const { dashboardKey = '' } = useParams()
+    const Page = DASHBOARD_PAGES[dashboardKey]
 
-    switch (dashboardKey) {
-        case 'protocolo-lexpre':
-            return <ProtocoloPage />
-        default:
-            return (
-                <section className="stack">
-                    <h1 className="h1">Em construção</h1>
-                    <p className="muted">O dashboard "{dashboardKey}" ainda não tem página na V2.</p>
-                </section>
-            )
+    if (!Page) {
+        return (
+            <StateMessage icon="inbox" title="Em construção">
+                O dashboard "{dashboardKey}" ainda não tem página na V2.
+            </StateMessage>
+        )
     }
+    return <Page />
 }
