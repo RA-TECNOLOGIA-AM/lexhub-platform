@@ -121,3 +121,6 @@ export const pendencias: PendenciasResponse = {
         return { funcionario: n, taxa_resolvido: tr, taxa_cancelamento: tc, qtd_resolvido: q, valor, qtd_x_valor: q * valor, comissao: q * valor }
     }),
 }
+// Usuários de teste do mock (só existem aqui, no navegador).
+// No Supabase, cada um vira um usuário de verdade em Authentication > Users.
+export const testUsers = [{ email: 'controller@lexgroup.com.br', password: 'lexhub123' }]

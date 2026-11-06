@@ -31,6 +31,11 @@ export function LoginPage() {
             setError('Preencha e-mail e senha.')
             return
         }
+        // Só formato (tem algo@algo.algo). Não é segurança: é para pegar erro de digitação cedo.
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+            setError('Digite um e-mail válido.')
+            return
+        }
         setError('')
         setSubmitting(true)
         try {

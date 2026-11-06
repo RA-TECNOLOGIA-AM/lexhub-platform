@@ -1,6 +1,6 @@
 import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
-import { catalog, me, pendencias, protocolo } from './mock-data.ts'
+import { catalog, me, pendencias, protocolo, testUsers} from './mock-data.ts'
 
 // Simula a rede: um pouco de espera faz o "carregando" aparecer de verdade.
 const LATENCY_MS = 300
@@ -28,10 +28,13 @@ function checkAccess(dashboardKey: string, unit: string) {
 
 export function createMockClient(): DataClient {
     return {
-        // Qualquer e-mail e senha entram, exceto a senha "errada" (para testar o erro).
+           // Confere contra os usuários de teste do mock-data.ts (o Supabase fará isso de verdade).
         async signIn(email, password) {
             await wait()
-            if (password === 'errada') {
+            const ok = testUsers.some(
+                (u) => u.email === email.trim().toLowerCase() && u.password === password,
+            )
+            if (!ok) {
                 throw new DataError(401, 'E-mail ou senha incorretos.')
             }
             sessionStorage.setItem(SESSION_KEY, email)

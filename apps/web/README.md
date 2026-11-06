@@ -28,14 +28,17 @@ Se o editor acusar erro que o `npx tsc -b` não acusa: `Ctrl+Shift+P` → **Type
 
 ## Login
 
-Por enquanto é **fictício** (`mockClient.ts`), sem banco e sem usuário cadastrado:
+Por enquanto é **fictício**: o `mockClient.ts` confere e-mail e senha contra a lista `testUsers` do `mock-data.ts`
+(sem banco; esses usuários só existem no navegador).
 
-| Para testar | E-mail | Senha |
-|---|---|---|
-| Login com sucesso | qualquer | qualquer uma, menos `errada` |
-| Login com erro (401) | qualquer | `errada` |
+| Para testar | E-mail | Senha | Resultado |
+|---|---|---|---|
+| Login com sucesso | `controller@lexgroup.com.br` | `lexhub123` | entra (o e-mail ignora maiúsculas) |
+| Credencial errada (401) | outro e-mail ou outra senha | — | "E-mail ou senha incorretos." |
+| E-mail mal formatado | ex.: `abc` | qualquer | "Digite um e-mail válido." (validado na tela) |
+| Campos vazios | — | — | "Preencha e-mail e senha." |
 
-O usuário exibido é sempre o do `mock-data.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`):
+Para outro usuário de teste, acrescente na lista `testUsers`. O usuário exibido depois de entrar é sempre o `me` do `mock-data.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`):
 sobrevive ao F5 e some ao fechar a aba. Para deslogar pelo console: `sessionStorage.clear()` + F5.
 
 Estados do login: `/login?convite=abc` e `/login?estado=sessao-expirada`.
@@ -91,7 +94,7 @@ telas  →  dataClient (interface DataClient)  →  mockClient  →  mock-data.t
 | `client.ts` | Interface `DataClient` (sessão + dados) e escolha da implementação por `VITE_DATA_SOURCE` |
 | `types.ts` | Formato das respostas (campos da v1 + bloco `meta` da V2) |
 | `mockClient.ts` | Implementação atual: lê o mock, espera 300 ms, devolve 401 sem sessão e 403 fora das unidades liberadas |
-| `mock-data.ts` | Dados fictícios (porte do `template/mock-data.js`) |
+| `mock-data.ts` | Dados fictícios (porte do `template/mock-data.js`) e usuários de teste (`testUsers`) |
 | `errors.ts` | `DataError` com o status HTTP (401, 403...) |
 
 Para trocar pela API real: escrever um `apiClient.ts` que implemente `DataClient` e escolhê-lo em `createDataClient()`.
