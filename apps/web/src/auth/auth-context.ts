@@ -4,8 +4,11 @@ import type { Me } from '../data/types.ts'
 export type AuthValue = {
     me: Me | null // null = ninguém logado
     loading: boolean // true enquanto confere se já existe sessão (ao abrir o app)
+    // false depois de um 'Sair' do usuário: aí o próximo login vai para o hub, não para a página anterior
+    rememberLocation: boolean
     signIn(email: string, password: string): Promise<void>
-    signOut(): Promise<void>
+    // returnHere: true quando a sessão caiu (401) e o usuário deve voltar para a mesma página depois de entrar
+    signOut(options?: { returnHere?: boolean }): Promise<void>
 }
 
 export const AuthContext = createContext<AuthValue | null>(null)

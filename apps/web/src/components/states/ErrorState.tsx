@@ -31,7 +31,7 @@ export function ErrorState({ error, backTo }: ErrorStateProps) {
     // 401: a sessão acabou. Sair limpa a sessão e o porteiro (RequireAuth) leva ao /login.
     const action =
         error.status === 401 ? (
-            <button className="btn btn-primary" type="button" onClick={signOut}>
+            <button className="btn btn-primary" type="button" onClick={() => signOut({ returnHere: true })}>
                 Entrar de novo
             </button>
         ) : backTo ? (

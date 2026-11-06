@@ -7,7 +7,7 @@ import { AuthContext } from './auth-context.ts'
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [me, setMe] = useState<Me | null>(null)
     const [loading, setLoading] = useState(true)
-
+    const [rememberLocation, setRememberLocation] = useState(true)
     // Ao abrir o app (ou dar F5): já existe sessão? getMe() responde ou dá 401.
     useEffect(() => {
         let ignore = false
@@ -29,13 +29,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function signIn(email: string, password: string) {
         await dataClient.signIn(email, password)
+        setRememberLocation(true)
         setMe(await dataClient.getMe())
     }
 
-    async function signOut() {
+    // Padrão: 'Sair' do usuário (o próximo login vai para o hub).
+    // returnHere: true = sessão caiu (401); o próximo login volta para a mesma página.
+    async function signOut({ returnHere = false }: { returnHere?: boolean } = {}) {
         await dataClient.signOut()
+        setRememberLocation(returnHere)
         setMe(null)
     }
-
-    return <AuthContext value={{ me, loading, signIn, signOut }}>{children}</AuthContext>
-}
+    return <AuthContext value={{ me, loading, rememberLocation, signIn, signOut }}>{children}</AuthContext>}

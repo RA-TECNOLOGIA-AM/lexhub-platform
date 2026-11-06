@@ -97,7 +97,7 @@ export function AppLayout() {
                         type="button"
                         aria-label="Sair"
                         style={{ width: 'auto', marginLeft: 'auto', padding: 8 }}
-                        onClick={signOut}
+                        onClick={() => signOut()}
                     >
                         <Icon name="logout" />
                     </button>
