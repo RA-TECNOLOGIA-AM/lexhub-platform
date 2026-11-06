@@ -43,10 +43,15 @@ export const catalog: DashboardCatalog = {
             desc: 'Pendências abertas, resolvidas e tempo de resolução.',
             units: ['NG'], source: 'LexPre', synced_at: minAgo(4), max_delay_min: 60,
         },
+        {
+            key: 'peticionamento', title: 'Peticionamento', area: 'Operação jurídica',
+            desc: 'Petições elaboradas, prazos e devoluções do setor Peticionamento.',
+            units: ['NG'], source: 'LexPre', synced_at: minAgo(4), max_delay_min: 60,
+        },
     ],
     // Só para comunicar o roteiro no hub; não são clicáveis.
     upcoming: [
-        { title: 'Peticionamento', area: 'Operação jurídica' },
+        // { title: 'Peticionamento', area: 'Operação jurídica' },
         { title: 'Organização de documentos', area: 'Operação jurídica' },
         { title: 'Execução', area: 'Execução e recursal' },
         { title: 'Comercial', area: 'Comercial' },
