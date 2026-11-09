@@ -46,7 +46,7 @@ Cores dos gráficos: uma série = `--accent`; séries extras (empilhado, anos) e
 tokens, com o ano atual sempre em `--accent`. Cores que precisam ser distinguidas diferem também
 em luminosidade.
 
-## 2. Contrato de dados (`data/types.ts`)
+## 2. Contrato de dados (`types/index.ts`)
 
 Nomes da v1 (LexPre) para a conferência v2 × v1 campo a campo; o que é novo da V2 fica agrupado.
 
@@ -126,7 +126,7 @@ controller de teste recebe `can_export` e `can_see_commission` verdadeiros em to
 - `DataTable` — tabela genérica a partir de colunas `{ header; render; align? }`.
 - `PeriodPicker`, `FilterPanel`, `ActiveFilters` (ver seção 4).
 
-**`dashboards/protocolo/`**
+**`pages/dashboards/protocolo/`**
 
 - `ProtocoloContent.tsx` — só monta os blocos 01–07 com os módulos.
 - `view.ts` — funções puras: lista de KPIs a partir de `stats`/`metas`; séries do mês a mês por ano; tom do "parado há".
