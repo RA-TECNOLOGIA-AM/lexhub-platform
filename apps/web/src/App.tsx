@@ -6,6 +6,15 @@ import { AppLayout } from './components/AppLayout.tsx'
 import { DashboardPage } from './pages/DashboardPage.tsx'
 import { HubPage } from './pages/HubPage.tsx'
 import { LoginPage } from './pages/LoginPage.tsx'
+import { NAV_SECTIONS } from './navigation.ts'
+import { ComingSoonPage } from './pages/ComingSoonPage.tsx'
+import type { ReactNode } from 'react'
+import { MembersPage } from './pages/members/MembersPage.tsx'
+
+// Páginas do menu que já têm conteúdo; as outras abrem a página-base (ComingSoonPage).
+const PAGES: Record<string, ReactNode> = {
+    membros: <MembersPage />,
+}
 
 // Endereço desconhecido: vai para o hub da organização de quem está logado.
 function GoToHub() {
@@ -23,6 +32,16 @@ function App() {
                         <Route element={<AppLayout />}>
                             <Route path="/:org/dashboards" element={<HubPage />} />
                             <Route path="/:org/:unit/dashboards/:dashboardKey" element={<DashboardPage />} />
+                            {/* Páginas do menu (exceto Dashboards, que já tem as rotas acima). */}
+                            {NAV_SECTIONS.flatMap((s) => s.items)
+                                .filter((item) => item.key !== 'dashboards')
+                                .map((item) => (
+                                    <Route
+                                        key={item.key}
+                                        path={item.route}
+                                        element={PAGES[item.key] ?? <ComingSoonPage item={item} />}
+                                    />
+                                ))}
                         </Route>
                         <Route path="*" element={<GoToHub />} />
                     </Route>

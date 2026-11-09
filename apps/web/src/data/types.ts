@@ -7,6 +7,7 @@ export type User = {
     roleLabel: string
     canExport: boolean
     canSeeCommission: boolean
+    platformStaff: boolean // equipe RA: vê a seção "Plataforma" (Clientes)
 }
 
 export type Org = { slug: string; name: string; sub: string }
@@ -125,3 +126,21 @@ export type PendenciasResponse = {
         comissao: number
     }[]
 }
+// --- Membros ---
+export type RoleKey = 'owner' | 'admin' | 'gestor' | 'colaborador' | 'leitor'
+// Banco: invited / active / disabled. 'requested' = pediu acesso e espera aprovação (novo na V2).
+export type MemberStatus = 'active' | 'invited' | 'requested' | 'disabled'
+
+export type Member = {
+    id: string
+    name: string | null // null = convite ainda não aceito (mostra o e-mail no lugar)
+    email: string
+    role: RoleKey | null // null = sem papel (pedido ainda não aprovado)
+    units: string[] // códigos ('NG', 'LA_AM'...); ['*'] = todas as unidades
+    team: string | null
+    status: MemberStatus
+    note: string | null // linha de baixo, quando não é o e-mail ("Convidado por Ana Ribeiro há 2 dias")
+    security: string | null // 'MFA ativo', 'Google'...
+}
+
+export type MembersResponse = { members: Member[]; seats: { used: number; total: number } }

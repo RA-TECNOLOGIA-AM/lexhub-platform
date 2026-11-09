@@ -1,6 +1,6 @@
 import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
-import { catalog, me, pendenciasFor, protocoloFor, testUsers, defaultFavorites } from './mock/index.ts'
+import { catalog, me, pendenciasFor, protocoloFor, testUsers, defaultFavorites, members } from './mock/index.ts'
 import type { DashboardQuery, Meta } from './types.ts'
 
 // Simula a rede: um pouco de espera faz o "carregando" aparecer de verdade.
@@ -73,6 +73,12 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             return copy(catalog)
+        },
+
+        async listMembers() {
+            await wait()
+            requireSession()
+            return copy(members)
         },
 
         async listFavorites() {

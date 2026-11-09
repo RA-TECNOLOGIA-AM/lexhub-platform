@@ -76,6 +76,39 @@ const PATHS = {
     arrowLeft: <path d="M19 12H5M12 19l-7-7 7-7" />,
     logout: <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
     star: <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />,
+    shield: (
+        <>
+            <path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z" />
+            <path d="M9.5 12l2 2 3.5-3.5" />
+        </>
+    ),
+    plug: (
+        <>
+            <path d="M9 7V3M15 7V3" />
+            <path d="M6 7h12v4a6 6 0 0 1-12 0V7z" />
+            <path d="M12 17v4" />
+        </>
+    ),
+    clock: (
+        <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+        </>
+    ),
+    receipt: (
+        <>
+            <path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z" />
+            <path d="M9 8h6M9 12h6" />
+        </>
+    ),
+    building: (
+        <>
+            <path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />
+            <path d="M16 9h2a2 2 0 0 1 2 2v10" />
+            <path d="M8 7h4M8 11h4M8 15h4M3 21h18" />
+        </>
+    ),
+    plus: <path d="M12 5v14M5 12h14" />,
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof PATHS

@@ -69,3 +69,43 @@
 .fav-btn[aria-pressed='true'] svg {
     fill: #e5a100;
 }
+/* Topo das páginas do menu: título à esquerda, ações à direita (quebram no celular). */
+.page-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+}
+.page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+/* Membros: pessoa (avatar + nome) e selos do protótipo que o tokens.css não tem. */
+.person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 220px;
+}
+.av.waiting {
+    background: var(--warn-bg);
+    color: var(--warn);
+}
+.pro {
+    background: #f3ecfc;
+    color: #6d3fc0;
+}
+/* Barra de filtros: a busca cresce; os selects têm largura fixa e quebram no celular. */
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.filter-grow {
+    flex: 1 1 220px;
+}
+.filter {
+    flex: 0 1 180px;
+}

@@ -1,15 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/auth-context.ts'
-import { Icon, type IconName } from './Icon.tsx'
-
-// Administração no MVP: só leitura, ainda "em breve".
-const ADMIN_SOON: { label: string; icon: IconName }[] = [
-    { label: 'Membros', icon: 'users' },
-    { label: 'Acesso', icon: 'key' },
-    { label: 'Unidades e fontes', icon: 'db' },
-    { label: 'Auditoria', icon: 'history' },
-]
+import { Icon } from './Icon.tsx'
+import { activeItem, NAV_SECTIONS, pathOf } from '../navigation.ts'
 
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
@@ -17,10 +10,10 @@ export function AppLayout() {
     const { pathname } = useLocation()
     const { me, signOut } = useAuth()
 
-    // Hub e dashboards ficam todos sob "Dashboards" na barra lateral.
-    const inDashboards = pathname.includes('/dashboards')
+    // Página atual: marca o item do menu e monta o breadcrumb ("Administração / Membros").
+    const current = me ? activeItem(pathname, me.org.slug) : null
     const dashboardKey = pathname.split('/dashboards/')[1]
-    const crumb = dashboardKey ? `Dashboards / ${dashboardKey}` : 'Dashboards'
+    const crumb = [current?.section.title, current?.item.label, dashboardKey].filter(Boolean).join(' / ')
 
     // Menu do celular: fecha com Esc ou clicando fora da barra lateral.
     useEffect(() => {
@@ -65,24 +58,22 @@ export function AppLayout() {
                     </span>
                 </div>
 
-                <span className="side-label">Espaço de trabalho</span>
-                <Link
-                    className="nav"
-                    to={`/${org.slug}/dashboards`}
-                    aria-current={inDashboards ? 'page' : undefined}
-                    onClick={closeMenu}
-                >
-                    <Icon name="grid" />
-                    Dashboards
-                </Link>
-
-                <span className="side-label">Administração · somente leitura</span>
-                {ADMIN_SOON.map((item) => (
-                    <a key={item.label} className="nav" aria-disabled="true" tabIndex={-1}>
-                        <Icon name={item.icon} />
-                        {item.label}
-                        <span className="soon">em breve</span>
-                    </a>
+                {NAV_SECTIONS.filter((section) => !section.platformOnly || user.platformStaff).map((section) => (
+                    <div key={section.title} className="stack" style={{ gap: 2 }}>
+                        <span className="side-label">{section.title}</span>
+                        {section.items.map((item) => (
+                            <Link
+                                key={item.key}
+                                className="nav"
+                                to={pathOf(item, org.slug)}
+                                aria-current={current?.item.key === item.key ? 'page' : undefined}
+                                onClick={closeMenu}
+                            >
+                                <Icon name={item.icon} />
+                                {item.label}
+                            </Link>
+                        ))}
+                    </div>
                 ))}
 
                 <div className="side-user">

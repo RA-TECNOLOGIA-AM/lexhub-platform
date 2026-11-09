@@ -2,7 +2,14 @@ import type { Me } from '../types.ts'
 
 // Quem aparece logado no mock (qualquer usuário de teste vira este).
 export const me: Me = {
-    user: { name: 'Luís Tápia', initials: 'LT', roleLabel: 'Controller · NG', canExport: true, canSeeCommission: true },
+    user: {
+        name: 'Luís Tápia',
+        initials: 'LT',
+        roleLabel: 'Dev · RA',
+        canExport: true,
+        canSeeCommission: true,
+        platformStaff: true,
+    },
     org: { slug: 'lexgroup', name: 'LexGroup', sub: 'Piloto V2 · 1 unidade' },
     units: [
         { code: 'NG', name: 'Nicolas Gomes' },

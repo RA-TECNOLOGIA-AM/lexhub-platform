@@ -3,7 +3,14 @@ import { env, required } from './env.ts'
 import { createHttp } from './http.ts'
 import { createMockClient } from './mockClient.ts'
 import { createSupabaseAuth } from './supabase.ts'
-import type { DashboardCatalog, DashboardQuery, Me, PendenciasResponse, ProtocoloResponse } from './types.ts'
+import type {
+    DashboardCatalog,
+    DashboardQuery,
+    Me,
+    PendenciasResponse,
+    ProtocoloResponse,
+    MembersResponse,
+} from './types.ts'
 
 // A única porta de entrada para dados. As telas só conhecem esta interface;
 // trocar o mock pela API real = escrever outra implementação e mudar createDataClient.
@@ -15,6 +22,7 @@ export interface DataClient {
 
     listDashboards(org: string): Promise<DashboardCatalog>
     listFavorites(org: string): Promise<string[]>
+    listMembers(org: string): Promise<MembersResponse>
     setFavorite(org: string, dashboardKey: string, favorite: boolean): Promise<void>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>
