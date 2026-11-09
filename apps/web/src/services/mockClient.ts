@@ -8,7 +8,13 @@ import {
     clients,
     createMembersStore,
     defaultFavorites,
+    emptyCatalog,
     me,
+    meFor,
+    onboardingAccess,
+    onboardingAudit,
+    onboardingBilling,
+    onboardingMembers,
     pendenciasFor,
     protocoloFor,
     testUsers,
@@ -35,6 +41,13 @@ function requireSession() {
     if (sessionStorage.getItem(SESSION_KEY) === null) {
         throw new DataError(401, 'Sessão expirada ou inexistente')
     }
+}
+
+// Mesma regra da API: organização de que a pessoa não faz parte = 403.
+// Devolve true para a organização principal (LexGroup), a única com os dados completos do mock.
+function requireOrg(org: string): boolean {
+    if (!meFor(org)) throw new DataError(403, 'Você não faz parte desta organização')
+    return org === me.org.slug
 }
 
 // Mesma regra da API: dashboard fora das unidades liberadas = 403.
@@ -78,27 +91,31 @@ export function createMockClient(): DataClient {
             sessionStorage.removeItem(SESSION_KEY)
         },
 
-        async getMe() {
+        async getMe(org) {
             await wait()
             requireSession()
-            return copy(me)
+            const found = meFor(org ?? me.org.slug)
+            if (!found) throw new DataError(403, 'Você não faz parte desta organização')
+            return copy(found)
         },
 
-        async listDashboards() {
+        async listDashboards(org) {
             await wait()
             requireSession()
-            return copy(catalog)
+            return copy(requireOrg(org) ? catalog : emptyCatalog)
         },
 
-        async listMembers() {
+        async listMembers(org) {
             await wait()
             requireSession()
-            return memberStore.list()
+            if (requireOrg(org)) return memberStore.list()
+            return onboardingMembers(sessionStorage.getItem(SESSION_KEY) ?? '', me.user.name)
         },
 
-        async inviteMembers(_org, invite) {
+        async inviteMembers(org, invite) {
             await wait()
             requireSession()
+            if (!requireOrg(org)) throw new DataError(400, 'No mock, convites só funcionam na LexGroup.')
             memberStore.invite(invite)
         },
 
@@ -116,22 +133,22 @@ export function createMockClient(): DataClient {
         },
 
         // Assentos lidos de Membros: convidar alguém muda o número aqui também.
-        async getBilling() {
+        async getBilling(org) {
             await wait()
             requireSession()
-            return billingFor(memberStore.list().seats)
+            return requireOrg(org) ? billingFor(memberStore.list().seats) : copy(onboardingBilling)
         },
 
-        async getAccess() {
+        async getAccess(org) {
             await wait()
             requireSession()
-            return copy(access)
+            return copy(requireOrg(org) ? access : onboardingAccess)
         },
 
-        async getAudit() {
+        async getAudit(org) {
             await wait()
             requireSession()
-            return copy(audit)
+            return copy(requireOrg(org) ? audit : onboardingAudit)
         },
 
         // Mesma regra da API: só a equipe RA (platformStaff) vê os clientes.

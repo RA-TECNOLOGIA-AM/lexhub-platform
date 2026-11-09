@@ -1,4 +1,4 @@
-import type { InvoiceStatus, Plan, PlanKey } from '../../../types/index.ts'
+import type { ClientPlan, InvoiceStatus, Plan } from '../../../types/index.ts'
 import { fmt } from '../../../lib/format.ts'
 
 // Módulo: as regras de texto e cor da tela de cobrança, sem React (testadas em billingView.test.ts).
@@ -49,7 +49,13 @@ const INVOICE_STATUS: Record<InvoiceStatus, { label: string; badge: string }> = 
 export const invoiceStatusOf = (status: InvoiceStatus) => INVOICE_STATUS[status]
 
 // Texto do botão de um plano; null = é o plano atual (mostra o selo "Seu plano").
-export function planAction(plan: Plan, current: PlanKey): string | null {
+export function planAction(plan: Plan, current: ClientPlan): string | null {
     if (plan.key === current) return null
     return plan.custom ? 'Falar com vendas' : `Mudar para ${plan.name}`
+}
+
+// Título do card do topo: "Plano Pro" ou, antes de assinar, "Em implantação".
+export function planTitle(current: ClientPlan, plans: Plan[]): string {
+    if (current === 'onboarding') return 'Em implantação'
+    return `Plano ${plans.find((p) => p.key === current)?.name ?? current}`
 }

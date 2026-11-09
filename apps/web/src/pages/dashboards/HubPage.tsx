@@ -8,6 +8,7 @@ import { dataClient } from '../../services/client.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
 import { ErrorState } from '../../components/states/ErrorState.tsx'
 import { LoadingState } from '../../components/states/LoadingState.tsx'
+import { StateMessage } from '../../components/states/StateMessage.tsx'
 import { useFavorites } from '../../hooks/useFavorites.ts'
 
 export function HubPage() {
@@ -40,7 +41,12 @@ export function HubPage() {
     const favs = dashboards.filter((d) => favorites.isFavorite(d.key))
     const others = dashboards.filter((d) => !favorites.isFavorite(d.key))
     const areas = [...new Set(others.map((d) => d.area))]
-    const count = dashboards.length === 1 ? '1 dashboard liberado' : `${dashboards.length} dashboards liberados`
+    const count =
+        dashboards.length === 0
+            ? 'Nenhum dashboard liberado'
+            : dashboards.length === 1
+              ? '1 dashboard liberado'
+              : `${dashboards.length} dashboards liberados`
 
     // Um card do hub; usado nas duas seções.
     const card = (d: DashboardSummary) => (
@@ -67,6 +73,13 @@ export function HubPage() {
             </section>
 
             <div className="stack" style={{ gap: 22 }}>
+                {/* Organização sem nenhum dashboard (ex.: em implantação): explica em vez de mostrar a página vazia. */}
+                {all.length === 0 && (
+                    <StateMessage icon="inbox" title="Nenhum dashboard liberado ainda">
+                        Eles aparecem aqui quando as fontes de dados estiverem ligadas e um admin liberar dashboards
+                        para a sua equipe.
+                    </StateMessage>
+                )}
                 {favs.length > 0 && <CardSection title="Favoritos">{favs.map(card)}</CardSection>}
                 {areas.map((area) => (
                     <CardSection key={area} title={area}>

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { dataClient } from '../services/client.ts'
 import type { Me } from '../types/index.ts'
 import { AuthContext } from './auth-context.ts'
@@ -40,5 +40,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRememberLocation(returnHere)
         setMe(null)
     }
-    return <AuthContext value={{ me, loading, rememberLocation, signIn, signOut }}>{children}</AuthContext>
+
+    // useCallback: a mesma função entre renderizações, para o OrgScope poder usá-la num useEffect
+    // sem buscar o "me" de novo a cada renderização.
+    const switchOrg = useCallback(async (slug: string) => {
+        setMe(await dataClient.getMe(slug))
+    }, [])
+
+    return <AuthContext value={{ me, loading, rememberLocation, signIn, signOut, switchOrg }}>{children}</AuthContext>
 }

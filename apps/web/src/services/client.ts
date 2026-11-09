@@ -23,7 +23,9 @@ export interface DataClient {
     // Sessão. Sem sessão, os outros métodos rejeitam com DataError 401.
     signIn(email: string, password: string): Promise<void>
     signOut(): Promise<void>
-    getMe(): Promise<Me>
+    // org = slug da organização ativa (vem da URL); sem org, a organização padrão da pessoa.
+    // Organização de que a pessoa não faz parte: rejeita com 403.
+    getMe(org?: string): Promise<Me>
 
     listDashboards(org: string): Promise<DashboardCatalog>
     listFavorites(org: string): Promise<string[]>

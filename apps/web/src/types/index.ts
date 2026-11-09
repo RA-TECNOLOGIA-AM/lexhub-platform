@@ -14,8 +14,9 @@ export type Org = { slug: string; name: string; sub: string }
 
 export type Unit = { code: string; name: string }
 
-// Quem está logado, em qual organização e quais unidades enxerga.
-export type Me = { user: User; org: Org; units: Unit[] }
+// Quem está logado, a organização ativa (a da URL) e as unidades que enxerga nela.
+// orgs = todas as organizações de que a pessoa faz parte (lista do seletor na barra lateral).
+export type Me = { user: User; org: Org; units: Unit[]; orgs: Org[] }
 
 export type DashboardSummary = {
     key: string
@@ -181,7 +182,7 @@ export type Invoice = {
 
 export type BillingResponse = {
     current: {
-        plan: PlanKey
+        plan: ClientPlan // 'onboarding' = em implantação, ainda sem plano assinado
         status: 'active' | 'past_due' | 'canceled'
         renewsOn: string // 'YYYY-MM-DD'
         paymentMethods: string[] // ['boleto', 'PIX']

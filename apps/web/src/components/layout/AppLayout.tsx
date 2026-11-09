@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { Icon } from '../ui/Icon.tsx'
+import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { activeItem, NAV_SECTIONS, pathOf } from '../../navigation.ts'
 
 export function AppLayout() {
@@ -50,13 +51,7 @@ export function AppLayout() {
                     <span className="brand-mark">LH</span>
                     <span>LexHub</span>
                 </div>
-                <div className="org">
-                    <span className="org-mark">LG</span>
-                    <span>
-                        <span className="org-name">{org.name}</span>
-                        <span className="org-sub">{org.sub}</span>
-                    </span>
-                </div>
+                <OrgSwitcher current={org} orgs={me.orgs} canCreate={user.platformStaff} onNavigate={closeMenu} />
 
                 {NAV_SECTIONS.filter((section) => !section.platformOnly || user.platformStaff).map((section) => (
                     <div key={section.title} className="stack" style={{ gap: 2 }}>

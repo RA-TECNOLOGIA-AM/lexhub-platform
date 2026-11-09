@@ -3,7 +3,7 @@ import { dayMonthLabel, joinPt, usagePct, usageTone } from './billingView.ts'
 
 type CurrentPlanCardProps = {
     current: BillingResponse['current']
-    planName: string
+    title: string // "Plano Pro" ou "Em implantação"
     usage: BillingResponse['usage']
 }
 
@@ -14,14 +14,14 @@ const STATUS = {
 }
 
 // Módulo: o card do topo. Plano atual, renovação e uma barra por limite do plano.
-export function CurrentPlanCard({ current, planName, usage }: CurrentPlanCardProps) {
+export function CurrentPlanCard({ current, title, usage }: CurrentPlanCardProps) {
     const status = STATUS[current.status]
     return (
         <section className="card card-pad stack" aria-label="Plano atual">
             <div className="row" style={{ justifyContent: 'space-between' }}>
                 <div className="row" style={{ gap: 8 }}>
                     <h2 className="h2" style={{ color: 'var(--text)' }}>
-                        Plano {planName}
+                        {title}
                     </h2>
                     <span className={status.badge}>{status.label}</span>
                 </div>

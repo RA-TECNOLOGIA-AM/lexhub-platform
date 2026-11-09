@@ -1,10 +1,10 @@
 import { Icon } from '../../../components/ui/Icon.tsx'
-import type { Plan, PlanKey } from '../../../types/index.ts'
+import type { ClientPlan, Plan } from '../../../types/index.ts'
 import { planAction, priceLabel } from './billingView.ts'
 
 type PlanCardProps = {
     plan: Plan
-    current: PlanKey
+    current: ClientPlan
     onAction: (label: string) => void // clique no botão (por enquanto só mostra um aviso)
 }
 

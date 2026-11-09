@@ -2,11 +2,12 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { useAuth } from './contexts/auth-context.ts'
 import { AuthProvider } from './contexts/AuthProvider.tsx'
 import { RequireAuth } from './components/auth/RequireAuth.tsx'
+import { OrgScope } from './components/auth/OrgScope.tsx'
 import { AppLayout } from './components/layout/AppLayout.tsx'
 import { DashboardPage } from './pages/dashboards/DashboardPage.tsx'
 import { HubPage } from './pages/dashboards/HubPage.tsx'
 import { LoginPage } from './pages/LoginPage.tsx'
-import { NAV_SECTIONS } from './navigation.ts'
+import { NAV_SECTIONS, type NavItem } from './navigation.ts'
 import { ComingSoonPage } from './pages/ComingSoonPage.tsx'
 import type { ReactNode } from 'react'
 import { MembersPage } from './pages/admin/members/MembersPage.tsx'
@@ -24,6 +25,12 @@ const PAGES: Record<string, ReactNode> = {
     clientes: <ClientsPage />,
 }
 
+// Páginas do menu (exceto Dashboards, que tem rotas próprias). As de organização ('/:org/admin/...')
+// ficam dentro do OrgScope com o caminho relativo; as da plataforma ('/plataforma/...') ficam fora.
+const ORG_PREFIX = '/:org/'
+const MENU_ITEMS = NAV_SECTIONS.flatMap((s) => s.items).filter((item) => item.key !== 'dashboards')
+const pageOf = (item: NavItem) => PAGES[item.key] ?? <ComingSoonPage item={item} />
+
 // Endereço desconhecido: vai para o hub da organização de quem está logado.
 function GoToHub() {
     const { me } = useAuth()
@@ -38,18 +45,22 @@ function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route element={<RequireAuth />}>
                         <Route element={<AppLayout />}>
-                            <Route path="/:org/dashboards" element={<HubPage />} />
-                            <Route path="/:org/:unit/dashboards/:dashboardKey" element={<DashboardPage />} />
-                            {/* Páginas do menu (exceto Dashboards, que já tem as rotas acima). */}
-                            {NAV_SECTIONS.flatMap((s) => s.items)
-                                .filter((item) => item.key !== 'dashboards')
-                                .map((item) => (
+                            {/* Tudo de uma organização: o OrgScope garante que a ativa é a da URL. */}
+                            <Route path="/:org" element={<OrgScope />}>
+                                <Route index element={<Navigate to="dashboards" replace />} />
+                                <Route path="dashboards" element={<HubPage />} />
+                                <Route path=":unit/dashboards/:dashboardKey" element={<DashboardPage />} />
+                                {MENU_ITEMS.filter((item) => item.route.startsWith(ORG_PREFIX)).map((item) => (
                                     <Route
                                         key={item.key}
-                                        path={item.route}
-                                        element={PAGES[item.key] ?? <ComingSoonPage item={item} />}
+                                        path={item.route.slice(ORG_PREFIX.length)}
+                                        element={pageOf(item)}
                                     />
                                 ))}
+                            </Route>
+                            {MENU_ITEMS.filter((item) => !item.route.startsWith(ORG_PREFIX)).map((item) => (
+                                <Route key={item.key} path={item.route} element={pageOf(item)} />
+                            ))}
                         </Route>
                         <Route path="*" element={<GoToHub />} />
                     </Route>

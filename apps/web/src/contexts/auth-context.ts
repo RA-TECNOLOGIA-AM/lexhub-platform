@@ -9,6 +9,8 @@ export type AuthValue = {
     signIn(email: string, password: string): Promise<void>
     // returnHere: true quando a sessão caiu (401) e o usuário deve voltar para a mesma página depois de entrar
     signOut(options?: { returnHere?: boolean }): Promise<void>
+    // Troca a organização ativa (busca o "me" dela). Rejeita se a pessoa não faz parte (403).
+    switchOrg(slug: string): Promise<void>
 }
 
 export const AuthContext = createContext<AuthValue | null>(null)

@@ -10,6 +10,7 @@ import { useAsync } from '../../../hooks/useAsync.ts'
 import { CurrentPlanCard } from './CurrentPlanCard.tsx'
 import { invoiceColumns } from './invoiceColumns.tsx'
 import { PlanCard } from './PlanCard.tsx'
+import { planTitle } from './billingView.ts'
 
 // Mudar de plano e baixar nota ainda não existem: os botões aparecem e explicam isso.
 const SOON = 'ainda não está disponível. Fale com a equipe RA.'
@@ -23,7 +24,6 @@ export function BillingPage() {
     if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
 
-    const currentPlan = data.plans.find((p) => p.key === data.current.plan)
     return (
         <>
             <PageHeader
@@ -34,7 +34,7 @@ export function BillingPage() {
                 {notice && <Notice message={notice} onClose={() => setNotice(null)} />}
                 <CurrentPlanCard
                     current={data.current}
-                    planName={currentPlan?.name ?? data.current.plan}
+                    title={planTitle(data.current.plan, data.plans)}
                     usage={data.usage}
                 />
                 <div className="plan-grid">

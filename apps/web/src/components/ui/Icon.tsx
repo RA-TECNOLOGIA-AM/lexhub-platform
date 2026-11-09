@@ -111,6 +111,7 @@ const PATHS = {
     plus: <path d="M12 5v14M5 12h14" />,
     check: <path d="M5 12.5l4.5 4.5L19 7" />,
     download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
+    chevrons: <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />,
     close: <path d="M6 6l12 12M18 6L6 18" />,
 } satisfies Record<string, ReactNode>
 

@@ -37,7 +37,7 @@ export function createApiClient({ auth, http }: { auth: SupabaseClient; http: Ht
             await auth.auth.signOut()
         },
 
-        getMe: () => http.get<Me>('/me'),
+        getMe: (org) => http.get<Me>(org ? `/me?org=${encodeURIComponent(org)}` : '/me'),
         listDashboards: (org) => http.get<DashboardCatalog>(`/orgs/${org}/dashboards`),
         listMembers: (org) => http.get<MembersResponse>(`/orgs/${org}/members`),
         async inviteMembers(org, invite) {

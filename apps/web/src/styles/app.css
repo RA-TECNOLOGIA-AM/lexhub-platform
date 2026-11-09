@@ -317,3 +317,45 @@
     font-size: var(--fs-md);
     color: var(--text-2);
 }
+
+/* Seletor de organização (barra lateral): o bloco .org vira botão e abre a lista logo abaixo. */
+.org-switch {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+button.org {
+    width: 100%;
+    border: 1px solid #2a313b;
+    color: #fff;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+button.org:hover {
+    border-color: var(--border-hover);
+}
+.org-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.org-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    border: 1px solid #2a313b;
+    border-radius: var(--r-md);
+    background: var(--side-hover);
+}
+.org-menu-label {
+    padding: 6px 8px 4px;
+    font-size: var(--fs-xs);
+    color: var(--side-label);
+}
+.org-menu .nav {
+    color: #e7e9ec;
+    white-space: normal;
+}
