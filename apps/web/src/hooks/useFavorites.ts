@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { dataClient } from '../data/client.ts'
+import { dataClient } from '../services/client.ts'
 import { withViewTransition } from '../lib/viewTransition.ts'
 
 // Módulo: os favoritos do usuário logado numa organização.

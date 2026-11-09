@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useSearchParams } from 'react-router'
-import { useAuth } from '../auth/auth-context.ts'
-import { Icon } from '../components/Icon.tsx'
-import { DataError } from '../data/errors.ts'
+import { useAuth } from '../contexts/auth-context.ts'
+import { Icon } from '../components/ui/Icon.tsx'
+import { DataError } from '../services/errors.ts'
 
 // MVP: e-mail + senha e entrada por convite (?convite=<token>). Google e MFA ficam para depois.
 // ?estado=sessao-expirada = veio de um 401 da API.

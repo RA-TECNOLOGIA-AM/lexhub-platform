@@ -1,4 +1,4 @@
-import { PageHeader } from '../components/PageHeader.tsx'
+import { PageHeader } from '../components/layout/PageHeader.tsx'
 import { StateMessage } from '../components/states/StateMessage.tsx'
 import type { NavItem } from '../navigation.ts'
 

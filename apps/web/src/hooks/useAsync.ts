@@ -1,5 +1,5 @@
 import { useEffect, useState, type DependencyList } from 'react'
-import { toDataError, type DataError } from '../data/errors.ts'
+import { toDataError, type DataError } from '../services/errors.ts'
 
 export type AsyncState<T> = {
     data: T | null // último resultado (fica na tela enquanto a próxima busca não chega)

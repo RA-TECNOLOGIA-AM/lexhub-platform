@@ -1,4 +1,4 @@
-import type { IconName } from './components/Icon.tsx'
+import type { IconName } from './components/ui/Icon.tsx'
 
 // Uma página do app: o item do menu, a rota e o texto do cabeçalho saem daqui.
 export type NavItem = {

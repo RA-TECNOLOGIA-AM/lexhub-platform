@@ -16,7 +16,7 @@ npm run dev
 ```
 
 Login de teste: `controller@lexgroup.com.br` / `lexhub123` (ver [Login](#login)).
-Não precisa da API nem do banco: com `VITE_DATA_SOURCE=mock` (o padrão), tudo vem de `src/data/mock/`.
+Não precisa da API nem do banco: com `VITE_DATA_SOURCE=mock` (o padrão), tudo vem de `src/services/mock/`.
 
 Abre em http://localhost:5173. É a porta que a API libera em `CORS_ORIGINS`; se ela estiver ocupada, o Vite usa a
 próxima (5174...) e as chamadas à API passam a ser recusadas por CORS.
@@ -57,7 +57,7 @@ configurações do usuário (`Preferences: Open User Settings (JSON)`):
 ## Login
 
 Por enquanto é **fictício**: o `mockClient.ts` confere e-mail e senha contra a lista `testUsers` de
-`data/mock/users.ts` (sem banco; esses usuários só existem no navegador).
+`services/mock/users.ts` (sem banco; esses usuários só existem no navegador).
 
 | Para testar             | E-mail                       | Senha       | Resultado                                     |
 | ----------------------- | ---------------------------- | ----------- | --------------------------------------------- |
@@ -67,7 +67,7 @@ Por enquanto é **fictício**: o `mockClient.ts` confere e-mail e senha contra a
 | Campos vazios           | —                            | —           | "Preencha e-mail e senha."                    |
 
 Para outro usuário de teste, acrescente na lista `testUsers`. O usuário exibido depois de entrar é sempre o `me`
-de `data/mock/users.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`): sobrevive ao F5 e some ao
+de `services/mock/users.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`): sobrevive ao F5 e some ao
 fechar a aba. Para simular sessão expirada: `sessionStorage.clear()` no console e trocar de unidade.
 
 Estados do login: `/login?convite=abc` e `/login?estado=sessao-expirada`.
@@ -83,9 +83,9 @@ No final, troca pelo Supabase Auth, com usuários de teste no projeto de staging
 | Sessão expirou (401, botão "Entrar de novo") | a mesma página em que estava |
 | Abriu um link direto sem estar logado        | a página do link             |
 
-- `auth/AuthProvider.tsx` guarda quem está logado (`me`) e oferece `signIn`/`signOut` via contexto; `useAuth()` lê.
+- `contexts/AuthProvider.tsx` guarda quem está logado (`me`) e oferece `signIn`/`signOut` via contexto; `useAuth()` lê.
   `signOut()` = Sair; `signOut({ returnHere: true })` = sessão expirada.
-- `auth/RequireAuth.tsx` é a rota "porteiro": sem sessão, manda para `/login` levando o endereço de origem (`from`),
+- `components/auth/RequireAuth.tsx` é a rota "porteiro": sem sessão, manda para `/login` levando o endereço de origem (`from`),
   exceto depois de um Sair.
 
 ## Rotas
@@ -109,36 +109,48 @@ módulo, e a variação entra como parâmetro (props, argumentos).
 
 ## Estrutura
 
+Pastas por tipo, como no LexHub v1: o nome da pasta diz o que tem dentro.
+
+- **Tela:** `pages/`. Dashboards em `pages/dashboards/`; telas da seção Administração do menu em `pages/admin/<tela>/`.
+- **Peça visual reaproveitada:** `components/<tipo>/` (`layout`, `dashboard`, `ui`, `auth`, `states`).
+- **Contexto React:** `contexts/`. **Porta de dados e mock:** `services/`. **Formato dos dados:** `types/`.
+
 ```
 src/
   main.tsx                 ponto de entrada: importa os CSS e desenha o <App />
   App.tsx                  tabela de rotas
-  auth/                    sessão: AuthProvider, useAuth() e o porteiro RequireAuth
+  navigation.ts            mapa do app: menu, breadcrumb e rotas leem daqui
   components/
-    AppLayout.tsx          barra lateral + cabeçalho (vem do template/app.js)
-    CardSection.tsx        bloco do hub: título + grade de cards (Favoritos e cada área)
-    DashboardCard.tsx      card de um dashboard no hub (link no título + estrela de favorito)
-    DashboardHeader.tsx    cabeçalho dos dashboards: voltar, título + unidade, selo, pílulas de unidade
-    PillGroup.tsx          grupo de pílulas-link (unidade no hub e no dashboard)
-    Freshness.tsx          selo "Atualizado há X" / "Fonte atrasada"
-    Kpi.tsx, Delta.tsx     indicador (com tone) e comparativo "▲ 8,2% vs. mês anterior"
-    KpiSection.tsx         bloco de KPIs com título ("No período", "Situação atual do setor")
-    Icon.tsx               ícones de traço do template
+    auth/RequireAuth.tsx   porteiro das rotas: sem sessão, manda para /login
+    layout/                AppLayout (barra lateral + cabeçalho), PageHeader (topo das páginas do menu)
+    dashboard/
+      CardSection.tsx      bloco do hub: título + grade de cards (Favoritos e cada área)
+      DashboardCard.tsx    card de um dashboard no hub (link no título + estrela de favorito)
+      DashboardHeader.tsx  cabeçalho dos dashboards: voltar, título + unidade, selo, pílulas de unidade
+      Freshness.tsx        selo "Atualizado há X" / "Fonte atrasada"
+      Kpi.tsx, Delta.tsx   indicador (com tone) e comparativo "▲ 8,2% vs. mês anterior"
+      KpiSection.tsx       bloco de KPIs com título ("No período", "Situação atual do setor")
+    ui/                    Icon (ícones do template), DataTable (tabela por colunas), PillGroup (pílulas-link)
     states/                StateMessage (base), ErrorState (por status), LoadingState (texto ou esqueleto)
-  dashboards/              cada dashboard como módulo (ver abaixo)
-  data/                    camada de dados (ver abaixo)
+  contexts/                sessão: AuthProvider e useAuth() (auth-context.ts)
   hooks/useAsync.ts        busca assíncrona: { data, error, loading }, refaz quando as deps mudam
   hooks/useFavorites.ts    favoritos do usuário: ready, isFavorite(key), toggle(key) (troca otimista)
   lib/format.ts            formatação pt-BR (números, R$, %, dias, "há X min")
   lib/viewTransition.ts    anima uma mudança de estado (View Transitions); sem suporte ou "reduzir movimento", só aplica
-  pages/                   telas das rotas (Login, Hub, DashboardPage)
+  services/                camada de dados (ver abaixo)
+  types/index.ts           formato das respostas (campos da v1 + bloco `meta` da V2)
+  pages/
+    LoginPage.tsx, ComingSoonPage.tsx ("Em construção")
+    dashboards/            HubPage, DashboardPage e cada dashboard como módulo (ver abaixo)
+    admin/members/         Membros: tabela, filtros na URL e painel de convite
+    admin/billing/         Plano e cobrança: plano atual com uso, planos e faturas
   styles/
     tokens.css             cópia inteira do template (não editar aqui)
     app.css                estilos novos do app React
 template/                  HTML estático de referência (não é usado pelo app)
 ```
 
-Testes ficam ao lado do arquivo testado, com o mesmo nome + `.test.ts` (ex.: `data/mock/protocolo.test.ts`).
+Testes ficam ao lado do arquivo testado, com o mesmo nome + `.test.ts` (ex.: `services/mock/protocolo.test.ts`).
 Por enquanto só funções puras (sem React), em ambiente Node.
 
 ## Hub
@@ -153,9 +165,9 @@ Por enquanto só funções puras (sem React), em ambiente Node.
 
 ## Dashboards
 
-Todo dashboard segue o mesmo roteiro, que fica no `dashboards/DashboardView.tsx`: buscar os dados da unidade e o
+Todo dashboard segue o mesmo roteiro, que fica no `pages/dashboards/DashboardView.tsx`: buscar os dados da unidade e o
 catálogo, mostrar carregando/erro, o cabeçalho e o conteúdo. Cada dashboard só informa o que é dele
-(contrato `DashboardModule` em `dashboards/types.ts`):
+(contrato `DashboardModule` em `pages/dashboards/types.ts`):
 
 ```ts
 export const pendencias: DashboardModule<PendenciasResponse> = {
@@ -167,9 +179,9 @@ export const pendencias: DashboardModule<PendenciasResponse> = {
 
 **Para criar um dashboard novo:**
 
-1. Pasta `dashboards/<nome>/` com o `<Nome>Content.tsx` (recebe `data`) e o `index.ts` (o módulo acima).
-2. Uma linha em `dashboards/registry.tsx`: `[<nome>.key]: toPage(<nome>)`.
-3. No mock: o tipo da resposta em `data/types.ts`, o `<nome>For(unit)` em `data/mock/` e o método no `DataClient`.
+1. Pasta `pages/dashboards/<nome>/` com o `<Nome>Content.tsx` (recebe `data`) e o `index.ts` (o módulo acima).
+2. Uma linha em `pages/dashboards/registry.tsx`: `[<nome>.key]: toPage(<nome>)`.
+3. No mock: o tipo da resposta em `types/index.ts`, o `<nome>For(unit)` em `services/mock/` e o método no `DataClient`.
 
 Dashboard que está no catálogo mas não no registro abre "Em construção".
 
@@ -180,17 +192,18 @@ Dashboard que está no catálogo mas não no registro abre "Em construção".
 
 ## Camada de dados
 
-As telas **só** importam `dataClient` de `src/data/client.ts` e nunca sabem de onde vêm os dados.
+Arquivos em `src/services/`; o formato das respostas fica em `src/types/index.ts`.
+
+As telas **só** importam `dataClient` de `src/services/client.ts` e nunca sabem de onde vêm os dados.
 
 ```
-telas  →  dataClient (interface DataClient)  →  mockClient  →  data/mock/
+telas  →  dataClient (interface DataClient)  →  mockClient  →  services/mock/
                                              →  apiClient   →  FastAPI   (a fazer)
 ```
 
 | Arquivo         | O que é                                                                                                      |
 | --------------- | ------------------------------------------------------------------------------------------------------------ |
 | `client.ts`     | Interface `DataClient` (sessão + dados) e escolha da implementação por `VITE_DATA_SOURCE`                    |
-| `types.ts`      | Formato das respostas (campos da v1 + bloco `meta` da V2)                                                    |
 | `errors.ts`     | `DataError` com o status HTTP (401, 403...) e `toDataError`                                                  |
 | `mockClient.ts` | O "servidor" fictício: espera 300 ms, 401 sem sessão, 403 fora das unidades liberadas, aplica o período      |
 | `mock/`         | Os dados fictícios: `users`, `catalog`, `protocolo`, `pendencias` e `helpers` (porta de entrada: `index.ts`) |

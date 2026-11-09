@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
-import { useAuth } from '../../auth/auth-context.ts'
-import type { DataError } from '../../data/errors.ts'
-import type { IconName } from '../Icon.tsx'
+import { useAuth } from '../../contexts/auth-context.ts'
+import type { DataError } from '../../services/errors.ts'
+import type { IconName } from '../ui/Icon.tsx'
 import { StateMessage } from './StateMessage.tsx'
 
 type ErrorStateProps = {

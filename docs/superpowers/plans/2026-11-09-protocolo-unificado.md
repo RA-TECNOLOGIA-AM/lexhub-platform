@@ -39,11 +39,11 @@
 
 **Files:**
 - Modify: `apps/web/package.json` (scripts `test`, `test:watch`; devDependency `vitest`)
-- Modify: `apps/web/src/data/types.ts` (`ProtocoloResponse`, `DashboardFilters`, `DashboardQuery`, `DashboardSummary`)
-- Modify: `apps/web/src/data/mock/protocolo.ts`
-- Modify: `apps/web/src/data/mock/catalog.ts` (`entry()` preenche permissões)
-- Modify: `apps/web/src/data/mockClient.ts` (`dashboardResponse` passa a `query` ao `build`)
-- Test: `apps/web/src/data/mock/protocolo.test.ts`
+- Modify: `apps/web/src/types/index.ts` (`ProtocoloResponse`, `DashboardFilters`, `DashboardQuery`, `DashboardSummary`)
+- Modify: `apps/web/src/services/mock/protocolo.ts`
+- Modify: `apps/web/src/services/mock/catalog.ts` (`entry()` preenche permissões)
+- Modify: `apps/web/src/services/mockClient.ts` (`dashboardResponse` passa a `query` ao `build`)
+- Test: `apps/web/src/services/mock/protocolo.test.ts`
 
 **Interfaces:**
 - Produces:
@@ -101,15 +101,15 @@ describe('protocoloFor', () => {
 ### Task 2: Seções, KPIs, tabela — blocos 01, 02 e 06
 
 **Files:**
-- Create: `apps/web/src/components/DashboardSection.tsx`
-- Create: `apps/web/src/components/DataTable.tsx`
-- Rename: `apps/web/src/components/KpiSection.tsx` → `KpiGrid.tsx`
-- Modify: `apps/web/src/components/Kpi.tsx` (prop `meta?`)
-- Modify: `apps/web/src/dashboards/pendencias/PendenciasContent.tsx` (usa `DashboardSection` + `KpiGrid`)
-- Create: `apps/web/src/dashboards/protocolo/view.ts`
-- Modify: `apps/web/src/dashboards/protocolo/ProtocoloContent.tsx`
+- Create: `apps/web/src/components/dashboard/DashboardSection.tsx`
+- Create: `apps/web/src/components/ui/DataTable.tsx`
+- Rename: `apps/web/src/components/dashboard/KpiSection.tsx` → `KpiGrid.tsx`
+- Modify: `apps/web/src/components/dashboard/Kpi.tsx` (prop `meta?`)
+- Modify: `apps/web/src/pages/dashboards/pendencias/PendenciasContent.tsx` (usa `DashboardSection` + `KpiGrid`)
+- Create: `apps/web/src/pages/dashboards/protocolo/view.ts`
+- Modify: `apps/web/src/pages/dashboards/protocolo/ProtocoloContent.tsx`
 - Modify: `apps/web/src/styles/app.css`
-- Test: `apps/web/src/dashboards/protocolo/view.test.ts`
+- Test: `apps/web/src/pages/dashboards/protocolo/view.test.ts`
 
 **Interfaces:**
 - Consumes: `ProtocoloResponse` (Task 1).
@@ -150,7 +150,7 @@ it('seriesByYear separa por ano e nomeia os meses', () => {
 **Files:**
 - Modify: `apps/web/package.json` (dependency `recharts`)
 - Create: `apps/web/src/components/charts/chartTheme.ts`, `ChartCard.tsx`, `ColumnChart.tsx`, `BarChart.tsx`, `LineChart.tsx`, `RankList.tsx`
-- Modify: `apps/web/src/dashboards/protocolo/ProtocoloContent.tsx`, `apps/web/src/styles/app.css`
+- Modify: `apps/web/src/pages/dashboards/protocolo/ProtocoloContent.tsx`, `apps/web/src/styles/app.css`
 
 **Interfaces:**
 - Consumes: `seriesByYear` (Task 2), `Point` (types).
@@ -175,8 +175,8 @@ it('seriesByYear separa por ano e nomeia os meses', () => {
 - Create: `apps/web/src/lib/filters.ts` (funções puras de URL)
 - Create: `apps/web/src/hooks/useDashboardFilters.ts`
 - Create: `apps/web/src/components/filters/PeriodPicker.tsx`, `FilterPanel.tsx`, `ActiveFilters.tsx`
-- Modify: `apps/web/src/dashboards/types.ts`, `DashboardView.tsx`, `apps/web/src/components/DashboardHeader.tsx`
-- Modify: `apps/web/src/dashboards/protocolo/index.ts`, `ProtocoloContent.tsx`
+- Modify: `apps/web/src/pages/dashboards/types.ts`, `DashboardView.tsx`, `apps/web/src/components/dashboard/DashboardHeader.tsx`
+- Modify: `apps/web/src/pages/dashboards/protocolo/index.ts`, `ProtocoloContent.tsx`
 - Test: `apps/web/src/lib/filters.test.ts`
 
 **Interfaces:**
@@ -227,9 +227,9 @@ it('clear mantém só o período', () => {
 
 **Files:**
 - Create: `apps/web/src/lib/csv.ts`, `apps/web/src/lib/download.ts`
-- Modify: `apps/web/src/data/client.ts`, `apps/web/src/data/mockClient.ts`
-- Modify: `apps/web/src/dashboards/DashboardView.tsx`, `apps/web/src/dashboards/protocolo/ProtocoloContent.tsx`
-- Modify: `apps/web/src/components/Icon.tsx` (ícones `download`, `file`, `calendar`, `filter`), `apps/web/src/styles/app.css` (`@media print`)
+- Modify: `apps/web/src/services/client.ts`, `apps/web/src/services/mockClient.ts`
+- Modify: `apps/web/src/pages/dashboards/DashboardView.tsx`, `apps/web/src/pages/dashboards/protocolo/ProtocoloContent.tsx`
+- Modify: `apps/web/src/components/ui/Icon.tsx` (ícones `download`, `file`, `calendar`, `filter`), `apps/web/src/styles/app.css` (`@media print`)
 - Test: `apps/web/src/lib/csv.test.ts`
 
 **Interfaces:**

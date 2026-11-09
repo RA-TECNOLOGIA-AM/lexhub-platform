@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Icon, type IconName } from '../Icon.tsx'
+import { Icon, type IconName } from '../ui/Icon.tsx'
 
 type StateMessageProps = {
     icon: IconName
