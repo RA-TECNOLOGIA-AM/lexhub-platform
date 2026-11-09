@@ -18,3 +18,54 @@
 .kpi-v.danger {
     color: var(--danger);
 }
+/* Card do hub: o link do título cobre o card inteiro (::after); a estrela fica por cima dele. */
+.dcard {
+    position: relative;
+}
+.dcard-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+.dcard-link {
+    color: inherit;
+    text-decoration: none;
+}
+.dcard-link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+}
+/* O foco do teclado aparece no card inteiro, não só no título. */
+.dcard-link:focus-visible {
+    outline: none;
+}
+.dcard:has(.dcard-link:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.fav-btn {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin: -6px -6px 0 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+.fav-btn:hover {
+    background: var(--surface-3);
+}
+.fav-btn[aria-pressed='true'] {
+    color: #b37d00;
+}
+.fav-btn[aria-pressed='true'] svg {
+    fill: #e5a100;
+}

@@ -3,6 +3,7 @@ import { useAuth } from '../auth/auth-context.ts'
 import type { DashboardSummary, Meta } from '../data/types.ts'
 import { Freshness } from './Freshness.tsx'
 import { Icon } from './Icon.tsx'
+import { PillGroup } from './PillGroup.tsx'
 
 type DashboardHeaderProps = {
     org: string
@@ -32,18 +33,15 @@ export function DashboardHeader({ org, dashboard, meta }: DashboardHeaderProps) 
             </div>
 
             {units.length > 1 && (
-                <div className="pills" role="group" aria-label="Unidade">
-                    {units.map((u) => (
-                        <Link
-                            key={u.code}
-                            className="pill"
-                            to={`/${org}/${u.code}/dashboards/${dashboard.key}`}
-                            aria-pressed={u.code === meta.unit}
-                        >
-                            {u.name}
-                        </Link>
-                    ))}
-                </div>
+                <PillGroup
+                    label="Unidade"
+                    items={units.map((u) => ({
+                        id: u.code,
+                        label: u.name,
+                        to: `/${org}/${u.code}/dashboards/${dashboard.key}`,
+                        active: u.code === meta.unit,
+                    }))}
+                />
             )}
         </section>
     )

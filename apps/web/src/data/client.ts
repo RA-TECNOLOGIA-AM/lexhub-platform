@@ -10,6 +10,8 @@ export interface DataClient {
     getMe(): Promise<Me>
 
     listDashboards(org: string): Promise<DashboardCatalog>
+    listFavorites(org: string): Promise<string[]>
+    setFavorite(org: string, dashboardKey: string, favorite: boolean): Promise<void>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>
 }

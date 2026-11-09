@@ -1,6 +1,6 @@
 import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
-import { catalog, me, pendenciasFor, protocoloFor, testUsers } from './mock/index.ts'
+import { catalog, me, pendenciasFor, protocoloFor, testUsers, defaultFavorites } from './mock/index.ts'
 import type { DashboardQuery, Meta } from './types.ts'
 
 // Simula a rede: um pouco de espera faz o "carregando" aparecer de verdade.
@@ -12,6 +12,9 @@ const copy = <T>(value: T): T => structuredClone(value)
 
 // Sessão fictícia: fica no sessionStorage (sobrevive ao F5, some ao fechar a aba).
 const SESSION_KEY = 'lexhub.mock.session'
+
+// Favoritos: ficam no localStorage (sobrevivem a fechar a aba, como na API ficarão no banco).
+const FAVORITES_KEY = 'lexhub.mock.favorites'
 
 function requireSession() {
     if (sessionStorage.getItem(SESSION_KEY) === null) {
@@ -70,6 +73,19 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             return copy(catalog)
+        },
+
+        async listFavorites() {
+            await wait()
+            requireSession()
+            const saved = localStorage.getItem(FAVORITES_KEY)
+            return saved ? (JSON.parse(saved) as string[]) : [...defaultFavorites]
+        },
+
+        async setFavorite(org, dashboardKey, favorite) {
+            const current = await this.listFavorites(org)
+            const next = favorite ? [...new Set([...current, dashboardKey])] : current.filter((k) => k !== dashboardKey)
+            localStorage.setItem(FAVORITES_KEY, JSON.stringify(next))
         },
 
         getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),
