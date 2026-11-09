@@ -9,6 +9,7 @@ import type {
     Me,
     PendenciasResponse,
     ProtocoloResponse,
+    InviteRequest,
     MembersResponse,
 } from './types.ts'
 
@@ -23,6 +24,7 @@ export interface DataClient {
     listDashboards(org: string): Promise<DashboardCatalog>
     listFavorites(org: string): Promise<string[]>
     listMembers(org: string): Promise<MembersResponse>
+    inviteMembers(org: string, invite: InviteRequest): Promise<void>
     setFavorite(org: string, dashboardKey: string, favorite: boolean): Promise<void>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>

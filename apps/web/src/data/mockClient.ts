@@ -1,6 +1,14 @@
 import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
-import { catalog, me, pendenciasFor, protocoloFor, testUsers, defaultFavorites, members } from './mock/index.ts'
+import {
+    catalog,
+    createMembersStore,
+    defaultFavorites,
+    me,
+    pendenciasFor,
+    protocoloFor,
+    testUsers,
+} from './mock/index.ts'
 import type { DashboardQuery, Meta } from './types.ts'
 
 // Simula a rede: um pouco de espera faz o "carregando" aparecer de verdade.
@@ -15,6 +23,9 @@ const SESSION_KEY = 'lexhub.mock.session'
 
 // Favoritos: ficam no localStorage (sobrevivem a fechar a aba, como na API ficarão no banco).
 const FAVORITES_KEY = 'lexhub.mock.favorites'
+
+// Membros do mock: a lista muda com os convites (volta ao original no F5).
+const memberStore = createMembersStore(me.user.name)
 
 function requireSession() {
     if (sessionStorage.getItem(SESSION_KEY) === null) {
@@ -78,7 +89,13 @@ export function createMockClient(): DataClient {
         async listMembers() {
             await wait()
             requireSession()
-            return copy(members)
+            return memberStore.list()
+        },
+
+        async inviteMembers(_org, invite) {
+            await wait()
+            requireSession()
+            memberStore.invite(invite)
         },
 
         async listFavorites() {

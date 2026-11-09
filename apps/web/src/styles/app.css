@@ -109,3 +109,54 @@
 .filter {
     flex: 0 1 180px;
 }
+
+/* Tabela e painel lado a lado; no celular o painel desce para baixo da tabela. */
+.with-aside {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+}
+.with-aside-main {
+    flex: 999 1 560px;
+    min-width: 0;
+}
+/* Painel "Convidar pessoas" */
+.invite {
+    flex: 1 1 320px;
+    max-width: 420px;
+    padding: 18px;
+}
+.invite-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.invite-units {
+    border: 0;
+    margin: 0;
+    padding: 0;
+}
+.check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+}
+.check input {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+}
+.invite-preview {
+    padding: 10px 12px;
+    border-radius: var(--r-md);
+    background: var(--surface-3);
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+}
+.invite-error {
+    margin: 0;
+    color: var(--danger);
+    font-size: var(--fs-sm);
+}

@@ -1,8 +1,15 @@
-import type { MembersResponse } from '../types.ts'
+import { DataError } from '../errors.ts'
+import type { InviteRequest, MembersResponse } from '../types.ts'
 
 // Os mesmos membros do protótipo.
 export const members: MembersResponse = {
     seats: { used: 42, total: 60 },
+    teams: [
+        { name: 'Protocolo', dashboards: 4 },
+        { name: 'Comercial', dashboards: 4 },
+        { name: 'Execução', dashboards: 3 },
+        { name: 'Diretoria', dashboards: 16 },
+    ],
     members: [
         {
             id: 'm1',
@@ -71,4 +78,33 @@ export const members: MembersResponse = {
             security: null,
         },
     ],
+}
+
+// Módulo: os membros do mock como um "banco" em memória (volta ao original no F5).
+// Parâmetro: o nome de quem convida. Esconde: a lista que muda e a regra de e-mail repetido.
+export function createMembersStore(inviterName: string) {
+    const state = structuredClone(members)
+    return {
+        list: (): MembersResponse => structuredClone(state),
+
+        invite(invite: InviteRequest): void {
+            const known = new Set(state.members.map((m) => m.email))
+            const repeated = invite.emails.filter((e) => known.has(e))
+            if (repeated.length) throw new DataError(409, `Já faz parte da organização: ${repeated.join(', ')}`)
+            for (const email of invite.emails) {
+                state.members.push({
+                    id: crypto.randomUUID(),
+                    name: null,
+                    email,
+                    role: invite.role,
+                    units: invite.units,
+                    team: invite.team,
+                    status: 'invited',
+                    note: `Convidado por ${inviterName} agora`,
+                    security: null,
+                })
+            }
+            state.seats.used += invite.emails.length
+        },
+    }
 }

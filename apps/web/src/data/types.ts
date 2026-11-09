@@ -143,4 +143,13 @@ export type Member = {
     security: string | null // 'MFA ativo', 'Google'...
 }
 
-export type MembersResponse = { members: Member[]; seats: { used: number; total: number } }
+export type Team = { name: string; dashboards: number } // quantos dashboards a equipe vê
+
+export type InviteRequest = {
+    emails: string[]
+    role: Exclude<RoleKey, 'owner'> // owner não se convida: é quem cria a organização
+    units: string[]
+    team: string
+}
+
+export type MembersResponse = { members: Member[]; seats: { used: number; total: number }; teams: Team[] }

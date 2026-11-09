@@ -1,58 +1,43 @@
+import { useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { useAuth } from '../../auth/auth-context.ts'
-import { DataTable, type Column } from '../../components/DataTable.tsx'
+import { DataTable } from '../../components/DataTable.tsx'
 import { Icon } from '../../components/Icon.tsx'
 import { PageHeader } from '../../components/PageHeader.tsx'
 import { ErrorState } from '../../components/states/ErrorState.tsx'
 import { LoadingState } from '../../components/states/LoadingState.tsx'
 import { dataClient } from '../../data/client.ts'
-import type { Member } from '../../data/types.ts'
+import type { InviteRequest } from '../../data/types.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
+import { InvitePanel } from './InvitePanel.tsx'
+import { MEMBER_COLUMNS } from './memberColumns.tsx'
 import { MemberFilters } from './MemberFilters.tsx'
-import {
-    filterFromParams,
-    filterMembers,
-    initialsOf,
-    isWaiting,
-    paramsFromFilter,
-    roleOf,
-    scopeOf,
-    statusOf,
-    type MemberFilter,
-} from './memberView.ts'
-// As colunas da tabela, como no protótipo.
-const COLUMNS: Column<Member>[] = [
-    {
-        header: 'Pessoa',
-        render: (m) => (
-            <div className="person">
-                <span className={isWaiting(m) ? 'av waiting' : 'av'}>{initialsOf(m)}</span>
-                <span className="stack" style={{ gap: 0 }}>
-                    <span style={{ fontWeight: 500 }}>{m.name ?? m.email}</span>
-                    <span className="muted small">{m.note ?? m.email}</span>
-                </span>
-            </div>
-        ),
-    },
-    { header: 'Papel', render: (m) => <span className={roleOf(m).badge}>{roleOf(m).label}</span> },
-    { header: 'Unidades e equipe', render: (m) => <span className="muted">{scopeOf(m)}</span> },
-    { header: 'Situação', render: (m) => <span className={statusOf(m).badge}>{statusOf(m).label}</span> },
-    { header: 'Segurança', render: (m) => <span className="muted small">{m.security ?? '—'}</span> },
-]
+import { filterFromParams, filterMembers, paramsFromFilter, type MemberFilter } from './memberView.ts'
 
+// A página só junta as peças: busca os membros, aplica o filtro da URL e abre o painel de convite.
 export function MembersPage() {
     const { org = '' } = useParams()
-    const { data, error } = useAsync(() => dataClient.listMembers(org), [org])
-
     const { me } = useAuth()
+    // version: mudar faz o useAsync buscar a lista de novo (depois de um convite).
+    const [version, setVersion] = useState(0)
+    const [inviteOpen, setInviteOpen] = useState(false)
+    const { data, error } = useAsync(() => dataClient.listMembers(org), [org, version])
+
     const [params, setParams] = useSearchParams()
     const filter = filterFromParams(params)
     // replace: digitar na busca não enche o histórico do "voltar" com uma entrada por letra.
     const setFilter = (next: MemberFilter) => setParams(paramsFromFilter(next), { replace: true })
 
+    async function sendInvite(invite: InviteRequest) {
+        await dataClient.inviteMembers(org, invite) // se der erro, o painel mostra a mensagem
+        setInviteOpen(false)
+        setVersion((v) => v + 1) // busca a lista de novo, já com os convidados
+    }
+
     if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
 
+    const units = me?.units ?? []
     const { used, total } = data.seats
     return (
         <>
@@ -60,19 +45,31 @@ export function MembersPage() {
                 title="Membros"
                 description={`${used} de ${total} assentos do plano em uso. Ninguém digita senha por outra pessoa: todos entram por convite ou pedido aprovado.`}
                 actions={
-                    <button className="btn btn-primary" type="button">
+                    <button className="btn btn-primary" type="button" onClick={() => setInviteOpen(true)}>
                         <Icon name="plus" size={16} />
                         Convidar pessoas
                     </button>
                 }
             />
-            <MemberFilters value={filter} units={me?.units ?? []} onChange={setFilter} />
-            <DataTable
-                columns={COLUMNS}
-                rows={filterMembers(data.members, filter)}
-                rowKey={(m) => m.id}
-                empty="Nenhum membro com esses filtros."
-            />
+            <div className="with-aside">
+                <div className="stack with-aside-main">
+                    <MemberFilters value={filter} units={units} onChange={setFilter} />
+                    <DataTable
+                        columns={MEMBER_COLUMNS}
+                        rows={filterMembers(data.members, filter)}
+                        rowKey={(m) => m.id}
+                        empty="Nenhum membro com esses filtros."
+                    />
+                </div>
+                {inviteOpen && (
+                    <InvitePanel
+                        units={units}
+                        teams={data.teams}
+                        onSend={sendInvite}
+                        onClose={() => setInviteOpen(false)}
+                    />
+                )}
+            </div>
         </>
     )
 }
