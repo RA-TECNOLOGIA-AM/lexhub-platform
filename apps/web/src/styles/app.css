@@ -160,3 +160,86 @@
     color: var(--danger);
     font-size: var(--fs-sm);
 }
+
+/* Plano e cobrança: barras de uso, cards de plano e o botão-link da nota fiscal. */
+.usage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    gap: 12px 20px;
+}
+.usage {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.usage-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+.usage-track {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--divider);
+    overflow: hidden;
+}
+.usage-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--accent);
+}
+.usage-fill.full {
+    background: var(--warn-dot);
+}
+.plan-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: var(--gap);
+}
+.plan {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.plan.current {
+    border-color: var(--accent);
+}
+.plan-price {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+}
+.plan-features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: var(--fs-md);
+    color: var(--text-2);
+}
+.plan-features li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.plan-features svg {
+    flex: none;
+    color: var(--ok);
+}
+.plan-action {
+    margin-top: auto;
+    align-self: flex-start;
+}
+.link-btn {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--link);
+    font: inherit;
+    cursor: pointer;
+}
+.link-btn:hover {
+    text-decoration: underline;
+}

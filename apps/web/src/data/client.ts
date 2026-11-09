@@ -11,6 +11,7 @@ import type {
     ProtocoloResponse,
     InviteRequest,
     MembersResponse,
+    BillingResponse,
 } from './types.ts'
 
 // A única porta de entrada para dados. As telas só conhecem esta interface;
@@ -26,6 +27,7 @@ export interface DataClient {
     listMembers(org: string): Promise<MembersResponse>
     inviteMembers(org: string, invite: InviteRequest): Promise<void>
     setFavorite(org: string, dashboardKey: string, favorite: boolean): Promise<void>
+    getBilling(org: string): Promise<BillingResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>
 }

@@ -1,6 +1,7 @@
 import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
 import {
+    billingFor,
     catalog,
     createMembersStore,
     defaultFavorites,
@@ -109,6 +110,13 @@ export function createMockClient(): DataClient {
             const current = await this.listFavorites(org)
             const next = favorite ? [...new Set([...current, dashboardKey])] : current.filter((k) => k !== dashboardKey)
             localStorage.setItem(FAVORITES_KEY, JSON.stringify(next))
+        },
+
+        // Assentos lidos de Membros: convidar alguém muda o número aqui também.
+        async getBilling() {
+            await wait()
+            requireSession()
+            return billingFor(memberStore.list().seats)
         },
 
         getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),

@@ -2,7 +2,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
-import type { DashboardCatalog, Me, MembersResponse, PendenciasResponse, ProtocoloResponse } from './types.ts'
+import type {
+    BillingResponse,
+    DashboardCatalog,
+    Me,
+    MembersResponse,
+    PendenciasResponse,
+    ProtocoloResponse,
+} from './types.ts'
 
 // Módulo: o DataClient de verdade. Login pelo Supabase Auth; todo dado pela API V2.
 // Parâmetros: o cliente de login e o http (já com a URL da API e o token).
@@ -38,6 +45,7 @@ export function createApiClient({ auth, http }: { auth: SupabaseClient; http: Ht
             const path = `/orgs/${org}/favorites/${dashboardKey}`
             await (favorite ? http.post(path) : http.delete(path))
         },
+        getBilling: (org) => http.get<BillingResponse>(`/orgs/${org}/billing`),
         getProtocolo: dashboard<ProtocoloResponse>('protocolo-lexpre'),
         getPendencias: dashboard<PendenciasResponse>('pendencias'),
     }

@@ -10,10 +10,12 @@ import { NAV_SECTIONS } from './navigation.ts'
 import { ComingSoonPage } from './pages/ComingSoonPage.tsx'
 import type { ReactNode } from 'react'
 import { MembersPage } from './pages/members/MembersPage.tsx'
+import { BillingPage } from './pages/billing/BillingPage.tsx'
 
 // Páginas do menu que já têm conteúdo; as outras abrem a página-base (ComingSoonPage).
 const PAGES: Record<string, ReactNode> = {
     membros: <MembersPage />,
+    plano: <BillingPage />,
 }
 
 // Endereço desconhecido: vai para o hub da organização de quem está logado.

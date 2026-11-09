@@ -153,3 +153,41 @@ export type InviteRequest = {
 }
 
 export type MembersResponse = { members: Member[]; seats: { used: number; total: number }; teams: Team[] }
+
+// Plano e cobrança. Preços ainda em descoberta: null = "a definir" (a tela mostra [PREÇO]/[VALOR]).
+export type PlanKey = 'starter' | 'pro' | 'enterprise'
+
+export type Plan = {
+    key: PlanKey
+    name: string
+    monthlyPrice: number | null // null = ainda não definido
+    custom: boolean // true = "Sob consulta" (negociado caso a caso), não tem preço de tabela
+    tagline: string // para quem é ("Um escritório começando a medir a operação")
+    features: string[]
+}
+
+// Uma barra de uso do plano ("Assentos 42 de 60", "Histórico 24 de 24 meses").
+export type PlanUsage = { key: string; label: string; used: number; total: number; unit?: string }
+
+export type InvoiceStatus = 'paid' | 'open' | 'overdue'
+
+export type Invoice = {
+    id: string
+    month: string // 'YYYY-MM'
+    amount: number | null // null = valor ainda não definido
+    status: InvoiceStatus
+    nfse: 'issued' | 'pending'
+}
+
+export type BillingResponse = {
+    current: {
+        plan: PlanKey
+        status: 'active' | 'past_due' | 'canceled'
+        renewsOn: string // 'YYYY-MM-DD'
+        paymentMethods: string[] // ['boleto', 'PIX']
+        gateway: string | null // null = gateway ainda não escolhido
+    }
+    usage: PlanUsage[]
+    plans: Plan[]
+    invoices: Invoice[] // mais recente primeiro
+}
