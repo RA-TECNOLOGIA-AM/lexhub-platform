@@ -191,3 +191,27 @@ export type BillingResponse = {
     plans: Plan[]
     invoices: Invoice[] // mais recente primeiro
 }
+
+// Acesso: o que cada papel pode fazer e o que cada equipe vê.
+// Célula da matriz: sim, não ou "em parte" com a ressalva ("Só os seus", "Da unidade").
+export type AccessCell = { kind: 'yes' } | { kind: 'no' } | { kind: 'partial'; note: string }
+
+export type Permission = {
+    key: string // estável, para o código procurar a linha ('export', 'members'...)
+    label: string // texto da linha ("Exportar e gerar PDF")
+    cells: Record<RoleKey, AccessCell> // uma célula por papel
+}
+
+// Regra de dashboards de uma equipe: nas unidades em que a pessoa estiver, ela vê estes dashboards.
+export type TeamRule = {
+    team: string
+    people: number
+    dashboards: string[]
+    all: boolean // true = todos os dashboards das suas unidades (Diretoria); aí `dashboards` fica vazio
+    scope: string | null // observação ("Colaborador vê só os próprios atendimentos...")
+}
+
+export type AccessResponse = {
+    matrix: Permission[]
+    rules: TeamRule[]
+}

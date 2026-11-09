@@ -243,3 +243,44 @@
 .link-btn:hover {
     text-decoration: underline;
 }
+/* Acesso: matriz centralizada, regras por equipe e simulador lado a lado (no celular, um embaixo do outro). */
+.tbl th.center,
+.tbl td.center {
+    text-align: center;
+}
+.cell-yes {
+    display: inline-flex;
+    color: var(--ok);
+}
+.cell-no {
+    color: var(--text-faint);
+}
+.access-cols {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+}
+.access-main {
+    flex: 999 1 460px;
+    min-width: 0;
+}
+.access-side {
+    flex: 1 1 300px;
+}
+.rule {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+.rule-warning {
+    margin: 0;
+    padding: 10px 14px;
+    border-radius: var(--r-md);
+    background: var(--warn-bg);
+    color: var(--warn);
+    font-size: var(--fs-sm);
+}
