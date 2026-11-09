@@ -96,3 +96,22 @@ jobs:
                     psql -v ON_ERROR_STOP=1 -q -f /tmp/import_v1_commit.sql
                     psql -v ON_ERROR_STOP=1 -q -f /tmp/import_v1_commit.sql
                     psql -v ON_ERROR_STOP=1 -q -f supabase/tests/ci/import_v1_assert.sql
+    web:
+        name: Front (tipos + lint + formato + testes + build)
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: apps/web
+        steps:
+            -   uses: actions/checkout@v4
+            -   uses: actions/setup-node@v4
+                with:
+                    node-version: "24"
+                    cache: npm
+                    cache-dependency-path: apps/web/package-lock.json
+            -   run: npm ci
+            -   run: npx tsc -b
+            -   run: npm run lint
+            -   run: npm run format:check
+            -   run: npm test
+            -   run: npx vite build

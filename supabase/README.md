@@ -51,8 +51,17 @@ Funções: `app.dashboard_scope(unit, key)`, `app.can_view_dashboard(unit, key)`
 ## Como aplicar (SEMPRE na staging primeiro)
 
 1. No painel, troque de `main` para a branch **staging**.
-2. SQL Editor → cole o conteúdo de `migrations/20261105120000_app_core.sql` → Run.
+2. SQL Editor → cole e rode **cada arquivo de `migrations/`, na ordem do nome** (o número no começo é a data/hora).
+   Num banco que já tem as anteriores, rode só as novas.
 3. Cole `tests/app_core_smoke.sql` → Run. Esperado: mensagens `OK: ...` e nenhum erro.
+
+Sem acesso ao painel, dá para testar tudo num Postgres local (é o que o CI faz):
+
+```powershell
+psql -v ON_ERROR_STOP=1 -f supabase/tests/ci/supabase_stub.sql      # simula auth e papéis do Supabase
+Get-ChildItem supabase/migrations/*.sql | Sort-Object Name | ForEach-Object { psql -v ON_ERROR_STOP=1 -f $_.FullName }
+psql -v ON_ERROR_STOP=1 -f supabase/tests/app_core_smoke.sql
+```
 4. Só depois de validado, aplicar na `main` (produção).
 
 Migrations: nunca direto na `main` sem passar pela staging.

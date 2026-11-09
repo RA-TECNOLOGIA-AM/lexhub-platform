@@ -25,6 +25,9 @@ export type DashboardSummary = {
     source: string
     synced_at: string
     max_delay_min: number
+    // Decididos pelo servidor (regra: colaborador exporta só o próprio setor; admin, dev e controller, qualquer um).
+    can_export: boolean
+    can_see_commission: boolean
 }
 
 export type DashboardCatalog = {
@@ -32,15 +35,24 @@ export type DashboardCatalog = {
     upcoming: { title: string; area: string }[]
 }
 
-// Novo na V2: de onde e de quando são os dados ("Atualizado há X").
-export type Meta = { unit: string; from: string; to: string; source: string; synced_at: string }
+// Novo na V2: de onde e de quando são os dados ("Atualizado há X · fuso America/Manaus").
+export type Meta = { unit: string; from: string; to: string; source: string; synced_at: string; timezone: string }
 
 export type Point = { name: string; value: number }
 
 export type WithComparison = { total: number; comparativo: number | null }
 
-export type DashboardQuery = { org: string; unit: string; from?: string; to?: string }
+// Filtros dos dashboards, com os nomes dos parâmetros da v1. Vários valores = lista.
+export type DashboardFilters = {
+    materia?: string[]
+    funcionario?: string[]
+    area_atuacao_id?: string[]
+    uf?: string[]
+}
 
+export type DashboardQuery = { org: string; unit: string; from?: string; to?: string; filters?: DashboardFilters }
+
+// Campos da v1 (ProtocoloLexpreNGResponse) + o que é novo da V2 (marcado abaixo).
 export type ProtocoloResponse = {
     meta: Meta
     stats: {
@@ -51,16 +63,36 @@ export type ProtocoloResponse = {
         mediana_tempo_protocolado: number
         comparativo_tempo_medio_protocolado: number | null
         comparativo_mediana_tempo_protocolado: number | null
+        // Situação atual: não dependem do período.
         represados: number
         devolvido_peticionamento: number
         devolvido_org_doc: number
         devolvido_pendencia: number
+        comparativo_devolvido_peticionamento: number | null
+        comparativo_devolvido_org_doc: number | null
+        comparativo_devolvido_pendencia: number | null
     }
     protocolados_por_dia: Point[]
     protocolados_por_materia: Point[]
+    represados_por_materia: Point[]
     protocolados_por_funcionario: Point[]
     represados_por_funcionario: Point[]
-    comissionamento_por_funcionario: { funcionario: string; qtd_protocolados: number; valor_comissao: number }[]
+    media_protocolados_por_funcionario: Point[]
+    valor_causa_por_funcionario: Point[]
+    protocolados_por_mes: Point[] // name = 'AAAA-MM'
+    represados_por_mes: Point[] // name = 'AAAA-MM'
+    // Só vem para quem tem permissão (can_see_commission).
+    comissionamento_por_funcionario?: { funcionario: string; qtd_protocolados: number; valor_comissao: number }[]
+    // --- Novos na V2 (não existem na v1) ---
+    protocolados_no_prazo: { taxa: number; comparativo: number | null } // taxa em %
+    metas: { tempo_medio_dias: number; no_prazo_pct: number; protocolados_por_funcionario: number }
+    pendencias_mais_antigas: { processo: string; etapa: string; responsavel: string; dias_parado: number }[]
+    opcoes_filtro: {
+        materias: string[]
+        funcionarios: string[]
+        ufs: string[]
+        areas: { id: number; nome: string }[]
+    }
 }
 
 export type PendenciasResponse = {

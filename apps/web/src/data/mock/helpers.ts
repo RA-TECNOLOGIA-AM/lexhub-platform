@@ -28,9 +28,19 @@ export const funcionarios = [
     'Helena Dias',
 ]
 
+// Fuso de cada unidade (no banco: app.units). Unidade nova = uma linha aqui.
+const TIMEZONE: Record<string, string> = { NG: 'America/Manaus', LA_AM: 'America/Manaus', LA_RJ: 'America/Sao_Paulo' }
+
 // Bloco `meta` de uma resposta: de onde e de quando são os dados da unidade.
 export function metaFor(unit: string, source = 'LexPre'): Meta {
-    return { unit, from: '2026-10-01', to: '2026-10-31', source, synced_at: minAgo(4) }
+    return {
+        unit,
+        from: '2026-10-01',
+        to: '2026-10-31',
+        source,
+        synced_at: minAgo(4),
+        timezone: TIMEZONE[unit] ?? 'America/Sao_Paulo',
+    }
 }
 
 // "Tamanho" de cada unidade no mock (NG = base). Unidade nova = uma linha aqui.

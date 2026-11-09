@@ -18,7 +18,15 @@ type EntryParams = {
 
 // Módulo: monta uma entrada do catálogo. Só o que muda vem por parâmetro; o resto tem padrão.
 function entry({ source = 'LexPre', syncedMin = 4, maxDelayMin = 60, ...d }: EntryParams): DashboardSummary {
-    return { ...d, source, synced_at: minAgo(syncedMin), max_delay_min: maxDelayMin }
+    // Mock: o usuário de teste é controller, que exporta e vê comissão em todos os setores.
+    return {
+        ...d,
+        source,
+        synced_at: minAgo(syncedMin),
+        max_delay_min: maxDelayMin,
+        can_export: true,
+        can_see_commission: true,
+    }
 }
 
 // Catálogo que a API devolveria para o usuário logado (app.my_dashboards()).

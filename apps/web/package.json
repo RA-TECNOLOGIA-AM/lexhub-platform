@@ -3,13 +3,18 @@
     "private": true,
     "version": "0.0.0",
     "type": "module",
+    "engines": {
+        "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
+    },
     "scripts": {
         "dev": "vite",
         "build": "tsc -b && vite build",
         "lint": "oxlint",
         "preview": "vite preview",
         "format": "prettier --write .",
-        "format:check": "prettier --check --end-of-line auto ."
+        "format:check": "prettier --check --end-of-line auto .",
+        "test": "vitest run",
+        "test:watch": "vitest"
     },
     "dependencies": {
         "react": "^19.3.1",
@@ -24,6 +29,7 @@
         "oxlint": "^1.90.0",
         "prettier": "^3.9.10",
         "typescript": "~7.0.2",
-        "vite": "^8.3.6"
+        "vite": "^8.3.6",
+        "vitest": "^5.1.0"
     }
 }

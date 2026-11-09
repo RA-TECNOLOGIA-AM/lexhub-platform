@@ -36,12 +36,12 @@ function checkAccess(dashboardKey: string, unit: string) {
 async function dashboardResponse<T extends { meta: Meta }>(
     dashboardKey: string,
     query: DashboardQuery,
-    build: (unit: string) => T,
+    build: (unit: string, query: DashboardQuery) => T,
 ): Promise<T> {
     await wait()
     requireSession()
     checkAccess(dashboardKey, query.unit)
-    const data = build(query.unit)
+    const data = build(query.unit, query)
     data.meta.from = query.from ?? data.meta.from
     data.meta.to = query.to ?? data.meta.to
     return data

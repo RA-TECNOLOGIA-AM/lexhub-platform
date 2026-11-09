@@ -5,13 +5,18 @@ Visual e contrato de dados vêm do template estático em [`template/`](template/
 
 ## Rodar local
 
-Precisa do Node (testado com 26). Tudo é rodado **dentro de `apps/web`** (confira o prompt: `...\apps\web>`):
+Precisa do **Node 22.12+, 24 ou 26** (testado com 26; o Vitest não aceita o 25) e do npm que vem junto.
+Tudo é rodado **dentro de `apps/web`** (confira o prompt: `...\apps\web>`):
 
 ```powershell
 cd apps\web
-npm install
+npm ci                              # instala exatamente as versões do package-lock.json
+Copy-Item .env.example .env.local   # opcional: hoje só tem VITE_DATA_SOURCE=mock
 npm run dev
 ```
+
+Login de teste: `controller@lexgroup.com.br` / `lexhub123` (ver [Login](#login)).
+Não precisa da API nem do banco: com `VITE_DATA_SOURCE=mock` (o padrão), tudo vem de `src/data/mock/`.
 
 Abre em http://localhost:5173. É a porta que a API libera em `CORS_ORIGINS`; se ela estiver ocupada, o Vite usa a
 próxima (5174...) e as chamadas à API passam a ser recusadas por CORS.
@@ -24,10 +29,13 @@ O navegador atualiza sozinho a cada arquivo salvo. `Ctrl+C` no terminal para par
 | `npm run lint`         | Oxlint                                |
 | `npm run format`       | Prettier: formata todos os arquivos   |
 | `npm run format:check` | Prettier: só confere (para o CI)      |
+| `npm test`             | Testes (Vitest), uma vez              |
+| `npm run test:watch`   | Testes refazendo a cada arquivo salvo |
 | `npm run build`        | Checa os tipos e gera o `dist/`       |
 | `npm run preview`      | Serve o `dist/` gerado pelo build     |
 
-Antes de commitar: `npx tsc -b`, `npm run lint` e `npm run format:check` sem erros.
+Antes de commitar: `npx tsc -b`, `npm run lint`, `npm run format:check` e `npm test` sem erros (o CI roda os mesmos).
+Rodou um comando fora de `apps\web` e o npx ofereceu instalar um pacote `tsc`? Responda `n`: não é o TypeScript.
 Se o editor acusar erro que o `npx tsc -b` não acusa: `Ctrl+Shift+P` → **TypeScript: Restart TS Server**.
 
 ## Formatação
@@ -108,8 +116,10 @@ src/
   auth/                    sessão: AuthProvider, useAuth() e o porteiro RequireAuth
   components/
     AppLayout.tsx          barra lateral + cabeçalho (vem do template/app.js)
-    DashboardCard.tsx      card de um dashboard no hub
+    CardSection.tsx        bloco do hub: título + grade de cards (Favoritos e cada área)
+    DashboardCard.tsx      card de um dashboard no hub (link no título + estrela de favorito)
     DashboardHeader.tsx    cabeçalho dos dashboards: voltar, título + unidade, selo, pílulas de unidade
+    PillGroup.tsx          grupo de pílulas-link (unidade no hub e no dashboard)
     Freshness.tsx          selo "Atualizado há X" / "Fonte atrasada"
     Kpi.tsx, Delta.tsx     indicador (com tone) e comparativo "▲ 8,2% vs. mês anterior"
     KpiSection.tsx         bloco de KPIs com título ("No período", "Situação atual do setor")
@@ -118,13 +128,28 @@ src/
   dashboards/              cada dashboard como módulo (ver abaixo)
   data/                    camada de dados (ver abaixo)
   hooks/useAsync.ts        busca assíncrona: { data, error, loading }, refaz quando as deps mudam
+  hooks/useFavorites.ts    favoritos do usuário: ready, isFavorite(key), toggle(key) (troca otimista)
   lib/format.ts            formatação pt-BR (números, R$, %, dias, "há X min")
+  lib/viewTransition.ts    anima uma mudança de estado (View Transitions); sem suporte ou "reduzir movimento", só aplica
   pages/                   telas das rotas (Login, Hub, DashboardPage)
   styles/
     tokens.css             cópia inteira do template (não editar aqui)
     app.css                estilos novos do app React
 template/                  HTML estático de referência (não é usado pelo app)
 ```
+
+Testes ficam ao lado do arquivo testado, com o mesmo nome + `.test.ts` (ex.: `data/mock/protocolo.test.ts`).
+Por enquanto só funções puras (sem React), em ambiente Node.
+
+## Hub
+
+`/:org/dashboards` mostra os dashboards do catálogo agrupados por área.
+
+- **Filtro por unidade:** as pílulas viram `?unidade=NG` na URL (F5, voltar e compartilhar mantêm). Com filtro, o card
+  abre o dashboard nessa unidade.
+- **Favoritos:** a estrela sobe o card para a seção "Favoritos" no topo, com animação. No mock ficam no `localStorage`
+  (`lexhub.mock.favorites`; padrão: Funil comercial e Protocolo). Para voltar ao padrão:
+  `localStorage.removeItem('lexhub.mock.favorites')` no console.
 
 ## Dashboards
 
@@ -186,16 +211,20 @@ Só variáveis com prefixo `VITE_` chegam ao navegador, e qualquer uma delas fic
 | ------------------ | ------ | --------------------------------------------------- |
 | `VITE_DATA_SOURCE` | `mock` | `mock` = dados fictícios; outro valor ainda dá erro |
 
+Modelo em [`.env.example`](.env.example).
+
 ## Estado atual (card #121, até 12/11)
 
-- [x] Base: Vite + React + TS, `tokens.css` inteiro, fonte Inter, Prettier
+- [x] Base: Vite + React + TS, `tokens.css` inteiro, fonte Inter, Prettier, Vitest
 - [x] Rotas, `<AppLayout>` (inclui menu do celular) e login fictício com rotas protegidas
-- [x] Hub: cards por área, selo de atualização, "Chegando na V2"
+- [x] Hub: os 15 cards do protótipo por área, filtro por unidade, favoritos no topo
 - [x] Dashboard como módulo (`DashboardView` + registro) e estados reutilizáveis (carregando, erro por status)
 - [x] Protocolo e Pendências: cabeçalho, troca de unidade e KPIs, com dados por unidade no mock
-- [ ] Gráficos (por dia, por funcionário, por matéria/origem)
-- [ ] Filtros (período, matéria, funcionário, UF), comissionamento e Exportar
-- [ ] Estados "vazio" e "fonte atrasada"; filtro por unidade no hub
+- [x] Contrato do Protocolo (v1 LexPre + novos da V2) e mock com filtros e testes
+- [ ] Layout padrão para os dashboards sem página (hoje "Em construção")
+- [ ] Páginas do menu: Membros, Acesso, Auditoria, Plano e cobrança, Clientes, Unidades e fontes
 - [ ] Breadcrumb com o título do dashboard (hoje mostra a key)
-- [ ] `getDashboard(key, query)` genérico no `DataClient` e testes (Vitest)
 - [ ] `apiClient` + Supabase Auth (card #123)
+
+O conteúdo de cada dashboard (gráficos, filtros, comissão, exportar) fica com outro dev. Desenho e contrato do
+Protocolo: [`docs/superpowers/specs/2026-11-09-protocolo-unificado-design.md`](../../docs/superpowers/specs/2026-11-09-protocolo-unificado-design.md).
