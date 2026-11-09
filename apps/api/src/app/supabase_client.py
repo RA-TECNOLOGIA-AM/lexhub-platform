@@ -6,7 +6,7 @@ from app.config import Settings
 
 async def create_supabase(settings: Settings) -> AsyncClient:
     """Cria o cliente. Usa a chave secreta se configurada; senão, a publishable (respeita RLS)."""
-    key = settings.SUPABASE_SECRET_KEY or settings.SUPABASE_PUBLISHABLE_KEY
+    key = settings.supabase_secret_key or settings.SUPABASE_PUBLISHABLE_KEY
     return await acreate_client(settings.SUPABASE_URL, key)
 
 

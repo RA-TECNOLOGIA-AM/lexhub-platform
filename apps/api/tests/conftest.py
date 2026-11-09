@@ -13,9 +13,14 @@ os.environ.update(
     SUPABASE_URL="https://example.supabase.co",
     SUPABASE_PUBLISHABLE_KEY="sb_publishable_test",
     SUPABASE_SECRET_KEY="",
+    SUPABASE_SERVICE_ROLE_KEY="",
     SUPABASE_JWT_SECRET="",
     DATABASE_URL="",
 )
+# Bancos de origem desligados: os testes nunca podem conectar nos bancos reais do .env.
+for _db in ("NG", "LAADV", "LEXFLOW", "LEXPRE"):
+    os.environ[f"DB_{_db}_URL"] = ""
+    os.environ[f"DB_{_db}_HOST"] = ""
 
 ISSUER = "https://example.supabase.co/auth/v1"
 USER_ID = "00000000-0000-0000-0000-0000000000a1"
