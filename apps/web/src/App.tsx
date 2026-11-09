@@ -12,12 +12,14 @@ import type { ReactNode } from 'react'
 import { MembersPage } from './pages/admin/members/MembersPage.tsx'
 import { BillingPage } from './pages/admin/billing/BillingPage.tsx'
 import { AccessPage } from './pages/admin/access/AccessPage.tsx'
+import { AuditPage } from './pages/admin/audit/AuditPage.tsx'
 
 // Páginas do menu que já têm conteúdo; as outras abrem a página-base (ComingSoonPage).
 const PAGES: Record<string, ReactNode> = {
     membros: <MembersPage />,
     plano: <BillingPage />,
     acesso: <AccessPage />,
+    auditoria: <AuditPage />,
 }
 
 // Endereço desconhecido: vai para o hub da organização de quem está logado.

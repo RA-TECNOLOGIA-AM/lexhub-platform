@@ -3,7 +3,7 @@ import { useParams } from 'react-router'
 import { PageHeader } from '../../../components/layout/PageHeader.tsx'
 import { ErrorState } from '../../../components/states/ErrorState.tsx'
 import { LoadingState } from '../../../components/states/LoadingState.tsx'
-import { Icon } from '../../../components/ui/Icon.tsx'
+import { Notice } from '../../../components/ui/Notice.tsx'
 import { useAuth } from '../../../contexts/auth-context.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
 import { dataClient } from '../../../services/client.ts'
@@ -29,20 +29,7 @@ export function AccessPage() {
                 description="O papel diz o que a pessoa pode fazer. A equipe e as unidades dizem quais dashboards ela vê. Tudo isso é conferido no servidor."
             />
             <div className="stack">
-                {notice && (
-                    <div className="notice info" role="status">
-                        <Icon name="info" size={18} />
-                        <span style={{ flex: 1 }}>{notice}</span>
-                        <button
-                            className="iconbtn"
-                            type="button"
-                            aria-label="Fechar aviso"
-                            onClick={() => setNotice(null)}
-                        >
-                            <Icon name="close" size={16} />
-                        </button>
-                    </div>
-                )}
+                {notice && <Notice message={notice} onClose={() => setNotice(null)} />}
                 <PermissionMatrix matrix={access.matrix} />
                 <div className="access-cols">
                     <TeamRules

@@ -13,6 +13,7 @@ import type {
     MembersResponse,
     BillingResponse,
     AccessResponse,
+    AuditResponse,
 } from '../types/index.ts'
 
 // A única porta de entrada para dados. As telas só conhecem esta interface;
@@ -30,6 +31,7 @@ export interface DataClient {
     setFavorite(org: string, dashboardKey: string, favorite: boolean): Promise<void>
     getBilling(org: string): Promise<BillingResponse>
     getAccess(org: string): Promise<AccessResponse>
+    getAudit(org: string): Promise<AuditResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>
 }

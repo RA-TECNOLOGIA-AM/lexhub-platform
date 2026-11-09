@@ -10,6 +10,7 @@ import type {
     PendenciasResponse,
     ProtocoloResponse,
     AccessResponse,
+    AuditResponse,
 } from '../types/index.ts'
 
 // Módulo: o DataClient de verdade. Login pelo Supabase Auth; todo dado pela API V2.
@@ -47,6 +48,7 @@ export function createApiClient({ auth, http }: { auth: SupabaseClient; http: Ht
             await (favorite ? http.post(path) : http.delete(path))
         },
         getAccess: (org) => http.get<AccessResponse>(`/orgs/${org}/access`),
+        getAudit: (org) => http.get<AuditResponse>(`/orgs/${org}/audit`),
         getBilling: (org) => http.get<BillingResponse>(`/orgs/${org}/billing`),
         getProtocolo: dashboard<ProtocoloResponse>('protocolo-lexpre'),
         getPendencias: dashboard<PendenciasResponse>('pendencias'),

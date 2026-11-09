@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router'
 import { DataTable } from '../../../components/ui/DataTable.tsx'
-import { Icon } from '../../../components/ui/Icon.tsx'
+import { Notice } from '../../../components/ui/Notice.tsx'
 import { PageHeader } from '../../../components/layout/PageHeader.tsx'
 import { ErrorState } from '../../../components/states/ErrorState.tsx'
 import { LoadingState } from '../../../components/states/LoadingState.tsx'
@@ -31,20 +31,7 @@ export function BillingPage() {
                 description="Os preços ainda serão definidos na fase de descoberta com escritórios. Por isso aparecem como campos em aberto."
             />
             <div className="stack">
-                {notice && (
-                    <div className="notice info" role="status">
-                        <Icon name="info" size={18} />
-                        <span style={{ flex: 1 }}>{notice}</span>
-                        <button
-                            className="iconbtn"
-                            type="button"
-                            aria-label="Fechar aviso"
-                            onClick={() => setNotice(null)}
-                        >
-                            <Icon name="close" size={16} />
-                        </button>
-                    </div>
-                )}
+                {notice && <Notice message={notice} onClose={() => setNotice(null)} />}
                 <CurrentPlanCard
                     current={data.current}
                     planName={currentPlan?.name ?? data.current.plan}

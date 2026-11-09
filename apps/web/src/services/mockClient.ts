@@ -2,6 +2,7 @@ import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
 import {
     access,
+    audit,
     billingFor,
     catalog,
     createMembersStore,
@@ -124,6 +125,12 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             return copy(access)
+        },
+
+        async getAudit() {
+            await wait()
+            requireSession()
+            return copy(audit)
         },
 
         getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),

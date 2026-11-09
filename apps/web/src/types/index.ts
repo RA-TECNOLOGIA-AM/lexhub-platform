@@ -215,3 +215,17 @@ export type AccessResponse = {
     matrix: Permission[]
     rules: TeamRule[]
 }
+
+// Auditoria: o que aconteceu na organização (entradas, exportações, acesso, suporte, fontes).
+export type AuditKind = 'login' | 'export' | 'access' | 'support' | 'source'
+
+export type AuditEvent = {
+    id: string
+    at: string // ISO com fuso ('2026-10-30T14:02:00-04:00'); a tela formata
+    actor: string // quem fez ("Ana Ribeiro", "Sistema", "Suporte RA Tecnologia")
+    kind: AuditKind
+    action: string // "Exportou dados"
+    detail: string
+}
+
+export type AuditResponse = { events: AuditEvent[] } // mais recente primeiro

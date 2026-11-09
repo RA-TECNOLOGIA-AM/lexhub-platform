@@ -11,10 +11,11 @@ type DataTableProps<T> = {
     rows: T[]
     rowKey: (row: T) => string
     empty?: string // texto quando não há linhas
+    rowClassName?: (row: T) => string | undefined // classe de uma linha (ex.: destacar a sessão de suporte)
 }
 
 // Módulo: tabela a partir de colunas. Quem usa diz o que vai em cada coluna; a tabela só desenha.
-export function DataTable<T>({ columns, rows, rowKey, empty = 'Nada para mostrar.' }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, rowKey, empty = 'Nada para mostrar.', rowClassName }: DataTableProps<T>) {
     return (
         <div className="card" style={{ overflow: 'hidden' }}>
             <div className="tblwrap">
@@ -37,7 +38,7 @@ export function DataTable<T>({ columns, rows, rowKey, empty = 'Nada para mostrar
                             </tr>
                         ) : (
                             rows.map((row) => (
-                                <tr key={rowKey(row)}>
+                                <tr key={rowKey(row)} className={rowClassName?.(row)}>
                                     {columns.map((c) => (
                                         <td key={c.header} className={c.align === 'right' ? 'num' : undefined}>
                                             {c.render(row)}

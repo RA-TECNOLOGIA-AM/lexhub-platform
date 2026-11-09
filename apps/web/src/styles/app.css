@@ -284,3 +284,11 @@
     color: var(--warn);
     font-size: var(--fs-sm);
 }
+
+/* Auditoria: a sessão de suporte aparece destacada (mesmo tom do selo "Plataforma"). */
+.tbl tr.row-support td {
+    background: #fbf8ff;
+}
+.nowrap {
+    white-space: nowrap;
+}
