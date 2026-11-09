@@ -5,6 +5,7 @@ import {
     audit,
     billingFor,
     catalog,
+    clients,
     createMembersStore,
     defaultFavorites,
     me,
@@ -131,6 +132,14 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             return copy(audit)
+        },
+
+        // Mesma regra da API: só a equipe RA (platformStaff) vê os clientes.
+        async listClients() {
+            await wait()
+            requireSession()
+            if (!me.user.platformStaff) throw new DataError(403, 'Só a equipe RA Tecnologia vê os clientes')
+            return copy(clients)
         },
 
         getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),

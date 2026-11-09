@@ -14,6 +14,7 @@ import type {
     BillingResponse,
     AccessResponse,
     AuditResponse,
+    ClientsResponse,
 } from '../types/index.ts'
 
 // A única porta de entrada para dados. As telas só conhecem esta interface;
@@ -32,6 +33,8 @@ export interface DataClient {
     getBilling(org: string): Promise<BillingResponse>
     getAccess(org: string): Promise<AccessResponse>
     getAudit(org: string): Promise<AuditResponse>
+    // Plataforma (só equipe RA): todas as organizações. Sem platformStaff, rejeita com 403.
+    listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>
 }

@@ -111,7 +111,8 @@ módulo, e a variação entra como parâmetro (props, argumentos).
 
 Pastas por tipo, como no LexHub v1: o nome da pasta diz o que tem dentro.
 
-- **Tela:** `pages/`. Dashboards em `pages/dashboards/`; telas da seção Administração do menu em `pages/admin/<tela>/`.
+- **Tela:** `pages/`. Dashboards em `pages/dashboards/`; telas da seção Administração do menu em `pages/admin/<tela>/`;
+  telas da seção Plataforma (equipe RA) em `pages/platform/<tela>/`.
 - **Peça visual reaproveitada:** `components/<tipo>/` (`layout`, `dashboard`, `ui`, `auth`, `states`).
 - **Contexto React:** `contexts/`. **Porta de dados e mock:** `services/`. **Formato dos dados:** `types/`.
 
@@ -144,6 +145,9 @@ src/
     dashboards/            HubPage, DashboardPage e cada dashboard como módulo (ver abaixo)
     admin/members/         Membros: tabela, filtros na URL e painel de convite
     admin/billing/         Plano e cobrança: plano atual com uso, planos e faturas
+    admin/access/          Acesso: matriz de papéis, regras por equipe e simulador
+    admin/audit/           Auditoria: eventos com filtros de tipo e pessoa na URL
+    platform/clients/      Clientes (só equipe RA): indicadores, organizações e sessão de suporte
   styles/
     tokens.css             cópia inteira do template (não editar aqui)
     app.css                estilos novos do app React

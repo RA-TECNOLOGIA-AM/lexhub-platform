@@ -4,7 +4,7 @@ type KpiProps = {
     label: string
     value: ReactNode
     note?: ReactNode
-    tone?: 'danger' // destaca o valor em vermelho (ex.: atrasos)
+    tone?: 'danger' | 'warn' // destaca o valor: vermelho (ex.: atrasos) ou âmbar (ex.: fontes com falha)
 }
 
 // Cartão de indicador: rótulo, valor grande e uma nota opcional embaixo.

@@ -18,6 +18,9 @@
 .kpi-v.danger {
     color: var(--danger);
 }
+.kpi-v.warn {
+    color: var(--warn);
+}
 /* Card do hub: o link do título cobre o card inteiro (::after); a estrela fica por cima dele. */
 .dcard {
     position: relative;
@@ -291,4 +294,26 @@
 }
 .nowrap {
     white-space: nowrap;
+}
+
+/* Clientes (plataforma): assentos com barra e o painel da sessão de suporte. */
+.seats {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 120px;
+}
+.support-panel {
+    max-width: 560px;
+    padding: 18px;
+    border-color: var(--border-hover);
+}
+.support-rules {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: var(--fs-md);
+    color: var(--text-2);
 }

@@ -229,3 +229,21 @@ export type AuditEvent = {
 }
 
 export type AuditResponse = { events: AuditEvent[] } // mais recente primeiro
+
+// Plataforma (só equipe RA): as organizações clientes.
+export type ClientPlan = PlanKey | 'onboarding' // 'onboarding' = em implantação, antes de assinar um plano
+
+export type PlatformClient = {
+    slug: string // endereço da organização (lexhub.app/<slug>)
+    name: string
+    sub: string // "3 unidades · cliente desde a v1"
+    plan: ClientPlan
+    seats: { used: number; total: number }
+    failingSources: number // fontes atrasadas ou com falha agora
+    billing: 'ok' | 'onboarding_paid' | 'overdue'
+}
+
+export type ClientsResponse = {
+    clients: PlatformClient[]
+    monthlyRevenue: number | null // null = preços ainda não definidos (mostra R$ [—])
+}
