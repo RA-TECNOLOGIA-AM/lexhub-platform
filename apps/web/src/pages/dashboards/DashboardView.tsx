@@ -3,10 +3,12 @@ import { DashboardHeader } from '../../components/dashboard/DashboardHeader.tsx'
 import { DashboardToolbar } from '../../components/dashboard/DashboardToolbar.tsx'
 import { ErrorState } from '../../components/states/ErrorState.tsx'
 import { LoadingState } from '../../components/states/LoadingState.tsx'
+import { Notice } from '../../components/ui/Notice.tsx'
 import { dataClient } from '../../services/client.ts'
 import { DataError } from '../../services/errors.ts'
 import type { Meta } from '../../types/index.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
+import { useDashboardExport } from '../../hooks/useDashboardExport.ts'
 import { useDashboardQuery } from '../../hooks/useDashboardQuery.ts'
 import type { DashboardModule } from './types.ts'
 
@@ -15,7 +17,9 @@ import type { DashboardModule } from './types.ts'
 export function DashboardView<T extends { meta: Meta }>({ module }: { module: DashboardModule<T> }) {
     const { org = '', unit = '' } = useParams()
     const hub = `/${org}/dashboards`
-    const { query, search, setPeriod } = useDashboardQuery()
+    const { query, search, setPeriod, setFilters } = useDashboardQuery()
+    // Exporta com o período e os filtros em uso (os mesmos da tela).
+    const { exportReport, notice, clearNotice } = useDashboardExport(module.key, { org, unit, ...query })
     // search na lista: mudar período ou filtros na URL busca de novo.
     const { data: result, error } = useAsync(
         () => Promise.all([module.fetch({ org, unit, ...query }), dataClient.listDashboards(org)]),
@@ -40,8 +44,21 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
                 org={org}
                 dashboard={summary}
                 meta={data.meta}
-                actions={<DashboardToolbar period={period} onPeriodChange={setPeriod} />}
+                actions={
+                    <DashboardToolbar
+                        period={period}
+                        onPeriodChange={setPeriod}
+                        filterFields={module.filters?.(data) ?? []}
+                        filters={query.filters}
+                        onFiltersChange={setFilters}
+                        exportTitle={summary.title}
+                        exportGroups={module.exportFields ?? []}
+                        canExport={summary.can_export}
+                        onExport={exportReport}
+                    />
+                }
             />
+            {notice && <Notice message={notice} onClose={clearNotice} />}
             <Content data={data} />
         </>
     )

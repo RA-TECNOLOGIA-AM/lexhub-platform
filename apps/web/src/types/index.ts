@@ -277,3 +277,16 @@ export type SourcesResponse = {
     units: UnitSources[]
     unitLimit: { used: number; total: number } // "3 de 5 unidades do plano"
 }
+
+// Exportar (como na v1, o servidor gera o arquivo): o relatório com o período e os filtros em uso.
+export type ExportRequest = DashboardQuery & {
+    dashboard: string // a key ('protocolo-lexpre')
+    format: 'csv' | 'xlsx'
+    campos: string[] // slugs na ordem das colunas
+}
+
+export type ExportFile = {
+    blob: Blob
+    filename: string
+    note?: string // aviso para mostrar depois de baixar (ex.: no mock o XLSX sai como CSV)
+}

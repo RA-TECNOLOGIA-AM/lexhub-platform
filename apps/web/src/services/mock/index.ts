@@ -7,7 +7,7 @@ export { defaultFavorites } from './favorites.ts'
 export { createMembersStore, members } from './members.ts'
 export { billingFor, plans } from './billing.ts'
 export { access } from './access.ts'
-export { audit } from './audit.ts'
+export { addAuditEvent, audit } from './audit.ts'
 export { clients } from './clients.ts'
 export {
     emptyCatalog,
@@ -18,3 +18,4 @@ export {
     onboardingSources,
 } from './emptyOrg.ts'
 export { sources } from './sources.ts'
+export { EXPORT_LABELS, exportRowsFor } from './exportRows.ts'

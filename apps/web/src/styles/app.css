@@ -529,6 +529,76 @@ button.org:hover {
     margin: 0;
     color: var(--danger);
 }
+/* Filtros: um grupo por filtro, com rolagem quando a lista é grande. */
+.filter-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: min(420px, 60vh);
+    overflow-y: auto;
+}
+.filter-group {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+}
+/* Janela "Exportar relatório": cabeçalho e rodapé fixos, campos com rolagem no meio. */
+.export-dialog {
+    width: min(640px, calc(100vw - 32px));
+    max-height: min(720px, calc(100vh - 32px));
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    color: var(--text);
+}
+.export-dialog[open] {
+    display: flex;
+    flex-direction: column;
+}
+.export-dialog::backdrop {
+    background: color-mix(in srgb, var(--text) 45%, transparent);
+}
+.export-head {
+    padding: 20px 20px 14px;
+    border-bottom: 1px solid var(--divider);
+}
+.export-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.export-toolbar {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.export-group-title {
+    padding: 0;
+    margin-bottom: 4px;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.export-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0 16px;
+}
+.export-foot {
+    padding: 12px 20px;
+    border-top: 1px solid var(--divider);
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
 /* Celular: o painel vira uma folha presa embaixo da tela (preso ao botão, ele sairia pela borda). */
 @media (max-width: 640px) {
     .popover {

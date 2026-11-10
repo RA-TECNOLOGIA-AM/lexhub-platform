@@ -1,6 +1,9 @@
 import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
 import {
+    addAuditEvent,
+    EXPORT_LABELS,
+    exportRowsFor,
     access,
     audit,
     billingFor,
@@ -22,6 +25,8 @@ import {
     testUsers,
 } from './mock/index.ts'
 import type { DashboardQuery, Meta } from '../types/index.ts'
+import { toCsv } from '../lib/csv.ts'
+import { periodLabel } from '../lib/period.ts'
 
 // Simula a rede: um pouco de espera faz o "carregando" aparecer de verdade.
 const LATENCY_MS = 300
@@ -184,5 +189,34 @@ export function createMockClient(): DataClient {
 
         getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),
         getPendencias: (query) => dashboardResponse('pendencias', query, pendenciasFor),
+
+        // Mesmas regras da API: sessão, organização, unidade liberada e can_export; registra na Auditoria.
+        // No mock o arquivo é sempre CSV (gerar XLSX exige biblioteca); com a API, vem o formato pedido.
+        async exportDashboard({ org, unit, dashboard, format, campos, from, to, filters }) {
+            await wait()
+            requireSession()
+            if (!requireOrg(org)) throw new DataError(403, 'Você não tem acesso a este dashboard nesta unidade')
+            checkAccess(dashboard, unit)
+            const summary = catalog.available.find((d) => d.key === dashboard)
+            if (!summary?.can_export) throw new DataError(403, 'Você não pode exportar este dashboard')
+
+            const columns = campos.map((slug) => ({ key: slug, label: EXPORT_LABELS[slug] ?? slug }))
+            const rows = exportRowsFor(campos, filters)
+            const period = from && to ? periodLabel({ from, to }) : 'período padrão'
+            addAuditEvent({
+                actor: me.user.name,
+                kind: 'export',
+                action: 'Exportou dados',
+                detail: `${summary.title} · ${unit} · ${period} · ${rows.length} linhas · ${format.toUpperCase()}`,
+            })
+            return {
+                blob: new Blob([toCsv(columns, rows)], { type: 'text/csv;charset=utf-8' }),
+                filename: `${dashboard}_${unit}.csv`,
+                note:
+                    format === 'xlsx'
+                        ? 'No modo de teste o XLSX sai como CSV. O XLSX de verdade vem da API.'
+                        : undefined,
+            }
+        },
     }
 }

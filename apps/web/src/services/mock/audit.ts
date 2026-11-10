@@ -1,4 +1,4 @@
-import type { AuditResponse } from '../../types/index.ts'
+import type { AuditEvent, AuditResponse } from '../../types/index.ts'
 
 // Os eventos do protótipo (canvas "LexHub v2 — protótipo", tela Auditoria), no horário de Manaus.
 export const audit: AuditResponse = {
@@ -52,4 +52,9 @@ export const audit: AuditResponse = {
             detail: 'Navegador Chrome · Manaus',
         },
     ],
+}
+
+// Evento novo (ex.: uma exportação) entra no topo da lista, como a API fará. Volta ao original no F5.
+export function addAuditEvent(event: Omit<AuditEvent, 'id' | 'at'>) {
+    audit.events.unshift({ ...event, id: `ev-${Date.now()}`, at: new Date().toISOString() })
 }

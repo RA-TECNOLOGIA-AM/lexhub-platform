@@ -14,6 +14,7 @@ import type {
     ClientsResponse,
     SourcesResponse,
 } from '../types/index.ts'
+import { paramsFromQuery } from '../lib/dashboardQuery.ts'
 
 // Módulo: o DataClient de verdade. Login pelo Supabase Auth; todo dado pela API V2.
 // Parâmetros: o cliente de login e o http (já com a URL da API e o token).
@@ -62,5 +63,15 @@ export function createApiClient({ auth, http }: { auth: SupabaseClient; http: Ht
         getBilling: (org) => http.get<BillingResponse>(`/orgs/${org}/billing`),
         getProtocolo: dashboard<ProtocoloResponse>('protocolo-lexpre'),
         getPendencias: dashboard<PendenciasResponse>('pendencias'),
+
+        // Mesmo formato da v1: ?format=xlsx&campos=id_demanda&campos=materia&from=...&materia=ANP
+        async exportDashboard({ org, unit, dashboard, format, campos, ...query }) {
+            const params = paramsFromQuery(query)
+            params.set('format', format)
+            for (const campo of campos) params.append('campos', campo)
+            const path = `/orgs/${org}/units/${unit}/dashboards/${dashboard}/export?${params}`
+            const { blob, filename } = await http.file(path)
+            return { blob, filename: filename ?? `${dashboard}_${unit}.${format}` }
+        },
     }
 }

@@ -65,3 +65,23 @@ describe('toSearch', () => {
         expect(toSearch({})).toBe('')
     })
 })
+
+describe('http.file', () => {
+    const fileFetch = (headers: Record<string, string>) => async () => new Response('a;b', { status: 200, headers })
+
+    it('devolve o conteúdo e o nome do Content-Disposition', async () => {
+        const http = createHttp({
+            baseUrl: 'http://api',
+            getToken: async () => 't',
+            fetch: fileFetch({ 'Content-Disposition': 'attachment; filename="protocolo_NG.xlsx"' }),
+        })
+        const { blob, filename } = await http.file('/x')
+        expect(filename).toBe('protocolo_NG.xlsx')
+        expect(await blob.text()).toBe('a;b')
+    })
+
+    it('sem Content-Disposition, o nome vem null (quem chama escolhe um)', async () => {
+        const http = createHttp({ baseUrl: 'http://api', getToken: async () => null, fetch: fileFetch({}) })
+        expect((await http.file('/x')).filename).toBeNull()
+    })
+})

@@ -16,6 +16,8 @@ import type {
     AuditResponse,
     ClientsResponse,
     SourcesResponse,
+    ExportRequest,
+    ExportFile,
 } from '../types/index.ts'
 
 // A única porta de entrada para dados. As telas só conhecem esta interface;
@@ -43,6 +45,8 @@ export interface DataClient {
     listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>
+    // Relatório de um dashboard (CSV ou XLSX). Sem can_export ou sem acesso à unidade, rejeita com 403.
+    exportDashboard(request: ExportRequest): Promise<ExportFile>
 }
 
 // mock = dados fictícios; api = Supabase Auth (login) + API V2 (dados). Escolha em VITE_DATA_SOURCE.

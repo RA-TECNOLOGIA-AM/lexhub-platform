@@ -51,6 +51,7 @@ do go-live com o mock.
 | P1         | `GET /orgs/{org}/dashboards`                               | `DashboardCatalog`                  | Hub                                          |
 | P1         | `GET /orgs/{org}/units/{unit}/dashboards/protocolo-lexpre` | `ProtocoloResponse`                 | Protocolo (#123)                             |
 | P2         | `GET /orgs/{org}/units/{unit}/dashboards/pendencias`       | `PendenciasResponse`                | Pendências                                   |
+| P2         | `GET /orgs/{org}/units/{unit}/dashboards/{key}/export`     | arquivo CSV ou XLSX                 | Exportar (Protocolo e Pendências)            |
 | P2         | `GET /orgs/{org}/favorites`                                | `string[]` (keys)                   | Hub                                          |
 | P2         | `POST /orgs/{org}/favorites/{key}` · `DELETE …/{key}`      | 204                                 | Hub (estrela)                                |
 | P3         | `GET /orgs/{org}/hub-order` · `PUT …` (corpo: `string[]`)  | `string[]` (keys) · 204             | Hub (arrastar cards)                         |
@@ -89,6 +90,25 @@ Cada uma precisa existir no servidor.
   colaborador exporta só o próprio setor; admin, dev e controller exportam qualquer um.
 - Nos dashboards, `scope = 'own'` (de `require_dashboard`) filtra para os registros da própria pessoa.
   `comissionamento_por_funcionario` só vem para quem tem `can_see_commission`.
+
+### Opções dos filtros (`opcoes_filtro`)
+
+- Calculadas pela API junto com o dashboard: valores distintos de matéria, funcionário, UF e área nos dados da
+  **unidade e do período**, **antes** de aplicar os filtros (marcar "ANP" não pode esconder as outras matérias).
+- Os filtros seguem os parâmetros da v1 (Protocolo LexPre: `materia`, `funcionario`, `area_atuacao_id`, `uf`).
+- O front só exibe; não calcula opções nem números (igual à v1, onde a API faz tudo: funções `filter_*` por
+  dashboard e opções na resposta ou em `GET /<dashboard>/filtros/opcoes`).
+
+### Exportar (`.../dashboards/{key}/export`)
+
+- Parâmetros como na v1: `?format=csv|xlsx&campos=id_demanda&campos=materia&from=&to=&<filtros>`. O arquivo sai
+  com o período e os filtros pedidos, colunas na ordem de `campos`, cabeçalho com os rótulos da v1 (`_LABELS_EXPORT_*`).
+- Gerado pelo servidor (openpyxl no XLSX, como na v1), com as mesmas queries e funções `filter_*` do dashboard.
+- **403** sem `can_export`, fora da regra do setor ou sem acesso à unidade. Só aceita `campos` da lista do servidor
+  (`_CAMPOS_EXPORT_*`); campo desconhecido = **400**.
+- Toda exportação vai para a **auditoria** (quem, dashboard, unidade, período, filtros, quantas linhas, formato). A v1
+  não registra.
+- Nome do arquivo no `Content-Disposition` (o front usa `{key}_{unit}.{format}` se não vier).
 
 ### Convite (`POST /orgs/{org}/invitations`)
 
