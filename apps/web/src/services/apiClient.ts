@@ -49,6 +49,12 @@ export function createApiClient({ auth, http }: { auth: SupabaseClient; http: Ht
             const path = `/orgs/${org}/favorites/${dashboardKey}`
             await (favorite ? http.post(path) : http.delete(path))
         },
+
+        getHubOrder: (org) => http.get<string[]>(`/orgs/${org}/hub-order`),
+        async setHubOrder(org, keys) {
+            await http.put(`/orgs/${org}/hub-order`, keys)
+        },
+
         getAccess: (org) => http.get<AccessResponse>(`/orgs/${org}/access`),
         getAudit: (org) => http.get<AuditResponse>(`/orgs/${org}/audit`),
         getSources: (org) => http.get<SourcesResponse>(`/orgs/${org}/sources`),

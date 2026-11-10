@@ -455,3 +455,41 @@ button.org:hover {
 .source-when {
     flex: 0 1 200px;
 }
+
+/* Hub: arrastar cards. O embrulho ocupa a célula da grade e estica o card dentro dele. */
+.sortable-card {
+    display: flex;
+    border-radius: var(--r-lg);
+}
+.sortable-card > .dcard {
+    flex: 1;
+}
+.sortable-card:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.sortable-card.dragging {
+    position: relative;
+    z-index: 2;
+}
+.sortable-card.dragging > .dcard {
+    border-color: var(--accent);
+    cursor: grabbing;
+}
+/* Seção que recebe um card de fora (Favoritos): fundo e contorno enquanto o card está por cima. */
+.drop-zone {
+    border-radius: var(--r-lg);
+    transition: background-color 0.15s;
+}
+.drop-zone.over {
+    background: var(--accent-soft);
+    outline: 2px dashed var(--accent);
+    outline-offset: 6px;
+}
+/* Favoritos vazio: a dica ocupa a linha inteira da grade. */
+.drop-hint {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 16px;
+    border-style: dashed;
+}

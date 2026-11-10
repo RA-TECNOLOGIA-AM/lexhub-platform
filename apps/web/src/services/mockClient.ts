@@ -36,6 +36,9 @@ const SESSION_KEY = 'lexhub.mock.session'
 // Favoritos: ficam no localStorage (sobrevivem a fechar a aba, como na API ficarão no banco).
 const FAVORITES_KEY = 'lexhub.mock.favorites'
 
+// Ordem do hub: no localStorage, uma por organização (cada org tem o seu catálogo).
+const hubOrderKey = (org: string) => `lexhub.mock.hubOrder.${org}`
+
 // Membros do mock: a lista muda com os convites (volta ao original no F5).
 const memberStore = createMembersStore(me.user.name)
 
@@ -132,6 +135,18 @@ export function createMockClient(): DataClient {
             const current = await this.listFavorites(org)
             const next = favorite ? [...new Set([...current, dashboardKey])] : current.filter((k) => k !== dashboardKey)
             localStorage.setItem(FAVORITES_KEY, JSON.stringify(next))
+        },
+
+        async getHubOrder(org) {
+            await wait()
+            requireSession()
+            const saved = localStorage.getItem(hubOrderKey(org))
+            return saved ? (JSON.parse(saved) as string[]) : []
+        },
+
+        async setHubOrder(org, keys) {
+            requireSession()
+            localStorage.setItem(hubOrderKey(org), JSON.stringify(keys))
         },
 
         // Assentos lidos de Membros: convidar alguém muda o número aqui também.

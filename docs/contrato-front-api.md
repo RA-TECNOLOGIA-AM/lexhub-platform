@@ -53,10 +53,12 @@ do go-live com o mock.
 | P2         | `GET /orgs/{org}/units/{unit}/dashboards/pendencias`       | `PendenciasResponse`                | Pendências                                   |
 | P2         | `GET /orgs/{org}/favorites`                                | `string[]` (keys)                   | Hub                                          |
 | P2         | `POST /orgs/{org}/favorites/{key}` · `DELETE …/{key}`      | 204                                 | Hub (estrela)                                |
+| P3         | `GET /orgs/{org}/hub-order` · `PUT …` (corpo: `string[]`)  | `string[]` (keys) · 204             | Hub (arrastar cards)                         |
 | P2         | `GET /orgs/{org}/members`                                  | `MembersResponse`                   | Membros                                      |
 | P2         | `POST /orgs/{org}/invitations`                             | 204 (corpo: `InviteRequest`)        | Membros (convite)                            |
 | P3         | `GET /orgs/{org}/access`                                   | `AccessResponse`                    | Acesso                                       |
 | P3         | `GET /orgs/{org}/audit`                                    | `AuditResponse`                     | Auditoria                                    |
+| P3         | `GET /orgs/{org}/sources`                                  | `SourcesResponse`                   | Unidades e fontes                            |
 | P3         | `GET /orgs/{org}/billing`                                  | `BillingResponse`                   | Plano e cobrança                             |
 | P3         | `GET /platform/clients`                                    | `ClientsResponse`                   | Clientes (equipe RA)                         |
 

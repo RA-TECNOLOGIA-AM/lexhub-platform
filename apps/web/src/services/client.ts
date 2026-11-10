@@ -27,12 +27,14 @@ export interface DataClient {
     // org = slug da organização ativa (vem da URL); sem org, a organização padrão da pessoa.
     // Organização de que a pessoa não faz parte: rejeita com 403.
     getMe(org?: string): Promise<Me>
-
     listDashboards(org: string): Promise<DashboardCatalog>
     listFavorites(org: string): Promise<string[]>
     listMembers(org: string): Promise<MembersResponse>
     inviteMembers(org: string, invite: InviteRequest): Promise<void>
     setFavorite(org: string, dashboardKey: string, favorite: boolean): Promise<void>
+    // Ordem dos cards do hub da pessoa: uma lista de keys para o hub inteiro ([] = ordem do catálogo).
+    getHubOrder(org: string): Promise<string[]>
+    setHubOrder(org: string, keys: string[]): Promise<void>
     getBilling(org: string): Promise<BillingResponse>
     getAccess(org: string): Promise<AccessResponse>
     getAudit(org: string): Promise<AuditResponse>

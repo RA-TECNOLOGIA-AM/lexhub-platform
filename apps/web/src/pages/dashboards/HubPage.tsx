@@ -1,7 +1,9 @@
 import { useParams, useSearchParams } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
-import { CardSection } from '../../components/dashboard/CardSection.tsx'
 import { DashboardCard } from '../../components/dashboard/DashboardCard.tsx'
+import { HubDnd, type HubDrop } from '../../components/dashboard/HubDnd.tsx'
+import { SortableCard } from '../../components/dashboard/SortableCard.tsx'
+import { SortableSection } from '../../components/dashboard/SortableSection.tsx'
 import type { DashboardSummary } from '../../types/index.ts'
 import { PillGroup, type PillItem } from '../../components/ui/PillGroup.tsx'
 import { dataClient } from '../../services/client.ts'
@@ -10,6 +12,10 @@ import { ErrorState } from '../../components/states/ErrorState.tsx'
 import { LoadingState } from '../../components/states/LoadingState.tsx'
 import { StateMessage } from '../../components/states/StateMessage.tsx'
 import { useFavorites } from '../../hooks/useFavorites.ts'
+import { useHubOrder } from '../../hooks/useHubOrder.ts'
+import { sortAreas, sortByOrder } from '../../lib/hubOrder.ts'
+
+const FAVORITES = 'Favoritos'
 
 export function HubPage() {
     const { org = '' } = useParams()
@@ -18,16 +24,19 @@ export function HubPage() {
     const [searchParams] = useSearchParams()
     const unit = searchParams.get('unidade') // null = todas as unidades
     const favorites = useFavorites(org)
+    const hubOrder = useHubOrder(org)
 
     if (error) return <ErrorState error={error} />
-    if (!catalog || !favorites.ready) return <LoadingState />
+    if (!catalog || !favorites.ready || !hubOrder.ready) return <LoadingState />
 
-    const all = catalog.available
+    // O catálogo na ordem que a pessoa arrastou (dashboard novo vai para o fim).
+    const all = sortByOrder(catalog.available, hubOrder.order)
     const dashboards = unit ? all.filter((d) => d.units.includes(unit)) : all
 
     // Pílulas: "Todas" + cada unidade que aparece no catálogo (nome do usuário logado quando houver).
+    // Lê do catálogo original: arrastar cards não muda a ordem das pílulas.
     const unitName = (code: string) => me?.units.find((u) => u.code === code)?.name ?? code
-    const unitCodes = [...new Set(all.flatMap((d) => d.units))]
+    const unitCodes = [...new Set(catalog.available.flatMap((d) => d.units))]
     const pills: PillItem[] = [
         { id: 'todas', label: 'Todas as unidades', to: `/${org}/dashboards`, active: !unit },
         ...unitCodes.map((code) => ({
@@ -37,10 +46,13 @@ export function HubPage() {
             active: code === unit,
         })),
     ]
-    // Favoritos sobem para a seção do topo; o resto fica na sua área, na ordem do catálogo.
+    // Favoritos sobem para a seção do topo; o resto fica na sua área.
     const favs = dashboards.filter((d) => favorites.isFavorite(d.key))
     const others = dashboards.filter((d) => !favorites.isFavorite(d.key))
-    const areas = [...new Set(others.map((d) => d.area))]
+    // Áreas na ordem do catálogo, com as prioritárias (Gestão) logo abaixo de Favoritos.
+    const areas = sortAreas([...new Set(catalog.available.map((d) => d.area))]).filter((area) =>
+        others.some((d) => d.area === area),
+    )
     const count =
         dashboards.length === 0
             ? 'Nenhum dashboard liberado'
@@ -48,16 +60,31 @@ export function HubPage() {
               ? '1 dashboard liberado'
               : `${dashboards.length} dashboards liberados`
 
-    // Um card do hub; usado nas duas seções.
-    const card = (d: DashboardSummary) => (
-        <DashboardCard
-            key={d.key}
-            org={org}
-            unit={unit ?? d.units[0]}
-            dashboard={d}
-            favorite={favorites.isFavorite(d.key)}
-            onToggleFavorite={() => favorites.toggle(d.key)}
-        />
+    // O que fazer ao soltar um card: na mesma seção, reordena; de uma área para Favoritos, favorita
+    // (e põe onde caiu). Qualquer outro caso (ex.: Favoritos -> área) é ignorado: desfavoritar é pela estrela.
+    function handleDrop({ active, from, over, to }: HubDrop) {
+        if (to === FAVORITES && from !== FAVORITES) favorites.toggle(active)
+        else if (to !== from) return
+        // Ordem completa (todas as unidades): o filtro da tela não pode apagar a posição dos outros cards.
+        if (over)
+            hubOrder.move(
+                all.map((d) => d.key),
+                active,
+                over,
+            )
+    }
+
+    // Um card do hub, arrastável dentro da sua seção.
+    const card = (section: string) => (d: DashboardSummary) => (
+        <SortableCard key={d.key} id={d.key} section={section}>
+            <DashboardCard
+                org={org}
+                unit={unit ?? d.units[0]}
+                dashboard={d}
+                favorite={favorites.isFavorite(d.key)}
+                onToggleFavorite={() => favorites.toggle(d.key)}
+            />
+        </SortableCard>
     )
 
     return (
@@ -72,21 +99,37 @@ export function HubPage() {
                 <PillGroup label="Filtrar por unidade" items={pills} />
             </section>
 
-            <div className="stack" style={{ gap: 22 }}>
-                {/* Organização sem nenhum dashboard (ex.: em implantação): explica em vez de mostrar a página vazia. */}
-                {all.length === 0 && (
-                    <StateMessage icon="inbox" title="Nenhum dashboard liberado ainda">
-                        Eles aparecem aqui quando as fontes de dados estiverem ligadas e um admin liberar dashboards
-                        para a sua equipe.
-                    </StateMessage>
-                )}
-                {favs.length > 0 && <CardSection title="Favoritos">{favs.map(card)}</CardSection>}
-                {areas.map((area) => (
-                    <CardSection key={area} title={area}>
-                        {others.filter((d) => d.area === area).map(card)}
-                    </CardSection>
-                ))}
-            </div>
+            <HubDnd onDrop={handleDrop}>
+                <div className="stack" style={{ gap: 22 }}>
+                    {/* Organização sem nenhum dashboard (ex.: em implantação): explica em vez de mostrar a página vazia. */}
+                    {all.length === 0 && (
+                        <StateMessage icon="inbox" title="Nenhum dashboard liberado ainda">
+                            Eles aparecem aqui quando as fontes de dados estiverem ligadas e um admin liberar dashboards
+                            para a sua equipe.
+                        </StateMessage>
+                    )}
+                    {/* Favoritos aparece mesmo vazio: é onde se solta um card para favoritar. */}
+                    {all.length > 0 && (
+                        <SortableSection title={FAVORITES} ids={favs.map((d) => d.key)} acceptsOthers>
+                            {favs.length > 0 ? (
+                                favs.map(card(FAVORITES))
+                            ) : (
+                                <p className="card drop-hint muted small">
+                                    Arraste um card para cá ou toque na estrela para favoritar.
+                                </p>
+                            )}
+                        </SortableSection>
+                    )}
+                    {areas.map((area) => {
+                        const items = others.filter((d) => d.area === area)
+                        return (
+                            <SortableSection key={area} title={area} ids={items.map((d) => d.key)}>
+                                {items.map(card(area))}
+                            </SortableSection>
+                        )
+                    })}
+                </div>
+            </HubDnd>
 
             {catalog.upcoming.length > 0 && (
                 <section className="stack" aria-labelledby="soon-title">
