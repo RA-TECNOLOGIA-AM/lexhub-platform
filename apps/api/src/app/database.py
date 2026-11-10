@@ -180,4 +180,3 @@ async def run_with_connection_retry[T](
 def get_databases(request: Request) -> DatabaseManager:
     """Dependency FastAPI: `databases: DatabaseManager = Depends(get_databases)`."""
     return request.app.state.databases
-    

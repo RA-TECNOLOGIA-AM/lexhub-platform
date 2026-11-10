@@ -116,6 +116,15 @@ class TokenVerifier:
         return CurrentUser(user_id=claims["sub"], email=claims.get("email"), claims=claims)
 
 
+def is_platform_staff(user: CurrentUser) -> bool:
+    """Equipe RA Tecnologia: app_metadata.platform_staff = true no Supabase Auth.
+
+    app_metadata só é alterado com a chave secreta (painel ou API), nunca pelo próprio usuário.
+    """
+    app_metadata = user.claims.get("app_metadata") or {}
+    return app_metadata.get("platform_staff") is True
+
+
 def get_verifier(request: Request) -> TokenVerifier:
     return request.app.state.token_verifier
 

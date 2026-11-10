@@ -11,3 +11,9 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
+
+[tool.ruff.format]
+# CRLF no Windows, LF no Linux (CI e Docker): igual ao .editorconfig e ao Prettier do front.
+line-ending = "native"
+# Os exemplos de código no README ficam como estão.
+exclude = ["*.md"]

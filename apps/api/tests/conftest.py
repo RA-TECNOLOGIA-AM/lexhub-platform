@@ -99,18 +99,43 @@ def repo() -> FakeRepo:
     return FakeRepo()
 
 
+class FakeMeRepo:
+    """Banco em memória do /me: user_id -> organizações e a associação em cada uma."""
+
+    def __init__(self):
+        self.orgs: dict[str, list] = {}
+        self.memberships: dict[tuple[str, str], object] = {}
+
+    def add(self, user_id: str, org, membership) -> None:
+        self.orgs.setdefault(user_id, []).append(org)
+        self.memberships[(user_id, org.id)] = membership
+
+    async def list_orgs(self, user_id):
+        return list(self.orgs.get(user_id, []))
+
+    async def membership(self, user_id, org_id):
+        return self.memberships.get((user_id, org_id))
+
+
 @pytest.fixture
-def client(signer, repo):
+def me_repo() -> FakeMeRepo:
+    return FakeMeRepo()
+
+
+@pytest.fixture
+def client(signer, repo, me_repo):
     from app.access import get_repo
     from app.auth import TokenVerifier, get_verifier
     from app.config import get_settings
     from app.main import create_app
+    from app.me import get_me_repo
 
     get_settings.cache_clear()
     app = create_app()
     verifier = TokenVerifier(get_settings(), jwks_loader=lambda: _async(signer.jwks))
     app.dependency_overrides[get_verifier] = lambda: verifier
     app.dependency_overrides[get_repo] = lambda: repo
+    app.dependency_overrides[get_me_repo] = lambda: me_repo
     with TestClient(app) as c:
         yield c
 

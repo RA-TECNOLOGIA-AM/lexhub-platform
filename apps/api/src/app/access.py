@@ -98,10 +98,15 @@ class PgAccessRepo:
         )
 
 
-def get_repo(request: Request) -> AccessRepo:
+def get_db_pool(request: Request) -> asyncpg.Pool:
+    """Pool do banco da V2 (DATABASE_URL). Sem banco configurado, a rota responde 503."""
     pool = getattr(request.app.state, "db_pool", None)
     if pool is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail="Banco indisponível")
+    return pool
+
+
+def get_repo(pool: Annotated[asyncpg.Pool, Depends(get_db_pool)]) -> AccessRepo:
     return PgAccessRepo(pool)
 
 

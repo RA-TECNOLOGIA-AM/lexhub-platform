@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.auth import build_verifier
 from app.config import get_settings
 from app.database import DatabaseManager
-from app.routes import dashboards, health
+from app.routes import dashboards, health, me
 from app.supabase_client import create_supabase
 
 
@@ -53,6 +53,7 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(health.router)
+    app.include_router(me.router)
     app.include_router(dashboards.router)
     return app
 
