@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { orgInitials } from '../../lib/orgs.ts'
 import type { Org } from '../../types/index.ts'
 import { Icon } from '../ui/Icon.tsx'
+import { useDismiss } from '../../hooks/useDismiss.ts'
 
 type OrgSwitcherProps = {
     current: Org
@@ -19,24 +20,13 @@ export function OrgSwitcher({ current, orgs, canCreate, onNavigate }: OrgSwitche
     const button = useRef<HTMLButtonElement>(null)
 
     // Aberto: fecha com Esc (e devolve o foco ao botão) ou clicando fora.
-    useEffect(() => {
-        if (!open) return
-        function onKey(e: KeyboardEvent) {
-            if (e.key === 'Escape') {
-                setOpen(false)
-                button.current?.focus()
-            }
-        }
-        function onClick(e: MouseEvent) {
-            if (!root.current?.contains(e.target as Node)) setOpen(false)
-        }
-        document.addEventListener('keydown', onKey)
-        document.addEventListener('click', onClick)
-        return () => {
-            document.removeEventListener('keydown', onKey)
-            document.removeEventListener('click', onClick)
-        }
-    }, [open])
+
+    useDismiss({
+        open,
+        onClose: () => setOpen(false),
+        isInside: (target) => !!root.current?.contains(target),
+        returnFocus: button,
+    })
 
     function choose() {
         setOpen(false)

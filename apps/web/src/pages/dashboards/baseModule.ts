@@ -11,7 +11,9 @@ export type BaseResponse = { meta: Meta }
 export function baseModule(key: string): DashboardModule<BaseResponse> {
     return {
         key,
-        fetch: async ({ org, unit }) => ({ meta: baseMeta(await dataClient.listDashboards(org), key, unit) }),
+        fetch: async ({ org, unit, from, to }) => ({
+            meta: baseMeta(await dataClient.listDashboards(org), key, unit, { from, to }),
+        }),
         Content: BaseContent,
     }
 }

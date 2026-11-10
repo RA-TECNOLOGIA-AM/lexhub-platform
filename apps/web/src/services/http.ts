@@ -1,5 +1,6 @@
 import { DataError } from './errors.ts'
 import type { DashboardFilters } from '../types/index.ts'
+import { paramsFromQuery } from '../lib/dashboardQuery.ts'
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>
 
@@ -57,12 +58,6 @@ async function detailOf(res: Response): Promise<string> {
 
 // Período e filtros na query string, com os nomes da API (?from=&to=&materia=ANP&materia=MORA).
 export function toSearch(query: { from?: string; to?: string; filters?: DashboardFilters }): string {
-    const params = new URLSearchParams()
-    if (query.from) params.set('from', query.from)
-    if (query.to) params.set('to', query.to)
-    for (const [key, values] of Object.entries(query.filters ?? {})) {
-        for (const value of values ?? []) params.append(key, value)
-    }
-    const text = params.toString()
+    const text = paramsFromQuery(query).toString()
     return text ? `?${text}` : ''
 }

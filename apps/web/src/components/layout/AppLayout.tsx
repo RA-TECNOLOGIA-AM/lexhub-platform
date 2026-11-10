@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { Icon } from '../ui/Icon.tsx'
 import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { SearchBox } from './SearchBox.tsx'
 import { activeItem, NAV_SECTIONS, pathOf } from '../../navigation.ts'
+import { useDismiss } from '../../hooks/useDismiss.ts'
 
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
@@ -17,26 +18,13 @@ export function AppLayout() {
     const dashboardKey = pathname.split('/dashboards/')[1]
     const crumb = [current?.section.title, current?.item.label, dashboardKey].filter(Boolean).join(' / ')
 
-    // Menu do celular: fecha com Esc ou clicando fora da barra lateral.
-    useEffect(() => {
-        if (!menuOpen) return
-        function onKey(e: KeyboardEvent) {
-            if (e.key === 'Escape') {
-                setMenuOpen(false)
-                menuButton.current?.focus()
-            }
-        }
-        function onClick(e: MouseEvent) {
-            const target = e.target as Element
-            if (!target.closest('.side, .menu-btn')) setMenuOpen(false)
-        }
-        document.addEventListener('keydown', onKey)
-        document.addEventListener('click', onClick)
-        return () => {
-            document.removeEventListener('keydown', onKey)
-            document.removeEventListener('click', onClick)
-        }
-    }, [menuOpen])
+    // Menu do celular: fecha com Esc (foco volta ao botão) ou clicando fora da barra lateral.
+    useDismiss({
+        open: menuOpen,
+        onClose: () => setMenuOpen(false),
+        isInside: (target) => !!target.closest('.side, .menu-btn'),
+        returnFocus: menuButton,
+    })
 
     // O <RequireAuth> só deixa chegar aqui com alguém logado; o if é para o TypeScript.
     // Fica depois de todos os hooks (regra dos hooks: mesma ordem em toda renderização).

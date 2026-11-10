@@ -127,6 +127,13 @@ const PATHS = {
             <path d="M4 10h16M10 4v16" />
         </>
     ),
+    calendar: (
+        <>
+            <rect x="3.5" y="5" width="17" height="15" rx="2" />
+            <path d="M8 3v4M16 3v4M3.5 10h17" />
+        </>
+    ),
+    filter: <path d="M4 5h16l-6 8v6l-4-2v-4L4 5z" />,
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof PATHS
