@@ -5,6 +5,7 @@ import type {
     DashboardCatalog,
     Member,
     MembersResponse,
+    SourcesResponse,
 } from '../../types/index.ts'
 import { access } from './access.ts'
 import { plans } from './billing.ts'
@@ -34,6 +35,21 @@ export function onboardingMembers(email: string, name: string): MembersResponse 
 export const onboardingAccess: AccessResponse = { matrix: access.matrix, rules: [] }
 
 export const onboardingAudit: AuditResponse = { events: [] }
+
+// Ainda sem fontes conectadas: só a unidade-sede, vazia.
+export const onboardingSources: SourcesResponse = {
+    syncEveryMin: 5,
+    unitLimit: { used: 1, total: 1 },
+    units: [
+        {
+            unit: { code: 'CP', name: 'Parceiro · sede' },
+            timezone: 'America/Manaus',
+            dashboards: 0,
+            lastFailure: null,
+            sources: [],
+        },
+    ],
+}
 
 export const onboardingBilling: BillingResponse = {
     current: {

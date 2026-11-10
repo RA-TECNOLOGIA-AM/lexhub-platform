@@ -1,0 +1,160 @@
+import type { SourcesResponse, Unit } from '../../types/index.ts'
+import { minAgo } from './helpers.ts'
+import { me } from './users.ts'
+
+// As fontes do protótipo (canvas "LexHub v2 — protótipo", tela Unidades e fontes).
+// Datas relativas a agora (minAgo), para "há 4 min" continuar verdade no F5.
+
+// Unidade pelo código, reaproveitando os nomes do users.ts (sem repetir 'Nicolas Gomes' aqui).
+const unit = (code: string): Unit => me.units.find((u) => u.code === code)!
+
+export const sources: SourcesResponse = {
+    syncEveryMin: 5,
+    unitLimit: { used: 3, total: 5 },
+    units: [
+        {
+            unit: unit('NG'),
+            timezone: 'America/Manaus',
+            dashboards: 14,
+            lastFailure: { at: minAgo(180), source: 'LexPre', message: 'tempo esgotado (30 s)' },
+            sources: [
+                {
+                    id: 'ng-juridico',
+                    kind: 'database',
+                    name: 'Sistema jurídico NG',
+                    detail: 'Postgres · réplica somente leitura',
+                    syncedAt: minAgo(4),
+                    rows: 18_000,
+                    failures: 0,
+                    status: 'healthy',
+                },
+                {
+                    id: 'ng-lexflow',
+                    kind: 'flow',
+                    name: 'LexFlow',
+                    detail: 'Execução, acordos, recursal e publicações',
+                    syncedAt: minAgo(6),
+                    rows: 9_000,
+                    failures: 0,
+                    status: 'healthy',
+                },
+                {
+                    id: 'ng-lexpre',
+                    kind: 'database',
+                    name: 'LexPre · escritório 1',
+                    detail: 'Comercial e pré-protocolo',
+                    syncedAt: minAgo(180),
+                    rows: null,
+                    failures: 2,
+                    status: 'late',
+                },
+                {
+                    id: 'ng-contaazul',
+                    kind: 'finance',
+                    name: 'Conta Azul',
+                    detail: 'Contas a pagar e a receber · login seguro (OAuth)',
+                    syncedAt: null,
+                    rows: null,
+                    failures: 0,
+                    status: 'pending',
+                },
+                {
+                    id: 'ng-planilha',
+                    kind: 'sheet',
+                    name: 'Planilha do financeiro',
+                    detail: 'Google Sheets · conta de serviço',
+                    syncedAt: minAgo(9),
+                    rows: null,
+                    failures: 0,
+                    status: 'healthy',
+                },
+            ],
+        },
+        {
+            unit: unit('LA_AM'),
+            timezone: 'America/Manaus',
+            dashboards: 12,
+            lastFailure: null,
+            sources: [
+                {
+                    id: 'laam-juridico',
+                    kind: 'database',
+                    name: 'Sistema jurídico LA',
+                    detail: 'Postgres · somente leitura',
+                    syncedAt: minAgo(5),
+                    rows: 15_000,
+                    failures: 0,
+                    status: 'healthy',
+                },
+                {
+                    id: 'laam-lexflow',
+                    kind: 'flow',
+                    name: 'LexFlow',
+                    detail: 'Execução, acordos e recursal',
+                    syncedAt: minAgo(6),
+                    rows: 7_000,
+                    failures: 0,
+                    status: 'healthy',
+                },
+                {
+                    id: 'laam-lexpre',
+                    kind: 'database',
+                    name: 'LexPre · escritório 2',
+                    detail: 'Comercial e pré-protocolo',
+                    syncedAt: minAgo(7),
+                    rows: null,
+                    failures: 0,
+                    status: 'healthy',
+                },
+                {
+                    id: 'laam-contaazul',
+                    kind: 'finance',
+                    name: 'Conta Azul',
+                    detail: 'Contas a pagar e a receber · OAuth',
+                    syncedAt: minAgo(10),
+                    rows: null,
+                    failures: 0,
+                    status: 'healthy',
+                },
+            ],
+        },
+        {
+            unit: unit('LA_RJ'),
+            timezone: 'America/Sao_Paulo',
+            dashboards: 9,
+            lastFailure: null,
+            sources: [
+                {
+                    id: 'larj-lexflow',
+                    kind: 'flow',
+                    name: 'LexFlow · consultas RJ',
+                    detail: 'Protocolo, pendências, execução e acordos',
+                    syncedAt: minAgo(6),
+                    rows: 3_000,
+                    failures: 0,
+                    status: 'healthy',
+                },
+                {
+                    id: 'larj-lexpre',
+                    kind: 'database',
+                    name: 'LexPre · escritório 3',
+                    detail: 'Comercial e pré-protocolo',
+                    syncedAt: minAgo(7),
+                    rows: null,
+                    failures: 0,
+                    status: 'healthy',
+                },
+                {
+                    id: 'larj-contaazul',
+                    kind: 'finance',
+                    name: 'Conta Azul',
+                    detail: 'Contas a pagar e a receber · OAuth',
+                    syncedAt: minAgo(10),
+                    rows: null,
+                    failures: 0,
+                    status: 'healthy',
+                },
+            ],
+        },
+    ],
+}

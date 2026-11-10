@@ -113,6 +113,20 @@ const PATHS = {
     download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
     chevrons: <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />,
     close: <path d="M6 6l12 12M18 6L6 18" />,
+    flow: (
+        <>
+            <path d="M20 11a8 8 0 0 0-14.5-4.5L4 8" />
+            <path d="M4 4v4h4" />
+            <path d="M4 13a8 8 0 0 0 14.5 4.5L20 16" />
+            <path d="M20 20v-4h-4" />
+        </>
+    ),
+    sheet: (
+        <>
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <path d="M4 10h16M10 4v16" />
+        </>
+    ),
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof PATHS

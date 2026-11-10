@@ -15,6 +15,7 @@ import { BillingPage } from './pages/admin/billing/BillingPage.tsx'
 import { AccessPage } from './pages/admin/access/AccessPage.tsx'
 import { AuditPage } from './pages/admin/audit/AuditPage.tsx'
 import { ClientsPage } from './pages/platform/clients/ClientsPage.tsx'
+import { SourcesPage } from './pages/admin/sources/SourcesPage.tsx'
 
 // Páginas do menu que já têm conteúdo; as outras abrem a página-base (ComingSoonPage).
 const PAGES: Record<string, ReactNode> = {
@@ -23,6 +24,7 @@ const PAGES: Record<string, ReactNode> = {
     acesso: <AccessPage />,
     auditoria: <AuditPage />,
     clientes: <ClientsPage />,
+    unidades: <SourcesPage />,
 }
 
 // Páginas do menu (exceto Dashboards, que tem rotas próprias). As de organização ('/:org/admin/...')

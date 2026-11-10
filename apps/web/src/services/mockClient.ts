@@ -15,8 +15,10 @@ import {
     onboardingAudit,
     onboardingBilling,
     onboardingMembers,
+    onboardingSources,
     pendenciasFor,
     protocoloFor,
+    sources,
     testUsers,
 } from './mock/index.ts'
 import type { DashboardQuery, Meta } from '../types/index.ts'
@@ -149,6 +151,12 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             return copy(requireOrg(org) ? audit : onboardingAudit)
+        },
+
+        async getSources(org) {
+            await wait()
+            requireSession()
+            return copy(requireOrg(org) ? sources : onboardingSources)
         },
 
         // Mesma regra da API: só a equipe RA (platformStaff) vê os clientes.

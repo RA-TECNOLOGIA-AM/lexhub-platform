@@ -248,3 +248,32 @@ export type ClientsResponse = {
     clients: PlatformClient[]
     monthlyRevenue: number | null // null = preços ainda não definidos (mostra R$ [—])
 }
+
+// Unidades e fontes: de onde vêm os dados de cada unidade (conectores).
+export type SourceKind = 'database' | 'flow' | 'finance' | 'sheet' // define o ícone
+export type SourceStatus = 'healthy' | 'late' | 'pending' // pending = falta autorizar (ex.: Conta Azul)
+
+export type DataSource = {
+    id: string
+    kind: SourceKind
+    name: string // "LexPre · escritório 1"
+    detail: string // "Comercial e pré-protocolo"
+    syncedAt: string | null // ISO da última sincronização; null = nunca sincronizou
+    rows: number | null // linhas na última sincronização; null = não se aplica
+    failures: number // falhas seguidas (0 = nenhuma)
+    status: SourceStatus // decidido pelo servidor
+}
+
+export type UnitSources = {
+    unit: Unit
+    timezone: string // 'America/Manaus'
+    dashboards: number // quantos dashboards essas fontes alimentam
+    lastFailure: { at: string; source: string; message: string } | null // últimos 7 dias; null = nenhuma
+    sources: DataSource[]
+}
+
+export type SourcesResponse = {
+    syncEveryMin: number // intervalo da sincronização (a tela monta o texto do cabeçalho)
+    units: UnitSources[]
+    unitLimit: { used: number; total: number } // "3 de 5 unidades do plano"
+}

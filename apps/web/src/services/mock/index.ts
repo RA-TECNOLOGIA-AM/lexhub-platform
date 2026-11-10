@@ -9,4 +9,12 @@ export { billingFor, plans } from './billing.ts'
 export { access } from './access.ts'
 export { audit } from './audit.ts'
 export { clients } from './clients.ts'
-export { emptyCatalog, onboardingAccess, onboardingAudit, onboardingBilling, onboardingMembers } from './emptyOrg.ts'
+export {
+    emptyCatalog,
+    onboardingAccess,
+    onboardingAudit,
+    onboardingBilling,
+    onboardingMembers,
+    onboardingSources,
+} from './emptyOrg.ts'
+export { sources } from './sources.ts'
