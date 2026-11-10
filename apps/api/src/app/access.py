@@ -8,7 +8,7 @@ para não revelar quais organizações existem.
 
 import json
 from dataclasses import dataclass, field
-from typing import Annotated, Any, Protocol
+from typing import Annotated, Any, NoReturn, Protocol
 
 import asyncpg
 from fastapi import Depends, HTTPException, Path, Request, status
@@ -50,13 +50,30 @@ class DashboardAccess:
     scope: str
 
 
+@dataclass(frozen=True)
+class OrgAccess:
+    user: CurrentUser
+    org_slug: str
+    org_id: str
+
+
 class AccessRepo(Protocol):
+    async def resolve_org(self, user_id: str, org_slug: str) -> str | None: ...
+
     async def resolve_access(
         self, user_id: str, org_slug: str, unit_code: str, dashboard_key: str
     ) -> ResolvedAccess | None: ...
 
     async def insert_audit(self, entry: AuditEntry) -> None: ...
 
+
+# Id da organização só se a pessoa for membro ativo dela (e ela estiver ativa).
+_ORG_SQL = """
+select o.id::text
+  from app.organizations o
+  join app.memberships m on m.org_id = o.id and m.user_id = $1::uuid and m.status = 'active'
+ where o.slug = $2 and o.active
+"""
 
 _RESOLVE_SQL = """
 select o.id::text as org_id,
@@ -77,6 +94,9 @@ values ($1::uuid, $2::uuid, $3, $4, $5, $6::jsonb, $7::inet, $8)
 class PgAccessRepo:
     def __init__(self, pool: asyncpg.Pool):
         self._pool = pool
+
+    async def resolve_org(self, user_id, org_slug):
+        return await self._pool.fetchval(_ORG_SQL, user_id, org_slug)
 
     async def resolve_access(self, user_id, org_slug, unit_code, dashboard_key):
         row = await self._pool.fetchrow(_RESOLVE_SQL, user_id, org_slug, unit_code, dashboard_key)
@@ -118,6 +138,36 @@ def audit_entry(request: Request, user: CurrentUser | None, action: str, **kw) -
         user_agent=request.headers.get("user-agent"),
         **kw,
     )
+
+
+async def deny_org(
+    request: Request, user: CurrentUser, repo: AccessRepo, org_slug: str | None
+) -> NoReturn:
+    """403 de organização, auditado. Igual para inexistente, sem acesso ou sem organização."""
+    await repo.insert_audit(
+        audit_entry(
+            request,
+            user,
+            "org.access_denied",
+            target_type="org",
+            target_id=org_slug,
+            metadata={"org": org_slug},
+        )
+    )
+    raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Sem acesso")
+
+
+async def require_org(
+    request: Request,
+    org_slug: OrgSlug,
+    user: Annotated[CurrentUser, Depends(get_current_user)],
+    repo: Annotated[AccessRepo, Depends(get_repo)],
+) -> OrgAccess:
+    """Dependency das rotas /orgs/{org_slug}/...: 401 sem login, 403 se não for membro (auditado)."""
+    org_id = await repo.resolve_org(user.user_id, org_slug)
+    if org_id is None:
+        await deny_org(request, user, repo, org_slug)
+    return OrgAccess(user=user, org_slug=org_slug, org_id=org_id)
 
 
 async def require_dashboard(

@@ -25,9 +25,10 @@ export type DashboardSummary = {
     desc: string
     units: string[]
     source: string
-    synced_at: string
+    synced_at: string | null // null = a fonte ainda não sincronizou (cache de 5 min)
     max_delay_min: number
     // Decididos pelo servidor (regra: colaborador exporta só o próprio setor; admin, dev e controller, qualquer um).
+    // Com várias unidades, só vale true se valer em todas (o botão nunca aparece onde a API negaria).
     can_export: boolean
     can_see_commission: boolean
 }
@@ -38,7 +39,14 @@ export type DashboardCatalog = {
 }
 
 // Novo na V2: de onde e de quando são os dados ("Atualizado há X · fuso America/Manaus").
-export type Meta = { unit: string; from: string; to: string; source: string; synced_at: string; timezone: string }
+export type Meta = {
+    unit: string
+    from: string
+    to: string
+    source: string
+    synced_at: string | null // null = a fonte ainda não sincronizou
+    timezone: string
+}
 
 export type Point = { name: string; value: number }
 

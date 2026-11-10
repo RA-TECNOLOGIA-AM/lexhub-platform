@@ -1,8 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request
 
-from app.access import AccessRepo, audit_entry, get_repo
+from app.access import AccessRepo, deny_org, get_repo
 from app.auth import CurrentUser, get_current_user, is_platform_staff
 from app.me import MeOut, MeRepo, build_me, get_me_repo, pick_org
 
@@ -24,16 +24,5 @@ async def get_me(
     current = pick_org(orgs, org)
     membership = await repo.membership(user.user_id, current.id) if current else None
     if current is None or membership is None:
-        # Mesma resposta para organização inexistente, sem acesso ou pessoa sem organização.
-        await audit.insert_audit(
-            audit_entry(
-                request,
-                user,
-                "org.access_denied",
-                target_type="org",
-                target_id=org,
-                metadata={"org": org},
-            )
-        )
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Sem acesso")
+        await deny_org(request, user, audit, org)
     return build_me(orgs, current, membership, platform_staff=is_platform_staff(user))

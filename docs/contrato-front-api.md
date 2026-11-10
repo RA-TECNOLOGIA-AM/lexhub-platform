@@ -9,9 +9,9 @@ formatos é o código: `apps/web/src/types/index.ts` (tipos) e `apps/web/src/ser
 
 ## Situação hoje
 
-A API tem só `GET /health`, `GET /health/supabase`, `GET /health/sources` e
-`GET /orgs/{org}/units/{unit}/dashboards/{key}/access`. **Nenhuma rota de dados abaixo existe ainda.** No modo `api`,
-cada tela sem rota mostra o erro 404 ("Não encontrado").
+Prontas (10/11): `GET /me` e `GET /orgs/{org}/dashboards`, além de `GET /health`, `GET /health/supabase`,
+`GET /health/sources` e `GET /orgs/{org}/units/{unit}/dashboards/{key}/access`. **As demais rotas de dados abaixo ainda
+não existem.** No modo `api`, cada tela sem rota mostra o erro 404 ("Não encontrado").
 
 ## Convenções (valem para todas as rotas)
 
@@ -29,16 +29,12 @@ cada tela sem rota mostra o erro 404 ("Não encontrado").
 | Valores ainda não definidos | `null` (preços, valores de fatura, receita). O front mostra `[PREÇO]`, `[VALOR]`, `R$ [—]`.                                                                                          |
 | Corpo vazio                 | `204 No Content` em escritas sem resposta (favoritos, convite).                                                                                                                      |
 
-### Nomes dos campos: decisão em aberto
+### Nomes dos campos: `snake_case` em tudo (decidido em 10/11)
 
-- **`snake_case`, por compatibilidade com a v1:** o catálogo e os dashboards (`synced_at`, `can_export`,
-  `max_delay_min`, campos do Protocolo e de Pendências). A conferência v2 × v1 é campo a campo.
-- **`camelCase`:** os contratos novos da V2 (`renewsOn`, `paymentMethods`, `monthlyPrice`, `failingSources`,
-  `monthlyRevenue`, `canExport` em `User`).
-
-**Proposta:** manter assim, sem renomear nada agora, e na API usar modelos Pydantic com
-`alias_generator=to_camel` só nos contratos novos. Se o time preferir um padrão único, o front ajusta os tipos (é
-mecânico), mas precisa ser decidido **antes** de implementar as rotas.
+Igual à v1, para a conferência v2 × v1 ser campo a campo, e também nos contratos novos da V2. `User` já está assim
+(`role_label`, `can_export`, `can_see_commission`, `platform_staff`). Ainda em camelCase no front, a trocar quando a
+rota for feita: `renewsOn`, `paymentMethods`, `monthlyPrice` (cobrança), `failingSources` e `monthlyRevenue`
+(clientes) e `syncedAt` (fontes).
 
 ## Rotas, em ordem de prioridade para o go-live (18/11)
 
@@ -74,12 +70,22 @@ Cada uma precisa existir no servidor.
 
 ### Sessão e organização (`/me`)
 
-- `GET /me` sem `org`: a organização padrão da pessoa (a última usada, ou a primeira).
+- `GET /me` sem `org`: a organização padrão da pessoa (a última usada, `memberships.last_seen_at`; enquanto nada
+  grava esse campo, a primeira por nome).
 - `GET /me?org={slug}`: o `me` daquela organização, com as **unidades que a pessoa vê nela**. Se a pessoa não for
   membro, responder **403**. O front mostra "Organização não encontrada".
-- `Me.orgs` lista **todas** as organizações da pessoa (o seletor da barra lateral). `Org.sub` é o texto de baixo
-  ("Plano Pro · 3 unidades").
-- `User.platformStaff = true` só para a equipe RA Tecnologia.
+- `Me.orgs` lista **todas** as organizações da pessoa (o seletor da barra lateral). `Org.sub` é o texto de baixo:
+  por enquanto só as unidades ("3 unidades"), porque o plano ainda não existe no banco.
+- `Me.units`: owner e admin veem todas as unidades ativas; os demais, as unidades em que têm cargo.
+- `User.role_label`: owner/admin mostram o papel da organização ("Desenvolvedor"); os demais, os cargos nas unidades
+  ("Gestor · Leitor").
+- `User.can_export` e `User.can_see_commission` vêm das permissões (`app.role_permissions`): exporta quem tem
+  `dashboards.export`; vê comissão quem tem `org.dashboards.all` ou `unit.dashboards.all` (owner, admin, gestor e
+  controller, como Gestor e Desenvolvedor na v1).
+- `User.platform_staff = true` só para a equipe RA Tecnologia: vem de `app_metadata.platform_staff` no token do
+  Supabase Auth (só a chave secreta altera; `user_metadata` não vale).
+- Negação (`?org=` de que não é membro, inexistente ou pessoa sem organização): **403** `Sem acesso`, auditado como
+  `org.access_denied`.
 
 ### Rotas `/orgs/{org}/...`
 
@@ -87,7 +93,11 @@ Cada uma precisa existir no servidor.
 - `GET /orgs/{org}/dashboards` devolve **só** os dashboards que a pessoa pode ver (regra de equipe × unidade,
   `app_private.dashboard_scope`). Quem não tem equipe ou unidade **não vê nenhum** (diferente da v1).
 - `can_export` e `can_see_commission` em cada dashboard são **decididos pelo servidor**. Regra de exportação:
-  colaborador exporta só o próprio setor; admin, dev e controller exportam qualquer um.
+  colaborador exporta só o próprio setor; admin, dev e controller exportam qualquer um. Calculados por unidade
+  (`app_private.has_unit_permission`); num card com várias unidades, só vêm `true` se valerem em **todas** (o botão
+  nunca aparece numa unidade em que a API negaria).
+- `synced_at` vem `null` enquanto a fonte não sincronizou (o cache de 5 min ainda não existe); o card mostra
+  "Aguardando sincronização". `upcoming` = dashboards do catálogo com `status = 'upcoming'`.
 - Nos dashboards, `scope = 'own'` (de `require_dashboard`) filtra para os registros da própria pessoa.
   `comissionamento_por_funcionario` só vem para quem tem `can_see_commission`.
 
@@ -133,7 +143,7 @@ Corpo:
 
 ### Plataforma (`/platform/clients`)
 
-- Só `platformStaff`; os demais recebem **403**. O front esconde o menu e bloqueia a página, mas a proteção real é esta.
+- Só `platform_staff`; os demais recebem **403**. O front esconde o menu e bloqueia a página, mas a proteção real é esta.
 - Sessão de suporte (ação futura): somente leitura, motivo obrigatório (pelo menos 10 caracteres, visível ao
   cliente), MFA, expira em 1 hora e fica registrada na auditoria do cliente.
 
@@ -173,15 +183,15 @@ Exemplo curto de `GET /me?org=lexgroup`:
     "user": {
         "name": "Luís Tápia",
         "initials": "LT",
-        "roleLabel": "Dev · RA",
-        "canExport": true,
-        "canSeeCommission": true,
-        "platformStaff": true
+        "role_label": "Desenvolvedor",
+        "can_export": true,
+        "can_see_commission": true,
+        "platform_staff": true
     },
     "org": {
         "slug": "lexgroup",
         "name": "LexGroup",
-        "sub": "Plano Pro · 3 unidades"
+        "sub": "3 unidades"
     },
     "units": [
         { "code": "NG", "name": "Nicolas Gomes" },
@@ -192,12 +202,12 @@ Exemplo curto de `GET /me?org=lexgroup`:
         {
             "slug": "lexgroup",
             "name": "LexGroup",
-            "sub": "Plano Pro · 3 unidades"
+            "sub": "3 unidades"
         },
         {
             "slug": "cliente-parceiro",
             "name": "Cliente parceiro",
-            "sub": "Implantação · 1 unidade"
+            "sub": "1 unidade"
         }
     ]
 }
@@ -210,7 +220,7 @@ Exemplo curto de `GET /me?org=lexgroup`:
 2. Subir a API (`apps/api`, ver o README) com `CORS_ORIGINS=http://localhost:5173`.
 3. Abrir cada tela da tabela acima. Rota pronta = a tela igual à do mock; rota faltando = "Não encontrado".
 4. Conferir os erros: sem login → tela de login; outra organização na URL → "Organização não encontrada";
-   usuário sem `platformStaff` em `/plataforma/clientes` → "Área da equipe RA Tecnologia".
+   usuário sem `platform_staff` em `/plataforma/clientes` → "Área da equipe RA Tecnologia".
 
 ## Mudanças neste contrato
 

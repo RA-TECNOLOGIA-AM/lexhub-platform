@@ -66,13 +66,20 @@ def signer() -> Signer:
 
 
 class FakeRepo:
-    """Banco em memória: (slug, code) -> unit; (user, unit, dashboard) -> escopo."""
+    """Banco em memória: (slug, code) -> unit; (user, unit, dashboard) -> escopo; membros por org."""
 
     def __init__(self):
         self.org_id = str(uuid.uuid4())
         self.units = {("lexgroup", "NG"): str(uuid.uuid4())}
         self.scopes: dict[tuple[str, str, str], str] = {}
+        self.members: set[tuple[str, str]] = set()  # (user_id, org_slug)
         self.audits: list[dict] = []
+
+    def join(self, user_id: str, org_slug: str = "lexgroup") -> None:
+        self.members.add((user_id, org_slug))
+
+    async def resolve_org(self, user_id, org_slug):
+        return self.org_id if (user_id, org_slug) in self.members else None
 
     def grant(self, user_id: str, unit_code: str, dashboard_key: str, scope: str) -> None:
         unit_id = self.units[("lexgroup", unit_code)]
@@ -122,10 +129,33 @@ def me_repo() -> FakeMeRepo:
     return FakeMeRepo()
 
 
+class FakeCatalogRepo:
+    """Banco em memória do catálogo: (user_id, org_id) -> linhas dashboard x unidade."""
+
+    def __init__(self):
+        self.rows: dict[tuple[str, str], list] = {}
+        self.upcoming: list = []
+
+    def add(self, user_id: str, org_id: str, row) -> None:
+        self.rows.setdefault((user_id, org_id), []).append(row)
+
+    async def list_available(self, user_id, org_id):
+        return list(self.rows.get((user_id, org_id), []))
+
+    async def list_upcoming(self):
+        return list(self.upcoming)
+
+
 @pytest.fixture
-def client(signer, repo, me_repo):
+def catalog_repo() -> FakeCatalogRepo:
+    return FakeCatalogRepo()
+
+
+@pytest.fixture
+def client(signer, repo, me_repo, catalog_repo):
     from app.access import get_repo
     from app.auth import TokenVerifier, get_verifier
+    from app.catalog import get_catalog_repo
     from app.config import get_settings
     from app.main import create_app
     from app.me import get_me_repo
@@ -136,6 +166,7 @@ def client(signer, repo, me_repo):
     app.dependency_overrides[get_verifier] = lambda: verifier
     app.dependency_overrides[get_repo] = lambda: repo
     app.dependency_overrides[get_me_repo] = lambda: me_repo
+    app.dependency_overrides[get_catalog_repo] = lambda: catalog_repo
     with TestClient(app) as c:
         yield c
 
