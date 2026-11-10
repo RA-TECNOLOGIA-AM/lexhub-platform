@@ -9,7 +9,8 @@ formatos é o código: `apps/web/src/types/index.ts` (tipos) e `apps/web/src/ser
 
 ## Situação hoje
 
-Prontas (10/11): `GET /me` e `GET /orgs/{org}/dashboards`, além de `GET /health`, `GET /health/supabase`,
+Prontas (10/11): `GET /me`, `GET /orgs/{org}/dashboards`, favoritos (`GET`, `POST` e `DELETE /orgs/{org}/favorites`) e
+ordem dos cards (`GET` e `PUT /orgs/{org}/hub-order`), além de `GET /health`, `GET /health/supabase`,
 `GET /health/sources` e `GET /orgs/{org}/units/{unit}/dashboards/{key}/access`. **As demais rotas de dados abaixo ainda
 não existem.** No modo `api`, cada tela sem rota mostra o erro 404 ("Não encontrado").
 
@@ -96,6 +97,10 @@ Cada uma precisa existir no servidor.
   colaborador exporta só o próprio setor; admin, dev e controller exportam qualquer um. Calculados por unidade
   (`app_private.has_unit_permission`); num card com várias unidades, só vêm `true` se valerem em **todas** (o botão
   nunca aparece numa unidade em que a API negaria).
+- Favoritos e ordem dos cards são por pessoa em cada organização (`app.dashboard_favorites`, `app.hub_orders`). Só
+  favorita o que a pessoa consegue abrir (mesma regra do catálogo); inexistente, "em breve" ou sem acesso = **403**,
+  auditado. Favoritar de novo ou desfavoritar o que não estava marcado não é erro (204). A ordem é salva inteira (até 200
+  keys; repetidas contam só na primeira posição).
 - `synced_at` vem `null` enquanto a fonte não sincronizou (o cache de 5 min ainda não existe); o card mostra
   "Aguardando sincronização". `upcoming` = dashboards do catálogo com `status = 'upcoming'`.
 - Nos dashboards, `scope = 'own'` (de `require_dashboard`) filtra para os registros da própria pessoa.

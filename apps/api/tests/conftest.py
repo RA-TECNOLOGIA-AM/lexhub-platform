@@ -146,12 +146,49 @@ def catalog_repo() -> FakeCatalogRepo:
     return FakeCatalogRepo()
 
 
+class FakeHubPrefsRepo:
+    """Banco em memória dos favoritos e da ordem: (user_id, org_id) -> lista de keys."""
+
+    def __init__(self):
+        self.favorites: dict[tuple[str, str], list[str]] = {}
+        self.orders: dict[tuple[str, str], list[str]] = {}
+        self.visible: set[str] = set()  # keys que a pessoa pode abrir
+
+    async def list_favorites(self, user_id, org_id):
+        return list(self.favorites.get((user_id, org_id), []))
+
+    async def add_favorite(self, user_id, org_id, dashboard_key):
+        if dashboard_key not in self.visible:
+            return False
+        keys = self.favorites.setdefault((user_id, org_id), [])
+        if dashboard_key not in keys:
+            keys.append(dashboard_key)
+        return True
+
+    async def remove_favorite(self, user_id, org_id, dashboard_key):
+        keys = self.favorites.get((user_id, org_id), [])
+        if dashboard_key in keys:
+            keys.remove(dashboard_key)
+
+    async def get_order(self, user_id, org_id):
+        return list(self.orders.get((user_id, org_id), []))
+
+    async def set_order(self, user_id, org_id, keys):
+        self.orders[(user_id, org_id)] = list(keys)
+
+
 @pytest.fixture
-def client(signer, repo, me_repo, catalog_repo):
+def hub_repo() -> FakeHubPrefsRepo:
+    return FakeHubPrefsRepo()
+
+
+@pytest.fixture
+def client(signer, repo, me_repo, catalog_repo, hub_repo):
     from app.access import get_repo
     from app.auth import TokenVerifier, get_verifier
     from app.catalog import get_catalog_repo
     from app.config import get_settings
+    from app.hub_prefs import get_hub_prefs_repo
     from app.main import create_app
     from app.me import get_me_repo
 
@@ -162,6 +199,7 @@ def client(signer, repo, me_repo, catalog_repo):
     app.dependency_overrides[get_repo] = lambda: repo
     app.dependency_overrides[get_me_repo] = lambda: me_repo
     app.dependency_overrides[get_catalog_repo] = lambda: catalog_repo
+    app.dependency_overrides[get_hub_prefs_repo] = lambda: hub_repo
     with TestClient(app) as c:
         yield c
 
