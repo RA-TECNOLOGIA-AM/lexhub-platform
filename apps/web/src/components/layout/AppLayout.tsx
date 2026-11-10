@@ -40,9 +40,9 @@ export function AppLayout() {
                     <span className="brand-mark">LH</span>
                     <span>LexHub</span>
                 </div>
-                <OrgSwitcher current={org} orgs={me.orgs} canCreate={user.platformStaff} onNavigate={closeMenu} />
+                <OrgSwitcher current={org} orgs={me.orgs} canCreate={user.platform_staff} onNavigate={closeMenu} />
 
-                {NAV_SECTIONS.filter((section) => !section.platformOnly || user.platformStaff).map((section) => (
+                {NAV_SECTIONS.filter((section) => !section.platformOnly || user.platform_staff).map((section) => (
                     <div key={section.title} className="stack" style={{ gap: 2 }}>
                         <span className="side-label">{section.title}</span>
                         {section.items.map((item) => (
@@ -64,7 +64,7 @@ export function AppLayout() {
                     <span className="av">{user.initials}</span>
                     <span>
                         <span className="name">{user.name}</span>
-                        <span className="sub">{user.roleLabel}</span>
+                        <span className="sub">{user.role_label}</span>
                     </span>
                     {/* Sair só apaga a sessão; o <RequireAuth> é quem manda para o /login. */}
                     <button

@@ -4,10 +4,10 @@
 export type User = {
     name: string
     initials: string
-    roleLabel: string
-    canExport: boolean
-    canSeeCommission: boolean
-    platformStaff: boolean // equipe RA: vê a seção "Plataforma" (Clientes)
+    role_label: string
+    can_export: boolean
+    can_see_commission: boolean
+    platform_staff: boolean // equipe RA: vê a seção "Plataforma" (Clientes)
 }
 
 export type Org = { slug: string; name: string; sub: string }

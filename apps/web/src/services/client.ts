@@ -41,7 +41,7 @@ export interface DataClient {
     getAccess(org: string): Promise<AccessResponse>
     getAudit(org: string): Promise<AuditResponse>
     getSources(org: string): Promise<SourcesResponse>
-    // Plataforma (só equipe RA): todas as organizações. Sem platformStaff, rejeita com 403.
+    // Plataforma (só equipe RA): todas as organizações. Sem platform_staff, rejeita com 403.
     listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>

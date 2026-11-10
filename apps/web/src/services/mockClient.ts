@@ -179,11 +179,11 @@ export function createMockClient(): DataClient {
             return copy(requireOrg(org) ? sources : onboardingSources)
         },
 
-        // Mesma regra da API: só a equipe RA (platformStaff) vê os clientes.
+        // Mesma regra da API: só a equipe RA (platform_staff) vê os clientes.
         async listClients() {
             await wait()
             requireSession()
-            if (!me.user.platformStaff) throw new DataError(403, 'Só a equipe RA Tecnologia vê os clientes')
+            if (!me.user.platform_staff) throw new DataError(403, 'Só a equipe RA Tecnologia vê os clientes')
             return copy(clients)
         },
 

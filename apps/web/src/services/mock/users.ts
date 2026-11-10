@@ -4,10 +4,10 @@ import type { Me, Org, Unit, User } from '../../types/index.ts'
 const user: User = {
     name: 'Luís Tápia',
     initials: 'LT',
-    roleLabel: 'Dev · RA',
-    canExport: true,
-    canSeeCommission: true,
-    platformStaff: true,
+    role_label: 'Dev · RA',
+    can_export: true,
+    can_see_commission: true,
+    platform_staff: true,
 }
 
 // As organizações de que essa pessoa faz parte (as mesmas do protótipo).

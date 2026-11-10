@@ -15,11 +15,11 @@ import { clientColumns } from './clientColumns.tsx'
 import { kpisOf } from './clientsView.ts'
 import { SupportPanel } from './SupportPanel.tsx'
 
-// Porteiro da página: só a equipe RA (platformStaff) entra. O menu já esconde o item,
+// Porteiro da página: só a equipe RA (platform_staff) entra. O menu já esconde o item,
 // mas quem digitar o endereço cai aqui. A API também barra (403).
 export function ClientsPage() {
     const { me } = useAuth()
-    if (!me?.user.platformStaff) {
+    if (!me?.user.platform_staff) {
         return (
             <StateMessage icon="lock" title="Área da equipe RA Tecnologia" alert>
                 Esta página mostra todas as organizações da plataforma e é só para a equipe RA.
