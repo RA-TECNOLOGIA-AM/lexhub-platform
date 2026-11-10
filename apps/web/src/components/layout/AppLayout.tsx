@@ -6,6 +6,7 @@ import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { SearchBox } from './SearchBox.tsx'
 import { activeItem, NAV_SECTIONS, pathOf } from '../../navigation.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { env } from '../../services/env.ts'
 
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
@@ -97,7 +98,8 @@ export function AppLayout() {
                         </span>
                         <span className="path">lexhub.app{pathname}</span>
                     </div>
-                    <span className="badge warn">Dados fictícios</span>
+                    {/* Só no modo mock: em modo api os dados vêm da API V2. */}
+                    {env.dataSource === 'mock' && <span className="badge warn">Dados fictícios</span>}
                     <SearchBox org={org.slug} />
                     <button className="iconbtn" type="button" aria-label="Notificações">
                         <Icon name="bell" />
