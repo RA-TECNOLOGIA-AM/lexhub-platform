@@ -20,9 +20,10 @@ async def get_me(
     org: OrgQuery = None,
 ) -> MeOut:
     """Quem está logado, na organização pedida (?org=slug) ou na padrão (a última usada)."""
-    orgs = await repo.list_orgs(user.user_id)
+    memberships = await repo.list_memberships(user.user_id)
+    orgs = [o for o, _ in memberships]
     current = pick_org(orgs, org)
-    membership = await repo.membership(user.user_id, current.id) if current else None
-    if current is None or membership is None:
+    if current is None:
         await deny_org(request, user, audit, org)
+    membership = next(m for o, m in memberships if o.id == current.id)
     return build_me(orgs, current, membership, platform_staff=is_platform_staff(user))

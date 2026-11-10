@@ -107,21 +107,16 @@ def repo() -> FakeRepo:
 
 
 class FakeMeRepo:
-    """Banco em memória do /me: user_id -> organizações e a associação em cada uma."""
+    """Banco em memória do /me: user_id -> (organização, associação), na ordem em que entraram."""
 
     def __init__(self):
-        self.orgs: dict[str, list] = {}
-        self.memberships: dict[tuple[str, str], object] = {}
+        self.memberships: dict[str, list] = {}
 
     def add(self, user_id: str, org, membership) -> None:
-        self.orgs.setdefault(user_id, []).append(org)
-        self.memberships[(user_id, org.id)] = membership
+        self.memberships.setdefault(user_id, []).append((org, membership))
 
-    async def list_orgs(self, user_id):
-        return list(self.orgs.get(user_id, []))
-
-    async def membership(self, user_id, org_id):
-        return self.memberships.get((user_id, org_id))
+    async def list_memberships(self, user_id):
+        return list(self.memberships.get(user_id, []))
 
 
 @pytest.fixture

@@ -7,6 +7,7 @@ Dividido em três partes trocáveis:
 As permissões vêm de app.role_permissions; nenhum nome de papel fica fixo aqui.
 """
 
+import json
 from dataclasses import dataclass
 from typing import Annotated, Protocol
 
@@ -50,9 +51,8 @@ class MembershipRow:
 
 
 class MeRepo(Protocol):
-    async def list_orgs(self, user_id: str) -> list[OrgRow]: ...
-
-    async def membership(self, user_id: str, org_id: str) -> MembershipRow | None: ...
+    # Cada organização da pessoa com a associação nela; a padrão (última usada) primeiro.
+    async def list_memberships(self, user_id: str) -> list[tuple[OrgRow, MembershipRow]]: ...
 
 
 # --- Resposta (tipo Me do front) -------------------------------------------
@@ -145,68 +145,67 @@ def build_me(
 
 # --- Banco -----------------------------------------------------------------
 
-_ORGS_SQL = """
+# Tudo numa consulta só (cada ida e volta ao banco custa caro): uma linha por organização,
+# com o papel, as permissões e as unidades que a pessoa vê nela (json).
+# $2 = permissão de quem vê todas as unidades (owner/admin); os demais, só onde têm cargo.
+_MEMBERSHIPS_SQL = """
 select o.id::text as id, o.slug, o.name,
-       (select count(*) from app.units u where u.org_id = o.id and u.active)::int as unit_count
+       (select count(*) from app.units u where u.org_id = o.id and u.active)::int as unit_count,
+       m.full_name,
+       r.name as role_name,
+       array(select rp.permission from app.role_permissions rp
+              where rp.role_key = m.role_key) as permissions,
+       coalesce((
+           select json_agg(json_build_object(
+                      'code', u.code,
+                      'name', u.name,
+                      'role_name', ur.name,
+                      'permissions', array(select rp.permission from app.role_permissions rp
+                                            where rp.role_key = mu.role_key))
+                  order by u.name)
+             from app.units u
+             left join app.membership_units mu on mu.unit_id = u.id and mu.membership_id = m.id
+             left join app.roles ur            on ur.key = mu.role_key
+            where u.org_id = o.id and u.active
+              and (mu.membership_id is not null
+                   or exists (select 1 from app.role_permissions rp
+                               where rp.role_key = m.role_key and rp.permission = $2))
+       ), '[]') as units
   from app.memberships m
   join app.organizations o on o.id = m.org_id and o.active
+  join app.roles r         on r.key = m.role_key
  where m.user_id = $1::uuid and m.status = 'active'
  order by m.last_seen_at desc nulls last, o.name
 """
 
-_MEMBERSHIP_SQL = """
-select m.id::text as id, m.full_name, r.name as role_name,
-       coalesce(array_agg(rp.permission) filter (where rp.permission is not null), '{}') as permissions
-  from app.memberships m
-  join app.roles r on r.key = m.role_key
-  left join app.role_permissions rp on rp.role_key = m.role_key
- where m.user_id = $1::uuid and m.org_id = $2::uuid and m.status = 'active'
- group by m.id, m.full_name, r.name
-"""
 
-# $3 = vê todas as unidades (owner/admin); senão, só as unidades em que tem cargo.
-_UNITS_SQL = """
-select u.code, u.name, r.name as role_name,
-       coalesce(array_agg(rp.permission) filter (where rp.permission is not null), '{}') as permissions
-  from app.units u
-  left join app.membership_units mu on mu.unit_id = u.id and mu.membership_id = $2::uuid
-  left join app.roles r             on r.key = mu.role_key
-  left join app.role_permissions rp on rp.role_key = mu.role_key
- where u.org_id = $1::uuid and u.active
-   and ($3 or mu.membership_id is not null)
- group by u.code, u.name, r.name, r.sort_order
- order by u.name
-"""
+def _unit(u: dict) -> UnitRow:
+    return UnitRow(
+        code=u["code"],
+        name=u["name"],
+        role_name=u["role_name"],
+        permissions=frozenset(u["permissions"] or ()),
+    )
 
 
 class PgMeRepo:
     def __init__(self, pool: asyncpg.Pool):
         self._pool = pool
 
-    async def list_orgs(self, user_id: str) -> list[OrgRow]:
-        rows = await self._pool.fetch(_ORGS_SQL, user_id)
-        return [OrgRow(**dict(r)) for r in rows]
-
-    async def membership(self, user_id: str, org_id: str) -> MembershipRow | None:
-        row = await self._pool.fetchrow(_MEMBERSHIP_SQL, user_id, org_id)
-        if row is None:
-            return None
-        permissions = frozenset(row["permissions"])
-        units = await self._pool.fetch(_UNITS_SQL, org_id, row["id"], SEE_ALL_ORG in permissions)
-        return MembershipRow(
-            full_name=row["full_name"],
-            role_name=row["role_name"],
-            permissions=permissions,
-            units=tuple(
-                UnitRow(
-                    code=u["code"],
-                    name=u["name"],
-                    role_name=u["role_name"],
-                    permissions=frozenset(u["permissions"]),
-                )
-                for u in units
-            ),
-        )
+    async def list_memberships(self, user_id: str) -> list[tuple[OrgRow, MembershipRow]]:
+        rows = await self._pool.fetch(_MEMBERSHIPS_SQL, user_id, SEE_ALL_ORG)
+        return [
+            (
+                OrgRow(id=r["id"], slug=r["slug"], name=r["name"], unit_count=r["unit_count"]),
+                MembershipRow(
+                    full_name=r["full_name"],
+                    role_name=r["role_name"],
+                    permissions=frozenset(r["permissions"]),
+                    units=tuple(_unit(u) for u in json.loads(r["units"])),
+                ),
+            )
+            for r in rows
+        ]
 
 
 def get_me_repo(pool: Annotated[asyncpg.Pool, Depends(get_db_pool)]) -> MeRepo:

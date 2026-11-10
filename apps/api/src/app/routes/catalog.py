@@ -1,3 +1,4 @@
+import asyncio
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -14,5 +15,8 @@ async def list_dashboards(
     repo: Annotated[CatalogRepo, Depends(get_catalog_repo)],
 ) -> DashboardCatalogOut:
     """Hub: os dashboards que a pessoa pode abrir nesta organização e em quais unidades."""
-    rows = await repo.list_available(access.user.user_id, access.org_id)
-    return build_catalog(rows, await repo.list_upcoming())
+    # As duas consultas não dependem uma da outra: vão juntas (cada ida ao banco custa caro).
+    rows, upcoming = await asyncio.gather(
+        repo.list_available(access.user.user_id, access.org_id), repo.list_upcoming()
+    )
+    return build_catalog(rows, upcoming)
