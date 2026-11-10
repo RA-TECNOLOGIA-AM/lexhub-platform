@@ -4,6 +4,7 @@ import type { DashboardSummary, Meta } from '../../types/index.ts'
 import { Freshness } from './Freshness.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { PillGroup } from '../ui/PillGroup.tsx'
+import { unitName } from '../../lib/units.ts'
 
 type DashboardHeaderProps = {
     org: string
@@ -16,7 +17,6 @@ export function DashboardHeader({ org, dashboard, meta }: DashboardHeaderProps) 
     const { me } = useAuth()
     // Só as unidades em que este dashboard está liberado; o nome vem do usuário logado.
     const units = (me?.units ?? []).filter((u) => dashboard.units.includes(u.code))
-    const current = units.find((u) => u.code === meta.unit)
 
     return (
         <section className="stack">
@@ -26,8 +26,7 @@ export function DashboardHeader({ org, dashboard, meta }: DashboardHeaderProps) 
                     Dashboards
                 </Link>
                 <h1 className="h1">
-                    {dashboard.title}
-                    {current && ` · ${current.name}`}
+                    {dashboard.title} · {unitName(meta.unit, me?.units ?? [])}
                 </h1>
                 <Freshness syncedAt={meta.synced_at} source={meta.source} maxDelayMin={dashboard.max_delay_min} />
             </div>

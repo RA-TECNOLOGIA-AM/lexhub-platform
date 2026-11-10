@@ -15,6 +15,7 @@ import { useFavorites } from '../../hooks/useFavorites.ts'
 import { useHubOrder } from '../../hooks/useHubOrder.ts'
 import { sortAreas, sortByOrder } from '../../lib/hubOrder.ts'
 import { searchDashboards, SEARCH_PARAM } from '../../lib/dashboardSearch.ts'
+import { unitName } from '../../lib/units.ts'
 
 const FAVORITES = 'Favoritos'
 
@@ -40,13 +41,12 @@ export function HubPage() {
     const notFound = searching && dashboards.length === 0
     // Pílulas: "Todas" + cada unidade que aparece no catálogo (nome do usuário logado quando houver).
     // Lê do catálogo original: arrastar cards não muda a ordem das pílulas.
-    const unitName = (code: string) => me?.units.find((u) => u.code === code)?.name ?? code
     const unitCodes = [...new Set(catalog.available.flatMap((d) => d.units))]
     const pills: PillItem[] = [
         { id: 'todas', label: 'Todas as unidades', to: `/${org}/dashboards`, active: !unit },
         ...unitCodes.map((code) => ({
             id: code,
-            label: unitName(code),
+            label: unitName(code, me?.units ?? []),
             to: `/${org}/dashboards?unidade=${code}`,
             active: code === unit,
         })),
