@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from 'react-router'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { DashboardCard } from '../../components/dashboard/DashboardCard.tsx'
 import { HubDnd, type HubDrop } from '../../components/dashboard/HubDnd.tsx'
@@ -14,6 +14,7 @@ import { StateMessage } from '../../components/states/StateMessage.tsx'
 import { useFavorites } from '../../hooks/useFavorites.ts'
 import { useHubOrder } from '../../hooks/useHubOrder.ts'
 import { sortAreas, sortByOrder } from '../../lib/hubOrder.ts'
+import { searchDashboards, SEARCH_PARAM } from '../../lib/dashboardSearch.ts'
 
 const FAVORITES = 'Favoritos'
 
@@ -23,6 +24,7 @@ export function HubPage() {
     const { data: catalog, error } = useAsync(() => dataClient.listDashboards(org), [org])
     const [searchParams] = useSearchParams()
     const unit = searchParams.get('unidade') // null = todas as unidades
+    const query = searchParams.get(SEARCH_PARAM) ?? '' // texto da busca do topo ('' = sem busca)
     const favorites = useFavorites(org)
     const hubOrder = useHubOrder(org)
 
@@ -31,8 +33,11 @@ export function HubPage() {
 
     // O catálogo na ordem que a pessoa arrastou (dashboard novo vai para o fim).
     const all = sortByOrder(catalog.available, hubOrder.order)
-    const dashboards = unit ? all.filter((d) => d.units.includes(unit)) : all
-
+    // Primeiro a unidade, depois a busca. notFound = buscou e nada combinou.
+    const byUnit = unit ? all.filter((d) => d.units.includes(unit)) : all
+    const dashboards = searchDashboards(byUnit, query)
+    const searching = query.trim() !== ''
+    const notFound = searching && dashboards.length === 0
     // Pílulas: "Todas" + cada unidade que aparece no catálogo (nome do usuário logado quando houver).
     // Lê do catálogo original: arrastar cards não muda a ordem das pílulas.
     const unitName = (code: string) => me?.units.find((u) => u.code === code)?.name ?? code
@@ -108,8 +113,25 @@ export function HubPage() {
                             para a sua equipe.
                         </StateMessage>
                     )}
+                    {/* Buscou e nada combinou: explica e oferece limpar a busca (mantendo a unidade). */}
+                    {all.length > 0 && notFound && (
+                        <StateMessage
+                            icon="search"
+                            title={`Nenhum dashboard encontrado para “${query.trim()}”`}
+                            action={
+                                <Link
+                                    className="btn"
+                                    to={unit ? `/${org}/dashboards?unidade=${unit}` : `/${org}/dashboards`}
+                                >
+                                    Limpar busca
+                                </Link>
+                            }
+                        >
+                            Confira a grafia ou busque pelo nome da área (ex.: Gestão).
+                        </StateMessage>
+                    )}
                     {/* Favoritos aparece mesmo vazio: é onde se solta um card para favoritar. */}
-                    {all.length > 0 && (
+                    {all.length > 0 && !notFound && (favs.length > 0 || !searching) && (
                         <SortableSection title={FAVORITES} ids={favs.map((d) => d.key)} acceptsOthers>
                             {favs.length > 0 ? (
                                 favs.map(card(FAVORITES))

@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { Icon } from '../ui/Icon.tsx'
 import { OrgSwitcher } from './OrgSwitcher.tsx'
+import { SearchBox } from './SearchBox.tsx'
 import { activeItem, NAV_SECTIONS, pathOf } from '../../navigation.ts'
 
 export function AppLayout() {
@@ -109,11 +110,7 @@ export function AppLayout() {
                         <span className="path">lexhub.app{pathname}</span>
                     </div>
                     <span className="badge warn">Dados fictícios</span>
-                    <label className="search">
-                        <span className="sr-only">Buscar dashboard</span>
-                        <input className="field" type="search" placeholder="Buscar dashboard" />
-                        <Icon name="search" size={16} style={{ color: 'var(--text-muted)' }} />
-                    </label>
+                    <SearchBox org={org.slug} />
                     <button className="iconbtn" type="button" aria-label="Notificações">
                         <Icon name="bell" />
                     </button>

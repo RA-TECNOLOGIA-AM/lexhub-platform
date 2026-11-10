@@ -1,4 +1,5 @@
 import type { Member, MemberStatus, RoleKey } from '../../../types/index.ts'
+import { matchesText } from '../../../lib/text.ts'
 
 export const ROLE_LABEL: Record<RoleKey, string> = {
     owner: 'Owner',
@@ -42,18 +43,10 @@ export const isWaiting = (m: Member) => m.status === 'invited' || m.status === '
 // --- Filtros (Buscar, Unidade, Papel) ---
 export type MemberFilter = { q: string; unit: string; role: RoleKey | '' } // '' = todas / todos
 
-// "Fernánda" e "fernanda" são iguais na busca.
-const normalize = (text: string) =>
-    text
-        .normalize('NFD')
-        .replace(/\p{Diacritic}/gu, '')
-        .toLowerCase()
-
 export function filterMembers(list: Member[], f: MemberFilter): Member[] {
-    const q = normalize(f.q.trim())
     return list.filter(
         (m) =>
-            (!q || normalize(`${m.name ?? ''} ${m.email}`).includes(q)) &&
+            matchesText(`${m.name ?? ''} ${m.email}`, f.q) &&
             (!f.unit || m.units.includes('*') || m.units.includes(f.unit)) &&
             (!f.role || m.role === f.role),
     )
