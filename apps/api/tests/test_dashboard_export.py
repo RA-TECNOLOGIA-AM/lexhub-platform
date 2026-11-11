@@ -169,12 +169,16 @@ def test_formatacao_igual_a_v1():
 # --- Pendências (LexPre) ---------------------------------------------------
 
 
-def test_pendencias_lexpre_registrada_e_ainda_nao_ligada_501(client, signer, repo, sources):
+def test_pendencias_lexpre_ligada_ao_calculo_da_v1(client, signer, repo, sources):
     repo.grant(USER_ID, "NG", "pendencias-lexpre", "all")
     repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    sources.data["log_setor_demanda_lexpre_NG"] = []
+    sources.data["setor_func_lexpre_NG"] = []
     r = client.get("/orgs/lexgroup/units/NG/dashboards/pendencias-lexpre", headers=auth(signer))
-    assert r.status_code == 501
-    assert "Pendências" in r.json()["detail"]
+    assert r.status_code == 200
+    body = r.json()
+    assert body["stats"]["pendencias_total"] == 0
+    assert set(body["opcoes_filtro"]) == {"funcionarios", "ufs", "areas"}  # v1 sem matéria
 
 
 def test_mapas_de_exportacao_iguais_ao_front():

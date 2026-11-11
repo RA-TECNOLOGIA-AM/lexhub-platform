@@ -108,12 +108,17 @@ async def _prepare(
             detail=f"A unidade {access.unit_code} ainda não está ligada à fonte {module.source_label}",
         )
 
+    own_ref = None
+    if module.own_rows_only and not access.can_see_commission:
+        own_ref = await refs.member_ref(access.user.user_id, access.org_id, module.source_db)
+
     ctx = DashboardContext(
         source=sources(module.source_db),
         unit_ref=unit_ref,
         period=period,
         filters=filters,
         can_see_commission=access.can_see_commission,
+        own_ref=own_ref,
     )
     return module, ctx
 
