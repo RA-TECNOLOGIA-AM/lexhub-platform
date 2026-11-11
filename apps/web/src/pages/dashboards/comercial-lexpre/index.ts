@@ -1,5 +1,11 @@
-import { baseModule } from '../baseModule.ts'
+import { dataClient } from '../../../services/client.ts'
+import type { DashboardModule } from '../types.ts'
+import { ComercialLexpreContent } from './ComercialLexpreContent.tsx'
+import type { ComercialLexpreResponse } from './types.ts'
 
-// O dashboard Comercial (LexPre): página-base até o conteúdo ficar pronto.
-// Quando ficar, troca por { key, fetch, Content } próprios, como em protocolo/index.ts.
-export const comercialLexpre = baseModule('comercial-lexpre')
+// O dashboard Comercial (LexPre): de onde vêm os dados e como mostrar.
+export const comercialLexpre: DashboardModule<ComercialLexpreResponse> = {
+    key: 'comercial-lexpre',
+    fetch: (query) => dataClient.getDashboardData<ComercialLexpreResponse>('comercial-lexpre', query),
+    Content: ComercialLexpreContent,
+}

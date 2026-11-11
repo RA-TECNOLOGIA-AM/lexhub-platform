@@ -324,6 +324,49 @@ def test_comercial_e_comissao_lexpre_rodam_o_calculo_da_v1(client, signer, repo,
         assert set(r.json()["opcoes_filtro"]) == {"atendentes", "areas", "ufs", "segmentos"}
 
 
+def _lexflow(repo, sources, key, unidade="NG"):
+    repo.grant(USER_ID, unidade, key, "all")
+    repo.unit_refs[(repo.units[("lexgroup", unidade)], "lexflow")] = unidade
+    for q in DASHBOARDS[key].queries:
+        sources.data[q] = []
+
+
+@pytest.mark.parametrize("key", ["execucao", "acordos", "recursal"])
+def test_lexflow_roda_o_calculo_da_v1(client, signer, repo, sources, key):
+    """Execução, Acordos e Recursal: o handler da v1 roda na casca, com a fonte LexFlow da V2."""
+    _lexflow(repo, sources, key)
+    r = client.get(f"/orgs/lexgroup/units/NG/dashboards/{key}", headers=auth(signer))
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["meta"]["source"] == "LexFlow"
+    assert "stats" in body
+    assert sources.last.db_name == "lexflow"
+
+
+def test_lexflow_situacao_invalida_422(client, signer, repo, sources):
+    _lexflow(repo, sources, "recursal")
+    r = client.get(
+        "/orgs/lexgroup/units/NG/dashboards/recursal?situacao_processo=XYZ", headers=auth(signer)
+    )
+    assert r.status_code == 422
+    assert "Situação do processo inválida" in r.json()["detail"]
+
+
+def test_recursal_sem_versao_na_v1_para_a_unidade_501(client, signer, repo, sources):
+    """A v1 não tem Recursal do RJ: módulo existe, cálculo não."""
+    repo.grant(USER_ID, "NG", "recursal", "all")
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexflow")] = "RJ"
+    r = client.get("/orgs/lexgroup/units/NG/dashboards/recursal", headers=auth(signer))
+    assert r.status_code == 501
+
+
+def test_lexflow_filtros_seguem_a_rota_da_v1():
+    """Lista ou um valor, e int onde a rota da v1 recebe números (id_1g do Recursal)."""
+    assert DASHBOARDS["recursal"].filters["id_1g"] is int
+    assert DASHBOARDS["execucao"].filters["ano_ajuizamento_execucao"] is str
+    assert "situacao_processo" in DASHBOARDS["acordos"].filters
+
+
 # --- Funções puras -----------------------------------------------------------
 
 

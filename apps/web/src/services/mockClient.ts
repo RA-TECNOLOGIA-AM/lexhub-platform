@@ -25,6 +25,7 @@ import {
     testUsers,
 } from './mock/index.ts'
 import type { DashboardQuery, Meta } from '../types/index.ts'
+import { metaFor } from './mock/helpers.ts'
 import { toCsv } from '../lib/csv.ts'
 import { periodLabel } from '../lib/period.ts'
 
@@ -189,6 +190,9 @@ export function createMockClient(): DataClient {
 
         getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),
         getPendencias: (query) => dashboardResponse('pendencias-lexpre', query, pendenciasFor),
+        // Sem números fictícios: as telas novas mostram 0/—; os números de verdade vêm da API.
+        getDashboardData: <T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery) =>
+            dashboardResponse(dashboardKey, query, (unit) => ({ meta: metaFor(unit), stats: {} }) as unknown as T),
 
         // Mesmas regras da API: sessão, organização, unidade liberada e can_export; registra na Auditoria.
         // No mock o arquivo é sempre CSV (gerar XLSX exige biblioteca); com a API, vem o formato pedido.

@@ -5,7 +5,9 @@ import { toSearch, type Http } from './http.ts'
 import type {
     BillingResponse,
     DashboardCatalog,
+    DashboardQuery,
     Me,
+    Meta,
     MembersResponse,
     PendenciasResponse,
     ProtocoloResponse,
@@ -63,6 +65,8 @@ export function createApiClient({ auth, http }: { auth: SupabaseClient; http: Ht
         getBilling: (org) => http.get<BillingResponse>(`/orgs/${org}/billing`),
         getProtocolo: dashboard<ProtocoloResponse>('protocolo-lexpre'),
         getPendencias: dashboard<PendenciasResponse>('pendencias-lexpre'),
+        getDashboardData: <T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery) =>
+            dashboard<T>(dashboardKey)(query),
 
         // Mesmo formato da v1: ?format=xlsx&campos=id_demanda&campos=materia&from=...&materia=ANP
         async exportDashboard({ org, unit, dashboard, format, campos, ...query }) {

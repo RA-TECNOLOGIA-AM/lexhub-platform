@@ -15,7 +15,9 @@ ordem dos cards (`GET` e `PUT /orgs/{org}/hub-order`), além de `GET /health`, `
 (`GET /orgs/{org}/units/{unit}/dashboards/{key}`) existe desde 11/11. Com o cálculo da v1 ligado: Protocolo, Pendências,
 Organização de Documentos, Peticionamento, Comercial e Comissão Comercial (LexPre); números conferidos contra a v1 nas
 mesmas linhas (NG, LA e RJ, mês fechado e mês corrente), aguardando a validação do analista para abrir os cards.
-Marketing (LexPre) ainda não (usa também o banco NG). **As demais rotas de dados abaixo ainda não existem.** No modo `api`, cada tela sem rota mostra o erro 404
+Marketing (LexPre) ainda não (usa também o banco NG). Desde 12/11 também Execução, Acordos e Recursal (LexFlow), com
+o mesmo conteúdo da v1 nas mesmas linhas (ver "Dashboards do LexFlow" abaixo). **As demais rotas de dados abaixo
+ainda não existem.** No modo `api`, cada tela sem rota mostra o erro 404
 ("Não encontrado").
 
 ## Convenções (valem para todas as rotas)
@@ -131,6 +133,19 @@ Cada uma precisa existir no servidor.
   os próprios dados (v1 `escopo_proprio`), pelo vínculo em `app.member_source_refs`; sem vínculo, a página zera.
   `opcoes_filtro` do Comercial: `atendentes`, `areas`, `ufs`, `segmentos`. Exportar do Comercial ainda não (na v1 são
   duas abas). Pendências não tem filtro de matéria (como na v1).
+
+### Dashboards do LexFlow (`execucao`, `acordos`, `recursal`)
+
+- Na v1 cada unidade tem a sua rota (ex.: `/execucao` NG, `/execucao_LA`, `/execucao_RJ`). Na V2 a unidade escolhe
+  a variante: `app.unit_source_refs` com `source = 'lexflow'` e `ref` = `NG`, `LA` ou `RJ`. Recursal não existe no
+  RJ na v1: lá a rota responde **501**.
+- Filtros: os mesmos parâmetros da rota da v1, com os mesmos nomes (ex.: Execução `materia`, `subfase`, `uf`,
+  `comarca`, `funcionario_execucao`, `situacao_execucao`...; Recursal `id_1g`, `juiz`, `relator`, `decisao`...),
+  mais `situacao_processo` (`ATIVO`, `ARQUIVADO`, `SUSPENSO`), que na v1 vale para toda requisição do LexFlow.
+  Situação inválida = **422**.
+- Resposta: a mesma `DashboardResponse` da v1 (`dashboard`, `stats` e os gráficos), com `meta`. As opções dos
+  filtros vêm dentro de `stats`, como na v1 (ex.: `execucao_uf_opcoes_NG`); não há `opcoes_filtro`.
+- Exportar ainda não (na v1: `/execucao/export`, `/execucao_acordos_*/export`, `/recursal_*/export`).
 
 ### Opções dos filtros (`opcoes_filtro`)
 
