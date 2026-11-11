@@ -69,6 +69,14 @@ class Settings(BaseSettings):
     DB_QUERY_CONCURRENCY_LEXFLOW: int = Field(default=4, ge=1, le=16)
     DB_QUERY_CONCURRENCY_LEXPRE: int = Field(default=4, ge=1, le=16)
 
+    # Cache das queries dos bancos de origem (mesmos padrões da v1: 5 min, reserva de 1 h,
+    # aquecedor um pouco antes de vencer). Ver app/source_cache.py e app/cache_warmer.py.
+    SOURCE_CACHE_TTL: int = Field(default=300, ge=0)
+    SOURCE_CACHE_STALE_MAX_AGE: int = Field(default=3600, ge=0)
+    SOURCE_CACHE_MAX_ENTRIES: int = Field(default=64, ge=1)
+    SOURCE_CACHE_WARM_ENABLED: bool = True
+    SOURCE_CACHE_WARM_INTERVAL: int = Field(default=240, ge=30)
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

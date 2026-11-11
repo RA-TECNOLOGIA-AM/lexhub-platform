@@ -1,5 +1,5 @@
 from collections.abc import Awaitable, Callable
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
@@ -44,6 +44,10 @@ Today = Callable[[str], date]
 def today_in(timezone: str) -> date:
     """Hoje no fuso da unidade (o 'mês atual' do período padrão depende disso)."""
     return datetime.now(ZoneInfo(timezone)).date()
+
+
+def _iso(epoch: float | None) -> str | None:
+    return datetime.fromtimestamp(epoch, UTC).isoformat() if epoch is not None else None
 
 
 def get_today() -> Today:
@@ -97,7 +101,7 @@ async def _prepare(
     except DashboardInputError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from None
 
-    unit_ref = await refs.unit_ref(access.unit_id, module.source_db)
+    unit_ref = access.source_refs.get(module.source_db)
     if unit_ref is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -147,7 +151,7 @@ async def dashboard_data(
         "from": ctx.period.start.isoformat(),
         "to": ctx.period.end.isoformat(),
         "source": module.source_label,
-        "synced_at": None,  # vem do cache de 5 min quando ele existir
+        "synced_at": _iso(ctx.source.synced_at()),  # quando o dado veio do banco (cache)
         "timezone": access.timezone,
     }
     # Quem não gere a unidade vê só a própria comissão: precisa saber quem a pessoa é na fonte.

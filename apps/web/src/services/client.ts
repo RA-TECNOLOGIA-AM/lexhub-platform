@@ -1,5 +1,5 @@
 import { createApiClient } from './apiClient.ts'
-import { withCatalogCache } from './catalogCache.ts'
+import { withSessionCache } from './sessionCache.ts'
 import { env, required } from './env.ts'
 import { createHttp } from './http.ts'
 import { createMockClient } from './mockClient.ts'
@@ -62,8 +62,8 @@ function createDataClient(): DataClient {
             baseUrl: required('VITE_BASE_API_URL', env.apiUrl),
             getToken: async () => (await auth.auth.getSession()).data.session?.access_token ?? null,
         })
-        // Catálogo em memória na sessão: voltar ao hub não espera a API (ver catalogCache.ts).
-        return withCatalogCache(createApiClient({ auth, http }))
+        // Catálogo, favoritos e ordem em memória na sessão: voltar ao hub não espera a API (sessionCache.ts).
+        return withSessionCache(createApiClient({ auth, http }))
     }
     throw new Error(`VITE_DATA_SOURCE="${env.dataSource}" inválido: use mock ou api`)
 }

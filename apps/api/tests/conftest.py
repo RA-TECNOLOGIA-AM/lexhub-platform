@@ -17,6 +17,7 @@ os.environ.update(
     SUPABASE_SERVICE_ROLE_KEY="",
     SUPABASE_JWT_SECRET="",
     DATABASE_URL="",
+    SOURCE_CACHE_WARM_ENABLED="false",  # sem tarefa de fundo nos testes
 )
 # Bancos de origem desligados: os testes nunca podem conectar nos bancos reais do .env.
 for _db in ("NG", "LAADV", "LEXFLOW", "LEXPRE"):
@@ -77,6 +78,7 @@ class FakeRepo:
         self.members: set[tuple[str, str]] = set()  # (user_id, org_slug)
         self.commission: set[str] = set()  # user_ids que veem comissão
         self.exporters: set[str] = set()  # user_ids que podem exportar
+        self.unit_refs: dict[tuple[str, str], str] = {}  # (unit_id, source_db) -> ref
         self.audits: list[dict] = []
 
     def join(self, user_id: str, org_slug: str = "lexgroup") -> None:
@@ -101,6 +103,7 @@ class FakeRepo:
             scope=self.scopes.get((user_id, unit_id, dashboard_key)),
             can_see_commission=user_id in self.commission,
             can_export=user_id in self.exporters,
+            source_refs={src: ref for (uid, src), ref in self.unit_refs.items() if uid == unit_id},
         )
 
     async def insert_audit(self, entry):
@@ -200,18 +203,17 @@ class FakeSource:
         self.fetched.append(query_name)
         return list(self.data.get(query_name, []))
 
+    def synced_at(self):
+        return None
+
 
 class FakeSources:
     """unit_source_refs + bancos de origem em memória, para as rotas de dados dos dashboards."""
 
     def __init__(self):
-        self.refs: dict[tuple[str, str], str] = {}  # (unit_id, source_db) -> ref
         self.members: dict[tuple[str, str, str], str] = {}  # (user_id, org_id, source_db) -> ref
         self.data: dict[str, list] = {}  # query_name -> linhas
         self.last: FakeSource | None = None
-
-    async def unit_ref(self, unit_id, source_db):
-        return self.refs.get((unit_id, source_db))
 
     async def member_ref(self, user_id, org_id, source_db):
         return self.members.get((user_id, org_id, source_db))

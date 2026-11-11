@@ -86,7 +86,7 @@ def module(monkeypatch):
 def ready(repo, sources):
     """Pessoa com acesso 'all' ao Protocolo na NG, e a NG ligada ao escritório 1 do LexPre."""
     repo.grant(USER_ID, "NG", "protocolo-lexpre", "all")
-    sources.refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
     sources.data["log_setor_demanda_lexpre_NG"] = [{"ID_DEMANDA": 1}, {"ID_DEMANDA": 2}]
 
 

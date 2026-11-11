@@ -380,6 +380,7 @@ MODULE = DashboardModule(
     source_db="lexpre",
     source_label="LexPre",
     build=build,
+    queries=(QUERY,),
     # Mesmos parâmetros da v1 (GET /protocolo-lexpre).
     filters={"materia": str, "funcionario": str, "area_atuacao_id": int, "uf": str},
     commission_fields=("comissionamento_por_funcionario",),

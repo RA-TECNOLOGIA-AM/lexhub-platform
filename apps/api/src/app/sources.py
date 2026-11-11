@@ -1,21 +1,23 @@
 """Bancos de origem para os dashboards: qual unidade é qual na fonte, e a busca das queries da v1.
 
-  * SourceRefsRepo   quem é quem na fonte: unidade -> id (app.unit_source_refs; NG -> lexpre -> "1")
-                     e pessoa -> funcionário (app.member_source_refs; ex.: nome do funcionário no LexPre).
+  * SourceRefsRepo   pessoa -> funcionário na fonte (app.member_source_refs; ex.: nome no LexPre).
+                     Unidade -> id na fonte (app.unit_source_refs) vem junto com o acesso (access.py).
   * PgSourceFetcher  roda uma query registrada em app/source_queries.py no banco de origem,
                      com as tentativas da v1 (run_with_connection_retry) e o limite de consultas por banco.
 O cache de 5 min entra embrulhando o SourceFetcher (mesma interface), sem mudar os módulos.
 """
 
+import time
 from collections.abc import Callable
 from typing import Annotated, Any, Protocol
 
 import asyncpg
-from fastapi import Depends
+from fastapi import Depends, Request
 
 from app.access import get_db_pool
 from app.dashboards.base import SourceFetcher
 from app.database import DatabaseManager, get_databases, run_with_connection_retry
+from app.source_cache import CachedSourceFetcher, SourceCache
 from app.source_queries import QUERIES
 
 
@@ -24,15 +26,9 @@ class SourceUnavailable(Exception):
 
 
 class SourceRefsRepo(Protocol):
-    async def unit_ref(self, unit_id: str, source_db: str) -> str | None: ...
-
     # A pessoa logada naquela organização, como aparece na fonte; None = vínculo ainda não feito.
     async def member_ref(self, user_id: str, org_id: str, source_db: str) -> str | None: ...
 
-
-_UNIT_REF_SQL = """
-select r.ref from app.unit_source_refs r where r.unit_id = $1::uuid and r.source = $2
-"""
 
 _MEMBER_REF_SQL = """
 select r.ref
@@ -45,9 +41,6 @@ select r.ref
 class PgSourceRefsRepo:
     def __init__(self, pool: asyncpg.Pool):
         self._pool = pool
-
-    async def unit_ref(self, unit_id: str, source_db: str) -> str | None:
-        return await self._pool.fetchval(_UNIT_REF_SQL, unit_id, source_db)
 
     async def member_ref(self, user_id: str, org_id: str, source_db: str) -> str | None:
         return await self._pool.fetchval(_MEMBER_REF_SQL, user_id, org_id, source_db)
@@ -62,6 +55,7 @@ class PgSourceFetcher:
         self._manager = manager
         self._db = db_name
         self._queries = queries
+        self._fetched: list[float] = []
 
     async def fetch(self, query_name: str) -> list[dict[str, Any]]:
         spec = self._queries[query_name]  # KeyError = query não copiada da v1: erro de programação
@@ -76,14 +70,23 @@ class PgSourceFetcher:
             )
         except ValueError as exc:  # pool não inicializado (banco off ou down na subida)
             raise SourceUnavailable(self._db) from exc
+        self._fetched.append(time.time())
         return [dict(r) for r in rows]
+
+    def synced_at(self) -> float | None:
+        return min(self._fetched) if self._fetched else None
 
 
 SourceFactory = Callable[[str], SourceFetcher]
 
 
+def get_source_cache(request: Request) -> SourceCache:
+    return request.app.state.source_cache
+
+
 def get_source_factory(
     manager: Annotated[DatabaseManager, Depends(get_databases)],
+    cache: Annotated[SourceCache, Depends(get_source_cache)],
 ) -> SourceFactory:
-    """Dependency: db_name -> SourceFetcher daquele banco de origem."""
-    return lambda db_name: PgSourceFetcher(manager, db_name)
+    """Dependency: db_name -> SourceFetcher daquele banco de origem, com o cache de 5 min."""
+    return lambda db_name: CachedSourceFetcher(cache, PgSourceFetcher(manager, db_name), db_name)

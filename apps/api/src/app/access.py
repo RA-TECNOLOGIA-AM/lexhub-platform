@@ -29,6 +29,8 @@ class ResolvedAccess:
     # Por unidade: owner/admin/gestor/controller veem a comissão de todos; exportar = dashboards.export.
     can_see_commission: bool = False
     can_export: bool = False
+    # id da unidade em cada banco de origem (app.unit_source_refs): {'lexpre': '1', ...}
+    source_refs: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,7 @@ class DashboardAccess:
     timezone: str = "America/Manaus"
     can_see_commission: bool = False
     can_export: bool = False
+    source_refs: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -89,7 +92,9 @@ select o.id::text as org_id,
        u.timezone,
        (app_private.has_unit_permission($1::uuid, u.id, 'org.dashboards.all')
         or app_private.has_unit_permission($1::uuid, u.id, 'unit.dashboards.all')) as can_see_commission,
-       app_private.has_unit_permission($1::uuid, u.id, 'dashboards.export') as can_export
+       app_private.has_unit_permission($1::uuid, u.id, 'dashboards.export') as can_export,
+       coalesce((select jsonb_object_agg(r.source, r.ref) from app.unit_source_refs r
+                  where r.unit_id = u.id), '{}'::jsonb)::text as source_refs
   from app.organizations o
   join app.units u on u.org_id = o.id
  where o.slug = $2 and u.code = $3 and o.active and u.active
@@ -120,6 +125,7 @@ class PgAccessRepo:
             timezone=row["timezone"],
             can_see_commission=row["can_see_commission"],
             can_export=row["can_export"],
+            source_refs=json.loads(row["source_refs"]),
         )
 
     async def insert_audit(self, entry: AuditEntry) -> None:
@@ -222,4 +228,5 @@ async def require_dashboard(
         timezone=resolved.timezone,
         can_see_commission=resolved.can_see_commission,
         can_export=resolved.can_export,
+        source_refs=resolved.source_refs,
     )

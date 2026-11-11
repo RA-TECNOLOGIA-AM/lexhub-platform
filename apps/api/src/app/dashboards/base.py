@@ -20,6 +20,9 @@ class SourceFetcher(Protocol):
 
     async def fetch(self, query_name: str) -> list[dict[str, Any]]: ...
 
+    # Quando veio do banco o dado mais antigo usado (epoch s); None = nada buscado. Vai no meta.synced_at.
+    def synced_at(self) -> float | None: ...
+
 
 @dataclass(frozen=True)
 class Period:
@@ -61,6 +64,7 @@ class DashboardModule:
     commission_person_key: str = "funcionario"  # campo de cada linha com o nome da pessoa na fonte
     v2_only_fields: tuple[str, ...] = ()  # campos novos da V2 sem regra ainda: vêm null
     export: ExportSpec | None = None  # None = o dashboard não exporta
+    queries: tuple[str, ...] = ()  # queries que usa: o aquecedor do cache as mantém quentes
 
 
 class NotReady(Exception):
