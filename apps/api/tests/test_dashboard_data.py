@@ -254,6 +254,76 @@ def test_protocolo_real_filtro_que_nao_bate_zera_e_mantem_as_opcoes(client, sign
     assert body["opcoes_filtro"]["materias"] == ["ANP"]  # opções calculadas antes dos filtros
 
 
+@pytest.mark.parametrize(
+    ("key", "lista_funcionarios"),
+    [
+        ("org-documentos-lexpre", "funcionarios_org_doc"),
+        ("peticionamento-lexpre", "funcionarios_peticionamento"),
+        ("pendencias-lexpre", "funcionarios_pendencias"),
+    ],
+)
+def test_setores_lexpre_rodam_o_calculo_da_v1(
+    client, signer, repo, sources, key, lista_funcionarios
+):
+    """Org. Doc, Peticionamento e Pendências (LexPre): cálculo da v1 roda na casca, só a NG (escritório 1)."""
+    repo.grant(USER_ID, "NG", key, "all")
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    sources.data["log_setor_demanda_lexpre_NG"] = LOG_ROWS
+    sources.data["setor_func_lexpre_NG"] = []
+    r = client.get(f"/orgs/lexgroup/units/NG/dashboards/{key}", headers=auth(signer))
+    assert r.status_code == 200
+    body = r.json()
+    assert body["meta"]["source"] == "LexPre"
+    assert lista_funcionarios in body
+    assert body["opcoes_filtro"]["ufs"] == ["AM"]  # a linha do RJ (escritório 2) fica fora
+
+
+def _own_rows_module(monkeypatch):
+    """Módulo falso com own_rows_only (como a Comissão Comercial): devolve o que a casca passou."""
+
+    async def build(ctx):
+        return {"own_ref": ctx.own_ref, "gere": ctx.can_see_commission}
+
+    fake = DashboardModule(
+        key="protocolo-lexpre",
+        source_db="lexpre",
+        source_label="LexPre",
+        build=build,
+        own_rows_only=True,
+    )
+    monkeypatch.setitem(DASHBOARDS, "protocolo-lexpre", fake)
+
+
+def test_own_rows_only_colaborador_recebe_o_proprio_vinculo(
+    client, signer, ready, sources, repo, monkeypatch
+):
+    _own_rows_module(monkeypatch)
+    sources.members[(USER_ID, repo.org_id, "lexpre")] = "Ana Souza"
+    body = client.get(URL, headers=auth(signer)).json()
+    assert body["own_ref"] == "Ana Souza"
+    assert body["gere"] is False
+
+
+def test_own_rows_only_quem_gere_nao_e_recortado(client, signer, ready, sources, repo, monkeypatch):
+    _own_rows_module(monkeypatch)
+    repo.commission.add(USER_ID)
+    body = client.get(URL, headers=auth(signer)).json()
+    assert body["own_ref"] is None
+    assert body["gere"] is True
+
+
+def test_comercial_e_comissao_lexpre_rodam_o_calculo_da_v1(client, signer, repo, sources):
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    for q in DASHBOARDS["comercial-lexpre"].queries:
+        sources.data[q] = []
+    for key in ("comercial-lexpre", "comissao-lexpre"):
+        repo.grant(USER_ID, "NG", key, "all")
+        r = client.get(f"/orgs/lexgroup/units/NG/dashboards/{key}", headers=auth(signer))
+        assert r.status_code == 200, key
+        assert r.json()["stats"]["comissao_base"] == 0.0
+        assert set(r.json()["opcoes_filtro"]) == {"atendentes", "areas", "ufs", "segmentos"}
+
+
 # --- Funções puras -----------------------------------------------------------
 
 

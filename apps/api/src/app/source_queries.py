@@ -96,4 +96,162 @@ QUERIES: dict[str, dict] = {
         "description": "Log de entradas/saídas de demandas por setor (banco lexpre), base das páginas de dashboard por setor (LexPre).",
         "params": [],
     },
+    # v1: queries.py:791, "setor_func_lexpre_NG" (copiada em 11/11/2026). Pendências (LexPre).
+    "setor_func_lexpre_NG": {
+        "database": "lexpre",
+        "query": """
+        SELECT
+            sf.id AS "SETOR_FUNC_ID",
+            sf.funcionario_id AS "FUNCIONARIO_ID",
+            sf.setor_id AS "SETOR_ID"
+        FROM public.setor_func sf
+        """,
+        # Vínculos funcionário-setor (banco lexpre) — quem está formalmente alocado em qual
+        # setor agora. Usado em Pendências (04/09/2026) para validar se quem executou um
+        # cancelamento (log_setor_demanda.actor_id) realmente pertence ao setor Pendências —
+        # ver comentário em "log_setor_demanda_lexpre_NG" e
+        # pendencia_setor_lexpre.build_funcionarios_do_setor.
+        "description": "Vínculos funcionário-setor (banco lexpre) — quem está alocado em qual setor.",
+        "params": []
+    },
+    # v1: queries.py:613, "comercial_lexpre_NG" (copiada em 11/11/2026). Comercial e Comissão Comercial (LexPre).
+    "comercial_lexpre_NG": {
+        "database": "lexpre",
+        "query": """
+        SELECT
+            a.id AS "ID_ACTION",
+            c.nome AS "CLIENTE",
+            c.uf AS "UF",
+            f.nome AS "ATENDENTE",
+            a.status_id AS "STATUS_ID",
+            s.descricao AS "STATUS",
+            a.escritorio_id AS "ESCRITORIO_ID",
+            e.nome AS "ESCRITORIO",
+            a.motivo_id AS "MOTIVO_ID",
+            me.descricao AS "MOTIVO_ENCERRAMENTO",
+            a.data_assinatura AS "DATA_ASSINATURA",
+            a.data_entrada AS "DATA_ENTRADA",
+            a.canal_aquisicao AS "CANAL_AQUISICAO",
+            a.tipo_trafego AS "TIPO_TRAFEGO",
+            a.prospeccao AS "PROSPECCAO",
+            a.nome_campanha AS "NOME_CAMPANHA",
+            a.nome_conjunto AS "NOME_CONJUNTO",
+            a.criativo AS "CRIATIVO",
+            a.posicionamento AS "POSICIONAMENTO",
+            a.ad_id AS "AD_ID",
+            d.id AS "ID_DEMANDA",
+            d.rubrica_id AS "ID_RUBRICA",
+            r.nome AS "RUBRICA",
+            r.reunida AS "RUBRICA_REUNIDA",
+            r.operacao_id AS "OPERACAO_ID",
+            op.nome AS "OPERACAO_NOME",
+            aa.id AS "AREA_ATUACAO_ID",
+            aa.description AS "AREA_ATUACAO_NOME",
+            r.valor_rubrica AS "VALOR_AM",
+            d.status AS "STATUS_DEMANDA_ID",
+            sd.descricao AS "STATUS_DEMANDA",
+            d.valor_causa AS "VALOR_CAUSA",
+            d.dano_moral AS "DANO_MORAL",
+            d.numero_processo AS "NUMERO_PROCESSO",
+            d.data_protocolo AS "DATA_PROTOCOLO",
+            d.setor_id AS "SETOR_ID",
+            st.nome_setor AS "SETOR_NOME"
+        FROM public.atendimento a
+        LEFT JOIN public.customer c
+            ON a.customer_id = c.id
+        LEFT JOIN public.funcionario f
+            ON a.funcionario_id = f.id
+        LEFT JOIN public.status s
+            ON a.status_id = s.id
+        LEFT JOIN public.escritorio e
+            ON a.escritorio_id = e.id
+        LEFT JOIN public.motivo_encerramento me
+            ON a.motivo_id = me.id
+        LEFT JOIN public.demandas d
+            ON d.atendimento_id = a.id
+        LEFT JOIN public.rubricas r
+            ON d.rubrica_id = r.id
+        LEFT JOIN public.operacao op
+            ON r.operacao_id = op.id
+        LEFT JOIN public.area_atuacao aa
+            ON op.area_atuacao_id = aa.id
+        LEFT JOIN public.status sd
+            ON d.status = sd.id
+        LEFT JOIN public.setores st
+            ON d.setor_id = st.id
+        """,
+        # Sem filtro de escritório na query — traz todos os escritórios (NGAM/LAAM/LARJ).
+        # O recorte NG (escritorio_id = 1) é aplicado no backend (dashboard_routes.py).
+        # VALOR_AM (rubricas.valor_rubrica) é o valor de comissão fixo por rubrica —
+        # equivalente ao VALOR_AM do banco `ng`, adicionado em 04/09/2026. Consumido por
+        # app.analyses.NG.comissao_lexpre.get_comissao_base. Nem toda rubrica tem valor
+        # cadastrado ainda (NULL vira R$0 na soma, via `_converter_valor`).
+        #
+        # AREA_ATUACAO_ID/NOME (17/09/2026): a "área de atuação" de verdade do dashboard
+        # antigo NÃO é `rubricas.operacao_id`/`public.operacao` (que no lexpre é mais um
+        # código de escritório/operação — NGAM/NGPB/NGPA/CONSUMIDOR/ADMINISTRATIVO) — é
+        # `public.operacao.area_atuacao_id`, que aponta pra `public.area_atuacao`
+        # (CONSUMIDOR, CIVIL, TRABALHISTA, PENAL, ADMINISTRATIVO, AMBIENTAL,
+        # PREVIDENCIÁRIO). Hoje toda rubrica cadastrada usa uma operação de
+        # area_atuacao_id=1 (CONSUMIDOR) — outras operações (ex.: "NGAM ADM", associada a
+        # area_atuacao_id=5/ADMINISTRATIVO) ainda vão ser criadas. OPERACAO_ID/NOME
+        # continuam expostos (compatibilidade com o resto do módulo), mas o filtro/catálogo
+        # de "área de atuação" deve usar AREA_ATUACAO_ID/NOME — ver
+        # comercial_lexpre.list_areas_atuacao_comerciais/filter_comercial_lexpre_por_area_atuacao.
+        "description": "Dados comerciais a partir do banco lexpre (atendimento + demandas), base da nova página Comercial (LexPre).",
+        "params": []
+    },
+    # v1: queries.py:809, "demanda_rubrica_reunida_lexpre_NG" (copiada em 11/11/2026). Comercial e Comissão Comercial (LexPre).
+    "demanda_rubrica_reunida_lexpre_NG": {
+        "database": "lexpre",
+        "query": """
+        SELECT
+            drr.demanda_id AS "DEMANDA_ID",
+            drr.rubrica_associada_id AS "RUBRICA_ASSOCIADA_ID",
+            ra.nome AS "RUBRICA_ASSOCIADA_NOME",
+            ra.valor_rubrica AS "RUBRICA_ASSOCIADA_VALOR_AM"
+        FROM public.demanda_rubrica_reunida drr
+        LEFT JOIN public.rubricas ra
+            ON drr.rubrica_associada_id = ra.id
+        """,
+        # Mapa demanda -> rubricas associadas REALMENTE configuradas para aquela demanda
+        # específica de rubrica "reunida" (pacote), usado para expandir 1 demanda em 1 ação
+        # por componente, no cálculo de "ações fechadas" da página Comercial (LexPre).
+        #
+        # Corrigido em 04/09/2026: antes essa expansão usava `public.rubricas_reunidas`
+        # (mapa GENÉRICO rubrica_id do pacote -> TODAS as associadas já cadastradas para
+        # aquele tipo de pacote, ex.: 24 associadas para RUBRICAS_BRADESCO), inflando a
+        # contagem de toda demanda daquele pacote pelas 24, mesmo quando só 3-5 delas
+        # realmente se aplicavam ao caso do cliente. `demanda_rubrica_reunida` é a tabela
+        # correta: guarda, por demanda, só os componentes que o time realmente configurou
+        # para AQUELE caso. RUBRICA_ASSOCIADA_VALOR_AM é o VALOR_AM (rubricas.valor_rubrica)
+        # da PRÓPRIA associada, não do pacote — o pacote normalmente não tem valor cadastrado
+        # (ex.: RUBRICAS_BRADESCO), quem carrega a comissão são os componentes (ver
+        # comercial_lexpre.build_mapa_valor_rubrica_associada).
+        "description": "Componentes reais de cada demanda de rubrica 'reunida' (pacote), por demanda específica (banco lexpre).",
+        "params": []
+    },
+    # v1: queries.py:839, "audit_log_demandas_canceladas_lexpre_NG" (copiada em 11/11/2026). Comercial e Comissão Comercial (LexPre).
+    "audit_log_demandas_canceladas_lexpre_NG": {
+        "database": "lexpre",
+        "query": """
+        SELECT
+            al.entidade_id AS "ID_DEMANDA",
+            al.created_at AS "DATA_CANCELAMENTO",
+            al.escritorio_id AS "ESCRITORIO_ID"
+        FROM public.audit_log al
+        WHERE al.entidade = 'demanda'
+          AND al.acao = 'demanda.cancelada'
+        """,
+        # Trilha de auditoria (public.audit_log) do momento exato em que cada demanda
+        # foi cancelada — usada em app.analyses.NG.comissao_lexpre para descontar, da
+        # comissão do Comercial, o VALOR_AM de demandas cuja comissão já tinha sido
+        # paga em um período ANTERIOR (DATA_ASSINATURA antes do período atual) mas que
+        # foram canceladas DENTRO do período atual (ex.: atendente comissiona por um
+        # RMC fechado no fim de agosto, cliente cancela em setembro — o valor precisa
+        # ser descontado da comissão de setembro, não retroagir sobre agosto, que já
+        # foi pago). entidade_id é o id de public.demandas (entidade = 'demanda').
+        "description": "Eventos de cancelamento de demanda (banco lexpre), usados para desconto de comissão por cancelamento tardio.",
+        "params": []
+    },
 }

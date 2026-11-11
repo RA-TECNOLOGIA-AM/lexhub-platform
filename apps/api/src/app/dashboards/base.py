@@ -39,6 +39,9 @@ class DashboardContext:
     period: Period
     filters: dict[str, list[Any]]  # só os filtros que o módulo declara, já convertidos
     can_see_commission: bool  # a casca também remove a comissão da resposta se for False
+    # Quem a pessoa é na fonte (app.member_source_refs). Só vem preenchido nos módulos com
+    # own_rows_only e para quem não gere a unidade; None = sem vínculo (a página zera).
+    own_ref: str | None = None
 
 
 @dataclass(frozen=True)
@@ -65,6 +68,9 @@ class DashboardModule:
     v2_only_fields: tuple[str, ...] = ()  # campos novos da V2 sem regra ainda: vêm null
     export: ExportSpec | None = None  # None = o dashboard não exporta
     queries: tuple[str, ...] = ()  # queries que usa: o aquecedor do cache as mantém quentes
+    # A página inteira só com os dados da própria pessoa para quem não gere a unidade
+    # (v1: escopo_proprio da Comissão Comercial). A casca preenche ctx.own_ref.
+    own_rows_only: bool = False
 
 
 class NotReady(Exception):

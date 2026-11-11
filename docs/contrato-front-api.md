@@ -12,8 +12,10 @@ formatos é o código: `apps/web/src/types/index.ts` (tipos) e `apps/web/src/ser
 Prontas (10 e 11/11): `GET /me`, `GET /orgs/{org}/dashboards`, favoritos (`GET`, `POST` e `DELETE /orgs/{org}/favorites`) e
 ordem dos cards (`GET` e `PUT /orgs/{org}/hub-order`), além de `GET /health`, `GET /health/supabase`,
 `GET /health/sources` e `GET /orgs/{org}/units/{unit}/dashboards/{key}/access`. A casca dos dados dos dashboards
-(`GET /orgs/{org}/units/{unit}/dashboards/{key}`) existe desde 11/11; o Protocolo (LexPre) responde 501 até o cálculo da v1
-ser ligado. **As demais rotas de dados abaixo ainda não existem.** No modo `api`, cada tela sem rota mostra o erro 404
+(`GET /orgs/{org}/units/{unit}/dashboards/{key}`) existe desde 11/11. Com o cálculo da v1 ligado: Protocolo, Pendências,
+Organização de Documentos, Peticionamento, Comercial e Comissão Comercial (LexPre); números conferidos contra a v1 nas
+mesmas linhas (NG, LA e RJ, mês fechado e mês corrente), aguardando a validação do analista para abrir os cards.
+Marketing (LexPre) ainda não (usa também o banco NG). **As demais rotas de dados abaixo ainda não existem.** No modo `api`, cada tela sem rota mostra o erro 404
 ("Não encontrado").
 
 ## Convenções (valem para todas as rotas)
@@ -123,6 +125,12 @@ Cada uma precisa existir no servidor.
 - Campos novos da V2 sem regra ainda (`protocolados_no_prazo`, `metas`, `pendencias_mais_antigas`) vêm `null`.
 - Respostas: dashboard sem módulo = **404**; módulo sem o cálculo ligado = **501** (com a explicação no `detail`);
   unidade sem ligação com a fonte ou fonte fora do ar (ex.: LexPre fora da rede) = **503**.
+- Comercial e Comissão Comercial (LexPre): o mesmo cálculo (na v1, o mesmo endpoint `/comercial-lexpre`). Filtros da
+  v1: `atendente_comercial` (vários), `segmento_comercial` e `rubrica` (um valor), `area_atuacao_id`, `uf`. No
+  Comercial todo mundo vê todo mundo, como na v1. Na Comissão, quem não gere a unidade vê a **página inteira** só com
+  os próprios dados (v1 `escopo_proprio`), pelo vínculo em `app.member_source_refs`; sem vínculo, a página zera.
+  `opcoes_filtro` do Comercial: `atendentes`, `areas`, `ufs`, `segmentos`. Exportar do Comercial ainda não (na v1 são
+  duas abas). Pendências não tem filtro de matéria (como na v1).
 
 ### Opções dos filtros (`opcoes_filtro`)
 
@@ -145,8 +153,8 @@ Cada uma precisa existir no servidor.
 - Implementado em 11/11 (`apps/api/src/app/dashboards/export.py` + `ExportSpec` em cada módulo): CSV em UTF-8 com BOM e
   XLSX com a aba da v1, valores como na v1 (vazio, Sim/Não, `dd/mm/aaaa`), arquivo `protocolo_lexpre_NG_relatorio.csv`.
   `can_export` = `dashboards.export` no papel da organização ou no cargo da unidade. Formato diferente de `csv`/`xlsx` =
-  **400**; negação auditada com o motivo; exportação auditada como `dashboard.export`. Protocolo (LexPre) e Pendências
-  (LexPre) respondem 501 até o cálculo da v1 ser ligado.
+  **400**; negação auditada com o motivo; exportação auditada como `dashboard.export`. Exportam: Protocolo,
+  Pendências, Organização de Documentos e Peticionamento (LexPre).
 
 ### Convite (`POST /orgs/{org}/invitations`)
 
