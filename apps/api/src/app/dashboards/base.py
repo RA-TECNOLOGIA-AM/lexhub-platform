@@ -39,6 +39,16 @@ class DashboardContext:
 
 
 @dataclass(frozen=True)
+class ExportSpec:
+    """Exportação de um dashboard, como na v1 (`_CAMPOS_EXPORT_*`, `_LABELS_EXPORT_*`, `_rows_*_export`)."""
+
+    fields: dict[str, str]  # slug -> coluna das linhas (= _CAMPOS_EXPORT_* da v1, mesma ordem)
+    labels: dict[str, str]  # slug -> cabeçalho do arquivo (= _LABELS_EXPORT_* da v1)
+    sheet_name: str  # nome da aba no XLSX (igual à v1)
+    rows: Callable[[DashboardContext], Awaitable[list[dict[str, Any]]]]  # = _rows_*_export da v1
+
+
+@dataclass(frozen=True)
 class DashboardModule:
     key: str  # mesma key de app.dashboard_catalog
     source_db: str  # banco de origem ('lexpre', 'lexflow', 'ng', 'laadv')
@@ -50,6 +60,7 @@ class DashboardModule:
     ] = ()  # listas de comissão: todos para quem gere, só a sua para os demais
     commission_person_key: str = "funcionario"  # campo de cada linha com o nome da pessoa na fonte
     v2_only_fields: tuple[str, ...] = ()  # campos novos da V2 sem regra ainda: vêm null
+    export: ExportSpec | None = None  # None = o dashboard não exporta
 
 
 class NotReady(Exception):

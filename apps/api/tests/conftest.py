@@ -76,6 +76,7 @@ class FakeRepo:
         self.scopes: dict[tuple[str, str, str], str] = {}
         self.members: set[tuple[str, str]] = set()  # (user_id, org_slug)
         self.commission: set[str] = set()  # user_ids que veem comissão
+        self.exporters: set[str] = set()  # user_ids que podem exportar
         self.audits: list[dict] = []
 
     def join(self, user_id: str, org_slug: str = "lexgroup") -> None:
@@ -99,6 +100,7 @@ class FakeRepo:
             unit_id=unit_id,
             scope=self.scopes.get((user_id, unit_id, dashboard_key)),
             can_see_commission=user_id in self.commission,
+            can_export=user_id in self.exporters,
         )
 
     async def insert_audit(self, entry):

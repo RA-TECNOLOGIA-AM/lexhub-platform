@@ -142,6 +142,11 @@ Cada uma precisa existir no servidor.
 - Toda exportação vai para a **auditoria** (quem, dashboard, unidade, período, filtros, quantas linhas, formato). A v1
   não registra.
 - Nome do arquivo no `Content-Disposition` (o front usa `{key}_{unit}.{format}` se não vier).
+- Implementado em 11/11 (`apps/api/src/app/dashboards/export.py` + `ExportSpec` em cada módulo): CSV em UTF-8 com BOM e
+  XLSX com a aba da v1, valores como na v1 (vazio, Sim/Não, `dd/mm/aaaa`), arquivo `protocolo_lexpre_NG_relatorio.csv`.
+  `can_export` = `dashboards.export` no papel da organização ou no cargo da unidade. Formato diferente de `csv`/`xlsx` =
+  **400**; negação auditada com o motivo; exportação auditada como `dashboard.export`. Protocolo (LexPre) e Pendências
+  (LexPre) respondem 501 até o cálculo da v1 ser ligado.
 
 ### Convite (`POST /orgs/{org}/invitations`)
 

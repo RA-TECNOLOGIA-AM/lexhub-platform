@@ -26,9 +26,9 @@ class ResolvedAccess:
     unit_id: str
     scope: str | None  # 'all' | 'own' | None (sem acesso)
     timezone: str = "America/Manaus"  # fuso da unidade (app.units.timezone)
-    can_see_commission: bool = (
-        False  # vê tudo da organização ou da unidade (owner/admin/gestor/controller)
-    )
+    # Por unidade: owner/admin/gestor/controller veem a comissão de todos; exportar = dashboards.export.
+    can_see_commission: bool = False
+    can_export: bool = False
 
 
 @dataclass(frozen=True)
@@ -54,6 +54,7 @@ class DashboardAccess:
     scope: str
     timezone: str = "America/Manaus"
     can_see_commission: bool = False
+    can_export: bool = False
 
 
 @dataclass(frozen=True)
@@ -87,7 +88,8 @@ select o.id::text as org_id,
        app_private.dashboard_scope($1::uuid, u.id, $4) as scope,
        u.timezone,
        (app_private.has_unit_permission($1::uuid, u.id, 'org.dashboards.all')
-        or app_private.has_unit_permission($1::uuid, u.id, 'unit.dashboards.all')) as can_see_commission
+        or app_private.has_unit_permission($1::uuid, u.id, 'unit.dashboards.all')) as can_see_commission,
+       app_private.has_unit_permission($1::uuid, u.id, 'dashboards.export') as can_export
   from app.organizations o
   join app.units u on u.org_id = o.id
  where o.slug = $2 and u.code = $3 and o.active and u.active
@@ -117,6 +119,7 @@ class PgAccessRepo:
             scope=row["scope"],
             timezone=row["timezone"],
             can_see_commission=row["can_see_commission"],
+            can_export=row["can_export"],
         )
 
     async def insert_audit(self, entry: AuditEntry) -> None:
@@ -218,4 +221,5 @@ async def require_dashboard(
         scope=resolved.scope,
         timezone=resolved.timezone,
         can_see_commission=resolved.can_see_commission,
+        can_export=resolved.can_export,
     )
