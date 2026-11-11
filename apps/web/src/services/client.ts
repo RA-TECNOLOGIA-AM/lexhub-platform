@@ -27,7 +27,13 @@ import type {
 export interface DataClient {
     // Sessão. Sem sessão, os outros métodos rejeitam com DataError 401.
     signIn(email: string, password: string): Promise<void>
+    // Login com a conta Google (corporativa ou não).
+    // 'redirecting' = o navegador está indo para o Google (API) e volta em /login;
+    // 'signed-in' = já entrou sem sair do app (mock).
+    signInWithGoogle(): Promise<'redirecting' | 'signed-in'>
     signOut(): Promise<void>
+    // E-mail de quem está logado (null = sem sessão). Serve à tela "sem acesso", quando o /me dá 403.
+    getSessionEmail(): Promise<string | null>
     // org = slug da organização ativa (vem da URL); sem org, a organização padrão da pessoa.
     // Organização de que a pessoa não faz parte: rejeita com 403.
     getMe(org?: string): Promise<Me>
@@ -67,7 +73,9 @@ function createDataClient(): DataClient {
             getToken: async () => (await auth.auth.getSession()).data.session?.access_token ?? null,
         })
         // Catálogo, favoritos e ordem em memória na sessão: voltar ao hub não espera a API (sessionCache.ts).
-        return withSessionCache(createApiClient({ auth, http }))
+        // A volta do Google vem para a mesma origem em que o app está aberto: o código do PKCE fica
+        // guardado no navegador por origem (outra porta = outro armazenamento = login falha).
+        return withSessionCache(createApiClient({ auth, http, siteUrl: window.location.origin }))
     }
     throw new Error(`VITE_DATA_SOURCE="${env.dataSource}" inválido: use mock ou api`)
 }

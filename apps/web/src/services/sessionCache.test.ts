@@ -52,6 +52,9 @@ function fakeClient() {
             state.order = keys
         },
         async signIn() {},
+        async signInWithGoogle() {
+            return 'signed-in'
+        },
         async signOut() {},
     } as unknown as DataClient
     return { client, state }
@@ -138,5 +141,14 @@ describe('withSessionCache', () => {
         await cached.listDashboards('lexgroup')
         expect(state.calls.catalog).toBe(3)
         expect(state.calls.favorites).toBe(2)
+    })
+
+    it('entrar com o Google também limpa tudo', async () => {
+        const { client, state } = fakeClient()
+        const cached = withSessionCache(client, 1000, () => 0)
+        await cached.listDashboards('lexgroup')
+        await cached.signInWithGoogle()
+        await cached.listDashboards('lexgroup')
+        expect(state.calls.catalog).toBe(2)
     })
 })

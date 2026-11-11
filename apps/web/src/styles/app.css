@@ -611,3 +611,101 @@ button.org:hover {
         z-index: 50;
     }
 }
+
+/* ---------- login (Google + e-mail e senha) ---------- */
+/* Botão que ocupa a largura do card (Google, Entrar, Solicitar acesso). */
+.btn-block {
+    width: 100%;
+}
+/* Entrar com Google: contornado e um pouco mais alto, com o "G" colorido à esquerda do texto. */
+.btn-provider {
+    min-height: 44px;
+    gap: 10px;
+    border-color: var(--border-strong);
+    font-weight: 600;
+}
+.btn-provider:hover {
+    border-color: var(--border-hover);
+    background: var(--surface-2);
+}
+/* "──── OU COM E-MAIL E SENHA ────" */
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1 1 0;
+    height: 1px;
+    background: var(--border);
+}
+/* Campo com ícone à esquerda (e, na senha, o olho à direita). */
+.field-icon {
+    position: relative;
+}
+.field-icon > svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-faint);
+    pointer-events: none;
+}
+.field-icon > .field {
+    min-height: 44px;
+    padding-left: 38px;
+}
+.field-icon > .field:has(+ .field-toggle) {
+    padding-right: 44px;
+}
+.field-toggle {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: var(--r-sm);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+.field-toggle:hover {
+    background: var(--surface-3);
+    color: var(--text);
+}
+.auth-card .btn-primary {
+    min-height: 44px;
+}
+.auth-foot {
+    text-align: center;
+}
+/* Botão com cara de link (ação no meio de uma frase). */
+.linkbtn {
+    border: 0;
+    padding: 0;
+    background: none;
+    font: inherit;
+    font-weight: 500;
+    color: var(--accent);
+    cursor: pointer;
+}
+.linkbtn:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+}
+.linkbtn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

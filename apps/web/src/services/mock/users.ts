@@ -37,4 +37,14 @@ export const me: Me = meFor(orgs[0].slug)!
 
 // Usuários de teste do mock (só existem aqui, no navegador).
 // No Supabase, cada um vira um usuário de verdade em Authentication > Users.
-export const testUsers = [{ email: 'controller@lexgroup.com.br', password: 'lexhub123' }]
+// sem.acesso: entra, mas não faz parte de nenhuma organização (a API responde 403 no /me).
+export const testUsers = [
+    { email: 'controller@lexgroup.com.br', password: 'lexhub123' },
+    { email: 'sem.acesso@exemplo.com', password: 'lexhub123' },
+]
+
+// Quem entra sem organização (o /me do mock responde 403, como a API).
+export const noAccessEmails = ['sem.acesso@exemplo.com']
+
+// O "Entrar com Google" do mock entra direto com esta conta (que tem acesso).
+export const googleMockEmail = 'luis.google@lexgroup.com.br'
