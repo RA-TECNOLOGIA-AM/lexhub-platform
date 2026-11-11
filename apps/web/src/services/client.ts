@@ -8,6 +8,7 @@ import type {
     DashboardCatalog,
     DashboardQuery,
     Me,
+    Meta,
     PendenciasResponse,
     ProtocoloResponse,
     InviteRequest,
@@ -46,6 +47,9 @@ export interface DataClient {
     listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>
+    // Dados de qualquer dashboard pela key (o formato T é definido na pasta do dashboard).
+    // No mock: só o `meta` e `stats` vazio (os números de verdade só vêm da API).
+    getDashboardData<T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery): Promise<T>
     // Relatório de um dashboard (CSV ou XLSX). Sem can_export ou sem acesso à unidade, rejeita com 403.
     exportDashboard(request: ExportRequest): Promise<ExportFile>
 }

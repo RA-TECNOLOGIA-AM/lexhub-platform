@@ -1,7 +1,7 @@
 """Lado V2 da comparação: roda os módulos da V2 sobre as MESMAS linhas (rows.pkl) e compara com a v1.
 
-Rodar com o Python da V2, de dentro de lexhub-platform/apps/api/src:
-    python compare_v2.py <saida_dir>
+Rodar com o Python da V2, com PYTHONPATH = apps/api/src:
+    python compare_v2.py <saida_dir> [lexpre|lexflow]
 Compara campo a campo (sem `opcoes_filtro`, que é novo da V2) e escreve <saida_dir>/relatorio.json.
 """
 
@@ -23,15 +23,23 @@ INICIO_MES = HOJE.replace(day=1)
 ANT_FIM = INICIO_MES.fromordinal(INICIO_MES.toordinal() - 1)
 ANT_INI = ANT_FIM.replace(day=1)
 PERIODOS = {"mes_anterior": (ANT_INI, ANT_FIM), "mes_atual": (INICIO_MES, HOJE)}
-ESCRITORIOS = {"NG": "1", "LA": "2", "RJ": "3"}
-KEYS = [
-    "protocolo-lexpre",
-    "org-documentos-lexpre",
-    "peticionamento-lexpre",
-    "pendencias-lexpre",
-    "comercial-lexpre",
-    "comissao-lexpre",
-]
+FONTE = sys.argv[2] if len(sys.argv) > 2 else "lexpre"
+if FONTE == "lexflow":
+    # ref no LexFlow = sufixo da unidade na v1; Recursal não existe no RJ.
+    ESCRITORIOS = {"NG": "NG", "LA": "LA", "RJ": "RJ"}
+    KEYS = ["execucao", "acordos", "recursal"]
+    FORA = {("recursal", "RJ")}
+else:
+    ESCRITORIOS = {"NG": "1", "LA": "2", "RJ": "3"}
+    KEYS = [
+        "protocolo-lexpre",
+        "org-documentos-lexpre",
+        "peticionamento-lexpre",
+        "pendencias-lexpre",
+        "comercial-lexpre",
+        "comissao-lexpre",
+    ]
+    FORA = set()
 
 
 class Fonte:
@@ -69,6 +77,8 @@ async def main():
         mod = DASHBOARDS[key]
         filtros = {f: [] for f in mod.filters}
         for unidade, ref in ESCRITORIOS.items():
+            if (key, unidade) in FORA:
+                continue
             for nome_p, (ini, fim) in PERIODOS.items():
                 caso = f"{key}_{unidade}_{nome_p}"
                 ctx = DashboardContext(

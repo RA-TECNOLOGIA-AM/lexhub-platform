@@ -33,3 +33,9 @@ export const fmt = {
     pct: (v: number) => nf1.format(v) + '%', // 8,2%
     dias: (v: number) => nf1.format(v) + (Math.abs(v - 1) < 0.05 ? ' dia' : ' dias'), // 2,4 dias
 }
+
+// Valor que pode faltar na resposta (campo null ou ausente, ex.: mock sem números): '—'.
+// Uso: show(s.total, fmt.int)
+export function show(v: number | null | undefined, format: (v: number) => string): string {
+    return v === null || v === undefined || Number.isNaN(v) ? '—' : format(v)
+}

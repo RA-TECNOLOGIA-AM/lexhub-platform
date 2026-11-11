@@ -1,12 +1,15 @@
 """Dashboards com dados na V2: key -> módulo. Dashboard novo = um módulo + uma linha aqui."""
 
 from app.dashboards import (
+    acordos,
     comercial_lexpre,
     comissao_lexpre,
+    execucao,
     org_documentos_lexpre,
     pendencias_lexpre,
     peticionamento_lexpre,
     protocolo_lexpre,
+    recursal,
 )
 from app.dashboards.base import DashboardModule
 
@@ -19,5 +22,8 @@ DASHBOARDS: dict[str, DashboardModule] = {
         peticionamento_lexpre.MODULE,
         comercial_lexpre.MODULE,
         comissao_lexpre.MODULE,
+        execucao.MODULE,
+        acordos.MODULE,
+        recursal.MODULE,
     )
 }

@@ -129,6 +129,8 @@ async def _run[T](module: DashboardModule, work: Awaitable[T]) -> T:
         return await work
     except NotReady as exc:
         raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)) from None
+    except DashboardInputError as exc:  # filtro que só o cálculo valida (ex.: situacao_processo)
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from None
     except SourceUnavailable:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
