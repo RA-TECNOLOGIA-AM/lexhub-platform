@@ -11,6 +11,9 @@ testpaths = ["tests"]
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
+# Código copiado da v1 sem mudança (decisão de 10/11): fica fora do lint e do formatador,
+# para continuar comparável linha a linha com api_dashboards.
+extend-exclude = ["src/app/analyses", "src/app/utils.py"]
 
 [tool.ruff.format]
 # CRLF no Windows, LF no Linux (CI e Docker): igual ao .editorconfig e ao Prettier do front.

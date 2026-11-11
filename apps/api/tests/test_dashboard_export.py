@@ -149,9 +149,13 @@ def test_escopo_own_403(client, signer, module, ready, repo):
     assert client.get(URL, headers=auth(signer)).status_code == 403
 
 
-def test_protocolo_de_verdade_ainda_nao_ligado_501(client, signer, ready):
-    r = client.get(URL, headers=auth(signer))
-    assert r.status_code == 501
+def test_protocolo_real_exporta_as_linhas_da_v1(client, signer, ready, sources):
+    from test_dashboard_data import LOG_ROWS
+
+    sources.data["log_setor_demanda_lexpre_NG"] = LOG_ROWS
+    r = client.get(URL + "?campos=id_demanda&campos=materia", headers=auth(signer))
+    assert r.status_code == 200
+    assert read_csv(r) == [["ID da Demanda", "Matéria"], ["1", "ANP"]]
 
 
 def test_formatacao_igual_a_v1():

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 import pytest
 
@@ -8,6 +8,39 @@ from app.sources import SourceUnavailable
 from conftest import USER_ID
 
 URL = "/orgs/lexgroup/units/NG/dashboards/protocolo-lexpre"
+
+
+def log_row(**overrides):
+    """Uma linha no formato da query log_setor_demanda_lexpre_NG (só as colunas que o cálculo usa)."""
+    row = {
+        "ESCRITORIO_ID": 1,
+        "SETOR_ID": 5,
+        "ID_DEMANDA": 1,
+        "MATERIA": "ANP",
+        "UF": "am",
+        "AREA_ATUACAO_ID": 3,
+        "AREA_ATUACAO_NOME": "CONSUMIDOR",
+        "FUNCIONARIO": "Ana Souza",
+        "STATUS_DEMANDA_ID": 13,  # Aguardando Despacho Inicial = protocolada
+        "SETOR_ATUAL_ID": 99,
+    }
+    return {**row, **overrides}
+
+
+LOG_ROWS = [
+    log_row(TIPO="entrada", MOVIMENTACAO_ID=10, DATA=datetime(2026, 11, 2, 9)),
+    log_row(TIPO="saida", MOVIMENTACAO_ID=11, DATA=datetime(2026, 11, 5, 15)),
+    # outro escritório (LA): não entra na NG
+    log_row(
+        TIPO="entrada",
+        MOVIMENTACAO_ID=20,
+        DATA=datetime(2026, 11, 3, 9),
+        ESCRITORIO_ID=2,
+        ID_DEMANDA=2,
+        MATERIA="MORA",
+        UF="RJ",
+    ),
+]
 
 
 def auth(signer) -> dict:
@@ -196,11 +229,29 @@ def test_fonte_fora_do_ar_503(client, signer, ready, monkeypatch):
     assert r.json() == {"detail": "A fonte LexPre está indisponível no momento"}
 
 
-def test_protocolo_de_verdade_ainda_nao_ligado_501(client, signer, ready):
-    """Sem o código da v1 colado, responde 501 com a explicação (nunca números falsos)."""
+def test_protocolo_real_com_linhas_do_log(client, signer, ready, sources, repo):
+    """O cálculo copiado da v1 roda na casca: 1 protocolada na NG; a demanda do escritório 2 fica fora."""
+    repo.commission.add(USER_ID)
+    sources.data["log_setor_demanda_lexpre_NG"] = LOG_ROWS
     r = client.get(URL, headers=auth(signer))
-    assert r.status_code == 501
-    assert "aguardando a cópia da v1" in r.json()["detail"]
+    assert r.status_code == 200
+    body = r.json()
+    assert body["stats"]["protocolados_total"]["total"] == 1
+    assert [p["name"] for p in body["protocolados_por_materia"]] == ["ANP"]
+    assert body["opcoes_filtro"] == {
+        "materias": ["ANP"],
+        "funcionarios": ["Ana Souza"],
+        "ufs": ["AM"],
+        "areas": [{"id": 3, "nome": "CONSUMIDOR"}],
+    }
+    assert body["protocolados_no_prazo"] is None  # novo da V2, sem regra ainda
+
+
+def test_protocolo_real_filtro_que_nao_bate_zera_e_mantem_as_opcoes(client, signer, ready, sources):
+    sources.data["log_setor_demanda_lexpre_NG"] = LOG_ROWS
+    body = client.get(URL + "?materia=MORA", headers=auth(signer)).json()
+    assert body["stats"]["protocolados_total"]["total"] == 0
+    assert body["opcoes_filtro"]["materias"] == ["ANP"]  # opções calculadas antes dos filtros
 
 
 # --- Funções puras -----------------------------------------------------------
