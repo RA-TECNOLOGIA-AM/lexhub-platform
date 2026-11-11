@@ -59,12 +59,19 @@ configurações do usuário (`Preferences: Open User Settings (JSON)`):
 Por enquanto é **fictício**: o `mockClient.ts` confere e-mail e senha contra a lista `testUsers` de
 `services/mock/users.ts` (sem banco; esses usuários só existem no navegador).
 
-| Para testar             | E-mail                       | Senha       | Resultado                                     |
-| ----------------------- | ---------------------------- | ----------- | --------------------------------------------- |
-| Login com sucesso       | `controller@lexgroup.com.br` | `lexhub123` | entra (o e-mail ignora maiúsculas)            |
-| Credencial errada (401) | outro e-mail ou outra senha  | —           | "E-mail ou senha incorretos."                 |
-| E-mail mal formatado    | ex.: `abc`                   | qualquer    | "Digite um e-mail válido." (validado na tela) |
-| Campos vazios           | —                            | —           | "Preencha e-mail e senha."                    |
+| Para testar             | E-mail                               | Senha       | Resultado                                     |
+| ----------------------- | ------------------------------------ | ----------- | --------------------------------------------- |
+| Login com sucesso       | `controller@lexgroup.com.br`         | `lexhub123` | entra (o e-mail ignora maiúsculas)            |
+| Credencial errada (401) | outro e-mail ou outra senha          | —           | "E-mail ou senha incorretos."                 |
+| E-mail mal formatado    | ex.: `abc`                           | qualquer    | "Digite um e-mail válido." (validado na tela) |
+| Campos vazios           | —                                    | —           | "Preencha e-mail e senha."                    |
+| Sem organização (403)   | `sem.acesso@exemplo.com`             | `lexhub123` | tela "Você ainda não tem acesso"              |
+| Google                  | botão "Entrar com conta corporativa" | —           | no mock, entra direto (sem sair do app)       |
+
+Com `VITE_DATA_SOURCE=api`, o botão do Google sai para o Google (Supabase Auth, fluxo PKCE) e volta em
+`<origem do app>/login`. Essa origem precisa estar em **Redirect URLs** no Supabase (ex.: `http://localhost:5173/**`), e o
+callback do Supabase (`https://<projeto>.supabase.co/auth/v1/callback`) precisa estar no client OAuth do Google Cloud.
+Quem entra, mas não faz parte de nenhuma organização (403 no `/me`), vê a tela "sem acesso".
 
 Para outro usuário de teste, acrescente na lista `testUsers`. O usuário exibido depois de entrar é sempre o `me`
 de `services/mock/users.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`): sobrevive ao F5 e some ao

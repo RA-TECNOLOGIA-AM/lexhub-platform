@@ -4,6 +4,8 @@ import {
     addAuditEvent,
     EXPORT_LABELS,
     exportRowsFor,
+    googleMockEmail,
+    noAccessEmails,
     access,
     audit,
     billingFor,
@@ -98,13 +100,28 @@ export function createMockClient(): DataClient {
             sessionStorage.setItem(SESSION_KEY, email)
         },
 
+        // Sem Google de verdade: entra direto com a conta de mock/users.ts (sem sair do app).
+        async signInWithGoogle() {
+            await wait()
+            sessionStorage.setItem(SESSION_KEY, googleMockEmail)
+            return 'signed-in'
+        },
+
         async signOut() {
             sessionStorage.removeItem(SESSION_KEY)
+        },
+
+        async getSessionEmail() {
+            return sessionStorage.getItem(SESSION_KEY)
         },
 
         async getMe(org) {
             await wait()
             requireSession()
+            // Mesma regra da API: logado, mas sem nenhuma organização = 403.
+            if (noAccessEmails.includes(sessionStorage.getItem(SESSION_KEY) ?? '')) {
+                throw new DataError(403, 'Sem acesso')
+            }
             const found = meFor(org ?? me.org.slug)
             if (!found) throw new DataError(403, 'Você não faz parte desta organização')
             return copy(found)

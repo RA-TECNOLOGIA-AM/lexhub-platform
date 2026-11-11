@@ -19,10 +19,19 @@ import type {
 import { paramsFromQuery } from '../lib/dashboardQuery.ts'
 
 // Módulo: o DataClient de verdade. Login pelo Supabase Auth; todo dado pela API V2.
-// Parâmetros: o cliente de login e o http (já com a URL da API e o token).
+// Parâmetros: o cliente de login, o http (já com a URL da API e o token) e o endereço do app
+// (para onde o Google devolve a pessoa; precisa estar em Redirect URLs no Supabase).
 // As rotas seguem o padrão da API: /orgs/{org}/units/{unit}/dashboards/{key}.
 // Rota que a API ainda não tem responde 404 (ver apps/api/README.md).
-export function createApiClient({ auth, http }: { auth: SupabaseClient; http: Http }): DataClient {
+export function createApiClient({
+    auth,
+    http,
+    siteUrl,
+}: {
+    auth: SupabaseClient
+    http: Http
+    siteUrl: string
+}): DataClient {
     const dashboard =
         <T>(key: string) =>
         (q: { org: string; unit: string; from?: string; to?: string; filters?: object }) =>
@@ -37,8 +46,24 @@ export function createApiClient({ auth, http }: { auth: SupabaseClient; http: Ht
             }
         },
 
+        // Sai do app: o navegador vai para o Google e volta em /login?code=..., onde o cliente
+        // do Supabase troca o código pela sessão sozinho (ver supabase.ts).
+        async signInWithGoogle() {
+            const { error } = await auth.auth.signInWithOAuth({
+                provider: 'google',
+                options: { redirectTo: `${siteUrl.replace(/\/+$/, '')}/login` },
+            })
+            if (error) throw new DataError(error.status ?? 0, 'Não foi possível abrir o login do Google.')
+            return 'redirecting'
+        },
+
         async signOut() {
             await auth.auth.signOut()
+        },
+
+        async getSessionEmail() {
+            const { data } = await auth.auth.getSession()
+            return data.session?.user.email ?? null
         },
 
         getMe: (org) => http.get<Me>(org ? `/me?org=${encodeURIComponent(org)}` : '/me'),

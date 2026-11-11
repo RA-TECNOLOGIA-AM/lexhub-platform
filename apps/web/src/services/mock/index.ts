@@ -2,7 +2,7 @@
 export { catalog } from './catalog.ts'
 export { pendenciasFor } from './pendencias.ts'
 export { protocoloFor } from './protocolo.ts'
-export { me, meFor, orgs, testUsers } from './users.ts'
+export { googleMockEmail, me, meFor, noAccessEmails, orgs, testUsers } from './users.ts'
 export { defaultFavorites } from './favorites.ts'
 export { createMembersStore, members } from './members.ts'
 export { billingFor, plans } from './billing.ts'

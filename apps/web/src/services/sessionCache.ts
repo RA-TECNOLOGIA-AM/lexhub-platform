@@ -70,6 +70,11 @@ export function withSessionCache(client: DataClient, ttlMs = 5 * 60_000, now: ()
             await client.signIn(email, password)
         },
 
+        async signInWithGoogle() {
+            clearAll()
+            return client.signInWithGoogle()
+        },
+
         async signOut() {
             clearAll()
             await client.signOut()
