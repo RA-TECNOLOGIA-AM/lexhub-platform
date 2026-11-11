@@ -188,7 +188,7 @@ export function createMockClient(): DataClient {
         },
 
         getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),
-        getPendencias: (query) => dashboardResponse('pendencias', query, pendenciasFor),
+        getPendencias: (query) => dashboardResponse('pendencias-lexpre', query, pendenciasFor),
 
         // Mesmas regras da API: sessão, organização, unidade liberada e can_export; registra na Auditoria.
         // No mock o arquivo é sempre CSV (gerar XLSX exige biblioteca); com a API, vem o formato pedido.

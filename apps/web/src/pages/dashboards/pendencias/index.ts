@@ -1,13 +1,4 @@
-import { dataClient } from '../../../services/client.ts'
-import type { PendenciasResponse } from '../../../types/index.ts'
-import type { DashboardModule } from '../types.ts'
-import { PendenciasContent } from './PendenciasContent.tsx'
-import { pendenciasExport } from './exportFields.ts'
+import { baseModule } from '../baseModule.ts'
 
-// O dashboard Pendências (LexPre): de onde vêm os dados e como mostrar.
-export const pendencias: DashboardModule<PendenciasResponse> = {
-    key: 'pendencias',
-    fetch: (query) => dataClient.getPendencias(query),
-    Content: PendenciasContent,
-    exportFields: pendenciasExport,
-}
+// O dashboard Pendências (banco NG): página-base até o conteúdo ficar pronto.
+export const pendencias = baseModule('pendencias')

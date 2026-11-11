@@ -25,6 +25,10 @@ class ResolvedAccess:
     org_id: str
     unit_id: str
     scope: str | None  # 'all' | 'own' | None (sem acesso)
+    timezone: str = "America/Manaus"  # fuso da unidade (app.units.timezone)
+    can_see_commission: bool = (
+        False  # vê tudo da organização ou da unidade (owner/admin/gestor/controller)
+    )
 
 
 @dataclass(frozen=True)
@@ -48,6 +52,8 @@ class DashboardAccess:
     org_id: str
     unit_id: str
     scope: str
+    timezone: str = "America/Manaus"
+    can_see_commission: bool = False
 
 
 @dataclass(frozen=True)
@@ -78,7 +84,10 @@ select o.id::text
 _RESOLVE_SQL = """
 select o.id::text as org_id,
        u.id::text as unit_id,
-       app_private.dashboard_scope($1::uuid, u.id, $4) as scope
+       app_private.dashboard_scope($1::uuid, u.id, $4) as scope,
+       u.timezone,
+       (app_private.has_unit_permission($1::uuid, u.id, 'org.dashboards.all')
+        or app_private.has_unit_permission($1::uuid, u.id, 'unit.dashboards.all')) as can_see_commission
   from app.organizations o
   join app.units u on u.org_id = o.id
  where o.slug = $2 and u.code = $3 and o.active and u.active
@@ -102,7 +111,13 @@ class PgAccessRepo:
         row = await self._pool.fetchrow(_RESOLVE_SQL, user_id, org_slug, unit_code, dashboard_key)
         if row is None:
             return None
-        return ResolvedAccess(org_id=row["org_id"], unit_id=row["unit_id"], scope=row["scope"])
+        return ResolvedAccess(
+            org_id=row["org_id"],
+            unit_id=row["unit_id"],
+            scope=row["scope"],
+            timezone=row["timezone"],
+            can_see_commission=row["can_see_commission"],
+        )
 
     async def insert_audit(self, entry: AuditEntry) -> None:
         await self._pool.execute(
@@ -201,4 +216,6 @@ async def require_dashboard(
         org_id=resolved.org_id,
         unit_id=resolved.unit_id,
         scope=resolved.scope,
+        timezone=resolved.timezone,
+        can_see_commission=resolved.can_see_commission,
     )

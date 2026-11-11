@@ -62,7 +62,7 @@ export function createApiClient({ auth, http }: { auth: SupabaseClient; http: Ht
         listClients: () => http.get<ClientsResponse>('/platform/clients'),
         getBilling: (org) => http.get<BillingResponse>(`/orgs/${org}/billing`),
         getProtocolo: dashboard<ProtocoloResponse>('protocolo-lexpre'),
-        getPendencias: dashboard<PendenciasResponse>('pendencias'),
+        getPendencias: dashboard<PendenciasResponse>('pendencias-lexpre'),
 
         // Mesmo formato da v1: ?format=xlsx&campos=id_demanda&campos=materia&from=...&materia=ANP
         async exportDashboard({ org, unit, dashboard, format, campos, ...query }) {

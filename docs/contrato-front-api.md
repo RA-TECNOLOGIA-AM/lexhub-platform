@@ -9,10 +9,12 @@ formatos é o código: `apps/web/src/types/index.ts` (tipos) e `apps/web/src/ser
 
 ## Situação hoje
 
-Prontas (10/11): `GET /me`, `GET /orgs/{org}/dashboards`, favoritos (`GET`, `POST` e `DELETE /orgs/{org}/favorites`) e
+Prontas (10 e 11/11): `GET /me`, `GET /orgs/{org}/dashboards`, favoritos (`GET`, `POST` e `DELETE /orgs/{org}/favorites`) e
 ordem dos cards (`GET` e `PUT /orgs/{org}/hub-order`), além de `GET /health`, `GET /health/supabase`,
-`GET /health/sources` e `GET /orgs/{org}/units/{unit}/dashboards/{key}/access`. **As demais rotas de dados abaixo ainda
-não existem.** No modo `api`, cada tela sem rota mostra o erro 404 ("Não encontrado").
+`GET /health/sources` e `GET /orgs/{org}/units/{unit}/dashboards/{key}/access`. A casca dos dados dos dashboards
+(`GET /orgs/{org}/units/{unit}/dashboards/{key}`) existe desde 11/11; o Protocolo (LexPre) responde 501 até o cálculo da v1
+ser ligado. **As demais rotas de dados abaixo ainda não existem.** No modo `api`, cada tela sem rota mostra o erro 404
+("Não encontrado").
 
 ## Convenções (valem para todas as rotas)
 
@@ -42,23 +44,23 @@ rota for feita: `renewsOn`, `paymentMethods`, `monthlyPrice` (cobrança), `faili
 Legenda: **P1** = sem isso o app não abre · **P2** = tela do MVP · **P3** = tela do MVP só de leitura, pode entrar depois
 do go-live com o mock.
 
-| Prioridade | Método e rota                                              | Resposta (tipo em `types/index.ts`) | Tela                                         |
-| ---------- | ---------------------------------------------------------- | ----------------------------------- | -------------------------------------------- |
-| P1         | `GET /me` · `GET /me?org={slug}`                           | `Me`                                | todas (sessão, menu, seletor de organização) |
-| P1         | `GET /orgs/{org}/dashboards`                               | `DashboardCatalog`                  | Hub                                          |
-| P1         | `GET /orgs/{org}/units/{unit}/dashboards/protocolo-lexpre` | `ProtocoloResponse`                 | Protocolo (#123)                             |
-| P2         | `GET /orgs/{org}/units/{unit}/dashboards/pendencias`       | `PendenciasResponse`                | Pendências                                   |
-| P2         | `GET /orgs/{org}/units/{unit}/dashboards/{key}/export`     | arquivo CSV ou XLSX                 | Exportar (Protocolo e Pendências)            |
-| P2         | `GET /orgs/{org}/favorites`                                | `string[]` (keys)                   | Hub                                          |
-| P2         | `POST /orgs/{org}/favorites/{key}` · `DELETE …/{key}`      | 204                                 | Hub (estrela)                                |
-| P3         | `GET /orgs/{org}/hub-order` · `PUT …` (corpo: `string[]`)  | `string[]` (keys) · 204             | Hub (arrastar cards)                         |
-| P2         | `GET /orgs/{org}/members`                                  | `MembersResponse`                   | Membros                                      |
-| P2         | `POST /orgs/{org}/invitations`                             | 204 (corpo: `InviteRequest`)        | Membros (convite)                            |
-| P3         | `GET /orgs/{org}/access`                                   | `AccessResponse`                    | Acesso                                       |
-| P3         | `GET /orgs/{org}/audit`                                    | `AuditResponse`                     | Auditoria                                    |
-| P3         | `GET /orgs/{org}/sources`                                  | `SourcesResponse`                   | Unidades e fontes                            |
-| P3         | `GET /orgs/{org}/billing`                                  | `BillingResponse`                   | Plano e cobrança                             |
-| P3         | `GET /platform/clients`                                    | `ClientsResponse`                   | Clientes (equipe RA)                         |
+| Prioridade | Método e rota                                               | Resposta (tipo em `types/index.ts`) | Tela                                         |
+| ---------- | ----------------------------------------------------------- | ----------------------------------- | -------------------------------------------- |
+| P1         | `GET /me` · `GET /me?org={slug}`                            | `Me`                                | todas (sessão, menu, seletor de organização) |
+| P1         | `GET /orgs/{org}/dashboards`                                | `DashboardCatalog`                  | Hub                                          |
+| P1         | `GET /orgs/{org}/units/{unit}/dashboards/protocolo-lexpre`  | `ProtocoloResponse`                 | Protocolo (#123)                             |
+| P2         | `GET /orgs/{org}/units/{unit}/dashboards/pendencias-lexpre` | `PendenciasResponse`                | Pendências                                   |
+| P2         | `GET /orgs/{org}/units/{unit}/dashboards/{key}/export`      | arquivo CSV ou XLSX                 | Exportar (Protocolo e Pendências)            |
+| P2         | `GET /orgs/{org}/favorites`                                 | `string[]` (keys)                   | Hub                                          |
+| P2         | `POST /orgs/{org}/favorites/{key}` · `DELETE …/{key}`       | 204                                 | Hub (estrela)                                |
+| P3         | `GET /orgs/{org}/hub-order` · `PUT …` (corpo: `string[]`)   | `string[]` (keys) · 204             | Hub (arrastar cards)                         |
+| P2         | `GET /orgs/{org}/members`                                   | `MembersResponse`                   | Membros                                      |
+| P2         | `POST /orgs/{org}/invitations`                              | 204 (corpo: `InviteRequest`)        | Membros (convite)                            |
+| P3         | `GET /orgs/{org}/access`                                    | `AccessResponse`                    | Acesso                                       |
+| P3         | `GET /orgs/{org}/audit`                                     | `AuditResponse`                     | Auditoria                                    |
+| P3         | `GET /orgs/{org}/sources`                                   | `SourcesResponse`                   | Unidades e fontes                            |
+| P3         | `GET /orgs/{org}/billing`                                   | `BillingResponse`                   | Plano e cobrança                             |
+| P3         | `GET /platform/clients`                                     | `ClientsResponse`                   | Clientes (equipe RA)                         |
 
 Dashboards recebem período e filtros na query string, com os nomes da v1:
 `?from=YYYY-MM-DD&to=YYYY-MM-DD&materia=ANP&materia=MORA&funcionario=…&uf=…&area_atuacao_id=…` (valor repetido =
@@ -103,8 +105,24 @@ Cada uma precisa existir no servidor.
   keys; repetidas contam só na primeira posição).
 - `synced_at` vem `null` enquanto a fonte não sincronizou (o cache de 5 min ainda não existe); o card mostra
   "Aguardando sincronização". `upcoming` = dashboards do catálogo com `status = 'upcoming'`.
-- Nos dashboards, `scope = 'own'` (de `require_dashboard`) filtra para os registros da própria pessoa.
-  `comissionamento_por_funcionario` só vem para quem tem `can_see_commission`.
+- Nos dashboards, `scope = 'own'` (só os registros da própria pessoa) responde **403** enquanto não existir o vínculo
+  pessoa -> funcionário na fonte (`app.member_source_refs`): nunca mostra dados de outra pessoa por falta dele.
+- `comissionamento_por_funcionario`: quem gere a unidade (owner/admin na organização; gestor/controller **na unidade**)
+  vê a de todos; os demais, só a própria linha (pelo vínculo em `app.member_source_refs`; sem vínculo, lista vazia).
+
+### Dados dos dashboards (`GET /orgs/{org}/units/{unit}/dashboards/{key}`)
+
+- Uma rota para todos: acesso (`require_dashboard`), período, filtros da v1, `meta` e comissão ficam na API V2; o
+  cálculo de cada dashboard é um módulo em `apps/api/src/app/dashboards/` com as queries e funções `filter_*` copiadas
+  da v1 (ponto de encaixe documentado em `protocolo_lexpre.py`).
+- Pares como na v1: `<domínio>` = banco NG, `<domínio>-lexpre` = banco LexPre (Comercial, Comissão Comercial,
+  Marketing, Protocolo, Pendências, Organização de Documentos, Peticionamento). Piloto: Protocolo (LexPre) e
+  Pendências (LexPre); os de banco NG ficam "Em breve" até o cálculo ser copiado.
+- Unidade -> id na fonte em `app.unit_source_refs` (LexPre: NG = 1, LA = 2, RJ = 3, como na v1).
+- Período: sem `from`/`to`, do dia 1 do mês até hoje no fuso da unidade; só uma data ou datas invertidas = **422**.
+- Campos novos da V2 sem regra ainda (`protocolados_no_prazo`, `metas`, `pendencias_mais_antigas`) vêm `null`.
+- Respostas: dashboard sem módulo = **404**; módulo sem o cálculo ligado = **501** (com a explicação no `detail`);
+  unidade sem ligação com a fonte ou fonte fora do ar (ex.: LexPre fora da rede) = **503**.
 
 ### Opções dos filtros (`opcoes_filtro`)
 

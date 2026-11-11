@@ -1,15 +1,4 @@
-import { dataClient } from '../../../services/client.ts'
-import type { ProtocoloResponse } from '../../../types/index.ts'
-import type { DashboardModule } from '../types.ts'
-import { ProtocoloContent } from './ProtocoloContent.tsx'
-import { protocoloFilters } from './filters.ts'
-import { protocoloExport } from './exportFields.ts'
+import { baseModule } from '../baseModule.ts'
 
-// O dashboard Protocolo (LexPre): de onde vêm os dados e como mostrar.
-export const protocolo: DashboardModule<ProtocoloResponse> = {
-    key: 'protocolo-lexpre',
-    fetch: (query) => dataClient.getProtocolo(query),
-    Content: ProtocoloContent,
-    filters: (data) => protocoloFilters(data.opcoes_filtro),
-    exportFields: protocoloExport,
-}
+// O dashboard Protocolo (banco NG): página-base até o conteúdo ficar pronto.
+export const protocolo = baseModule('protocolo')

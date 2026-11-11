@@ -91,12 +91,12 @@ export type ProtocoloResponse = {
     valor_causa_por_funcionario: Point[]
     protocolados_por_mes: Point[] // name = 'AAAA-MM'
     represados_por_mes: Point[] // name = 'AAAA-MM'
-    // Só vem para quem tem permissão (can_see_commission).
+    // Quem gere a unidade vê de todos; os demais, só a própria linha ([] sem vínculo com a fonte).
     comissionamento_por_funcionario?: { funcionario: string; qtd_protocolados: number; valor_comissao: number }[]
-    // --- Novos na V2 (não existem na v1) ---
-    protocolados_no_prazo: { taxa: number; comparativo: number | null } // taxa em %
-    metas: { tempo_medio_dias: number; no_prazo_pct: number; protocolados_por_funcionario: number }
-    pendencias_mais_antigas: { processo: string; etapa: string; responsavel: string; dias_parado: number }[]
+    // --- Novos na V2 (não existem na v1). null = regra ainda não definida (a tela mostra "—") ---
+    protocolados_no_prazo: { taxa: number; comparativo: number | null } | null // taxa em %
+    metas: { tempo_medio_dias: number; no_prazo_pct: number; protocolados_por_funcionario: number } | null
+    pendencias_mais_antigas: { processo: string; etapa: string; responsavel: string; dias_parado: number }[] | null
     opcoes_filtro: {
         materias: string[]
         funcionarios: string[]
