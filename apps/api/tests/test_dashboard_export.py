@@ -52,7 +52,7 @@ def module(monkeypatch):
 def ready(repo, sources):
     repo.grant(USER_ID, "NG", "protocolo-lexpre", "all")
     repo.exporters.add(USER_ID)
-    sources.refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
 
 
 def read_csv(r) -> list[list[str]]:
@@ -171,7 +171,7 @@ def test_formatacao_igual_a_v1():
 
 def test_pendencias_lexpre_registrada_e_ainda_nao_ligada_501(client, signer, repo, sources):
     repo.grant(USER_ID, "NG", "pendencias-lexpre", "all")
-    sources.refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
     r = client.get("/orgs/lexgroup/units/NG/dashboards/pendencias-lexpre", headers=auth(signer))
     assert r.status_code == 501
     assert "Pendências" in r.json()["detail"]

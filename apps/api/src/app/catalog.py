@@ -81,7 +81,11 @@ class DashboardCatalogOut(BaseModel):
 # --- Regras ----------------------------------------------------------------
 
 
-def build_catalog(rows: list[DashboardUnitRow], upcoming: list[UpcomingRow]) -> DashboardCatalogOut:
+def build_catalog(
+    rows: list[DashboardUnitRow],
+    upcoming: list[UpcomingRow],
+    synced_at: dict[str, datetime] | None = None,
+) -> DashboardCatalogOut:
     """Junta as linhas (dashboard x unidade) num card por dashboard, na ordem em que vieram.
 
     can_export e can_see_commission só valem se valerem em TODAS as unidades do card: o botão
@@ -98,7 +102,7 @@ def build_catalog(rows: list[DashboardUnitRow], upcoming: list[UpcomingRow]) -> 
                 desc=r.desc,
                 units=[r.unit_code],
                 source=r.source,
-                synced_at=None,
+                synced_at=(synced_at or {}).get(r.key),
                 max_delay_min=r.max_delay_min,
                 can_export=r.can_export,
                 can_see_commission=r.can_see_commission,

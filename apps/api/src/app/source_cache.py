@@ -70,6 +70,11 @@ class SourceCache:
         self._clock = clock
         self._locks: dict[str, asyncio.Lock] = {}
 
+    def fetched_at(self, key: str) -> float | None:
+        """Quando o dado dessa chave veio do banco (None = ainda não buscado)."""
+        entry = self._store.get(key)
+        return entry.fetched_at if entry is not None else None
+
     def _fresh(self, entry: Entry | None) -> bool:
         return entry is not None and self._clock() - entry.fetched_at < self._ttl
 

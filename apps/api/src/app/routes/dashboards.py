@@ -101,7 +101,7 @@ async def _prepare(
     except DashboardInputError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from None
 
-    unit_ref = await refs.unit_ref(access.unit_id, module.source_db)
+    unit_ref = access.source_refs.get(module.source_db)
     if unit_ref is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,

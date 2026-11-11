@@ -136,3 +136,19 @@ def test_membro_nao_audita(client, signer, repo):
 
 def test_slug_invalido_422(client, signer):
     assert client.get("/orgs/Org_X/dashboards", headers=auth(signer)).status_code == 422
+
+
+def test_card_mostra_quando_o_dado_veio_do_banco(client, signer, repo, catalog_repo):
+    """Com a query do dashboard no cache, o card ganha synced_at ("Atualizado há X min")."""
+    from app.source_cache import Entry
+
+    repo.join(USER_ID)
+    catalog_repo.add(USER_ID, repo.org_id, row())  # protocolo-lexpre
+    catalog_repo.add(USER_ID, repo.org_id, row(key="pendencias-lexpre", title="Pendências"))
+    cache = client.app.state.source_cache
+    cache._store.set("lexpre:log_setor_demanda_lexpre_NG", Entry([], 1_762_869_600.0))
+
+    cards = client.get("/orgs/lexgroup/dashboards", headers=auth(signer)).json()["available"]
+
+    assert cards[0]["synced_at"] == "2025-11-11T14:00:00Z"
+    assert cards[1]["synced_at"] is None  # Pendências ainda sem query no cache
