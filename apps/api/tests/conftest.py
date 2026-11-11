@@ -17,6 +17,7 @@ os.environ.update(
     SUPABASE_SERVICE_ROLE_KEY="",
     SUPABASE_JWT_SECRET="",
     DATABASE_URL="",
+    SOURCE_CACHE_WARM_ENABLED="false",  # sem tarefa de fundo nos testes
 )
 # Bancos de origem desligados: os testes nunca podem conectar nos bancos reais do .env.
 for _db in ("NG", "LAADV", "LEXFLOW", "LEXPRE"):
@@ -199,6 +200,9 @@ class FakeSource:
     async def fetch(self, query_name):
         self.fetched.append(query_name)
         return list(self.data.get(query_name, []))
+
+    def synced_at(self):
+        return None
 
 
 class FakeSources:
