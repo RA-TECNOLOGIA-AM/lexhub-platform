@@ -298,3 +298,45 @@ export type ExportFile = {
     filename: string
     note?: string // aviso para mostrar depois de baixar (ex.: no mock o XLSX sai como CSV)
 }
+
+// ---------- Pedidos de acesso (schema api do Supabase; ver supabase/migrations/*_solicitar_acesso.sql) ----------
+export type AccessRequestStatus = 'pending' | 'approved' | 'rejected'
+
+export type AccessRequest = {
+    id: string
+    email: string
+    full_name: string
+    office: string // escritório ou empresa que a pessoa informou
+    message: string | null
+    status: AccessRequestStatus
+    created_at: string // ISO
+    decided_at: string | null
+    decision_note: string | null // nota da recusa
+    result_org_id: string | null // organização em que entrou (aprovado)
+}
+
+// Organizações e unidades que a equipe RA pode escolher ao aprovar.
+export type ApprovalOrg = {
+    id: string
+    slug: string
+    name: string
+    units: { id: string; code: string; name: string }[]
+}
+
+export type UnitRoleKey = 'gestor' | 'controller' | 'colaborador' | 'leitor'
+
+// Para onde vai quem foi aprovado: organização existente (papel + cargo em cada unidade) ou organização nova.
+export type ApprovalTarget =
+    | {
+          kind: 'existing'
+          org_id: string
+          org_role: 'admin' | 'member'
+          units: { unit_id: string; role_key: UnitRoleKey }[]
+      }
+    | {
+          kind: 'new'
+          name: string
+          slug: string
+          org_role: 'owner' | 'admin'
+          unit: { code: string; name: string; timezone: string }
+      }

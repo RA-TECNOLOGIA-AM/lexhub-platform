@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DataClient } from './client.ts'
+import { createAccessRequestsClient } from './accessRequests.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
 import type {
@@ -38,6 +39,9 @@ export function createApiClient({
             http.get<T>(`/orgs/${q.org}/units/${q.unit}/dashboards/${key}${toSearch(q)}`)
 
     return {
+        // Pedidos de acesso: direto no Supabase (schema api), não pela API em Python.
+        ...createAccessRequestsClient(auth),
+
         async signIn(email, password) {
             const { error } = await auth.auth.signInWithPassword({ email: email.trim(), password })
             if (error) {

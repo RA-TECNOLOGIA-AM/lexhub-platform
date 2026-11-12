@@ -4,6 +4,7 @@ import {
     addAuditEvent,
     EXPORT_LABELS,
     exportRowsFor,
+    createAccessRequestsStore,
     googleMockEmail,
     noAccessEmails,
     access,
@@ -50,9 +51,28 @@ const hubOrderKey = (org: string) => `lexhub.mock.hubOrder.${org}`
 // Membros do mock: a lista muda com os convites (volta ao original no F5).
 const memberStore = createMembersStore(me.user.name)
 
+// Pedidos de acesso do mock: em memória (voltam ao exemplo no F5).
+const accessRequests = createAccessRequestsStore()
+
 function requireSession() {
     if (sessionStorage.getItem(SESSION_KEY) === null) {
         throw new DataError(401, 'Sessão expirada ou inexistente')
+    }
+}
+
+// Logado, mas sem organização (e ainda não aprovado num pedido de acesso).
+const withoutAccess = (email: string) => noAccessEmails.includes(email) && !accessRequests.approved(email)
+
+// Quem está logado, do jeito que a loja de pedidos precisa (o banco tira isso do token).
+function who() {
+    requireSession()
+    const email = sessionStorage.getItem(SESSION_KEY) ?? ''
+    const blocked = withoutAccess(email)
+    return {
+        email,
+        name: blocked ? 'Pessoa sem acesso' : me.user.name,
+        staff: !blocked && me.user.platform_staff,
+        hasAccess: !blocked,
     }
 }
 
@@ -119,7 +139,7 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             // Mesma regra da API: logado, mas sem nenhuma organização = 403.
-            if (noAccessEmails.includes(sessionStorage.getItem(SESSION_KEY) ?? '')) {
+            if (withoutAccess(sessionStorage.getItem(SESSION_KEY) ?? '')) {
                 throw new DataError(403, 'Sem acesso')
             }
             const found = meFor(org ?? me.org.slug)
@@ -210,6 +230,35 @@ export function createMockClient(): DataClient {
         // Sem números fictícios: as telas novas mostram 0/—; os números de verdade vêm da API.
         getDashboardData: <T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery) =>
             dashboardResponse(dashboardKey, query, (unit) => ({ meta: metaFor(unit), stats: {} }) as unknown as T),
+
+        // Pedidos de acesso: mesmas regras das funções do schema api (ver mock/accessRequests.ts).
+        async requestAccess(office, message) {
+            await wait()
+            return accessRequests.request(who(), office, message)
+        },
+        async getMyAccessRequest() {
+            await wait()
+            return accessRequests.mine(who())
+        },
+        async countPendingAccessRequests() {
+            return accessRequests.count(who())
+        },
+        async listAccessRequests(status) {
+            await wait()
+            return accessRequests.list(who(), status)
+        },
+        async getApprovalOptions() {
+            await wait()
+            return accessRequests.options(who())
+        },
+        async approveAccessRequest(id, target) {
+            await wait()
+            return accessRequests.approve(who(), id, target)
+        },
+        async rejectAccessRequest(id, note) {
+            await wait()
+            return accessRequests.reject(who(), id, note)
+        },
 
         // Mesmas regras da API: sessão, organização, unidade liberada e can_export; registra na Auditoria.
         // No mock o arquivo é sempre CSV (gerar XLSX exige biblioteca); com a API, vem o formato pedido.

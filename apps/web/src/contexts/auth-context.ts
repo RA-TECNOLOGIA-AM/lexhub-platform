@@ -13,6 +13,8 @@ export type AuthValue = {
     signInWithGoogle(): Promise<void>
     // returnHere: true quando a sessão caiu (401) e o usuário deve voltar para a mesma página depois de entrar
     signOut(options?: { returnHere?: boolean }): Promise<void>
+    // Confere de novo se quem está "sem acesso" já tem acesso (ex.: depois de um pedido aprovado).
+    refreshSession(): Promise<void>
     // Troca a organização ativa (busca o "me" dela). Rejeita se a pessoa não faz parte (403).
     switchOrg(slug: string): Promise<void>
 }

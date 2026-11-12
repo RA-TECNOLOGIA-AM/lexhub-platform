@@ -709,3 +709,19 @@ button.org:hover {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* Selo de contagem num item do menu (ex.: pedidos de acesso pendentes). */
+.nav .count {
+    margin-left: auto;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: var(--r-pill);
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
