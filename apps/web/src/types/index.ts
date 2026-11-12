@@ -136,32 +136,59 @@ export type PendenciasResponse = {
     }[]
 }
 // --- Membros ---
+// RoleKey: as colunas da matriz da aba Acesso (ainda sem Controller).
 export type RoleKey = 'owner' | 'admin' | 'gestor' | 'colaborador' | 'leitor'
-// Banco: invited / active / disabled. 'requested' = pediu acesso e espera aprovação (novo na V2).
-export type MemberStatus = 'active' | 'invited' | 'requested' | 'disabled'
+// Papel na organização inteira (admin = Desenvolvedor; member = o acesso vem do cargo em cada unidade).
+export type OrgRoleKey = 'owner' | 'admin' | 'member'
+export type MemberStatus = 'active' | 'invited' | 'disabled'
 
+// Como vem de api.list_members: cargo por unidade (só as unidades que quem pergunta gere).
 export type Member = {
     id: string
-    name: string | null // null = convite ainda não aceito (mostra o e-mail no lugar)
+    name: string
     email: string
-    role: RoleKey | null // null = sem papel (pedido ainda não aprovado)
-    units: string[] // códigos ('NG', 'LA_AM'...); ['*'] = todas as unidades
-    team: string | null
+    org_role: OrgRoleKey
+    units: { code: string; role: UnitRoleKey }[]
+    teams: string[]
     status: MemberStatus
-    note: string | null // linha de baixo, quando não é o e-mail ("Convidado por Ana Ribeiro há 2 dias")
-    security: string | null // 'MFA ativo', 'Google'...
+    last_seen_at: string | null
+    security: string | null // 'Google' quando já entrou pelo Google
 }
 
-export type Team = { name: string; dashboards: number } // quantos dashboards a equipe vê
-
-export type InviteRequest = {
-    emails: string[]
-    role: Exclude<RoleKey, 'owner'> // owner não se convida: é quem cria a organização
+// Convite pendente (vira associação quando a pessoa entra com o Google usando o e-mail).
+export type Invitation = {
+    id: string
+    email: string
+    role: 'admin' | UnitRoleKey // admin vale na organização; cargo de unidade vale nas unidades do convite
     units: string[]
-    team: string
+    teams: string[]
+    invited_by: string | null
+    created_at: string
+    expires_at: string
 }
 
-export type MembersResponse = { members: Member[]; seats: { used: number; total: number }; teams: Team[] }
+export type MemberTeam = { id: string; name: string; unit: string } // unit = código da unidade
+
+export type InviteRequest = { emails: string[]; role: Invitation['role']; units: string[]; teams: string[] }
+export type InviteResult = { invited: string[]; skipped: { email: string; reason: string }[] }
+
+export type MembersResponse = {
+    members: Member[]
+    invitations: Invitation[]
+    teams: MemberTeam[]
+    units: Unit[] // as unidades que quem pergunta gere
+    can_invite_admin: boolean
+}
+
+// Membro no formato do simulador da aba Acesso (um papel só). Vem de Member por accessMemberOf.
+export type AccessMember = {
+    id: string
+    name: string
+    email: string
+    role: RoleKey
+    units: string[] // ['*'] = todas as unidades
+    team: string | null
+}
 
 // Plano e cobrança. Preços ainda em descoberta: null = "a definir" (a tela mostra [PREÇO]/[VALOR]).
 export type PlanKey = 'starter' | 'pro' | 'enterprise'

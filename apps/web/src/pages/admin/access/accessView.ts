@@ -1,4 +1,4 @@
-import type { Member, Permission, RoleKey, TeamRule, Unit } from '../../../types/index.ts'
+import type { AccessMember, Permission, RoleKey, TeamRule, Unit } from '../../../types/index.ts'
 import { ROLE_LABEL } from '../members/memberView.ts'
 
 export const ROLE_ORDER: RoleKey[] = ['owner', 'admin', 'gestor', 'colaborador', 'leitor']
@@ -28,17 +28,14 @@ function where(codes: string[], units: Unit[]): string {
 
 // Módulo: a regra de negócio do Acesso em uma função pura.
 // Papel diz o que a pessoa pode fazer; equipe + unidades dizem o que ela vê. Sem equipe ou unidade, não vê nada.
-export function simulateAccess(member: Member, rules: TeamRule[], matrix: Permission[], units: Unit[]): Simulation {
+export function simulateAccess(
+    member: AccessMember,
+    rules: TeamRule[],
+    matrix: Permission[],
+    units: Unit[],
+): Simulation {
     const { role, team } = member
     const hasUnits = member.units.length > 0
-
-    if (!role) {
-        return {
-            profile: 'Sem papel, equipe ou unidade',
-            summary: 'Não vê nenhum dashboard até um admin aprovar o pedido e definir equipe e unidade.',
-            dashboards: [],
-        }
-    }
 
     const profile = [
         ROLE_LABEL[role],

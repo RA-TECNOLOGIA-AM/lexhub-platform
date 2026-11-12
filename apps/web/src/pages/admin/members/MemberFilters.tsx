@@ -1,4 +1,4 @@
-import type { RoleKey, Unit } from '../../../types/index.ts'
+import type { Unit } from '../../../types/index.ts'
 import { ROLE_LABEL, type MemberFilter } from './memberView.ts'
 
 type MemberFiltersProps = {
@@ -42,7 +42,7 @@ export function MemberFilters({ value, units, onChange }: MemberFiltersProps) {
                 <select
                     className="field"
                     value={value.role}
-                    onChange={(e) => onChange({ ...value, role: e.target.value as RoleKey | '' })}
+                    onChange={(e) => onChange({ ...value, role: e.target.value as MemberFilter['role'] })}
                 >
                     <option value="">Todos</option>
                     {Object.entries(ROLE_LABEL).map(([key, label]) => (

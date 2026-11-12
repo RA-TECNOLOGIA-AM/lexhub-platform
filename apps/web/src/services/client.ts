@@ -12,6 +12,8 @@ import type {
     PendenciasResponse,
     ProtocoloResponse,
     InviteRequest,
+    InviteResult,
+    Member,
     MembersResponse,
     BillingResponse,
     AccessResponse,
@@ -42,8 +44,13 @@ export interface DataClient {
     getMe(org?: string): Promise<Me>
     listDashboards(org: string): Promise<DashboardCatalog>
     listFavorites(org: string): Promise<string[]>
+    // Membros (schema api no Supabase): o servidor só devolve e aceita o que quem chama gere.
     listMembers(org: string): Promise<MembersResponse>
-    inviteMembers(org: string, invite: InviteRequest): Promise<void>
+    inviteMembers(org: string, invite: InviteRequest): Promise<InviteResult>
+    setMemberStatus(org: string, memberId: string, status: 'active' | 'disabled'): Promise<Member>
+    revokeInvitation(id: string): Promise<void>
+    // Logo depois do login: convites pendentes do e-mail verificado viram associação. Devolve quantos.
+    acceptMyInvitations(): Promise<number>
     setFavorite(org: string, dashboardKey: string, favorite: boolean): Promise<void>
     // Ordem dos cards do hub da pessoa: uma lista de keys para o hub inteiro ([] = ordem do catálogo).
     getHubOrder(org: string): Promise<string[]>

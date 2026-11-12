@@ -15,20 +15,26 @@ import { plans } from './billing.ts'
 
 export const emptyCatalog: DashboardCatalog = { available: [], upcoming: [] }
 
-// Só quem está logado faz parte, como admin.
+// Só quem está logado faz parte, como Desenvolvedor; a sede ainda sem equipes.
 export function onboardingMembers(email: string, name: string): MembersResponse {
     const self: Member = {
         id: 'self',
         name,
         email,
-        role: 'admin',
-        units: ['*'],
-        team: null,
+        org_role: 'admin',
+        units: [],
+        teams: [],
         status: 'active',
-        note: null,
-        security: 'MFA ativo',
+        last_seen_at: new Date().toISOString(),
+        security: 'Google',
     }
-    return { seats: { used: 1, total: 10 }, teams: [], members: [self] }
+    return {
+        members: [self],
+        invitations: [],
+        teams: [],
+        units: [{ code: 'CP', name: 'Parceiro · sede' }],
+        can_invite_admin: true,
+    }
 }
 
 // O papel diz o que cada um pode fazer (igual em toda organização); as regras por equipe ainda não existem.

@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { invitePreview, parseEmails, validateInvite } from './invite.ts'
-
-const units = [
-    { code: 'NG', name: 'Nicolas Gomes' },
-    { code: 'LA_AM', name: 'Luis Albert AM' },
-]
+import { members } from '../../../services/mock/members.ts'
+import { inviteLink, inviteRolesFor, parseEmails, teamsFor, validateInvite } from './invite.ts'
 
 describe('parseEmails', () => {
     it('aceita vírgula, ponto e vírgula e quebra de linha, sem repetir', () => {
@@ -17,28 +13,39 @@ describe('parseEmails', () => {
 
 describe('validateInvite', () => {
     it('tudo certo devolve os e-mails', () => {
-        expect(validateInvite('a@x.com', ['NG'])).toEqual({ emails: ['a@x.com'] })
+        expect(validateInvite('a@x.com', 'leitor', ['NG'])).toEqual({ emails: ['a@x.com'] })
     })
     it('e-mail inválido vem antes dos outros avisos', () => {
-        expect(validateInvite('a@x.com, ruim', [])).toEqual({ error: 'E-mail inválido: ruim' })
+        expect(validateInvite('a@x.com, ruim', 'leitor', [])).toEqual({ error: 'E-mail inválido: ruim' })
     })
     it('sem e-mail', () => {
-        expect(validateInvite('  ', ['NG'])).toEqual({ error: 'Digite ao menos um e-mail.' })
+        expect(validateInvite('  ', 'leitor', ['NG'])).toEqual({ error: 'Digite ao menos um e-mail.' })
     })
-    it('sem unidade', () => {
-        expect(validateInvite('a@x.com', [])).toEqual({ error: 'Escolha ao menos uma unidade.' })
+    it('cargo de unidade precisa de unidade', () => {
+        expect(validateInvite('a@x.com', 'leitor', [])).toEqual({ error: 'Escolha ao menos uma unidade.' })
+    })
+    it('Desenvolvedor vale na organização inteira: não precisa de unidade', () => {
+        expect(validateInvite('a@x.com', 'admin', [])).toEqual({ emails: ['a@x.com'] })
     })
 })
 
-describe('invitePreview', () => {
-    it('frase do protótipo', () => {
-        expect(invitePreview('colaborador', ['NG'], { name: 'Protocolo', dashboards: 4 }, units)).toBe(
-            'Vão ver 4 dashboards da equipe Protocolo em Nicolas Gomes, com o papel Colaborador.',
-        )
+describe('inviteRolesFor', () => {
+    it('Desenvolvedor só para quem pode convidar Desenvolvedor', () => {
+        expect(inviteRolesFor(false)).toEqual(['colaborador', 'leitor', 'gestor', 'controller'])
+        expect(inviteRolesFor(true)).toEqual(['colaborador', 'leitor', 'gestor', 'controller', 'admin'])
     })
-    it('sem unidade avisa', () => {
-        expect(invitePreview('leitor', [], { name: 'Protocolo', dashboards: 4 }, units)).toMatch(
-            /^Escolha ao menos uma unidade/,
-        )
+})
+
+describe('teamsFor', () => {
+    it('só as equipes das unidades escolhidas', () => {
+        expect(teamsFor(members.teams, ['NG']).map((t) => t.name)).toEqual(['Diretoria', 'Pendências'])
+        expect(teamsFor(members.teams, [])).toEqual([])
+    })
+})
+
+describe('inviteLink', () => {
+    it('a tela de login do app (sem barra repetida)', () => {
+        expect(inviteLink('https://lexhub.app')).toBe('https://lexhub.app/login')
+        expect(inviteLink('https://lexhub.app/')).toBe('https://lexhub.app/login')
     })
 })

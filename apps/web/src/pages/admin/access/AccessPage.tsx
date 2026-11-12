@@ -7,6 +7,7 @@ import { Notice } from '../../../components/ui/Notice.tsx'
 import { useAuth } from '../../../contexts/auth-context.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
 import { dataClient } from '../../../services/client.ts'
+import { loadAccessMembers } from './accessMember.ts'
 import { AccessSimulator } from './AccessSimulator.tsx'
 import { PermissionMatrix } from './PermissionMatrix.tsx'
 import { TeamRules } from './TeamRules.tsx'
@@ -15,7 +16,10 @@ import { TeamRules } from './TeamRules.tsx'
 export function AccessPage() {
     const { org = '' } = useParams()
     const { me } = useAuth()
-    const { data, error } = useAsync(() => Promise.all([dataClient.getAccess(org), dataClient.listMembers(org)]), [org])
+    const { data, error } = useAsync(
+        () => Promise.all([dataClient.getAccess(org), loadAccessMembers(dataClient, org)]),
+        [org],
+    )
     const [notice, setNotice] = useState<string | null>(null)
 
     if (error) return <ErrorState error={error} />
@@ -39,7 +43,7 @@ export function AccessPage() {
                         }
                     />
                     <AccessSimulator
-                        members={members.members}
+                        members={members}
                         rules={access.rules}
                         matrix={access.matrix}
                         units={me?.units ?? []}

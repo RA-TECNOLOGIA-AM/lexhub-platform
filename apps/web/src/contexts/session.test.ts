@@ -13,6 +13,7 @@ function fakeClient(result: Me | Error, email: string | null = 'pessoa@gmail.com
             return result
         },
         getSessionEmail: async () => email,
+        acceptMyInvitations: async () => 0,
     }
 }
 
@@ -34,6 +35,7 @@ describe('loadSession', () => {
             getSessionEmail: async () => {
                 throw new Error('falhou')
             },
+            acceptMyInvitations: async () => 0,
         }
         expect(await loadSession(client)).toEqual({ status: 'no-access', email: null })
     })
@@ -44,5 +46,32 @@ describe('loadSession', () => {
 
     it('API fora do ar: signed-out', async () => {
         expect(await loadSession(fakeClient(new DataError(0, 'Sem conexão')))).toEqual({ status: 'signed-out' })
+    })
+
+    it('aceita os convites pendentes antes de buscar o me (o convidado entra direto)', async () => {
+        const order: string[] = []
+        const client = {
+            getMe: async () => {
+                order.push('getMe')
+                return me
+            },
+            getSessionEmail: async () => null,
+            acceptMyInvitations: async () => {
+                order.push('accept')
+                return 1
+            },
+        }
+        await loadSession(client)
+        expect(order).toEqual(['accept', 'getMe'])
+    })
+
+    it('se aceitar os convites falhar, o login segue', async () => {
+        const client = {
+            ...fakeClient(me),
+            acceptMyInvitations: async () => {
+                throw new DataError(500, 'schema api não exposto')
+            },
+        }
+        expect(await loadSession(client)).toEqual({ status: 'signed-in', me })
     })
 })

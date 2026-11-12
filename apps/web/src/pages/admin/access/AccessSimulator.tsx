@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import type { Member, Permission, TeamRule, Unit } from '../../../types/index.ts'
+import type { AccessMember, Permission, TeamRule, Unit } from '../../../types/index.ts'
 import { simulateAccess } from './accessView.ts'
 
 type AccessSimulatorProps = {
-    members: Member[]
+    members: AccessMember[]
     rules: TeamRule[]
     matrix: Permission[]
     units: Unit[]

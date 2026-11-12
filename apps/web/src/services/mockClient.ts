@@ -49,7 +49,7 @@ const FAVORITES_KEY = 'lexhub.mock.favorites'
 const hubOrderKey = (org: string) => `lexhub.mock.hubOrder.${org}`
 
 // Membros do mock: a lista muda com os convites (volta ao original no F5).
-const memberStore = createMembersStore(me.user.name)
+const memberStore = createMembersStore({ name: me.user.name, email: '' })
 
 // Pedidos de acesso do mock: em memória (voltam ao exemplo no F5).
 const accessRequests = createAccessRequestsStore()
@@ -164,7 +164,26 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             if (!requireOrg(org)) throw new DataError(400, 'No mock, convites só funcionam na LexGroup.')
-            memberStore.invite(invite)
+            return memberStore.invite(invite)
+        },
+
+        async setMemberStatus(org, memberId, status) {
+            await wait()
+            requireSession()
+            if (!requireOrg(org)) throw new DataError(403, 'Você não gere este membro.')
+            return memberStore.setStatus(memberId, status, sessionStorage.getItem(SESSION_KEY) ?? '')
+        },
+
+        async revokeInvitation(id) {
+            await wait()
+            requireSession()
+            memberStore.revoke(id)
+        },
+
+        // Como api.accept_my_invitations: convites do e-mail da sessão viram membro ativo.
+        async acceptMyInvitations() {
+            const email = sessionStorage.getItem(SESSION_KEY)
+            return email ? memberStore.accept(email) : 0
         },
 
         async listFavorites() {
@@ -192,11 +211,15 @@ export function createMockClient(): DataClient {
             localStorage.setItem(hubOrderKey(org), JSON.stringify(keys))
         },
 
-        // Assentos lidos de Membros: convidar alguém muda o número aqui também.
+        // Assentos lidos de Membros (ativos + convites pendentes, sobre a base de 37 do protótipo):
+        // convidar alguém muda o número aqui também.
         async getBilling(org) {
             await wait()
             requireSession()
-            return requireOrg(org) ? billingFor(memberStore.list().seats) : copy(onboardingBilling)
+            if (!requireOrg(org)) return copy(onboardingBilling)
+            const list = memberStore.list()
+            const used = 37 + list.members.filter((m) => m.status === 'active').length + list.invitations.length
+            return billingFor({ used, total: 60 })
         },
 
         async getAccess(org) {
