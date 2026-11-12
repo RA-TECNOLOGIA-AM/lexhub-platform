@@ -202,8 +202,8 @@ def test_escopo_own_403_auditado_ate_ter_vinculo(client, signer, module, ready, 
 
 
 def test_dashboard_sem_modulo_404(client, signer, repo):
-    repo.grant(USER_ID, "NG", "pendencias", "all")
-    r = client.get("/orgs/lexgroup/units/NG/dashboards/pendencias", headers=auth(signer))
+    repo.grant(USER_ID, "NG", "nps", "all")
+    r = client.get("/orgs/lexgroup/units/NG/dashboards/nps", headers=auth(signer))
     assert r.status_code == 404
     assert r.json() == {"detail": "Este dashboard ainda não tem dados na V2"}
 

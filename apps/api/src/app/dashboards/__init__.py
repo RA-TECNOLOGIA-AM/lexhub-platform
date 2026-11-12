@@ -2,12 +2,19 @@
 
 from app.dashboards import (
     acordos,
+    comercial,
     comercial_lexpre,
+    comissao,
     comissao_lexpre,
     execucao,
+    marketing,
+    org_documentos,
     org_documentos_lexpre,
+    pendencias,
     pendencias_lexpre,
+    peticionamento,
     peticionamento_lexpre,
+    protocolo,
     protocolo_lexpre,
     recursal,
 )
@@ -25,5 +32,12 @@ DASHBOARDS: dict[str, DashboardModule] = {
         execucao.MODULE,
         acordos.MODULE,
         recursal.MODULE,
+        protocolo.MODULE,
+        pendencias.MODULE,
+        org_documentos.MODULE,
+        peticionamento.MODULE,
+        comercial.MODULE,
+        comissao.MODULE,
+        marketing.MODULE,
     )
 }

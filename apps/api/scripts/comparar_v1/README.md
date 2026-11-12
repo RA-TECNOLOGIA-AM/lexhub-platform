@@ -36,6 +36,10 @@ O passo 3 imprime `IGUAL` ou o número de diferenças por caso e grava `relatori
 
 - **LexPre, 11/11/2026:** 36 de 36 iguais. Única variação: a ordem de atendentes **empatados** em
   `tabela_por_atendente` (Comercial) muda de uma execução para outra, na v1 e na V2, porque a v1 não desempata.
+- **Banco NG, 12/11/2026** (`compare_v1_lexflow.py <saida> ng` e `compare_v2.py <saida> ng`, linhas de
+  `fetch_rows.py <saida> ng`): Protocolo, Peticionamento, Org. de Documentos, Pendências e Comercial × NG/RJ e
+  Marketing × NG: 22 de 22 iguais. A Comissão NG usa o mesmo módulo do Comercial. As fontes da LA no Comercial
+  (banco LAADV/LexFlow) chegam vazias nos dois lados.
 - **LexFlow, 12/11/2026:** Acordos e Recursal 10 de 10 iguais. Execução 6 de 6 com o **mesmo conteúdo**; só a ordem
   dos itens muda em `execucao_atividades_criadas_por_atividade_*` (e `execucao_taxa_conclusao_por_funcionario_LA`).
   A própria v1 muda essa ordem entre duas execuções (conferido rodando a v1 com `PYTHONHASHSEED` diferente): a

@@ -4,10 +4,6 @@ import { fmt, show } from '../../../lib/format.ts'
 import { campo, razao, type CampoExecucao } from './fields.ts'
 import type { ExecucaoResponse } from './types.ts'
 
-// TRE como na v1 (gráfico de ponteiro): razão com 2 casas, ex.: 2,23.
-const nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const razaoFmt = (v: number) => nf2.format(v)
-
 // Só o que é de Execução: os KPIs. Carregar, erros e cabeçalho ficam no DashboardView.
 // Os nomes dos campos mudam por unidade (NG, LA, RJ): quem resolve é fields.ts.
 // A resposta da V2 não traz comparativos com o mês anterior para Execução, por isso não há Delta.
@@ -72,7 +68,8 @@ export function ExecucaoContent({ data }: { data: ExecucaoResponse }) {
                     value={show(v('estoqueInicial'), fmt.int)}
                     note="Base para entradas e saídas"
                 />
-                <Kpi label="Taxa de Redução Estoque (TRE)" value={show(v('tre'), razaoFmt)} />
+                {/* TRE como na v1 (gráfico de ponteiro): razão com 2 casas, ex.: 2,23. */}
+                <Kpi label="Taxa de Redução Estoque (TRE)" value={show(v('tre'), fmt.dec2)} />
             </KpiSection>
 
             <KpiSection

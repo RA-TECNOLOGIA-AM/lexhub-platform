@@ -1548,4 +1548,420 @@ QUERIES: dict[str, dict] = {
         ),
         "params": []
     },
+    # v1: queries.py:1047, "setor_protocolo" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "setor_protocolo": {
+        "database": "ng",
+        "query": """
+        SELECT
+            pro.id,
+            pro."NOME",
+            pro."ENTRADA",
+            pro."ID_PROCESSO",
+            atendente.nome AS "ATENDENTE",
+            pro."MATERIA",
+            pro."PARTE_ADVERSA",
+            pro."VALOR_DA_CAUSA",
+            pro."SISTEMA",
+            pro."UF",
+            pro."STATUS",
+            pro."SAIDA",
+            pro."ID_ACTION",
+            pro."ID_FUNCIONARIO",
+            responsavel.nome AS "FUNCIONARIO",
+            t.nome_campanha AS "CAMPANHA",
+            pro."REAJUIZAMENTO",
+            COALESCE(pro."DANO_MORAL", pet."DANO_MORAL") AS "DANO_MORAL",
+            COALESCE(pro."DANO_MATERIAL", pet."DANO_MATERIAL") AS "DANO_MATERIAL",
+            pro."DATA_CONTRATACAO",
+            r.area_atuacao_id AS "AREA_ATUACAO_ID"
+        FROM protocolo.protocolo pro
+        LEFT JOIN "public".actions a ON pro."ID_ACTION" = a.id
+        LEFT JOIN "public".trackeamento t ON a.id_tracking = t.id
+        LEFT JOIN "Setores".funcionarios atendente ON a.atendente_comercial = atendente.id
+        LEFT JOIN "Setores".funcionarios responsavel ON pro."ID_FUNCIONARIO" = responsavel.id
+        LEFT JOIN juridico.processos jp ON pro."ID_PROCESSO" = jp.id
+        LEFT JOIN juridico.rubricas r ON jp."ID_RUBRICA" = r.id
+        LEFT JOIN peticionamento."Peticionamento" pet ON pro."ID_PROCESSO" = pet."ID_PROCESSO"
+        """,
+        "description": "Protocolo do banco NG",
+        "params": []
+    },
+    # v1: queries.py:521, "comercial_geral_NG" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "comercial_geral_NG": {
+        "database": "ng",
+        "query": """
+        WITH acoes_base AS (
+            SELECT
+                a.id AS "ID_ACTION",
+                c.nome AS "CLIENTE",
+                f.nome AS "ATENDENTE",
+                t.canal_aquisicao AS "CANAL_ATUAL",
+                ac.motivo_encerramento,
+                tse."NOME" AS "MOTIVO_ENCERRAMENTO_NOME",
+                tu.uf AS "UF",
+                GREATEST(ac.fechado_em, ac.data_upsell) AS "ASSINATURA",
+                f.ativo AS "ATIVO"
+            FROM "public".actions a
+            INNER JOIN "public".action_status ac
+                ON a.id_status = ac.id
+            LEFT JOIN "public".customers c
+                ON a.customer = c.id
+            LEFT JOIN "public".trackeamento t
+                ON a.id_tracking = t.id
+            LEFT JOIN "public".type_uf tu
+                ON a.id_uf = tu.id_uf
+            LEFT JOIN "Setores".funcionarios f
+                ON a.atendente_comercial = f.id
+            LEFT JOIN "public".type_status_encerramento tse
+                ON ac.motivo_encerramento = tse.id
+            WHERE ac.motivo_encerramento = 11
+        ),
+        proc_rubricas AS (
+            SELECT
+                jp."ID_ACTION",
+                jp."ID_RUBRICA",
+                jp."REAJUIZAMENTO",
+                jp.status AS "STATUS",
+                tsp.status AS "STATUS_PROCESSO_NOME",
+                jr_exp."RUBRICA",
+                jr_exp."VALOR_AM",
+                jr_exp."AREA_ATUACAO_ID"
+            FROM juridico.processos jp
+            LEFT JOIN juridico.type_status_processo tsp
+                ON jp.status = tsp.id
+            LEFT JOIN LATERAL (
+                SELECT
+                    r2."RUBRICA",
+                    r2."valor_AM" AS "VALOR_AM",
+                    r2.area_atuacao_id AS "AREA_ATUACAO_ID"
+                FROM juridico.processo_rubricas_reunidas prr
+                JOIN juridico.rubricas r2
+                    ON r2.id = prr.rubrica_id
+                WHERE jp."ID_RUBRICA" IN (79, 85)
+                  AND prr.processo_id = jp.id
+
+                UNION ALL
+
+                SELECT
+                    r1."RUBRICA",
+                    r1."valor_AM" AS "VALOR_AM",
+                    r1.area_atuacao_id AS "AREA_ATUACAO_ID"
+                FROM juridico.rubricas r1
+                WHERE jp."ID_RUBRICA" NOT IN (79, 85)
+                  AND r1.id = jp."ID_RUBRICA"
+            ) jr_exp ON TRUE
+        )
+        SELECT
+            ab."ID_ACTION",
+            ab."CLIENTE",
+            ab."ATENDENTE",
+            ab."CANAL_ATUAL",
+            ab.motivo_encerramento,
+            ab."MOTIVO_ENCERRAMENTO_NOME",
+            ab."UF",
+            ab."ASSINATURA",
+            ab."ATIVO",
+            pr."ID_RUBRICA",
+            pr."REAJUIZAMENTO",
+            pr."STATUS",
+            pr."STATUS_PROCESSO_NOME",
+            pr."RUBRICA",
+            pr."VALOR_AM",
+            pr."AREA_ATUACAO_ID",
+            aa.nome_area AS "AREA_ATUACAO_NOME"
+        FROM acoes_base ab
+        LEFT JOIN proc_rubricas pr
+            ON ab."ID_ACTION" = pr."ID_ACTION"
+        LEFT JOIN juridico."area_atuação" aa
+            ON pr."AREA_ATUACAO_ID" = aa.id
+        """,
+        "description": "Dados comerciais gerais do banco NG",
+        "params": []
+    },
+    # v1: queries.py:1008, "setor_confeccao" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "setor_confeccao": {
+        "database": "ng",
+        "query": """
+        SELECT
+            pp.id,
+            pp."NOME",
+            pp."ID_PROCESSO",
+            pp."ENTRADA",
+            pp."ID_ACTION",
+            pp."UF",
+            pp."STATUS",
+            pp."DATA_CONFECCAO",
+            pp."MATERIA",
+            pp."PARTE_ADVERSA",
+            pp."VALOR_DA_CAUSA",
+            pp."DANO_MATERIAL",
+            pp."DANO_MORAL",
+            pp."SISTEMA",
+            pp."ID_FUNCIONARIO",
+            f.nome AS "FUNCIONARIO",
+            pr."ID_PETICAO",
+            pp."REAJUIZAMENTO",
+            pp."DATA_CONTRATACAO",
+            a.atendente_comercial AS "ID_ATENDENTE_COMERCIAL",
+            fc.nome AS "ATENDENTE_COMERCIAL",
+            pr.pet_auto AS "PET_AUTO",
+            pp."DANO_MORAL",
+            r.area_atuacao_id AS "AREA_ATUACAO_ID"
+        FROM peticionamento."Peticionamento" pp
+        JOIN "Setores".funcionarios f ON pp."ID_FUNCIONARIO" = f.id
+        JOIN juridico.processos pr ON pp."ID_PROCESSO" = pr.id
+        JOIN "public".actions a ON pp."ID_ACTION" = a.id
+        LEFT JOIN "Setores".funcionarios fc ON a.atendente_comercial = fc.id
+        LEFT JOIN juridico.rubricas r ON pr."ID_RUBRICA" = r.id
+        """,
+        "description": "Confecção de petições do banco NG",
+        "params": []
+    },
+    # v1: queries.py:976, "setor_org_doc" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "setor_org_doc": {
+        "database": "ng",
+        "query": """
+        SELECT
+            od.id,
+            od."NOME",
+            od."ENTRADA",
+            od."UF",
+            od."STATUS",
+            od."ORIGEM",
+            od."ATENDENTE_COMERCIAL",
+            od."ID_ACTION",
+            od."SAIDA",
+            od."ID_PROCESSO",
+            od."MATERIA",
+            od."DATA_CONTRATACAO",
+            od."ID_FUNCIONARIO",
+            f.nome AS "FUNCIONARIO",
+            p."VALOR_DA_CAUSA",
+            od."REAJUIZAMENTO",
+            p."DANO_MORAL",
+            r.area_atuacao_id AS "AREA_ATUACAO_ID"
+        FROM organizacao_doc.organizacao_de_documentos od
+        LEFT JOIN "Setores".funcionarios f ON od."ID_FUNCIONARIO" = f.id
+        LEFT JOIN peticionamento."Peticionamento" p ON od."ID_PROCESSO" = p."ID_PROCESSO"
+        LEFT JOIN juridico.processos jp ON od."ID_PROCESSO" = jp.id
+        LEFT JOIN juridico.rubricas r ON jp."ID_RUBRICA" = r.id
+        """,
+        "description": "Organização de documentos do banco NG",
+        "params": []
+    },
+    # v1: queries.py:946, "setor_pendencias" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "setor_pendencias": {
+        "database": "ng",
+        "query": """
+        SELECT
+            pp.id,
+            pp."NOME",
+            pp."ID_ACTION",
+            pp."UF",
+            pp."ENTRADA",
+            pp."STATUS",
+            pp."ATENDENTE",
+            pp."SAIDA",
+            pp."ORIGEM",
+            pp."ID_PROCESSO",
+            p."MOTIVO_CANCELAMENTO",
+            pp."TIPO_PENDENCIA",
+            f.nome AS "FUNCIONARIO",
+            pp."ID_FUNCIONARIO",
+            pp."DATA_CONTRATACAO",
+            pp."REAJUIZAMENTO",
+            r.area_atuacao_id AS "AREA_ATUACAO_ID"
+        FROM pendencias_de_processos.pendencias_de_processos pp
+        LEFT JOIN "Setores".funcionarios f ON pp."ID_FUNCIONARIO" = f.id
+        LEFT JOIN juridico.processos p ON pp."ID_PROCESSO" = p.id
+        LEFT JOIN juridico.rubricas r ON p."ID_RUBRICA" = r.id
+        """,
+        "description": "Pendências de processos do banco NG",
+        "params": []
+    },
+    # v1: queries.py:1132, "actions_NG_2" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "actions_NG_2": {
+        "database": "ng",
+        "query": """
+        SELECT
+            a."date" AS "ENTRADA",
+            a.customer AS "ID_CUSTOMER",
+            c.nome AS "CLIENTE",
+            tu.uf AS "UF",
+            a.id AS "ID_ACTION",
+            f.nome AS "ATENDENTE",
+            t.nome_campanha AS "CAMPANHA",
+            ac.distribuido_em,
+            ac.onboarding,
+            ac.respondeu_onboarding,
+            ac.data_etapa1,
+            ac.respondeu_etapa1,
+            ac.data_etapa2,
+            ac.respondeu_etapa2,
+            ac.data_etapa3,
+            ac.respondeu_etapa3,
+            ac.contrato_criado_em,
+            GREATEST(ac.fechado_em, ac.data_upsell) AS "ASSINADO_EM",
+            ac.data_encerramento,
+            c.tracking_id AS "TRACK_ORIGEM",
+            t_origem.canal_aquisicao AS "CANAL_ORIGEM",
+            t.id AS "TRACK_ATUAL",
+            t.canal_aquisicao AS "CANAL_ATUAL",
+            t.tipo_trafego AS "TIPO_TRAFEGO",
+            t.prospeccao AS "PROSPECCAO",
+            ac.status_id AS "STATUS",
+            ac.motivo_encerramento AS "MOTIVO_ENCERRAMENTO"
+    
+        FROM "public".actions a
+        LEFT JOIN "public".action_status ac ON a.id_status = ac.id
+        LEFT JOIN "public".type_status ts ON ac.status_id = ts.id
+        LEFT JOIN "public".customers c ON a.customer = c.id
+        LEFT JOIN "public".trackeamento t ON a.id_tracking = t.id
+        LEFT JOIN "public".trackeamento t_origem ON c.tracking_id = t_origem.id
+        LEFT JOIN "public".type_uf tu ON a.id_uf = tu.id_uf
+        LEFT JOIN "Setores".funcionarios f ON a.atendente_comercial = f.id
+        """,
+        "description": "Actions do banco NG",
+        "params": []
+    },
+    # v1: queries.py:1085, "rubrica_count_por_processo" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "rubrica_count_por_processo": {
+        "database": "ng",
+        "query": """
+        SELECT
+            jp.id AS "ID_PROCESSO",
+            COUNT(prr.rubrica_id)::int AS "N_RUBRICAS"
+        FROM juridico.processos jp
+        JOIN juridico.processo_rubricas_reunidas prr ON prr.processo_id = jp.id
+        WHERE jp."ID_RUBRICA" IN (79, 85)
+        GROUP BY jp.id
+        """,
+        "description": "Contagem de sub-rubricas por processo (rubricas reunidas NG)",
+        "params": []
+    },
+    # v1: queries.py:1177, "perfil_clientes_NG" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "perfil_clientes_NG": {
+        "database": "ng",
+        "query": """
+        SELECT
+            a."date" AS "ENTRADA",
+            a.customer AS "ID_CUSTOMER",
+            c.nome AS "CLIENTE",
+            c.nascimento AS "DATA_NASCIMENTO",
+            c.respondeu_form_socio AS "RESP_TRIAGEM?",
+            tec.estado_civil AS "ESTADO_CIVIL",
+            tg.genero AS "GENERO",
+            c.ocupacao AS "OCUPACAO",
+            c.tipo_residencia AS "TIPO_RESIDENCIA",
+            c.escolaridade AS "ESCOLARIDADE",
+            c.media_mensal AS "MEDIA_MENSAL",
+            c.pessoas_dependentes AS "PESSOAS_DEPENDENTES",
+            a.id AS "ID_ACTION",
+            f.nome AS "ATENDENTE",
+            t.nome_campanha AS "CAMPANHA",
+            t.plataforma AS "PLATAFORMA",
+            t.dispositivo AS "DISPOSITIVO",
+            t.canal_aquisicao AS "CANAL_AQUISICAO",
+            t.tipo_trafego AS "TIPO_TRAFEGO",
+            t.prospeccao AS "PROPECCAO",
+            ac.status_id,
+            ac.motivo_encerramento,
+            tu.uf AS "UF",
+            GREATEST(ac.fechado_em, ac.data_upsell) AS "ASSINATURA"
+        FROM "public".actions a
+        LEFT JOIN "public".action_status ac ON a.id_status = ac.id
+        LEFT JOIN "public".type_status ts ON ac.status_id = ts.id
+        LEFT JOIN "public".customers c ON a.customer = c.id
+        LEFT JOIN "public".trackeamento t ON a.id_tracking = t.id
+        LEFT JOIN "public".type_uf tu ON a.id_uf = tu.id_uf
+        LEFT JOIN "Setores".funcionarios f ON a.atendente_comercial = f.id
+        LEFT JOIN "public".type_estado_civil tec ON c.id_estado_civil = tec.id_estado_civil
+        LEFT JOIN "public".type_genero tg ON c.id_genero = tg.id_genero
+        WHERE ac.motivo_encerramento = 11
+        """,
+        "description": "Perfil de clientes do banco NG (motivo encerramento = 11)",
+        "params": []
+    },
+    # v1: queries.py:1100, "facebook_ads" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "facebook_ads": {
+        "database": "ng",
+        "query": """
+        SELECT *
+        FROM metrics_ads.facebook_ads
+        """,
+        "description": "Métricas do Facebook Ads do banco NG",
+        "params": []
+    },
+    # v1: queries.py:1279, "Analise_thiago" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "Analise_thiago": {
+        "database": "ng",
+        "query": """
+        SELECT
+            a."date" AS "ENTRADA",
+            a.customer AS "ID_CUSTOMER",
+            c.nome AS "CLIENTE",
+            a.id AS "ID_ACTION",
+            f.nome AS "ATENDENTE",
+            t.nome_campanha AS "CAMPANHA",
+            t.canal_aquisicao,
+            t.posicionamento AS "POSICIONAMENTO",
+            t.nome_conjunto AS "NOME_CONJUNTO",
+            t.criativo AS "CRIATIVO",
+            ac.status_id,
+            ac.motivo_encerramento,
+            tu.uf AS "UF",
+            GREATEST(ac.fechado_em, ac.data_upsell) AS "ASSINATURA",
+            jp.id AS "ID_PROCESSO",
+            jr."RUBRICA",
+            jr."valor_AM" AS "VALOR_AM",
+            jpa."EMPRESA",
+            jp."FASE",
+            jp."MOTIVO_CANCELAMENTO",
+            jp."REAJUIZAMENTO",
+            jp.status AS "STATUS",
+            jpp."STATUS" AS "STATUS_PROTOCOLO",
+            jpp."VALOR_DA_CAUSA",
+            jpp."DANO_MORAL",
+            jpp."SAIDA" AS "SAIDA_PROTOCO"
+        FROM "public".actions a
+        LEFT JOIN "public".action_status ac ON a.id_status = ac.id
+        LEFT JOIN "public".type_status ts ON ac.status_id = ts.id
+        LEFT JOIN "public".customers c ON a.customer = c.id
+        LEFT JOIN "public".trackeamento t ON a.id_tracking = t.id
+        LEFT JOIN "public".type_uf tu ON a.id_uf = tu.id_uf
+        LEFT JOIN "Setores".funcionarios f ON a.atendente_comercial = f.id
+        LEFT JOIN juridico.processos jp ON a.id = jp."ID_ACTION"
+        LEFT JOIN juridico.rubricas jr ON jp."ID_RUBRICA" = jr.id
+        LEFT JOIN juridico.partes_adversas jpa ON jp."ID_PARTE_ADVERSA" = jpa.id
+        LEFT JOIN protocolo.protocolo jpp ON jp.id = jpp."ID_PROCESSO"
+        """,
+        "description": "Análise Thiago do banco NG",
+        "params": []
+    },
+    # v1: queries.py:485, "trackeamento_NG_2" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+    "trackeamento_NG_2": {
+        "database": "ng",
+        "query": """
+        SELECT
+            t.id AS "ID_TRACK",
+            t."date" AS "DATA_TRACKEAMENTO",
+            tu.uf AS "UF",
+            t.nome_campanha AS "NOME_CAMPANHA",
+            t.nome_conjunto AS "NOME_CONJUNTO",
+            t.criativo AS "CRIATIVO",
+            t.posicionamento AS "POSICIONAMENTO",
+            t.canal_aquisicao AS "CANAL_AQUISICAO",
+            t.tipo_trafego AS "TIPO_TRAFEGO",
+            t.prospeccao AS "PROSPECCAO",
+            a.atendente_comercial AS "ATENDENTE",
+            GREATEST(ac.fechado_em, ac.data_upsell) AS "ASSINADO_EM",
+            ac.motivo_encerramento AS "MOTIVO_ENCERRAMENTO"
+        FROM "public".trackeamento t
+        LEFT JOIN "public".actions a ON t.id = a.id_tracking
+        LEFT JOIN "public".action_status ac ON a.id_status = ac.id
+        LEFT JOIN "public".type_uf tu ON a.id_uf = tu.id_uf
+        """,
+        "description": "Trackeamento do banco NG",
+        "params": []
+    },
 }

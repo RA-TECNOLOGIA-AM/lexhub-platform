@@ -24,7 +24,12 @@ ANT_FIM = INICIO_MES.fromordinal(INICIO_MES.toordinal() - 1)
 ANT_INI = ANT_FIM.replace(day=1)
 PERIODOS = {"mes_anterior": (ANT_INI, ANT_FIM), "mes_atual": (INICIO_MES, HOJE)}
 FONTE = sys.argv[2] if len(sys.argv) > 2 else "lexpre"
-if FONTE == "lexflow":
+if FONTE == "ng":
+    # ref no NG = sufixo da unidade na v1; a LA está no banco LAADV e o Marketing só existe na NG.
+    ESCRITORIOS = {"NG": "NG", "RJ": "RJ"}
+    KEYS = ["protocolo", "peticionamento", "org-documentos", "pendencias", "comercial", "marketing"]
+    FORA = {("marketing", "RJ")}
+elif FONTE == "lexflow":
     # ref no LexFlow = sufixo da unidade na v1; Recursal não existe no RJ.
     ESCRITORIOS = {"NG": "NG", "LA": "LA", "RJ": "RJ"}
     KEYS = ["execucao", "acordos", "recursal"]
