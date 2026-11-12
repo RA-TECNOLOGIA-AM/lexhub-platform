@@ -1964,4 +1964,27 @@ QUERIES: dict[str, dict] = {
         "description": "Trackeamento do banco NG",
         "params": []
     },
+    # v1: queries.py:4049, "nps_NG" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG, nps_NG.
+    "nps_NG": {
+        "database": "ng",
+        "query": """
+        SELECT
+            r.id                    AS "ID",
+            r.cliente               AS "CLIENTE",
+            r.telefone              AS "TELEFONE",
+            r.data                  AS "DATA",
+            r.av_tempo_resposta     AS "AV_TEMPO_RESPOSTA",
+            r.av_nivel_info         AS "AV_NIVEL_INFO",
+            r.av_prob_ind           AS "AV_PROB_IND",
+            r.av_confiança          AS "AV_CONFIANCA",
+            r.feedback_positivo     AS "FEEDBACK_POSITIVO",
+            r.feedback_melhoria     AS "FEEDBACK_MELHORIA",
+            r.etapa_preocupação     AS "ETAPA_PREOCUPACAO",
+            r.comentario            AS "COMENTARIO"
+        FROM relatorios.nps_escritorio r
+        ORDER BY r.data DESC NULLS LAST
+        """,
+        "description": "Respostas de NPS (Net Promoter Score) do banco NG — tabela relatorios.nps_escritorio.",
+        "params": []
+    },
 }

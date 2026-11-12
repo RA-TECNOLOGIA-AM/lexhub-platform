@@ -5,7 +5,7 @@ Gerado por scripts/copiar_v1/gerar_generico.py (banco ng). Únicas trocas, marca
   * fetch_*: buscam pela fonte da V2 (`usar_fonte`), com o recorte de situação do processo da v1;
   * _get_dashboard_response: mesmo início da v1 (fontes, datas, _f/_a), só com os ramos abaixo;
   * fontes de outro banco saem de FETCHES_BY_DASHBOARD (chegam vazias, como na v1 com a fonte fora do ar).
-Dashboards: protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
+Dashboards: protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG, nps_NG.
 """
 
 import asyncio
@@ -204,6 +204,16 @@ from app.analyses.LA.protocolo_LA import (
     group_represados_por_mes_LA,
     group_valor_causa_protocolados_por_dia_LA,
     group_valor_causa_protocolados_por_mes_LA,
+)
+from app.analyses.NG.NPS_NG import (
+    get_comentarios,
+    get_feedbacks_melhoria,
+    get_feedbacks_positivos,
+    get_nps_stats,
+    get_respostas_tabela,
+    group_nps_por_classificacao,
+    group_nps_por_mes,
+    group_nps_por_nota,
 )
 from app.analyses.NG.actions import (
     get_comparativo_leads_anuncio_NG,
@@ -612,6 +622,11 @@ async def fetch_analise_thiago() -> List[Dict[str, Any]]:
 # V2: v1 dashboard_routes.py:2969 -> fetch_data_with_cache('trackeamento_NG_2', ...)
 async def fetch_trackeamento_ng_2() -> List[Dict[str, Any]]:
     return await _fetch_v2('trackeamento_NG_2')
+
+
+# V2: v1 dashboard_routes.py:2951 -> fetch_data_with_cache('nps_NG', ...)
+async def fetch_nps_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('nps_NG')
 
 
 # v1: dashboard_routes.py:2121
@@ -4407,11 +4422,12 @@ FETCHES_BY_DASHBOARD: Dict[str, List[Tuple[str, Any]]] = {
     "comercial": [("comercial_geral", fetch_comercial_geral), ("actions", fetch_actions), ("protocolos", fetch_protocolos), ("peticionamento", fetch_peticionamento), ("org_doc", fetch_org_doc), ("pendencias", fetch_pendencias), ("rubrica_count_por_processo", fetch_rubrica_count_por_processo)],
     "comercial_RJ": [("comercial_geral", fetch_comercial_geral), ("actions", fetch_actions), ("protocolos", fetch_protocolos), ("peticionamento", fetch_peticionamento), ("org_doc", fetch_org_doc), ("pendencias", fetch_pendencias), ("rubrica_count_por_processo", fetch_rubrica_count_por_processo)],
     "marketing_NG": [("marketing_NG", fetch_marketing_NG), ("facebook_ads", fetch_facebook_ads), ("actions", fetch_actions), ("protocolos", fetch_protocolos), ("comercial_geral", fetch_comercial_geral), ("analise_thiago", fetch_analise_thiago), ("trackeamento_ng_2", fetch_trackeamento_ng_2)],
+    "nps_NG": [("nps_NG", fetch_nps_NG)],
 }
 DASHBOARD_NAMES = set(FETCHES_BY_DASHBOARD)
 
 
-# v1: dashboard_routes.py:10386 — V2: início igual, só os ramos de protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG
+# v1: dashboard_routes.py:10386 — V2: início igual, só os ramos de protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG, nps_NG
 async def _get_dashboard_response(  # V2: só os parâmetros usados por estes dashboards
     dashboard_name: str,
     from_date: Optional[date],
@@ -4725,7 +4741,34 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
-    # V2: (bloco de outros dashboards da v1 omitido)
+    if dashboard_name == "nps_NG":
+        respostas = _f("nps_NG")
+        stats = get_nps_stats(respostas)
+        charts = {
+            "nps_por_classificacao": [
+                ChartDataPoint(**x) for x in group_nps_por_classificacao(respostas)
+            ],
+            "nps_por_nota": [
+                ChartDataPoint(**x) for x in group_nps_por_nota(respostas)
+            ],
+            "nps_por_mes": [
+                ChartDataPoint(**x) for x in group_nps_por_mes(respostas)
+            ],
+            "nps_respostas_tabela": [
+                NpsRespostaRow(**x) for x in get_respostas_tabela(respostas)
+            ],
+            "nps_feedbacks_melhoria": [
+                NpsFeedbackMelhoriaRow(**x) for x in get_feedbacks_melhoria(respostas)
+            ],
+            "nps_feedbacks_positivos": [
+                NpsFeedbackPositivoRow(**x) for x in get_feedbacks_positivos(respostas)
+            ],
+            "nps_comentarios": [
+                NpsComentarioRow(**x) for x in get_comentarios(respostas)
+            ],
+        }
+        logger.info("Dashboard 'nps_NG' processado em %.2fs", time.time() - t0)
+        return DashboardResponse(dashboard="nps_NG", stats=DashboardStats(**stats), **charts)
     # V2: (bloco de outros dashboards da v1 omitido)
     if dashboard_name == "marketing_NG":
         # Filtros interativos (drill-down por clique nos gráficos, aplicados na
@@ -5316,6 +5359,20 @@ async def get_marketing_NG_dashboard(
     )
 
 
+# v1: dashboard_routes.py:29671 (rota sem os decoradores)
+async def get_nps_NG_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+):
+    """Dashboard de NPS (Net Promoter Score) — banco NG.
+
+    Retorna métricas de satisfação (NPS, taxa de confiança, nível de informação,
+    nível de indicação, tempo médio de resposta) e tabelas de respostas,
+    feedbacks de melhoria, feedbacks positivos e comentários livres.
+    """
+    return await _get_dashboard_response("nps_NG", from_date, to_date)
+
+
 # V2: dashboard da v1 -> handler da rota e queries que ele busca (para a casca e o aquecedor do cache).
-HANDLERS = {"protocolo": get_protocolo_dashboard, "protocolo_RJ": get_protocolo_rj_dashboard, "peticionamento": get_peticionamento_dashboard, "peticionamento_RJ": get_peticionamento_rj_dashboard, "org-documentos": get_org_documentos_dashboard, "org_doc_RJ": get_org_doc_rj_dashboard, "pendencias": get_pendencias_dashboard, "pendencias_RJ": get_pendencias_rj_dashboard, "comercial": get_comercial_dashboard, "comercial_RJ": get_comercial_rj_dashboard, "marketing_NG": get_marketing_NG_dashboard}
-QUERIES_POR_DASHBOARD = {'protocolo': ('setor_protocolo', 'comercial_geral_NG'), 'protocolo_RJ': ('setor_protocolo', 'comercial_geral_NG'), 'peticionamento': ('setor_confeccao',), 'peticionamento_RJ': ('setor_confeccao',), 'org-documentos': ('setor_org_doc',), 'org_doc_RJ': ('setor_org_doc',), 'pendencias': ('setor_pendencias',), 'pendencias_RJ': ('setor_pendencias',), 'comercial': ('comercial_geral_NG', 'actions_NG_2', 'setor_protocolo', 'setor_confeccao', 'setor_org_doc', 'setor_pendencias', 'rubrica_count_por_processo'), 'comercial_RJ': ('comercial_geral_NG', 'actions_NG_2', 'setor_protocolo', 'setor_confeccao', 'setor_org_doc', 'setor_pendencias', 'rubrica_count_por_processo'), 'marketing_NG': ('perfil_clientes_NG', 'facebook_ads', 'actions_NG_2', 'setor_protocolo', 'comercial_geral_NG', 'Analise_thiago', 'trackeamento_NG_2')}
+HANDLERS = {"protocolo": get_protocolo_dashboard, "protocolo_RJ": get_protocolo_rj_dashboard, "peticionamento": get_peticionamento_dashboard, "peticionamento_RJ": get_peticionamento_rj_dashboard, "org-documentos": get_org_documentos_dashboard, "org_doc_RJ": get_org_doc_rj_dashboard, "pendencias": get_pendencias_dashboard, "pendencias_RJ": get_pendencias_rj_dashboard, "comercial": get_comercial_dashboard, "comercial_RJ": get_comercial_rj_dashboard, "marketing_NG": get_marketing_NG_dashboard, "nps_NG": get_nps_NG_dashboard}
+QUERIES_POR_DASHBOARD = {'protocolo': ('setor_protocolo', 'comercial_geral_NG'), 'protocolo_RJ': ('setor_protocolo', 'comercial_geral_NG'), 'peticionamento': ('setor_confeccao',), 'peticionamento_RJ': ('setor_confeccao',), 'org-documentos': ('setor_org_doc',), 'org_doc_RJ': ('setor_org_doc',), 'pendencias': ('setor_pendencias',), 'pendencias_RJ': ('setor_pendencias',), 'comercial': ('comercial_geral_NG', 'actions_NG_2', 'setor_protocolo', 'setor_confeccao', 'setor_org_doc', 'setor_pendencias', 'rubrica_count_por_processo'), 'comercial_RJ': ('comercial_geral_NG', 'actions_NG_2', 'setor_protocolo', 'setor_confeccao', 'setor_org_doc', 'setor_pendencias', 'rubrica_count_por_processo'), 'marketing_NG': ('perfil_clientes_NG', 'facebook_ads', 'actions_NG_2', 'setor_protocolo', 'comercial_geral_NG', 'Analise_thiago', 'trackeamento_NG_2'), 'nps_NG': ('nps_NG',)}
