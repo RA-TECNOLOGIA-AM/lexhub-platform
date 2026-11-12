@@ -1,3 +1,5 @@
+import { useHoldTransition } from '../page_transition/useHoldTransition.ts'
+
 type LoadingStateProps = {
     variant?: 'text' | 'dashboard' // 'dashboard' = esqueleto de KPIs + gráficos (como no template)
 }
@@ -12,7 +14,10 @@ function SkeletonCard({ height }: { height: number }) {
 }
 
 // Módulo: o "carregando" de qualquer tela. A tela só escolhe o formato.
+// Se a tela abriu por uma transição (logo animada), segura o overlay até terminar de carregar.
 export function LoadingState({ variant = 'text' }: LoadingStateProps) {
+    useHoldTransition()
+
     if (variant === 'text') {
         return (
             <p className="muted" role="status">
