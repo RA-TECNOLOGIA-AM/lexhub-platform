@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countFilters, toggleFilter } from './filters.ts'
+import { countFilters, filterChips, toggleFilter, type FilterField } from './filters.ts'
 
 describe('filters', () => {
     it('conta todos os valores escolhidos', () => {
@@ -21,5 +21,29 @@ describe('filters', () => {
         const original = { materia: ['ANP'] }
         toggleFilter(original, 'materia', 'MORA')
         expect(original).toEqual({ materia: ['ANP'] })
+    })
+})
+
+describe('filterChips', () => {
+    const fields: FilterField[] = [
+        {
+            key: 'materia',
+            label: 'Matéria',
+            options: [
+                { value: 'ANP', label: 'ANP' },
+                { value: 'MORA', label: 'Mora' },
+            ],
+        },
+    ]
+
+    it('uma etiqueta por valor, com o nome da opção', () => {
+        expect(filterChips(fields, { materia: ['MORA', 'ANP'] }).map((c) => c.label)).toEqual([
+            'Matéria: Mora',
+            'Matéria: ANP',
+        ])
+    })
+
+    it('sem filtros: nenhuma etiqueta', () => {
+        expect(filterChips(fields, {})).toEqual([])
     })
 })

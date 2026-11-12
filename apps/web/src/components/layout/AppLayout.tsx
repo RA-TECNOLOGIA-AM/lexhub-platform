@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/auth-context.ts'
 import { Icon } from '../ui/Icon.tsx'
 import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { SearchBox } from './SearchBox.tsx'
+import { TopbarSlotContext } from './topbar-slot.ts'
 import { activeItem, NAV_SECTIONS, pathOf } from '../../navigation.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
@@ -12,6 +13,8 @@ import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
+    // Espaço da topbar que uma página pode ocupar (ex.: o Período de um dashboard). Ver TopbarSlot.tsx.
+    const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null)
     const menuButton = useRef<HTMLButtonElement>(null)
     const { pathname } = useLocation()
     const { me, signOut } = useAuth()
@@ -45,7 +48,13 @@ export function AppLayout() {
                     <span className="brand-mark">LH</span>
                     <span>LexHub</span>
                 </div>
-                <OrgSwitcher current={org} orgs={me.orgs} canCreate={user.platform_staff} onNavigate={closeMenu} />
+                <OrgSwitcher
+                    current={org}
+                    orgs={me.orgs}
+                    units={me.units}
+                    canCreate={user.platform_staff}
+                    onNavigate={closeMenu}
+                />
 
                 {NAV_SECTIONS.filter((section) => !section.platformOnly || user.platform_staff).map((section) => (
                     <div key={section.title} className="stack" style={{ gap: 2 }}>
@@ -109,6 +118,8 @@ export function AppLayout() {
                     </div>
                     {/* Só no modo mock: em modo api os dados vêm da API V2. */}
                     {env.dataSource === 'mock' && <span className="badge warn">Dados fictícios</span>}
+                    {/* A página atual pode ocupar este espaço (ex.: Período do dashboard). */}
+                    <div className="topbar-slot" ref={setTopbarSlot} />
                     <SearchBox org={org.slug} />
                     <button className="iconbtn" type="button" aria-label="Notificações">
                         <Icon name="bell" />
@@ -116,7 +127,9 @@ export function AppLayout() {
                 </header>
 
                 <main className="content">
-                    <Outlet />
+                    <TopbarSlotContext value={topbarSlot}>
+                        <Outlet />
+                    </TopbarSlotContext>
                 </main>
             </div>
         </div>

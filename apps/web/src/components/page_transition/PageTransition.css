@@ -18,96 +18,10 @@
     justify-content: center;
     align-items: center;
 
-    width: 160px;
-    height: 160px;
-}
-
-.loader-circle {
-    width: 110px;
-    height: 110px;
-
-    border-radius: 50%;
-
-    border: 4px solid transparent;
-    border-top-color: #ff7900;
-    border-right-color: #ff7900;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    position: relative;
-}
-
-.loader-logo {
-    width: 78px;
-    height: 78px;
-
-    object-fit: contain;
-
-    opacity: 0;
-    transform: scale(0.2);
+    width: 220px;
+    height: 220px;
 
     filter: drop-shadow(0 0 8px #ff790055);
-}
-
-/* Fase 1: círculo girando */
-.transition-overlay.loading .loader-circle {
-    animation: circleFormation 1.5s ease-in-out forwards;
-}
-
-/* Fase 2: logo surgindo */
-.transition-overlay.loading .loader-logo {
-    animation: logoFormation 1.5s ease-in-out forwards;
-}
-
-@keyframes circleFormation {
-    0% {
-        transform: rotate(0deg) scale(0.4);
-        border-radius: 50%;
-    }
-
-    30% {
-        transform: rotate(180deg) scale(1);
-    }
-
-    55% {
-        transform: rotate(360deg) scale(1.15);
-    }
-
-    75% {
-        transform: rotate(540deg) scale(1);
-    }
-
-    100% {
-        transform: rotate(720deg) scale(1);
-    }
-}
-
-@keyframes logoFormation {
-    0% {
-        opacity: 0;
-        transform: scale(0.2) rotate(-90deg);
-    }
-
-    35% {
-        opacity: 0;
-        transform: scale(0.5) rotate(-45deg);
-    }
-
-    60% {
-        opacity: 1;
-        transform: scale(1.1) rotate(12deg);
-    }
-
-    80% {
-        transform: scale(1) rotate(-5deg);
-    }
-
-    100% {
-        opacity: 1;
-        transform: scale(1) rotate(0deg);
-    }
 }
 
 /* Saída da transição */
@@ -127,9 +41,7 @@
 
 /* Acessibilidade */
 @media (prefers-reduced-motion: reduce) {
-    .transition-overlay,
-    .loader-circle,
-    .loader-logo {
+    .transition-overlay {
         animation-duration: 0.01ms !important;
     }
 }

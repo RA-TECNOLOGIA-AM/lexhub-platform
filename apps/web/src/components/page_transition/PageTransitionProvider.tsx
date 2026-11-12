@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, type To } from 'react-router'
 import { TransitionContext } from './PageTransitionContext.ts'
+import { LogoJustica } from '../ui/LogoJustica.tsx'
 import './PageTransition.css'
+
+const LOADING_MS = 1500
+const EXITING_MS = 450
 
 type TransitionPhase = 'idle' | 'loading' | 'exiting'
 
@@ -38,10 +42,10 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
                         phaseRef.current = 'idle'
                         setPhase('idle')
                     },
-                    reducedMotion ? 0 : 450,
+                    reducedMotion ? 0 : EXITING_MS,
                 )
             },
-            reducedMotion ? 0 : 1500,
+            reducedMotion ? 0 : LOADING_MS,
         )
     }
 
@@ -52,9 +56,7 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
             {phase !== 'idle' && (
                 <div className={`transition-overlay ${phase}`} aria-label="Carregando página" role="status">
                     <div className="loader-container">
-                        <div className="loader-circle">
-                            <img src="/logo-justica.png" alt="" className="loader-logo" />
-                        </div>
+                        <LogoJustica animation="once" durationMs={LOADING_MS} size={180} />
                     </div>
                 </div>
             )}

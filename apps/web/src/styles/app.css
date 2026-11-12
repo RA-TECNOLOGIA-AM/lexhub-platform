@@ -725,3 +725,95 @@ button.org:hover {
     align-items: center;
     justify-content: center;
 }
+
+/* ---------- layout pedido pelo gestor (12/11) ---------- */
+/* Conteúdo ocupa a largura toda (antes parava em 1400px e sobrava faixa vazia à direita). */
+.content {
+    max-width: none;
+}
+/* KPIs dos dashboards sem buraco: auto-fit estica os cards para ocupar a linha (auto-fill deixava colunas vazias). */
+.grid-kpi {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+/* Cards do hub: colunas fixas (auto-fill), para um card sozinho não esticar a linha inteira; um pouco mais
+   largos (mínimo de 360px) para preencher melhor as telas grandes. */
+.grid-cards {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+}
+
+/* Espaço da topbar que a página ocupa (Período do dashboard). Vazio = não ocupa lugar. */
+.topbar-slot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.topbar-slot:empty {
+    display: none;
+}
+
+/* Faixa logo abaixo da topbar nos dashboards: filtros em uso à esquerda, Filtros e Exportar à direita.
+   Encostada na topbar (margem negativa anula o espaço do .content) e presa ao rolar. */
+.dash-bar {
+    position: sticky;
+    top: 65px;
+    z-index: 4;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+    margin: -24px -28px 0;
+    padding: 10px 28px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+.dash-bar-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1 1 260px;
+    min-width: 0;
+}
+.dash-bar-actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 4px 3px 10px;
+    border-radius: var(--r-pill);
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+    font-size: var(--fs-sm);
+}
+.chip button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+}
+.chip button:hover {
+    background: rgba(179, 85, 0, 0.15);
+}
+/* Seletor travado (uma unidade e uma organização só): sem cara de botão. */
+div.org {
+    cursor: default;
+}
+@media (max-width: 860px) {
+    .dash-bar {
+        position: static;
+        margin: -18px -16px 0;
+        padding: 10px 16px;
+    }
+    .dash-bar-actions {
+        margin-left: 0;
+    }
+}

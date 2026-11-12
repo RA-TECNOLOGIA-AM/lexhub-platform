@@ -1,6 +1,8 @@
 import { useParams } from 'react-router'
 import { DashboardHeader } from '../../components/dashboard/DashboardHeader.tsx'
 import { DashboardToolbar } from '../../components/dashboard/DashboardToolbar.tsx'
+import { PeriodPicker } from '../../components/dashboard/PeriodPicker.tsx'
+import { TopbarPortal } from '../../components/layout/TopbarSlot.tsx'
 import { ErrorState } from '../../components/states/ErrorState.tsx'
 import { LoadingState } from '../../components/states/LoadingState.tsx'
 import { Notice } from '../../components/ui/Notice.tsx'
@@ -13,7 +15,8 @@ import { useDashboardQuery } from '../../hooks/useDashboardQuery.ts'
 import type { DashboardModule } from './types.ts'
 
 // Módulo: o roteiro comum de todo dashboard. Lê período e filtros da URL, busca os dados da unidade
-// e o catálogo, mostra carregando/erro, o cabeçalho com a barra e, por fim, o conteúdo próprio do dashboard.
+// e o catálogo, mostra carregando/erro, o Período na topbar, a faixa (Filtros · Exportar), o cabeçalho e,
+// por fim, o conteúdo próprio do dashboard.
 export function DashboardView<T extends { meta: Meta }>({ module }: { module: DashboardModule<T> }) {
     const { org = '', unit = '' } = useParams()
     const hub = `/${org}/dashboards`
@@ -40,24 +43,20 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
     const { Content } = module
     return (
         <>
-            <DashboardHeader
-                org={org}
-                dashboard={summary}
-                meta={data.meta}
-                actions={
-                    <DashboardToolbar
-                        period={period}
-                        onPeriodChange={setPeriod}
-                        filterFields={module.filters?.(data) ?? []}
-                        filters={query.filters}
-                        onFiltersChange={setFilters}
-                        exportTitle={summary.title}
-                        exportGroups={module.exportFields ?? []}
-                        canExport={summary.can_export}
-                        onExport={exportReport}
-                    />
-                }
+            {/* Período na topbar: só existe enquanto o dashboard está na tela. */}
+            <TopbarPortal>
+                <PeriodPicker value={period} onChange={setPeriod} />
+            </TopbarPortal>
+            <DashboardToolbar
+                filterFields={module.filters?.(data) ?? []}
+                filters={query.filters}
+                onFiltersChange={setFilters}
+                exportTitle={summary.title}
+                exportGroups={module.exportFields ?? []}
+                canExport={summary.can_export}
+                onExport={exportReport}
             />
+            <DashboardHeader org={org} dashboard={summary} meta={data.meta} />
             {notice && <Notice message={notice} onClose={clearNotice} />}
             <Content data={data} />
         </>

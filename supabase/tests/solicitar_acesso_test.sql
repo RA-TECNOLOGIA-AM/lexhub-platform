@@ -1,17 +1,23 @@
 -- =============================================================================
--- Teste de 20261112160000_solicitar_acesso.sql. Desfaz tudo sozinho: o último bloco sempre termina com
--- uma exceção ('OK: ...' quando passou), então nada fica gravado.
--- Uso: rodar depois da migration (ou colado logo abaixo dela, na mesma transação, para validar antes de aplicar).
+-- Teste de 20261112160000_solicitar_acesso.sql. Roda numa transação e desfaz no fim (ROLLBACK): não deixa dados.
+-- Passou = nenhum ERROR (só o aviso 'OK: ...'). Falhou = ERROR 'FALHOU: ...' (o CI para aí).
+-- Uso: rodar depois da migration (CI, SQL Editor do staging ou psql).
 -- Simula usuários com set local role + request.jwt.claims (o que o PostgREST faz em cada chamada).
 -- =============================================================================
 
 begin;
 
 -- Pessoas de teste (só existem nesta transação)
-insert into auth.users (id, email, raw_user_meta_data, aud, role)
-values ('00000000-0000-4000-8000-0000000000a1', 'pedido.teste@exemplo.com', '{"full_name":"Pessoa Teste"}', 'authenticated', 'authenticated'),
-       ('00000000-0000-4000-8000-0000000000a2', 'pedido.teste2@exemplo.com', '{}', 'authenticated', 'authenticated'),
-       ('00000000-0000-4000-8000-0000000000a3', 'pedido.teste3@exemplo.com', '{}', 'authenticated', 'authenticated');
+insert into auth.users (id, email, raw_user_meta_data)
+values ('00000000-0000-4000-8000-0000000000a1', 'pedido.teste@exemplo.com', '{"full_name":"Pessoa Teste"}'),
+       ('00000000-0000-4000-8000-0000000000a2', 'pedido.teste2@exemplo.com', '{}'),
+       ('00000000-0000-4000-8000-0000000000a3', 'pedido.teste3@exemplo.com', '{}');
+
+-- Organização e unidade de teste (o banco do CI começa vazio)
+insert into app.organizations (id, slug, name)
+values ('10000000-0000-4000-8000-0000000000f1', 'org-teste-pedido', 'Org Teste Pedido');
+insert into app.units (id, org_id, code, name)
+values ('20000000-0000-4000-8000-0000000000f1', '10000000-0000-4000-8000-0000000000f1', 'TP', 'Unidade Teste');
 
 create temp table t_ids (k text primary key, v uuid) on commit drop;
 grant all on t_ids to authenticated;
@@ -75,9 +81,12 @@ begin
     if jsonb_array_length(api.list_access_requests('pending')) < 3 then raise exception 'FALHOU: list pending'; end if;
 
     opts := api.approval_options();
-    v_org := (opts -> 0 ->> 'id')::uuid;
-    v_unit := (opts -> 0 -> 'units' -> 0 ->> 'id')::uuid;
-    if v_org is null or v_unit is null then raise exception 'FALHOU: approval_options vazio: %', opts; end if;
+    v_org := '10000000-0000-4000-8000-0000000000f1';
+    v_unit := '20000000-0000-4000-8000-0000000000f1';
+    if not exists (select 1 from jsonb_array_elements(opts) o
+                   where (o ->> 'id')::uuid = v_org and o -> 'units' @> jsonb_build_array(jsonb_build_object('id', v_unit, 'code', 'TP', 'name', 'Unidade Teste'))) then
+        raise exception 'FALHOU: approval_options sem a organização de teste: %', opts;
+    end if;
 
     -- member sem unidade: recusado
     ok := false;
@@ -147,7 +156,7 @@ begin
                                 '00000000-0000-4000-8000-0000000000a3')) < 7 then
         raise exception 'FALHOU: auditoria incompleta';
     end if;
-    raise exception 'OK: todos os casos passaram (nada foi gravado)';
+    raise notice 'OK: todos os casos passaram (o rollback abaixo desfaz tudo)';
 end $$;
 
 rollback;

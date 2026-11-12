@@ -5,7 +5,7 @@ import { HubDnd, type HubDrop } from '../../components/dashboard/HubDnd.tsx'
 import { SortableCard } from '../../components/dashboard/SortableCard.tsx'
 import { SortableSection } from '../../components/dashboard/SortableSection.tsx'
 import type { DashboardSummary } from '../../types/index.ts'
-import { PillGroup, type PillItem } from '../../components/ui/PillGroup.tsx'
+import { hubUnit, rememberedUnit } from '../../lib/activeUnit.ts'
 import { dataClient } from '../../services/client.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
 import { ErrorState } from '../../components/states/ErrorState.tsx'
@@ -25,7 +25,8 @@ export function HubPage() {
     const { me } = useAuth()
     const { data: catalog, error } = useAsync(() => dataClient.listDashboards(org), [org])
     const [searchParams] = useSearchParams()
-    const unit = searchParams.get('unidade') // null = todas as unidades
+    // A unidade do seletor da barra lateral: a da URL, ou a lembrada na sessão (null = todas as unidades).
+    const unit = hubUnit(searchParams.get('unidade'), rememberedUnit(org), me?.units ?? [])
     const query = searchParams.get(SEARCH_PARAM) ?? '' // texto da busca do topo ('' = sem busca)
     const favorites = useFavorites(org)
     const hubOrder = useHubOrder(org)
@@ -40,18 +41,6 @@ export function HubPage() {
     const dashboards = searchDashboards(byUnit, query)
     const searching = query.trim() !== ''
     const notFound = searching && dashboards.length === 0
-    // Pílulas: "Todas" + cada unidade que aparece no catálogo (nome do usuário logado quando houver).
-    // Lê do catálogo original: arrastar cards não muda a ordem das pílulas.
-    const unitCodes = [...new Set(catalog.available.flatMap((d) => d.units))]
-    const pills: PillItem[] = [
-        { id: 'todas', label: 'Todas as unidades', to: `/${org}/dashboards`, active: !unit },
-        ...unitCodes.map((code) => ({
-            id: code,
-            label: unitName(code, me?.units ?? []),
-            to: `/${org}/dashboards?unidade=${code}`,
-            active: code === unit,
-        })),
-    ]
     // Favoritos sobem para a seção do topo; o resto fica na sua área.
     const favs = dashboards.filter((d) => favorites.isFavorite(d.key))
     const others = dashboards.filter((d) => !favorites.isFavorite(d.key))
@@ -89,6 +78,7 @@ export function HubPage() {
                 dashboard={d}
                 favorite={favorites.isFavorite(d.key)}
                 onToggleFavorite={() => favorites.toggle(d.key)}
+                showUnits={!unit}
             />
         </SortableCard>
     )
@@ -99,10 +89,11 @@ export function HubPage() {
                 <div className="stack" style={{ gap: 6 }}>
                     <h1 className="h1">Dashboards</h1>
                     <p className="muted">
-                        {count} para você em {me?.org.name}.
+                        {count} para você em {me?.org.name}
+                        {unit ? ` · ${unitName(unit, me?.units ?? [])}` : ''}. Troque a unidade no seletor da barra
+                        lateral.
                     </p>
                 </div>
-                <PillGroup label="Filtrar por unidade" items={pills} />
             </section>
 
             <HubDnd onDrop={handleDrop}>
