@@ -153,6 +153,62 @@ const PATHS = {
         </>
     ),
     filter: <path d="M4 5h16l-6 8v6l-4-2v-4L4 5z" />,
+    // Documentação (menu) e ícones das páginas de documentação
+    book: (
+        <>
+            <path d="M4 19.5V5a2 2 0 0 1 2-2h13v15H6.5A2.5 2.5 0 0 0 4 20.5 2.5 2.5 0 0 0 6.5 23H19v-5" />
+            <path d="M8 7h7" />
+        </>
+    ),
+    fileText: (
+        <>
+            <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+            <path d="M14 3v6h6M8 13h8M8 17h6" />
+        </>
+    ),
+    trendingUp: <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />,
+    barChart: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+    xCircle: (
+        <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M15 9l-6 6M9 9l6 6" />
+        </>
+    ),
+    dollar: (
+        <path d="M12 2v20M17 6.5C17 4.6 14.8 3.5 12 3.5S7 4.7 7 7s2.2 3.2 5 3.8 5 1.6 5 4-2.2 3.7-5 3.7-5-1.2-5-3.2" />
+    ),
+    percent: (
+        <>
+            <path d="M19 5L5 19" />
+            <circle cx="6.5" cy="6.5" r="2.5" />
+            <circle cx="17.5" cy="17.5" r="2.5" />
+        </>
+    ),
+    pieChart: (
+        <>
+            <path d="M21 12A9 9 0 1 1 12 3v9z" />
+            <path d="M21 12a9 9 0 0 0-9-9" />
+        </>
+    ),
+    scale: (
+        <>
+            <path d="M12 3v18M7 21h10M5 7h14" />
+            <path d="M5 7l-3 7a3.5 3.5 0 0 0 6 0zM19 7l-3 7a3.5 3.5 0 0 0 6 0z" />
+        </>
+    ),
+    target: (
+        <>
+            <circle cx="12" cy="12" r="9" />
+            <circle cx="12" cy="12" r="5" />
+            <circle cx="12" cy="12" r="1" />
+        </>
+    ),
+    ban: (
+        <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M5.7 5.7l12.6 12.6" />
+        </>
+    ),
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof PATHS
