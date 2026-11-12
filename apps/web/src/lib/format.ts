@@ -17,6 +17,8 @@ export function timeAgo(iso: string, now: number = Date.now()): string {
 // Números no padrão brasileiro (1.284 · R$ 14.355,72 · 8,2%).
 const nf0 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 })
 const nf1 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+const nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const nfAte2 = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
 const brl = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
 const brlCompact = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -28,6 +30,8 @@ const brlCompact = new Intl.NumberFormat('pt-BR', {
 export const fmt = {
     int: (v: number) => nf0.format(v), // 1.284
     dec1: (v: number) => nf1.format(v), // 9,4
+    dec2: (v: number) => nf2.format(v), // 3,94 (razões da v1: aproveitamento, TRE, ROAS)
+    fator: (v: number) => `${nfAte2.format(v)}×`, // 4× (fator multiplicador da comissão)
     brl: (v: number) => brl.format(v), // R$ 14.355,72
     brlShort: (v: number) => brlCompact.format(v), // R$ 18,4 mi
     pct: (v: number) => nf1.format(v) + '%', // 8,2%

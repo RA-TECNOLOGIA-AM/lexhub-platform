@@ -4,10 +4,6 @@ import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
 import { fmt, show } from '../../../lib/format.ts'
 import type { ComissaoLexpreResponse } from './types.ts'
 
-// Fator multiplicador é um número (ex.: 4), não dinheiro: mostra como "4×".
-const nfFator = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
-const fator = (v: number) => `${nfFator.format(v)}×`
-
 // Desconto aparece negativo, como na v1 ("- R$ 120,00"); zero fica "R$ 0,00".
 const desconto = (v: number) => (v > 0 ? `- ${fmt.brl(v)}` : fmt.brl(v))
 
@@ -30,7 +26,7 @@ export function ComissaoLexpreContent({ data }: { data: ComissaoLexpreResponse }
                 />
                 <Kpi
                     label="Valor FM"
-                    value={show(s.fator_multiplicador, fator)}
+                    value={show(s.fator_multiplicador, fmt.fator)}
                     note="Conta a partir de R$ 2,5 mi protocolados; trava em 4 ao atingir R$ 4 mi"
                 />
                 <Kpi

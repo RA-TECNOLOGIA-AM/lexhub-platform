@@ -4,9 +4,6 @@ import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
 import { fmt, show } from '../../../lib/format.ts'
 import type { ComercialLexpreResponse } from './types.ts'
 
-// Razão com 2 casas, como na v1 (ex.: Aproveitamento 3,94 ações por cliente).
-const nf2 = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-
 // A API manda o tempo até o protocolo em horas; na tela, em dias.
 const horasEmDias = (h: number) => fmt.dias(h / 24)
 
@@ -38,7 +35,7 @@ export function ComercialLexpreContent({ data }: { data: ComercialLexpreResponse
                 />
                 <Kpi
                     label="Aproveitamento"
-                    value={show(s.taxa_aproveitamento?.total, (v) => nf2.format(v))}
+                    value={show(s.taxa_aproveitamento?.total, fmt.dec2)}
                     note="Ações fechadas por cliente assinado"
                 />
                 <Kpi

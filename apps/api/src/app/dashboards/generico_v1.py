@@ -1,8 +1,10 @@
-"""Molde para os dashboards "genéricos" da v1 (Execução, Acordos e Recursal, banco LexFlow).
+"""Molde para os dashboards "genéricos" da v1 (Execução, Acordos e Recursal no LexFlow; Protocolo,
+Peticionamento, Org. de Documentos e Pendências no banco NG).
 
 Na v1 cada unidade tem a sua rota e o seu ramo em `_get_dashboard_response` (ex.: Execução:
 /execucao para NG, /execucao_LA, /execucao_RJ), todos copiados sem mudança em
-app/analyses/v1_dashboard_generico.py. Aqui só a entrada muda:
+app/analyses/v1_dashboard_generico.py (LexFlow) e v1_dashboard_generico_ng.py (banco NG, gerado por
+scripts/copiar_v1/gerar_generico.py). Aqui só a entrada muda:
 
     v1                                         aqui
     rota por unidade (/execucao_LA)        ->  unidade -> ref no LexFlow (app.unit_source_refs: "NG", "LA", "RJ")
@@ -20,6 +22,7 @@ A resposta é a mesma DashboardResponse da v1 (model_dump). As opções dos filt
 import inspect
 import typing
 from collections.abc import Callable
+from types import ModuleType
 from typing import Any
 
 from app.analyses import v1_dashboard_generico as v1
@@ -51,24 +54,35 @@ def _parametros(handler: Callable) -> dict[str, inspect.Parameter]:
     }
 
 
-def _filtros(nomes_v1: list[str]) -> dict[str, type]:
+def _filtros(copia: ModuleType, nomes_v1: list[str]) -> dict[str, type]:
     """Os parâmetros das rotas da v1 do dashboard (todas as unidades) + situacao_processo."""
     filtros: dict[str, type] = {}
     for nome in nomes_v1:
-        for n, p in _parametros(v1.HANDLERS[nome]).items():
+        for n, p in _parametros(copia.HANDLERS[nome]).items():
             filtros.setdefault(n, _tipo(p.annotation))
     filtros[FILTRO_SITUACAO] = str
     return filtros
 
 
-def modulo(key: str, v1_por_unidade: dict[str, str], descricao_falta: str) -> DashboardModule:
-    """DashboardModule de um dashboard genérico da v1. `v1_por_unidade`: ref no LexFlow -> nome na v1."""
+def modulo(
+    key: str,
+    v1_por_unidade: dict[str, str],
+    descricao_falta: str,
+    copia: ModuleType = v1,
+    source_db: str = "lexflow",
+    source_label: str = "LexFlow",
+) -> DashboardModule:
+    """DashboardModule de um dashboard genérico da v1.
+
+    `v1_por_unidade`: ref da unidade na fonte -> nome do dashboard na v1. `copia`: o módulo com a cópia
+    da v1 (v1_dashboard_generico = LexFlow; v1_dashboard_generico_ng = banco NG), lido pelo banco `source_db`.
+    """
 
     async def build(ctx: DashboardContext) -> dict:
         nome = v1_por_unidade.get(ctx.unit_ref)
         if nome is None:
             raise NotReady(descricao_falta)
-        handler = v1.HANDLERS[nome]
+        handler = copia.HANDLERS[nome]
         kwargs: dict[str, Any] = {"from_date": ctx.period.start, "to_date": ctx.period.end}
         for n, p in _parametros(handler).items():
             valores = ctx.filters.get(n, [])
@@ -78,21 +92,21 @@ def modulo(key: str, v1_por_unidade: dict[str, str], descricao_falta: str) -> Da
         except ValueError as exc:
             raise DashboardInputError(str(exc)) from None
 
-        token_fonte = v1.usar_fonte(ctx.source)
+        token_fonte = copia.usar_fonte(ctx.source)
         token_situacao = _situacoes_processo_ctx.set(situacao)
         try:
             response = await handler(**kwargs)
         finally:
             _situacoes_processo_ctx.reset(token_situacao)
-            v1._fonte_ctx.reset(token_fonte)
+            copia._fonte_ctx.reset(token_fonte)
         return response.model_dump()
 
     nomes = list(dict.fromkeys(v1_por_unidade.values()))
     return DashboardModule(
         key=key,
-        source_db="lexflow",
-        source_label="LexFlow",
+        source_db=source_db,
+        source_label=source_label,
         build=build,
-        filters=_filtros(nomes),
-        queries=tuple(dict.fromkeys(q for n in nomes for q in v1.QUERIES_POR_DASHBOARD[n])),
+        filters=_filtros(copia, nomes),
+        queries=tuple(dict.fromkeys(q for n in nomes for q in copia.QUERIES_POR_DASHBOARD[n])),
     )
