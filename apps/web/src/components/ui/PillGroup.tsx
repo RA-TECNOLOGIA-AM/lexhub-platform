@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 
 export type PillItem = {
     id: string
@@ -17,9 +17,9 @@ export function PillGroup({ label, items }: PillGroupProps) {
     return (
         <div className="pills" role="group" aria-label={label}>
             {items.map((item) => (
-                <Link key={item.id} className="pill" to={item.to} aria-pressed={item.active}>
+                <PageTransitionLink key={item.id} className="pill" to={item.to} aria-pressed={item.active}>
                     {item.label}
-                </Link>
+                </PageTransitionLink>
             ))}
         </div>
     )

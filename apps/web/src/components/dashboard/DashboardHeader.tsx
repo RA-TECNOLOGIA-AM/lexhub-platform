@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router'
+import { useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import type { DashboardSummary, Meta } from '../../types/index.ts'
 import { Freshness } from './Freshness.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { PillGroup } from '../ui/PillGroup.tsx'
 import { unitName } from '../../lib/units.ts'
+import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 
 type DashboardHeaderProps = {
     org: string
@@ -23,10 +24,10 @@ export function DashboardHeader({ org, dashboard, meta, actions }: DashboardHead
 
     return (
         <section className="stack">
-            <Link to={`/${org}/dashboards`} className="back-link">
+            <PageTransitionLink to={`/${org}/dashboards`} className="back-link">
                 <Icon name="arrowLeft" size={16} />
                 Dashboards
-            </Link>
+            </PageTransitionLink>
             {/* Mesmo layout das páginas do menu: título à esquerda, ações à direita (quebram no celular). */}
             <div className="page-header">
                 <div className="stack" style={{ gap: 4 }}>

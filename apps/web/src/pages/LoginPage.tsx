@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useSearchParams } from 'react-router'
 import { useAuth } from '../contexts/auth-context.ts'
 import { GoogleMark } from '../components/ui/GoogleMark.tsx'
@@ -6,6 +6,7 @@ import { Icon } from '../components/ui/Icon.tsx'
 import { PasswordInput } from '../components/ui/PasswordInput.tsx'
 import { DataError } from '../services/errors.ts'
 import { NoAccessCard } from './login/NoAccessCard.tsx'
+import { usePageTransition } from '../components/page_transition/usePageTransition.ts'
 
 // Entrada: Google (principal) ou e-mail + senha, e entrada por convite (?convite=<token>).
 // ?estado=sessao-expirada = veio de um 401 da API.
@@ -14,18 +15,31 @@ export function LoginPage() {
     const { me, noAccess, signIn, signInWithGoogle, signOut } = useAuth()
     const location = useLocation()
     const [params] = useSearchParams()
+    const { transitionTo } = usePageTransition()
     const invite = params.get('convite')
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [submitting, setSubmitting] = useState(false)
+    const [googleSignInStarted, setGoogleSignInStarted] = useState(false)
+    const transitionStarted = useRef(false)
     const [error, setError] = useState(
         params.get('estado') === 'sessao-expirada' ? 'Sua sessão expirou. Entre de novo para continuar.' : '',
     )
 
+    const from = (location.state as { from?: string } | null)?.from
+    const destination = me ? (from ?? `/${me.org.slug}/dashboards`) : null
+    const isGoogleSignIn = params.has('code') || googleSignInStarted
+
+    useEffect(() => {
+        if (!destination || !isGoogleSignIn || transitionStarted.current) return
+        transitionStarted.current = true
+        transitionTo(destination)
+    }, [destination, isGoogleSignIn, transitionTo])
+
     // Logado (já estava, ou acabou de entrar): volta para onde queria ir, ou para o hub.
     if (me) {
-        const from = (location.state as { from?: string } | null)?.from
+        if (isGoogleSignIn) return null
         return <Navigate to={from ?? `/${me.org.slug}/dashboards`} replace />
     }
 
@@ -53,11 +67,13 @@ export function LoginPage() {
     // Na API, a página sai para o Google; o botão fica em "Abrindo o Google…" até lá.
     async function handleGoogle() {
         setError('')
+        setGoogleSignInStarted(true)
         setSubmitting(true)
         try {
             await signInWithGoogle()
         } catch (err) {
             setError(err instanceof DataError ? err.message : 'Não foi possível abrir o login do Google.')
+            setGoogleSignInStarted(false)
             setSubmitting(false)
         }
     }

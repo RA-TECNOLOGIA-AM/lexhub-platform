@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 import type { DashboardSummary } from '../../types/index.ts'
 import { Freshness } from './Freshness.tsx'
 import { Icon } from '../ui/Icon.tsx'
@@ -17,9 +17,9 @@ export function DashboardCard({ org, unit, dashboard, favorite, onToggleFavorite
     return (
         <article className="card dcard" style={{ viewTransitionName: `card-${dashboard.key}` }}>
             <span className="dcard-head">
-                <Link className="title dcard-link" to={`/${org}/${unit}/dashboards/${dashboard.key}`}>
+                <PageTransitionLink className="title dcard-link" to={`/${org}/${unit}/dashboards/${dashboard.key}`}>
                     {dashboard.title}
-                </Link>
+                </PageTransitionLink>
                 <button
                     type="button"
                     className="fav-btn"

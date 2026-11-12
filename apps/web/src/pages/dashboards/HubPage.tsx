@@ -1,4 +1,4 @@
-import { Link, useParams, useSearchParams } from 'react-router'
+import { useParams, useSearchParams } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { DashboardCard } from '../../components/dashboard/DashboardCard.tsx'
 import { HubDnd, type HubDrop } from '../../components/dashboard/HubDnd.tsx'
@@ -16,6 +16,7 @@ import { useHubOrder } from '../../hooks/useHubOrder.ts'
 import { sortAreas, sortByOrder } from '../../lib/hubOrder.ts'
 import { searchDashboards, SEARCH_PARAM } from '../../lib/dashboardSearch.ts'
 import { unitName } from '../../lib/units.ts'
+import { PageTransitionLink } from '../../components/page_transition/PageTransitionLink.tsx'
 
 const FAVORITES = 'Favoritos'
 
@@ -119,12 +120,12 @@ export function HubPage() {
                             icon="search"
                             title={`Nenhum dashboard encontrado para “${query.trim()}”`}
                             action={
-                                <Link
+                                <PageTransitionLink
                                     className="btn"
                                     to={unit ? `/${org}/dashboards?unidade=${unit}` : `/${org}/dashboards`}
                                 >
                                     Limpar busca
-                                </Link>
+                                </PageTransitionLink>
                             }
                         >
                             Confira a grafia ou busque pelo nome da área (ex.: Gestão).

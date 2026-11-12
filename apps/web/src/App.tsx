@@ -16,6 +16,7 @@ import { AccessPage } from './pages/admin/access/AccessPage.tsx'
 import { AuditPage } from './pages/admin/audit/AuditPage.tsx'
 import { ClientsPage } from './pages/platform/clients/ClientsPage.tsx'
 import { SourcesPage } from './pages/admin/sources/SourcesPage.tsx'
+import { PageTransitionProvider } from './components/page_transition/PageTransitionProvider.tsx'
 
 // Páginas do menu que já têm conteúdo; as outras abrem a página-base (ComingSoonPage).
 const PAGES: Record<string, ReactNode> = {
@@ -43,30 +44,32 @@ function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <Routes>
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route element={<RequireAuth />}>
-                        <Route element={<AppLayout />}>
-                            {/* Tudo de uma organização: o OrgScope garante que a ativa é a da URL. */}
-                            <Route path="/:org" element={<OrgScope />}>
-                                <Route index element={<Navigate to="dashboards" replace />} />
-                                <Route path="dashboards" element={<HubPage />} />
-                                <Route path=":unit/dashboards/:dashboardKey" element={<DashboardPage />} />
-                                {MENU_ITEMS.filter((item) => item.route.startsWith(ORG_PREFIX)).map((item) => (
-                                    <Route
-                                        key={item.key}
-                                        path={item.route.slice(ORG_PREFIX.length)}
-                                        element={pageOf(item)}
-                                    />
+                <PageTransitionProvider>
+                    <Routes>
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route element={<RequireAuth />}>
+                            <Route element={<AppLayout />}>
+                                {/* Tudo de uma organização: o OrgScope garante que a ativa é a da URL. */}
+                                <Route path="/:org" element={<OrgScope />}>
+                                    <Route index element={<Navigate to="dashboards" replace />} />
+                                    <Route path="dashboards" element={<HubPage />} />
+                                    <Route path=":unit/dashboards/:dashboardKey" element={<DashboardPage />} />
+                                    {MENU_ITEMS.filter((item) => item.route.startsWith(ORG_PREFIX)).map((item) => (
+                                        <Route
+                                            key={item.key}
+                                            path={item.route.slice(ORG_PREFIX.length)}
+                                            element={pageOf(item)}
+                                        />
+                                    ))}
+                                </Route>
+                                {MENU_ITEMS.filter((item) => !item.route.startsWith(ORG_PREFIX)).map((item) => (
+                                    <Route key={item.key} path={item.route} element={pageOf(item)} />
                                 ))}
                             </Route>
-                            {MENU_ITEMS.filter((item) => !item.route.startsWith(ORG_PREFIX)).map((item) => (
-                                <Route key={item.key} path={item.route} element={pageOf(item)} />
-                            ))}
+                            <Route path="*" element={<GoToHub />} />
                         </Route>
-                        <Route path="*" element={<GoToHub />} />
-                    </Route>
-                </Routes>
+                    </Routes>
+                </PageTransitionProvider>
             </AuthProvider>
         </BrowserRouter>
     )
