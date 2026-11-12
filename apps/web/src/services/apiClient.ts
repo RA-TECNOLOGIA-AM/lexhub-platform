@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DataClient } from './client.ts'
 import { createAccessRequestsClient } from './accessRequests.ts'
+import { createMembersClient } from './membersClient.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
 import type {
@@ -9,7 +10,6 @@ import type {
     DashboardQuery,
     Me,
     Meta,
-    MembersResponse,
     PendenciasResponse,
     ProtocoloResponse,
     AccessResponse,
@@ -41,6 +41,8 @@ export function createApiClient({
     return {
         // Pedidos de acesso: direto no Supabase (schema api), não pela API em Python.
         ...createAccessRequestsClient(auth),
+        // Membros: também direto no Supabase (schema api).
+        ...createMembersClient(auth),
 
         async signIn(email, password) {
             const { error } = await auth.auth.signInWithPassword({ email: email.trim(), password })
@@ -72,10 +74,6 @@ export function createApiClient({
 
         getMe: (org) => http.get<Me>(org ? `/me?org=${encodeURIComponent(org)}` : '/me'),
         listDashboards: (org) => http.get<DashboardCatalog>(`/orgs/${org}/dashboards`),
-        listMembers: (org) => http.get<MembersResponse>(`/orgs/${org}/members`),
-        async inviteMembers(org, invite) {
-            await http.post(`/orgs/${org}/invitations`, invite)
-        },
         listFavorites: (org) => http.get<string[]>(`/orgs/${org}/favorites`),
         async setFavorite(org, dashboardKey, favorite) {
             const path = `/orgs/${org}/favorites/${dashboardKey}`

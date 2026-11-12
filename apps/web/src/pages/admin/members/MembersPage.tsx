@@ -1,51 +1,82 @@
 import { useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
-import { useAuth } from '../../../contexts/auth-context.ts'
 import { DataTable } from '../../../components/ui/DataTable.tsx'
 import { Icon } from '../../../components/ui/Icon.tsx'
 import { PageHeader } from '../../../components/layout/PageHeader.tsx'
 import { ErrorState } from '../../../components/states/ErrorState.tsx'
 import { LoadingState } from '../../../components/states/LoadingState.tsx'
+import { StateMessage } from '../../../components/states/StateMessage.tsx'
 import { dataClient } from '../../../services/client.ts'
 import type { InviteRequest } from '../../../types/index.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
 import { InvitePanel } from './InvitePanel.tsx'
-import { MEMBER_COLUMNS } from './memberColumns.tsx'
+import { memberColumns } from './memberColumns.tsx'
 import { MemberFilters } from './MemberFilters.tsx'
-import { filterFromParams, filterMembers, paramsFromFilter, type MemberFilter } from './memberView.ts'
+import { MemberPanel } from './MemberPanel.tsx'
+import { membersErrorView } from './membersError.ts'
+import {
+    activeCount,
+    filterFromParams,
+    filterRows,
+    paramsFromFilter,
+    rowKey,
+    rowsOf,
+    type MemberFilter,
+    type MemberRow,
+} from './memberView.ts'
 
-// A página só junta as peças: busca os membros, aplica o filtro da URL e abre o painel de convite.
+// Painel aberto ao lado da lista: o convite ou uma pessoa (pela chave da linha).
+type Aside = { kind: 'invite' } | { kind: 'row'; key: string } | null
+
+// A página só junta as peças: busca a lista, aplica o filtro da URL e abre os painéis.
 export function MembersPage() {
     const { org = '' } = useParams()
-    const { me } = useAuth()
-    // version: mudar faz o useAsync buscar a lista de novo (depois de um convite).
+    const sessionEmail = useAsync(() => dataClient.getSessionEmail(), []).data ?? null
+    // version: mudar faz o useAsync buscar a lista de novo (depois de convidar, desativar...).
     const [version, setVersion] = useState(0)
-    const [inviteOpen, setInviteOpen] = useState(false)
+    const [aside, setAside] = useState<Aside>(null)
+    const [now] = useState(() => new Date()) // para "vence em N dias"
     const { data, error } = useAsync(() => dataClient.listMembers(org), [org, version])
 
     const [params, setParams] = useSearchParams()
     const filter = filterFromParams(params)
     // replace: digitar na busca não enche o histórico do "voltar" com uma entrada por letra.
     const setFilter = (next: MemberFilter) => setParams(paramsFromFilter(next), { replace: true })
+    const reload = () => setVersion((v) => v + 1)
 
-    async function sendInvite(invite: InviteRequest) {
-        await dataClient.inviteMembers(org, invite) // se der erro, o painel mostra a mensagem
-        setInviteOpen(false)
-        setVersion((v) => v + 1) // busca a lista de novo, já com os convidados
+    if (error) {
+        if (!membersErrorView(error).forbidden) return <ErrorState error={error} />
+        return (
+            <>
+                <PageHeader title="Membros" description="Quem faz parte da organização." />
+                <StateMessage icon="users" title="Você não gere membros nesta organização.">
+                    Quem convida e desativa pessoas é o Owner, o Desenvolvedor ou o Gestor/Controller da unidade.
+                </StateMessage>
+            </>
+        )
     }
-
-    if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
 
-    const units = me?.units ?? []
-    const { used, total } = data.seats
+    const rows = rowsOf(data)
+    const open = aside?.kind === 'row' ? rows.find((r) => rowKey(r) === aside.key) : undefined
+    const columns = memberColumns(filter.unit || null, now, (row: MemberRow) =>
+        setAside({ kind: 'row', key: rowKey(row) }),
+    )
+
+    async function sendInvite(invite: InviteRequest) {
+        const result = await dataClient.inviteMembers(org, invite) // se der erro, o painel mostra a mensagem
+        if (result.invited.length) reload() // busca a lista de novo, já com os convites
+        return result
+    }
+
+    const count = activeCount(data)
     return (
         <>
             <PageHeader
                 title="Membros"
-                description={`${used} de ${total} assentos do plano em uso. Ninguém digita senha por outra pessoa: todos entram por convite ou pedido aprovado.`}
+                description={`${count} ${count === 1 ? 'membro ativo' : 'membros ativos'}. Ninguém digita senha por outra pessoa: todos entram por convite ou pedido aprovado.`}
                 actions={
-                    <button className="btn btn-primary" type="button" onClick={() => setInviteOpen(true)}>
+                    <button className="btn btn-primary" type="button" onClick={() => setAside({ kind: 'invite' })}>
                         <Icon name="plus" size={16} />
                         Convidar pessoas
                     </button>
@@ -53,20 +84,41 @@ export function MembersPage() {
             />
             <div className="with-aside">
                 <div className="stack with-aside-main">
-                    <MemberFilters value={filter} units={units} onChange={setFilter} />
+                    <MemberFilters value={filter} units={data.units} onChange={setFilter} />
                     <DataTable
-                        columns={MEMBER_COLUMNS}
-                        rows={filterMembers(data.members, filter)}
-                        rowKey={(m) => m.id}
-                        empty="Nenhum membro com esses filtros."
+                        columns={columns}
+                        rows={filterRows(rows, filter)}
+                        rowKey={rowKey}
+                        empty="Ninguém com esses filtros."
                     />
                 </div>
-                {inviteOpen && (
+                {aside?.kind === 'invite' && (
                     <InvitePanel
-                        units={units}
+                        units={data.units}
                         teams={data.teams}
+                        canInviteAdmin={data.can_invite_admin}
                         onSend={sendInvite}
-                        onClose={() => setInviteOpen(false)}
+                        onClose={() => setAside(null)}
+                    />
+                )}
+                {open && (
+                    <MemberPanel
+                        key={rowKey(open)}
+                        row={open}
+                        isSelf={open.kind === 'member' && open.member.email === sessionEmail}
+                        accessHref={`/${org}/admin/acesso`}
+                        onSetStatus={async (status) => {
+                            if (open.kind !== 'member') return
+                            await dataClient.setMemberStatus(org, open.member.id, status)
+                            reload()
+                        }}
+                        onRevoke={async () => {
+                            if (open.kind !== 'invitation') return
+                            await dataClient.revokeInvitation(open.invitation.id)
+                            setAside(null)
+                            reload()
+                        }}
+                        onClose={() => setAside(null)}
                     />
                 )}
             </div>

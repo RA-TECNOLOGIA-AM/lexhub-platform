@@ -10,9 +10,13 @@ export type SessionState =
     { status: 'signed-in'; me: Me } | { status: 'no-access'; email: string | null } | { status: 'signed-out' }
 
 // Módulo: descobre em que estado está a sessão, sem React (testado em session.test.ts).
-// Parâmetros: o cliente de dados (só getMe e getSessionEmail). Usa a organização padrão:
-// aqui, um 403 só pode querer dizer "nenhuma organização".
-export async function loadSession(client: Pick<DataClient, 'getMe' | 'getSessionEmail'>): Promise<SessionState> {
+// Parâmetros: o cliente de dados (getMe, getSessionEmail e acceptMyInvitations). Usa a organização
+// padrão: aqui, um 403 só pode querer dizer "nenhuma organização".
+// Antes do /me, aceita os convites pendentes (quem foi convidado entra direto); se falhar, o login segue.
+export async function loadSession(
+    client: Pick<DataClient, 'getMe' | 'getSessionEmail' | 'acceptMyInvitations'>,
+): Promise<SessionState> {
+    await client.acceptMyInvitations().catch(() => 0)
     try {
         return { status: 'signed-in', me: await client.getMe() }
     } catch (err) {

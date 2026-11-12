@@ -1,110 +1,179 @@
 import { DataError } from '../errors.ts'
-import type { InviteRequest, MembersResponse } from '../../types/index.ts'
+import type { InviteRequest, InviteResult, Invitation, Member, MembersResponse } from '../../types/index.ts'
 
-// Os mesmos membros do protótipo.
+const DAY = 24 * 60 * 60 * 1000
+const daysFromNow = (days: number) => new Date(Date.now() + days * DAY).toISOString()
+
+// Os membros do protótipo, no formato de api.list_members (cargo por unidade).
+// O mock é Owner/Desenvolvedor: gere todas as unidades e pode convidar Desenvolvedor.
 export const members: MembersResponse = {
-    seats: { used: 42, total: 60 },
-    teams: [
-        { name: 'Protocolo', dashboards: 4 },
-        { name: 'Comercial', dashboards: 4 },
-        { name: 'Execução', dashboards: 3 },
-        { name: 'Diretoria', dashboards: 16 },
+    units: [
+        { code: 'LA_AM', name: 'Luis Albert AM' },
+        { code: 'LA_RJ', name: 'Luis Albert RJ' },
+        { code: 'NG', name: 'Nicolas Gomes' },
     ],
+    teams: [
+        { id: 't-comercial', name: 'Comercial', unit: 'LA_AM' },
+        { id: 't-protocolo', name: 'Protocolo', unit: 'LA_RJ' },
+        { id: 't-diretoria', name: 'Diretoria', unit: 'NG' },
+        { id: 't-pendencias', name: 'Pendências', unit: 'NG' },
+    ],
+    can_invite_admin: true,
     members: [
         {
             id: 'm1',
             name: 'Ana Ribeiro',
             email: 'ana@lexgroup.com.br',
-            role: 'admin',
-            units: ['*'],
-            team: 'Diretoria',
+            org_role: 'admin',
+            units: [],
+            teams: ['Diretoria'],
             status: 'active',
-            note: null,
-            security: 'MFA ativo',
+            last_seen_at: daysFromNow(0),
+            security: 'Google',
         },
         {
             id: 'm2',
             name: 'Bruno Melo',
             email: 'bruno@lexgroup.com.br',
-            role: 'gestor',
-            units: ['NG', 'LA_AM'],
-            team: 'Comercial',
+            org_role: 'member',
+            units: [
+                { code: 'LA_AM', role: 'controller' },
+                { code: 'NG', role: 'gestor' },
+            ],
+            teams: ['Comercial'],
             status: 'active',
-            note: null,
-            security: 'MFA ativo',
+            last_seen_at: daysFromNow(-1),
+            security: 'Google',
         },
         {
             id: 'm3',
             name: 'Carla Souza',
             email: 'carla@lexgroup.com.br',
-            role: 'colaborador',
-            units: ['LA_RJ'],
-            team: 'Protocolo',
+            org_role: 'member',
+            units: [{ code: 'LA_RJ', role: 'colaborador' }],
+            teams: ['Protocolo'],
             status: 'active',
-            note: null,
-            security: 'Senha + Google',
-        },
-        {
-            id: 'm4',
-            name: 'Fernanda Lopes',
-            email: 'fernanda@lexgroup.com.br',
-            role: 'leitor',
-            units: ['NG'],
-            team: 'Diretoria',
-            status: 'active',
-            note: null,
+            last_seen_at: daysFromNow(-2),
             security: 'Google',
         },
         {
-            id: 'm5',
-            name: null,
+            id: 'm4',
+            name: 'Diego Pires',
             email: 'diego@lexgroup.com.br',
-            role: 'colaborador',
-            units: ['NG'],
-            team: 'Pendências',
-            status: 'invited',
-            note: 'Convidado por Ana Ribeiro há 2 dias',
+            org_role: 'member',
+            units: [{ code: 'NG', role: 'colaborador' }],
+            teams: ['Pendências'],
+            status: 'active',
+            last_seen_at: null,
             security: null,
         },
         {
-            id: 'm6',
-            name: 'Eduardo Lima',
-            email: 'eduardo@lexgroup.com.br',
-            role: null,
-            units: [],
-            team: null,
-            status: 'requested',
-            note: 'Pediu acesso com Google · domínio verificado',
-            security: null,
+            id: 'm5',
+            name: 'Fernanda Lopes',
+            email: 'fernanda@lexgroup.com.br',
+            org_role: 'member',
+            units: [{ code: 'NG', role: 'leitor' }],
+            teams: ['Diretoria'],
+            status: 'disabled',
+            last_seen_at: daysFromNow(-40),
+            security: 'Google',
+        },
+    ],
+    invitations: [
+        {
+            id: 'i1',
+            email: 'gabriel@lexgroup.com.br',
+            role: 'colaborador',
+            units: ['NG'],
+            teams: ['Pendências'],
+            invited_by: 'Ana Ribeiro',
+            created_at: daysFromNow(-2),
+            expires_at: daysFromNow(5),
         },
     ],
 }
 
 // Módulo: os membros do mock como um "banco" em memória (volta ao original no F5).
-// Parâmetro: o nome de quem convida. Esconde: a lista que muda e a regra de e-mail repetido.
-export function createMembersStore(inviterName: string) {
+// Parâmetro: quem convida (nome e e-mail). Mesmas regras e mensagens das funções do schema api.
+export function createMembersStore(inviter: { name: string; email: string }) {
     const state = structuredClone(members)
+    const byEmail = (email: string) => state.members.find((m) => m.email === email)
+
     return {
         list: (): MembersResponse => structuredClone(state),
 
-        invite(invite: InviteRequest): void {
-            const known = new Set(state.members.map((m) => m.email))
-            const repeated = invite.emails.filter((e) => known.has(e))
-            if (repeated.length) throw new DataError(409, `Já faz parte da organização: ${repeated.join(', ')}`)
-            for (const email of invite.emails) {
-                state.members.push({
-                    id: crypto.randomUUID(),
-                    name: null,
-                    email,
-                    role: invite.role,
-                    units: invite.units,
-                    team: invite.team,
-                    status: 'invited',
-                    note: `Convidado por ${inviterName} agora`,
-                    security: null,
-                })
+        invite(req: InviteRequest): InviteResult {
+            const result: InviteResult = { invited: [], skipped: [] }
+            for (const email of [...new Set(req.emails.map((e) => e.trim().toLowerCase()))]) {
+                const member = byEmail(email)
+                if (member?.status === 'active') result.skipped.push({ email, reason: 'Já faz parte da organização' })
+                else if (member?.status === 'disabled') {
+                    result.skipped.push({ email, reason: 'Desativado: reative na lista' })
+                } else if (state.invitations.some((i) => i.email === email)) {
+                    result.skipped.push({ email, reason: 'Já tem convite pendente' })
+                } else {
+                    const teamNames = state.teams.filter((t) => req.teams.includes(t.id)).map((t) => t.name)
+                    state.invitations.unshift({
+                        id: crypto.randomUUID(),
+                        email,
+                        role: req.role,
+                        units: req.role === 'admin' ? [] : req.units,
+                        teams: teamNames,
+                        invited_by: inviter.name,
+                        created_at: daysFromNow(0),
+                        expires_at: daysFromNow(7),
+                    })
+                    result.invited.push(email)
+                }
             }
-            state.seats.used += invite.emails.length
+            return result
         },
+
+        setStatus(id: string, status: 'active' | 'disabled', selfEmail: string): Member {
+            const member = state.members.find((m) => m.id === id)
+            if (!member) throw new DataError(403, 'Você não gere este membro.')
+            if (member.email === selfEmail) throw new DataError(409, 'Você não pode desativar a si mesmo.')
+            member.status = status
+            return structuredClone(member)
+        },
+
+        revoke(id: string): void {
+            const index = state.invitations.findIndex((i) => i.id === id)
+            if (index < 0) throw new DataError(409, 'Convite não está mais pendente.')
+            state.invitations.splice(index, 1)
+        },
+
+        // Como api.accept_my_invitations: o convite do e-mail vira membro ativo.
+        accept(email: string): number {
+            const normalized = email.trim().toLowerCase()
+            const mine = state.invitations.filter((i) => i.email === normalized)
+            for (const inv of mine) acceptOne(inv)
+            state.invitations = state.invitations.filter((i) => i.email !== normalized)
+            return mine.length
+        },
+    }
+
+    function acceptOne(inv: Invitation) {
+        const existing = byEmail(inv.email)
+        if (existing?.status === 'disabled') return
+        const unitRoles =
+            inv.role === 'admin'
+                ? []
+                : inv.units.map((code) => ({ code, role: inv.role as Exclude<Invitation['role'], 'admin'> }))
+        if (existing) {
+            existing.status = 'active'
+            return
+        }
+        state.members.push({
+            id: crypto.randomUUID(),
+            name: inv.email,
+            email: inv.email,
+            org_role: inv.role === 'admin' ? 'admin' : 'member',
+            units: unitRoles,
+            teams: inv.teams,
+            status: 'active',
+            last_seen_at: daysFromNow(0),
+            security: 'Google',
+        })
     }
 }

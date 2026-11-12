@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createAccessRequestsClient, toAccessError } from './accessRequests.ts'
+import { createAccessRequestsClient } from './accessRequests.ts'
+import { toRpcError } from './rpcError.ts'
 import { DataError } from './errors.ts'
 
 // Supabase falso: guarda o schema, a função e os parâmetros de cada rpc e devolve `result`.
@@ -50,11 +51,11 @@ describe('createAccessRequestsClient', () => {
     })
 })
 
-describe('toAccessError', () => {
+describe('toRpcError', () => {
     it('sem permissão = 403, regra = 409, schema não exposto = mensagem de configuração', () => {
-        expect(toAccessError({ code: '42501', message: 'Só a equipe RA' }).status).toBe(403)
-        expect(toAccessError({ code: 'P0001', message: 'x' }).status).toBe(409)
-        expect(toAccessError({ code: 'PGRST106' }).message).toContain('Exposed schemas')
-        expect(toAccessError({}).status).toBe(0)
+        expect(toRpcError({ code: '42501', message: 'Só a equipe RA' }).status).toBe(403)
+        expect(toRpcError({ code: 'P0001', message: 'x' }).status).toBe(409)
+        expect(toRpcError({ code: 'PGRST106' }).message).toContain('Exposed schemas')
+        expect(toRpcError({}).status).toBe(0)
     })
 })

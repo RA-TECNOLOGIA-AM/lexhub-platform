@@ -17,6 +17,15 @@ create table auth.users (
   raw_app_meta_data  jsonb default '{}'::jsonb
 );
 
+-- Identidades de login (Google etc.): o banco confere e-mail verificado por aqui, não pelo user_metadata.
+create table auth.identities (
+  id            uuid primary key default gen_random_uuid(),
+  provider_id   text not null,
+  user_id       uuid not null references auth.users (id) on delete cascade,
+  identity_data jsonb not null,
+  provider      text not null
+);
+
 create function auth.uid() returns uuid
 language sql stable
 as $$

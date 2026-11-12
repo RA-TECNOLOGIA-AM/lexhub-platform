@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { access } from '../../../services/mock/access.ts'
 import { members } from '../../../services/mock/members.ts'
 import type { Unit } from '../../../types/index.ts'
+import { accessMemberOf } from './accessMember.ts'
 import { simulateAccess } from './accessView.ts'
 
 const units: Unit[] = [
@@ -12,7 +13,7 @@ const units: Unit[] = [
 // Simula pelo primeiro nome do mock de Membros ('carla', 'bruno'...).
 const sim = (email: string) => {
     const member = members.members.find((m) => m.email.startsWith(email))!
-    return simulateAccess(member, access.rules, access.matrix, units)
+    return simulateAccess(accessMemberOf(member), access.rules, access.matrix, units)
 }
 
 describe('simulateAccess', () => {
@@ -34,13 +35,6 @@ describe('simulateAccess', () => {
             'Vê todos os dashboards em todas as unidades, com os dados de toda a equipe, e pode exportar.',
         )
         expect(ana.dashboards).toEqual(['Todos os dashboards das suas unidades'])
-    })
-    it('sem papel não vê nada', () => {
-        expect(sim('eduardo')).toEqual({
-            profile: 'Sem papel, equipe ou unidade',
-            summary: 'Não vê nenhum dashboard até um admin aprovar o pedido e definir equipe e unidade.',
-            dashboards: [],
-        })
     })
     it('equipe sem regra não vê nada', () => {
         expect(sim('diego').summary).toBe('Não vê nenhum dashboard: a equipe Pendências ainda não tem regra.')
