@@ -4,6 +4,8 @@ import { Freshness } from './Freshness.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { unitName } from '../../lib/units.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
+import { DOC_ENTRIES, docFor } from '../../pages/documentacao/docRegistry.ts'
+import { DOC_PAGES } from '../../pages/documentacao/docPages.ts'
 
 type DashboardHeaderProps = {
     org: string
@@ -15,6 +17,8 @@ type DashboardHeaderProps = {
 // A troca de unidade fica no seletor da barra lateral; Período, Filtros e Exportar ficam na topbar e na faixa.
 export function DashboardHeader({ org, dashboard, meta }: DashboardHeaderProps) {
     const { me } = useAuth()
+    const entry = docFor(DOC_ENTRIES, dashboard.key, meta.unit)
+    const doc = entry && DOC_PAGES[entry.slug] ? entry : null
     return (
         <section className="stack">
             <PageTransitionLink to={`/${org}/dashboards`} className="back-link">
@@ -25,7 +29,15 @@ export function DashboardHeader({ org, dashboard, meta }: DashboardHeaderProps) 
                 <h1 className="h1">
                     {dashboard.title} · {unitName(meta.unit, me?.units ?? [])}
                 </h1>
-                <Freshness syncedAt={meta.synced_at} source={meta.source} maxDelayMin={dashboard.max_delay_min} />
+                <span className="row" style={{ gap: 16 }}>
+                    <Freshness syncedAt={meta.synced_at} source={meta.source} maxDelayMin={dashboard.max_delay_min} />
+                    {/* Atalho para o guia deste dashboard (só quando já existe na V2). */}
+                    {doc && (
+                        <PageTransitionLink className="doc-link small" to={`/${org}/documentacao/${doc.slug}`}>
+                            Como ler este dashboard
+                        </PageTransitionLink>
+                    )}
+                </span>
             </div>
         </section>
     )

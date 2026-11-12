@@ -16,6 +16,8 @@ import { AccessPage } from './pages/admin/access/AccessPage.tsx'
 import { AuditPage } from './pages/admin/audit/AuditPage.tsx'
 import { ClientsPage } from './pages/platform/clients/ClientsPage.tsx'
 import { AccessRequestsPage } from './pages/platform/requests/AccessRequestsPage.tsx'
+import { DocumentacaoPage } from './pages/documentacao/DocumentacaoPage.tsx'
+import { DocumentoPage } from './pages/documentacao/DocumentoPage.tsx'
 import { SourcesPage } from './pages/admin/sources/SourcesPage.tsx'
 import { PageTransitionProvider } from './components/page_transition/PageTransitionProvider.tsx'
 
@@ -27,6 +29,7 @@ const PAGES: Record<string, ReactNode> = {
     auditoria: <AuditPage />,
     clientes: <ClientsPage />,
     pedidos: <AccessRequestsPage />,
+    documentacao: <DocumentacaoPage />,
     unidades: <SourcesPage />,
 }
 
@@ -56,6 +59,7 @@ function App() {
                                     <Route index element={<Navigate to="dashboards" replace />} />
                                     <Route path="dashboards" element={<HubPage />} />
                                     <Route path=":unit/dashboards/:dashboardKey" element={<DashboardPage />} />
+                                    <Route path="documentacao/:slug" element={<DocumentoPage />} />
                                     {MENU_ITEMS.filter((item) => item.route.startsWith(ORG_PREFIX)).map((item) => (
                                         <Route
                                             key={item.key}

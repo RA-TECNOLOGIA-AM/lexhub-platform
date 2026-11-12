@@ -29,6 +29,14 @@ export const NAV_SECTIONS: NavSection[] = [
                 // Hub e cada dashboard (/:org/:unit/dashboards/:key) contam como "Dashboards".
                 active: (pathname) => pathname.includes('/dashboards'),
             },
+            {
+                key: 'documentacao',
+                label: 'Documentação',
+                title: 'Documentação',
+                description: 'Guias de cada dashboard: o que cada número mede e como é calculado.',
+                icon: 'book',
+                route: '/:org/documentacao',
+            },
         ],
     },
     {

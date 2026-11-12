@@ -735,10 +735,20 @@ button.org:hover {
 .grid-kpi {
     grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
-/* Cards do hub: colunas fixas (auto-fill), para um card sozinho não esticar a linha inteira; um pouco mais
-   largos (mínimo de 360px) para preencher melhor as telas grandes. */
+/* Cards do hub e do índice da Documentação: como na v1, 1 coluna no celular, 2 a partir de 640px e 3 a partir
+   de 1280px. As colunas dividem a largura toda (a tela fica preenchida) e um card sozinho ocupa só a sua coluna. */
 .grid-cards {
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    grid-template-columns: 1fr;
+}
+@media (min-width: 640px) {
+    .grid-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (min-width: 1280px) {
+    .grid-cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
 /* Espaço da topbar que a página ocupa (Período do dashboard). Vazio = não ocupa lugar. */
@@ -816,4 +826,301 @@ div.org {
     .dash-bar-actions {
         margin-left: 0;
     }
+}
+
+/* ---------- Documentação (guias dos dashboards, trazidos da v1) ---------- */
+/* O guia numa coluna centralizada, como na v1 (max-w-5xl mx-auto). Em "em" para acompanhar a escala da
+   tipografia em telas grandes (14px x 73 = ~1024px; maior a partir de 1920px). */
+.doc {
+    width: 100%;
+    max-width: 73em;
+    margin-inline: auto;
+}
+.doc-kicker,
+.doc-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin: 0;
+}
+.doc-intro {
+    max-width: 48em;
+    color: var(--text-2);
+    line-height: 1.6;
+}
+.doc-tag {
+    display: inline-block;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: var(--r-sm);
+    background: var(--accent);
+    color: #fff;
+}
+.doc-toc {
+    padding: 14px 16px;
+}
+.doc-toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 2px;
+    margin-top: 8px;
+}
+.doc-toc-grid a {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: var(--r-md);
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+    text-decoration: none;
+}
+.doc-toc-grid a::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+}
+.doc-toc-grid a:hover {
+    background: var(--surface-3);
+    color: var(--text);
+}
+.doc-section {
+    gap: 16px;
+    scroll-margin-top: 80px;
+}
+.doc-section-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+}
+.doc-section-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--r-md);
+    background: var(--side-bg);
+    color: #fff;
+    flex: none;
+}
+.doc-h2 {
+    font-size: var(--fs-xl);
+    font-weight: 600;
+    margin: 0;
+}
+.doc-h3 {
+    font-size: var(--fs-md);
+    font-weight: 600;
+    margin: 0;
+    color: var(--text);
+}
+/* Cartões dos guias: mesmas colunas da v1 (1 / 2 / 3), dividindo a largura toda. */
+.doc-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--gap);
+}
+.doc-metric {
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.doc-metric-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.doc-metric-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--r-md);
+    background: var(--accent-soft);
+    color: var(--accent);
+    flex: none;
+}
+.doc-dl {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0;
+    font-size: var(--fs-sm);
+}
+.doc-dl dd {
+    margin: 2px 0 0;
+    color: var(--text-2);
+    line-height: 1.55;
+}
+.doc-caveat,
+.doc-info,
+.doc-watch {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    border-radius: var(--r-lg);
+    font-size: var(--fs-sm);
+    line-height: 1.6;
+}
+.doc-caveat {
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+}
+.doc-caveat p {
+    margin: 0;
+}
+.doc-info {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+}
+.doc-info > svg {
+    color: var(--accent);
+    flex: none;
+    margin-top: 3px;
+}
+.doc-watch {
+    background: var(--warn-bg);
+    border: 1px solid #f2d8a7;
+    color: var(--warn);
+}
+.doc-watch > svg {
+    flex: none;
+    margin-top: 3px;
+}
+.doc-diff {
+    padding: 12px 14px;
+    border-left: 3px solid var(--accent);
+    background: var(--surface);
+    border-radius: 0 var(--r-md) var(--r-md) 0;
+    font-size: var(--fs-sm);
+    line-height: 1.6;
+    color: var(--text-2);
+}
+.doc-card {
+    padding: 18px;
+    gap: 10px;
+    font-size: var(--fs-sm);
+    line-height: 1.6;
+    color: var(--text-2);
+}
+.doc-card p,
+.doc-info p,
+.doc-watch p,
+.doc-diff p {
+    margin: 0;
+}
+.doc-card ul,
+.doc-card ol {
+    margin: 0;
+    padding-left: 20px;
+}
+.doc strong {
+    color: var(--text);
+}
+.doc-code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--surface-3);
+    color: var(--text);
+}
+.doc-link {
+    color: var(--link);
+    text-decoration: underline;
+}
+.doc .tbl {
+    font-size: var(--fs-sm);
+}
+.doc-index-card .dcard-head {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+}
+.doc-formula {
+    padding: 12px 16px;
+    border-radius: var(--r-md);
+    background: var(--accent-soft);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: var(--fs-sm);
+    text-align: center;
+}
+@media (min-width: 640px) {
+    .doc-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (min-width: 1280px) {
+    .doc-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* Tipografia como na v1: base maior em telas grandes (v1: html 16px -> 18px a partir de 1920px e 20px a partir
+   de 2560px, e todo o texto em rem acompanha). Aqui os tamanhos são tokens (tokens.css), então a escala vem
+   pelos tokens: x1,125 a partir de 1920px e x1,25 a partir de 2560px. */
+@media (min-width: 1920px) {
+    :root {
+        --fs-xs: 13.5px;
+        --fs-sm: 14.625px;
+        --fs-md: 15.75px;
+        --fs-lg: 16.875px;
+        --fs-xl: 19.125px;
+        --fs-h1: 29.25px;
+        --fs-kpi: 31.5px;
+    }
+}
+@media (min-width: 2560px) {
+    :root {
+        --fs-xs: 15px;
+        --fs-sm: 16.25px;
+        --fs-md: 17.5px;
+        --fs-lg: 18.75px;
+        --fs-xl: 21.25px;
+        --fs-h1: 32.5px;
+        --fs-kpi: 35px;
+    }
+}
+
+/* Guias com os tamanhos da v1 (text-sm no corpo, text-lg nas seções, text-3xl no título), em tokens para
+   acompanhar a escala acima. */
+.doc .h1 {
+    font-size: calc(var(--fs-h1) * 1.15);
+}
+.doc-h2 {
+    font-size: var(--fs-xl);
+}
+.doc-h3 {
+    font-size: var(--fs-lg);
+}
+.doc-intro,
+.doc-dl,
+.doc-card,
+.doc-info,
+.doc-watch,
+.doc-diff,
+.doc-caveat,
+.doc-formula,
+.doc .tbl,
+.doc-toc-grid a {
+    font-size: var(--fs-md);
+}
+.doc-kicker,
+.doc-label {
+    font-size: var(--fs-xs);
 }
