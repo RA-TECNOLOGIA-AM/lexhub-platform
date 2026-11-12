@@ -1124,3 +1124,65 @@ div.org {
 .doc-label {
     font-size: var(--fs-xs);
 }
+
+/* Acesso: card "Pessoas" (lista compacta ao lado da matriz de papéis) e a janela da pessoa. */
+.people-card {
+    flex: 1 1 280px;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+}
+.people-list {
+    list-style: none;
+    margin: 0;
+    padding: 0 6px 8px;
+    max-height: 440px;
+    overflow-y: auto;
+}
+.people-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: var(--r-md);
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.people-row:hover,
+.people-row:focus-visible {
+    background: var(--surface-3);
+}
+.people-name {
+    font-weight: 500;
+}
+.people-empty {
+    padding: 8px 10px;
+}
+.access-dialog {
+    width: min(860px, calc(100vw - 32px));
+}
+.unit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+}
+.unit-card {
+    margin: 0;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.unit-teams {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}

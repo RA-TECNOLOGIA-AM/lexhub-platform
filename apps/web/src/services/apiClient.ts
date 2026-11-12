@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DataClient } from './client.ts'
 import { createAccessRequestsClient } from './accessRequests.ts'
+import { createAccessClient } from './accessClient.ts'
 import { createMembersClient } from './membersClient.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
@@ -12,7 +13,6 @@ import type {
     Meta,
     PendenciasResponse,
     ProtocoloResponse,
-    AccessResponse,
     AuditResponse,
     ClientsResponse,
     SourcesResponse,
@@ -43,6 +43,8 @@ export function createApiClient({
         ...createAccessRequestsClient(auth),
         // Membros: também direto no Supabase (schema api).
         ...createMembersClient(auth),
+        // Acesso: também direto no Supabase (schema api).
+        ...createAccessClient(auth),
 
         async signIn(email, password) {
             const { error } = await auth.auth.signInWithPassword({ email: email.trim(), password })
@@ -85,7 +87,6 @@ export function createApiClient({
             await http.put(`/orgs/${org}/hub-order`, keys)
         },
 
-        getAccess: (org) => http.get<AccessResponse>(`/orgs/${org}/access`),
         getAudit: (org) => http.get<AuditResponse>(`/orgs/${org}/audit`),
         getSources: (org) => http.get<SourcesResponse>(`/orgs/${org}/sources`),
         listClients: () => http.get<ClientsResponse>('/platform/clients'),

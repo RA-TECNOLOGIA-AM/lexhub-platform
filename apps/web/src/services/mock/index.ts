@@ -6,7 +6,7 @@ export { googleMockEmail, me, meFor, noAccessEmails, orgs, testUsers } from './u
 export { defaultFavorites } from './favorites.ts'
 export { createMembersStore, members } from './members.ts'
 export { billingFor, plans } from './billing.ts'
-export { access } from './access.ts'
+export { createAccessStore } from './access.ts'
 export { addAuditEvent, audit } from './audit.ts'
 export { clients } from './clients.ts'
 export {

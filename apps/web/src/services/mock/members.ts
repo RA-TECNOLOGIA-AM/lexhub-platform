@@ -1,5 +1,12 @@
 import { DataError } from '../errors.ts'
-import type { InviteRequest, InviteResult, Invitation, Member, MembersResponse } from '../../types/index.ts'
+import type {
+    InviteRequest,
+    InviteResult,
+    Invitation,
+    Member,
+    MemberAccessUpdate,
+    MembersResponse,
+} from '../../types/index.ts'
 
 const DAY = 24 * 60 * 60 * 1000
 const daysFromNow = (days: number) => new Date(Date.now() + days * DAY).toISOString()
@@ -27,6 +34,7 @@ export const members: MembersResponse = {
             org_role: 'admin',
             units: [],
             teams: ['Diretoria'],
+            team_ids: ['t-diretoria'],
             status: 'active',
             last_seen_at: daysFromNow(0),
             security: 'Google',
@@ -41,6 +49,7 @@ export const members: MembersResponse = {
                 { code: 'NG', role: 'gestor' },
             ],
             teams: ['Comercial'],
+            team_ids: ['t-comercial'],
             status: 'active',
             last_seen_at: daysFromNow(-1),
             security: 'Google',
@@ -52,6 +61,7 @@ export const members: MembersResponse = {
             org_role: 'member',
             units: [{ code: 'LA_RJ', role: 'colaborador' }],
             teams: ['Protocolo'],
+            team_ids: ['t-protocolo'],
             status: 'active',
             last_seen_at: daysFromNow(-2),
             security: 'Google',
@@ -63,6 +73,7 @@ export const members: MembersResponse = {
             org_role: 'member',
             units: [{ code: 'NG', role: 'colaborador' }],
             teams: ['Pendências'],
+            team_ids: ['t-pendencias'],
             status: 'active',
             last_seen_at: null,
             security: null,
@@ -74,6 +85,7 @@ export const members: MembersResponse = {
             org_role: 'member',
             units: [{ code: 'NG', role: 'leitor' }],
             teams: ['Diretoria'],
+            team_ids: ['t-diretoria'],
             status: 'disabled',
             last_seen_at: daysFromNow(-40),
             security: 'Google',
@@ -137,6 +149,20 @@ export function createMembersStore(inviter: { name: string; email: string }) {
             return structuredClone(member)
         },
 
+        // Acesso (mock/access.ts já conferiu as regras): grava cargos, equipes e o papel na org.
+        setAccess(id: string, update: MemberAccessUpdate): Member {
+            const member = state.members.find((m) => m.id === id)
+            if (!member) throw new DataError(403, 'Você não gere o acesso desta pessoa.')
+            member.units = [...update.units].sort((a, b) => a.code.localeCompare(b.code))
+            const chosen = state.teams
+                .filter((t) => update.teams.includes(t.id))
+                .sort((a, b) => a.name.localeCompare(b.name))
+            member.teams = chosen.map((t) => t.name)
+            member.team_ids = chosen.map((t) => t.id)
+            if (update.org_role) member.org_role = update.org_role
+            return structuredClone(member)
+        },
+
         revoke(id: string): void {
             const index = state.invitations.findIndex((i) => i.id === id)
             if (index < 0) throw new DataError(409, 'Convite não está mais pendente.')
@@ -171,6 +197,9 @@ export function createMembersStore(inviter: { name: string; email: string }) {
             org_role: inv.role === 'admin' ? 'admin' : 'member',
             units: unitRoles,
             teams: inv.teams,
+            team_ids: state.teams
+                .filter((t) => inv.teams.includes(t.name) && inv.units.includes(t.unit))
+                .map((t) => t.id),
             status: 'active',
             last_seen_at: daysFromNow(0),
             security: 'Google',

@@ -1,47 +1,80 @@
-import type { AccessCell, AccessResponse, Permission, RoleKey } from '../../types/index.ts'
+import { DataError } from '../errors.ts'
+import type { AccessOverview, Member, MemberAccessUpdate, UnitRoleKey } from '../../types/index.ts'
+import { catalog } from './catalog.ts'
+import type { createMembersStore } from './members.ts'
 
-// Atalhos para escrever a matriz como no protótipo: Y = sim, N = não, T('...') = em parte.
-const Y: AccessCell = { kind: 'yes' }
-const N: AccessCell = { kind: 'no' }
-const T = (note: string): AccessCell => ({ kind: 'partial', note })
-
-// Uma linha da matriz: as células na ordem owner, admin, gestor, colaborador, leitor.
-function row(
-    key: string,
-    label: string,
-    cells: [AccessCell, AccessCell, AccessCell, AccessCell, AccessCell],
-): Permission {
-    const roles: RoleKey[] = ['owner', 'admin', 'gestor', 'colaborador', 'leitor']
-    return { key, label, cells: Object.fromEntries(roles.map((r, i) => [r, cells[i]])) as Record<RoleKey, AccessCell> }
+// Regras das equipes do mock (team_id -> dashboards que liberam), como app.access_rules.
+// Diretoria (NG) libera todos os dashboards da unidade, como no banco (uma regra por dashboard).
+const NG_KEYS = catalog.available.filter((d) => d.units.includes('NG')).map((d) => d.key)
+const RULES: Record<string, string[]> = {
+    't-protocolo': ['protocolo-lexpre', 'pendencias-lexpre', 'peticionamento-lexpre', 'pre-protocolo'],
+    't-comercial': ['comercial-lexpre', 'comissao-lexpre', 'nps'],
+    't-diretoria': NG_KEYS,
+    't-pendencias': ['pendencias', 'pendencias-lexpre'],
 }
 
-// Os papéis e as regras do protótipo (canvas "LexHub v2 — protótipo", tela Acesso).
-export const access: AccessResponse = {
-    matrix: [
-        row('view', 'Ver dashboards liberados', [Y, Y, Y, Y, Y]),
-        row('export', 'Exportar e gerar PDF', [Y, Y, Y, N, N]),
-        row('team_data', 'Ver dados de toda a equipe', [Y, Y, Y, T('Só os seus'), T('Só resumos')]),
-        row('members', 'Convidar e gerir membros', [Y, Y, T('Da unidade'), N, N]),
-        row('sources', 'Gerir fontes de dados', [Y, Y, N, N, N]),
-        row('finance', 'Financeiro e despesas', [Y, Y, T('Se liberado'), N, N]),
-        row('billing', 'Plano e cobrança', [Y, T('Só ver'), N, N, N]),
-    ],
-    rules: [
-        {
-            team: 'Protocolo',
-            people: 12,
-            dashboards: ['Protocolo', 'Pendências', 'Peticionamento', 'Pré-protocolo'],
-            all: false,
-            scope: null,
+// O que cada cargo faz (app.role_permissions): Gestor e Controller veem tudo da unidade; Leitor não exporta.
+const ROLES: AccessOverview['roles'] = [
+    { key: 'gestor', sees_all: true, exports: true },
+    { key: 'controller', sees_all: true, exports: true },
+    { key: 'colaborador', sees_all: false, exports: true },
+    { key: 'leitor', sees_all: false, exports: false },
+]
+const UNIT_ROLES = ROLES.map((r) => r.key)
+
+const keysOf = (unit: string) => catalog.available.filter((d) => d.units.includes(unit)).map((d) => d.key)
+
+// Módulo: o Acesso do mock, com as mesmas regras e mensagens de api.access_overview e
+// api.update_member_access. O mock é Owner/Desenvolvedor: gere todas as unidades.
+// Parâmetro: a loja de Membros (editar acesso muda a lista de Membros também).
+export function createAccessStore(members: ReturnType<typeof createMembersStore>) {
+    return {
+        overview(unit: string | null): AccessOverview {
+            const data = members.list()
+            const units = [...data.units].sort((a, b) => a.code.localeCompare(b.code))
+            const current = unit ?? units[0]?.code
+            if (!units.some((u) => u.code === current)) throw new DataError(403, 'Você não gere acesso nesta unidade.')
+            const teamsOf = (key: string) =>
+                data.teams
+                    .filter((t) => t.unit === current && RULES[t.id]?.includes(key))
+                    .map((t) => t.name)
+                    .sort()
+            return {
+                units,
+                unit: current,
+                dashboards: catalog.available
+                    .filter((d) => d.units.includes(current))
+                    .map((d) => ({ key: d.key, title: d.title, area: d.area, teams: teamsOf(d.key) })),
+                teams: data.teams,
+                roles: ROLES,
+                rules: data.teams.flatMap((t) =>
+                    (RULES[t.id] ?? [])
+                        .filter((key) => keysOf(t.unit).includes(key))
+                        .map((key) => ({ team_id: t.id, dashboard_key: key })),
+                ),
+                dashboards_by_unit: Object.fromEntries(units.map((u) => [u.code, keysOf(u.code)])),
+                titles: Object.fromEntries(catalog.available.map((d) => [d.key, d.title])),
+                can_set_org_role: true,
+            }
         },
-        {
-            team: 'Comercial',
-            people: 9,
-            dashboards: ['Funil comercial', 'Comissão', 'NPS', 'Marketing'],
-            all: false,
-            scope: 'Colaborador vê só os próprios atendimentos, pelo vínculo exato com o atendente.',
+
+        update(id: string, update: MemberAccessUpdate, selfEmail: string): Member {
+            const data = members.list()
+            const member = data.members.find((m) => m.id === id)
+            if (!member) throw new DataError(403, 'Você não gere o acesso desta pessoa.')
+            if (member.status === 'disabled') throw new DataError(409, 'Reative a pessoa antes de mudar o acesso.')
+            if (update.org_role && update.org_role !== member.org_role) {
+                if (member.org_role === 'owner') throw new DataError(409, 'O Owner não muda de papel por aqui.')
+                if (member.email === selfEmail) throw new DataError(409, 'Você não pode mudar o seu próprio papel.')
+            }
+            if (update.units.some((u) => !UNIT_ROLES.includes(u.role as UnitRoleKey))) {
+                throw new DataError(409, 'Cargo inválido.')
+            }
+            const withRole = new Set(update.units.map((u) => u.code))
+            if (data.teams.some((t) => update.teams.includes(t.id) && !withRole.has(t.unit))) {
+                throw new DataError(409, 'Equipe sem cargo na unidade.')
+            }
+            return members.setAccess(id, update)
         },
-        { team: 'Execução', people: 7, dashboards: ['Execução', 'Acordos', 'Recursal'], all: false, scope: null },
-        { team: 'Diretoria', people: 4, dashboards: [], all: true, scope: null },
-    ],
+    }
 }

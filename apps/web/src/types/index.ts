@@ -136,8 +136,6 @@ export type PendenciasResponse = {
     }[]
 }
 // --- Membros ---
-// RoleKey: as colunas da matriz da aba Acesso (ainda sem Controller).
-export type RoleKey = 'owner' | 'admin' | 'gestor' | 'colaborador' | 'leitor'
 // Papel na organização inteira (admin = Desenvolvedor; member = o acesso vem do cargo em cada unidade).
 export type OrgRoleKey = 'owner' | 'admin' | 'member'
 export type MemberStatus = 'active' | 'invited' | 'disabled'
@@ -150,6 +148,7 @@ export type Member = {
     org_role: OrgRoleKey
     units: { code: string; role: UnitRoleKey }[]
     teams: string[]
+    team_ids: string[] // mesmas equipes, por id (o nome se repete entre unidades: Diretoria)
     status: MemberStatus
     last_seen_at: string | null
     security: string | null // 'Google' quando já entrou pelo Google
@@ -178,16 +177,6 @@ export type MembersResponse = {
     teams: MemberTeam[]
     units: Unit[] // as unidades que quem pergunta gere
     can_invite_admin: boolean
-}
-
-// Membro no formato do simulador da aba Acesso (um papel só). Vem de Member por accessMemberOf.
-export type AccessMember = {
-    id: string
-    name: string
-    email: string
-    role: RoleKey
-    units: string[] // ['*'] = todas as unidades
-    team: string | null
 }
 
 // Plano e cobrança. Preços ainda em descoberta: null = "a definir" (a tela mostra [PREÇO]/[VALOR]).
@@ -232,24 +221,36 @@ export type BillingResponse = {
 // Célula da matriz: sim, não ou "em parte" com a ressalva ("Só os seus", "Da unidade").
 export type AccessCell = { kind: 'yes' } | { kind: 'no' } | { kind: 'partial'; note: string }
 
+// Colunas da matriz de papéis: os dois papéis da organização e os quatro cargos de unidade.
+export type PermissionRole = 'owner' | 'admin' | UnitRoleKey
+
 export type Permission = {
     key: string // estável, para o código procurar a linha ('export', 'members'...)
     label: string // texto da linha ("Exportar e gerar PDF")
-    cells: Record<RoleKey, AccessCell> // uma célula por papel
+    cells: Record<PermissionRole, AccessCell> // uma célula por papel
 }
 
-// Regra de dashboards de uma equipe: nas unidades em que a pessoa estiver, ela vê estes dashboards.
-export type TeamRule = {
-    team: string
-    people: number
-    dashboards: string[]
-    all: boolean // true = todos os dashboards das suas unidades (Diretoria); aí `dashboards` fica vazio
-    scope: string | null // observação ("Colaborador vê só os próprios atendimentos...")
+// Acesso (api.access_overview): a grade "o que cada cargo vê" de uma unidade + o que o editor precisa.
+export type AccessOverview = {
+    units: Unit[] // as unidades em que quem pergunta gere acesso
+    unit: string // a unidade da grade
+    dashboards: { key: string; title: string; area: string; teams: string[] }[] // teams = equipes que liberam
+    teams: MemberTeam[] // equipes de todas as unidades geridas
+    roles: { key: UnitRoleKey; sees_all: boolean; exports: boolean }[]
+    rules: { team_id: string; dashboard_key: string }[] // regras das equipes de todas as unidades geridas
+    dashboards_by_unit: Record<string, string[]> // keys ligadas em cada unidade gerida
+    titles: Record<string, string> // key -> título
+    can_set_org_role: boolean // pode tornar alguém Desenvolvedor (Owner/Desenvolvedor)
 }
 
-export type AccessResponse = {
-    matrix: Permission[]
-    rules: TeamRule[]
+// O que a pessoa gere nesta organização (api.my_admin_permissions): o menu esconde o que não for dela.
+export type AdminPermissions = { access: boolean; members: boolean }
+
+// O que o editor grava (api.update_member_access): estado desejado nas unidades geridas.
+export type MemberAccessUpdate = {
+    units: { code: string; role: UnitRoleKey }[]
+    teams: string[] // ids
+    org_role: 'admin' | 'member' | null // null = não muda
 }
 
 // Auditoria: o que aconteceu na organização (entradas, exportações, acesso, suporte, fontes).

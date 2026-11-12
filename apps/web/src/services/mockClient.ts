@@ -7,7 +7,7 @@ import {
     createAccessRequestsStore,
     googleMockEmail,
     noAccessEmails,
-    access,
+    createAccessStore,
     audit,
     billingFor,
     catalog,
@@ -50,6 +50,8 @@ const hubOrderKey = (org: string) => `lexhub.mock.hubOrder.${org}`
 
 // Membros do mock: a lista muda com os convites (volta ao original no F5).
 const memberStore = createMembersStore({ name: me.user.name, email: '' })
+// Acesso do mock: grava na mesma loja de Membros.
+const accessStore = createAccessStore(memberStore)
 
 // Pedidos de acesso do mock: em memória (voltam ao exemplo no F5).
 const accessRequests = createAccessRequestsStore()
@@ -222,10 +224,24 @@ export function createMockClient(): DataClient {
             return billingFor({ used, total: 60 })
         },
 
-        async getAccess(org) {
+        async getAccessOverview(org, unit) {
             await wait()
             requireSession()
-            return copy(requireOrg(org) ? access : onboardingAccess)
+            return requireOrg(org) ? accessStore.overview(unit) : copy(onboardingAccess)
+        },
+
+        // O mock entra como Desenvolvedor: gere acesso e membros.
+        async getMyAdminPermissions(org) {
+            requireSession()
+            requireOrg(org)
+            return { access: true, members: true }
+        },
+
+        async updateMemberAccess(org, memberId, update) {
+            await wait()
+            requireSession()
+            if (!requireOrg(org)) throw new DataError(403, 'Você não gere o acesso desta pessoa.')
+            return accessStore.update(memberId, update, sessionStorage.getItem(SESSION_KEY) ?? '')
         },
 
         async getAudit(org) {

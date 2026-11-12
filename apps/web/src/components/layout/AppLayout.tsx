@@ -5,9 +5,11 @@ import { Icon } from '../ui/Icon.tsx'
 import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { SearchBox } from './SearchBox.tsx'
 import { TopbarSlotContext } from './topbar-slot.ts'
-import { activeItem, NAV_SECTIONS, pathOf } from '../../navigation.ts'
+import { activeItem, menuPermissions, NAV_SECTIONS, pathOf, visibleItems } from '../../navigation.ts'
+import { useAsync } from '../../hooks/useAsync.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
+import { dataClient } from '../../services/client.ts'
 import { env } from '../../services/env.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 
@@ -20,6 +22,14 @@ export function AppLayout() {
     const { me, signOut } = useAuth()
     // Selo de pedidos de acesso pendentes: só a equipe RA busca.
     const pending = usePendingRequests(!!me?.user.platform_staff)
+    // O que a pessoa gere nesta organização: esconde Acesso de Colaborador/Leitor.
+    // Se a consulta falhar, o menu mostra tudo (ver menuPermissions): a página já protege sozinha.
+    const orgSlug = me?.org.slug ?? ''
+    const permsQuery = useAsync(
+        () => (orgSlug ? dataClient.getMyAdminPermissions(orgSlug) : Promise.resolve(null)),
+        [orgSlug],
+    )
+    const perms = menuPermissions(permsQuery.data ?? null, permsQuery.error)
 
     // Página atual: marca o item do menu e monta o breadcrumb ("Administração / Membros").
     const current = me ? activeItem(pathname, me.org.slug) : null
@@ -59,7 +69,7 @@ export function AppLayout() {
                 {NAV_SECTIONS.filter((section) => !section.platformOnly || user.platform_staff).map((section) => (
                     <div key={section.title} className="stack" style={{ gap: 2 }}>
                         <span className="side-label">{section.title}</span>
-                        {section.items.map((item) => (
+                        {visibleItems(section, perms).map((item) => (
                             <PageTransitionLink
                                 key={item.key}
                                 className="nav"

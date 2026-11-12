@@ -16,7 +16,9 @@ import type {
     Member,
     MembersResponse,
     BillingResponse,
-    AccessResponse,
+    AccessOverview,
+    AdminPermissions,
+    MemberAccessUpdate,
     AuditResponse,
     ClientsResponse,
     SourcesResponse,
@@ -56,7 +58,11 @@ export interface DataClient {
     getHubOrder(org: string): Promise<string[]>
     setHubOrder(org: string, keys: string[]): Promise<void>
     getBilling(org: string): Promise<BillingResponse>
-    getAccess(org: string): Promise<AccessResponse>
+    // Acesso (schema api no Supabase): grade da unidade (null = a primeira gerida) e edição de uma pessoa.
+    getAccessOverview(org: string, unit: string | null): Promise<AccessOverview>
+    updateMemberAccess(org: string, memberId: string, update: MemberAccessUpdate): Promise<Member>
+    // O que a pessoa gere na organização (o menu esconde Acesso de quem não gere).
+    getMyAdminPermissions(org: string): Promise<AdminPermissions>
     getAudit(org: string): Promise<AuditResponse>
     getSources(org: string): Promise<SourcesResponse>
     // Plataforma (só equipe RA): todas as organizações. Sem platform_staff, rejeita com 403.
