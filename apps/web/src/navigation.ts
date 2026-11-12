@@ -1,4 +1,5 @@
 import type { IconName } from './components/ui/Icon.tsx'
+import type { AdminPermissions } from './types/index.ts'
 
 // Uma página do app: o item do menu, a rota e o texto do cabeçalho saem daqui.
 export type NavItem = {
@@ -10,6 +11,7 @@ export type NavItem = {
     route: string // padrão da rota; ':org' vira a organização ativa
     active?: (pathname: string) => boolean // quando a regra "começa com a rota" não basta
     badge?: 'access-requests' // contador ao lado do item (ex.: pedidos de acesso pendentes)
+    requires?: keyof AdminPermissions // só aparece para quem gere isso (api.my_admin_permissions)
 }
 
 export type NavSection = { title: string; items: NavItem[]; platformOnly?: boolean }
@@ -58,6 +60,7 @@ export const NAV_SECTIONS: NavSection[] = [
                     'O papel diz o que a pessoa pode fazer. A equipe e as unidades dizem quais dashboards ela vê.',
                 icon: 'shield',
                 route: '/:org/admin/acesso',
+                requires: 'access',
             },
             {
                 key: 'unidades',
@@ -111,6 +114,20 @@ export const NAV_SECTIONS: NavSection[] = [
 ]
 
 // Endereço de verdade de um item: '/:org/admin/membros' -> '/lexgroup/admin/membros'.
+// Itens que a pessoa vê numa seção. perms null = ainda carregando: esconde os que exigem permissão
+// (melhor aparecer um instante depois do que piscar para quem não gere).
+export function visibleItems(section: NavSection, perms: AdminPermissions | null): NavItem[] {
+    return section.items.filter((item) => !item.requires || perms?.[item.requires] === true)
+}
+
+// As permissões que o menu usa. Se a consulta falhar (ex.: a função ainda não foi aplicada no banco),
+// mostra tudo: o menu não protege dado nenhum — cada página já recusa quem não gere (403).
+// Esconder por erro tiraria o item até de Owner/Desenvolvedor.
+export function menuPermissions(data: AdminPermissions | null, error: unknown): AdminPermissions | null {
+    if (data) return data
+    return error ? { access: true, members: true } : null
+}
+
 export const pathOf = (item: NavItem, org: string) => item.route.replace(':org', org)
 
 // O item da página atual (para marcar o menu e montar o breadcrumb).

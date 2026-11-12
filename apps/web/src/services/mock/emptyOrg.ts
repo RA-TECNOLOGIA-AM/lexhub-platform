@@ -1,5 +1,5 @@
 import type {
-    AccessResponse,
+    AccessOverview,
     AuditResponse,
     BillingResponse,
     DashboardCatalog,
@@ -7,7 +7,6 @@ import type {
     MembersResponse,
     SourcesResponse,
 } from '../../types/index.ts'
-import { access } from './access.ts'
 import { plans } from './billing.ts'
 
 // Organização em implantação (Cliente parceiro): ainda sem dashboards, regras ou eventos.
@@ -24,6 +23,7 @@ export function onboardingMembers(email: string, name: string): MembersResponse 
         org_role: 'admin',
         units: [],
         teams: [],
+        team_ids: [],
         status: 'active',
         last_seen_at: new Date().toISOString(),
         security: 'Google',
@@ -38,7 +38,22 @@ export function onboardingMembers(email: string, name: string): MembersResponse 
 }
 
 // O papel diz o que cada um pode fazer (igual em toda organização); as regras por equipe ainda não existem.
-export const onboardingAccess: AccessResponse = { matrix: access.matrix, rules: [] }
+export const onboardingAccess: AccessOverview = {
+    units: [{ code: 'CP', name: 'Parceiro · sede' }],
+    unit: 'CP',
+    dashboards: [],
+    teams: [],
+    roles: [
+        { key: 'gestor', sees_all: true, exports: true },
+        { key: 'controller', sees_all: true, exports: true },
+        { key: 'colaborador', sees_all: false, exports: true },
+        { key: 'leitor', sees_all: false, exports: false },
+    ],
+    rules: [],
+    dashboards_by_unit: { CP: [] },
+    titles: {},
+    can_set_org_role: true,
+}
 
 export const onboardingAudit: AuditResponse = { events: [] }
 

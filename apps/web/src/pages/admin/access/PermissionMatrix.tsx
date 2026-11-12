@@ -1,7 +1,7 @@
 import { Icon } from '../../../components/ui/Icon.tsx'
 import type { AccessCell, Permission } from '../../../types/index.ts'
 import { ROLE_LABEL } from '../members/memberView.ts'
-import { ROLE_ORDER } from './accessView.ts'
+import { PERMISSION_ROLES } from './permissions.ts'
 
 // Uma célula: ✓ (sim), — (não) ou o selo com a ressalva.
 function Cell({ cell }: { cell: AccessCell }) {
@@ -34,7 +34,7 @@ export function PermissionMatrix({ matrix }: { matrix: Permission[] }) {
                     <thead>
                         <tr>
                             <th>Permissão</th>
-                            {ROLE_ORDER.map((r) => (
+                            {PERMISSION_ROLES.map((r) => (
                                 <th key={r} className="center">
                                     {ROLE_LABEL[r]}
                                 </th>
@@ -45,7 +45,7 @@ export function PermissionMatrix({ matrix }: { matrix: Permission[] }) {
                         {matrix.map((p) => (
                             <tr key={p.key}>
                                 <td>{p.label}</td>
-                                {ROLE_ORDER.map((r) => (
+                                {PERMISSION_ROLES.map((r) => (
                                     <td key={r} className="center">
                                         <Cell cell={p.cells[r]} />
                                     </td>
