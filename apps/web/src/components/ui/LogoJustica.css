@@ -1,0 +1,173 @@
+.logo-justica {
+    --logo-justica-dur: 6000ms;
+    color: #f47b20;
+    overflow: visible;
+}
+
+.logo-justica--once,
+.logo-justica--loop {
+    --logo-justica-iter: 1;
+    --logo-justica-ease: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.logo-justica--loop {
+    --logo-justica-iter: infinite;
+}
+
+.logo-justica--once .logo-justica__mao,
+.logo-justica--once .logo-justica__balanca,
+.logo-justica--once .logo-justica__circulo,
+.logo-justica--loop .logo-justica__mao,
+.logo-justica--loop .logo-justica__balanca,
+.logo-justica--loop .logo-justica__circulo {
+    transform-box: view-box;
+    transform-origin: 50px 50px;
+    animation-duration: var(--logo-justica-dur);
+    animation-iteration-count: var(--logo-justica-iter);
+    animation-timing-function: var(--logo-justica-ease);
+    animation-fill-mode: both;
+}
+
+.logo-justica--once .logo-justica__mao,
+.logo-justica--loop .logo-justica__mao {
+    animation-name: logo-justica-mao;
+}
+
+.logo-justica--once .logo-justica__balanca,
+.logo-justica--loop .logo-justica__balanca {
+    animation-name: logo-justica-balanca;
+}
+
+.logo-justica--once .logo-justica__circulo,
+.logo-justica--loop .logo-justica__circulo {
+    animation-name: logo-justica-circulo;
+}
+
+.logo-justica--once .logo-justica__anel,
+.logo-justica--loop .logo-justica__anel {
+    stroke-dasharray: 0 226;
+    animation: logo-justica-desenhar var(--logo-justica-dur) var(--logo-justica-ease) var(--logo-justica-iter) both;
+}
+
+.logo-justica--once .logo-justica__travessao,
+.logo-justica--loop .logo-justica__travessao {
+    transform-box: view-box;
+    transform-origin: 50px 20px;
+    animation: logo-justica-balancar var(--logo-justica-dur) ease-in-out var(--logo-justica-iter) both;
+}
+
+/* 1) mão some girando para o centro e volta no fim */
+@keyframes logo-justica-mao {
+    0%,
+    16% {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+    }
+    30%,
+    66% {
+        transform: scale(0.25) rotate(-200deg);
+        opacity: 0;
+    }
+    78% {
+        transform: scale(1.06) rotate(0);
+        opacity: 1;
+    }
+    84%,
+    100% {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+    }
+}
+
+/* 2) balança é sugada para o centro e depois pousa em cima da mão */
+@keyframes logo-justica-balanca {
+    0%,
+    12% {
+        transform: translateY(0) scale(1) rotate(0);
+        opacity: 1;
+    }
+    28% {
+        transform: translateY(0) scale(0.25) rotate(200deg);
+        opacity: 0;
+    }
+    72% {
+        transform: translateY(-34px) scale(1) rotate(0);
+        opacity: 0;
+    }
+    82% {
+        transform: translateY(2px) scale(1) rotate(0);
+        opacity: 1;
+    }
+    86%,
+    100% {
+        transform: translateY(0) scale(1) rotate(0);
+        opacity: 1;
+    }
+}
+
+/* travessão oscila ao pousar */
+@keyframes logo-justica-balancar {
+    0%,
+    82% {
+        transform: rotate(0);
+    }
+    87% {
+        transform: rotate(-8deg);
+    }
+    92% {
+        transform: rotate(5deg);
+    }
+    96% {
+        transform: rotate(-2deg);
+    }
+    100% {
+        transform: rotate(0);
+    }
+}
+
+/* 3) círculo nasce, dá uma volta completa e se recolhe */
+@keyframes logo-justica-circulo {
+    0%,
+    16% {
+        transform: scale(0.3) rotate(-90deg);
+        opacity: 0;
+    }
+    30% {
+        transform: scale(1) rotate(0);
+        opacity: 1;
+    }
+    64% {
+        transform: scale(1) rotate(360deg);
+        opacity: 1;
+    }
+    76%,
+    100% {
+        transform: scale(0.3) rotate(450deg);
+        opacity: 0;
+    }
+}
+
+@keyframes logo-justica-desenhar {
+    0%,
+    16% {
+        stroke-dasharray: 0 226;
+    }
+    30%,
+    64% {
+        stroke-dasharray: 196 30;
+    }
+    76%,
+    100% {
+        stroke-dasharray: 0 226;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .logo-justica * {
+        animation: none !important;
+    }
+
+    .logo-justica__circulo {
+        display: none;
+    }
+}
