@@ -27,8 +27,16 @@ FONTE = sys.argv[2] if len(sys.argv) > 2 else "lexpre"
 if FONTE == "ng":
     # ref no NG = sufixo da unidade na v1; a LA está no banco LAADV e o Marketing só existe na NG.
     ESCRITORIOS = {"NG": "NG", "RJ": "RJ"}
-    KEYS = ["protocolo", "peticionamento", "org-documentos", "pendencias", "comercial", "marketing"]
-    FORA = {("marketing", "RJ")}
+    KEYS = [
+        "protocolo",
+        "peticionamento",
+        "org-documentos",
+        "pendencias",
+        "comercial",
+        "marketing",
+        "nps",
+    ]
+    FORA = {("marketing", "RJ"), ("nps", "RJ")}
 elif FONTE == "lexflow":
     # ref no LexFlow = sufixo da unidade na v1; Recursal não existe no RJ.
     ESCRITORIOS = {"NG": "NG", "LA": "LA", "RJ": "RJ"}
@@ -76,8 +84,42 @@ def diffs(a, b, path=""):
     return [] if a == b else [(path, a, b)]
 
 
+# Pré-protocolo (LexPre): cada setor é comparado com o `stats` da v1 daquele dashboard.
+PRE_PROTOCOLO = {
+    "pendencias": "pendencias-lexpre",
+    "org_documentos": "org-documentos-lexpre",
+    "peticionamento": "peticionamento-lexpre",
+    "protocolo": "protocolo-lexpre",
+}
+
+
+async def comparar_pre_protocolo(relatorio):
+    mod = DASHBOARDS["pre-protocolo"]
+    for unidade, ref in ESCRITORIOS.items():
+        for nome_p, (ini, fim) in PERIODOS.items():
+            caso = f"pre-protocolo_{unidade}_{nome_p}"
+            ctx = DashboardContext(
+                source=Fonte(),
+                unit_ref=ref,
+                period=Period(ini, fim),
+                filters={},
+                can_see_commission=True,
+            )
+            v2 = json.loads(json.dumps(await mod.build(ctx), default=str))
+            d = []
+            for setor, key in PRE_PROTOCOLO.items():
+                v1 = json.loads(
+                    (out / f"v1_{key}_{unidade}_{nome_p}.json").read_text(encoding="utf-8")
+                )
+                d += diffs(v1["stats"], v2[setor]["stats"], setor)
+            relatorio[caso] = {"diferencas": len(d), "exemplos": d[:10]}
+            print(f"{caso:55s} {'IGUAL' if not d else f'{len(d)} DIFERENÇAS'}")
+
+
 async def main():
     relatorio = {}
+    if FONTE == "lexpre":
+        await comparar_pre_protocolo(relatorio)
     for key in KEYS:
         mod = DASHBOARDS[key]
         filtros = {f: [] for f in mod.filters}

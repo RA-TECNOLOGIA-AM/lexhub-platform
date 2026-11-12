@@ -54,6 +54,7 @@ ROTAS_POR_FONTE = {
         ("comercial", "NG"): r.get_comercial_dashboard,
         ("comercial", "RJ"): r.get_comercial_rj_dashboard,
         ("marketing", "NG"): r.get_marketing_NG_dashboard,
+        ("nps", "NG"): r.get_nps_NG_dashboard,
     },
 }
 ROTAS = ROTAS_POR_FONTE[FONTE]

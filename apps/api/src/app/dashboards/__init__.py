@@ -8,12 +8,14 @@ from app.dashboards import (
     comissao_lexpre,
     execucao,
     marketing,
+    nps,
     org_documentos,
     org_documentos_lexpre,
     pendencias,
     pendencias_lexpre,
     peticionamento,
     peticionamento_lexpre,
+    pre_protocolo,
     protocolo,
     protocolo_lexpre,
     recursal,
@@ -39,5 +41,7 @@ DASHBOARDS: dict[str, DashboardModule] = {
         comercial.MODULE,
         comissao.MODULE,
         marketing.MODULE,
+        nps.MODULE,
+        pre_protocolo.MODULE,
     )
 }

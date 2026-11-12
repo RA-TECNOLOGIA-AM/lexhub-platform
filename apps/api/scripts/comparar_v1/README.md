@@ -40,6 +40,9 @@ O passo 3 imprime `IGUAL` ou o número de diferenças por caso e grava `relatori
   `fetch_rows.py <saida> ng`): Protocolo, Peticionamento, Org. de Documentos, Pendências e Comercial × NG/RJ e
   Marketing × NG: 22 de 22 iguais. A Comissão NG usa o mesmo módulo do Comercial. As fontes da LA no Comercial
   (banco LAADV/LexFlow) chegam vazias nos dois lados.
+- **13/11/2026:** NPS × NG entrou no banco NG (24 de 24 iguais). No LexPre, o Pré-protocolo é comparado setor a
+  setor com o `stats` da v1 de Pendências, Org. de Documentos, Peticionamento e Protocolo (LexPre) × NG/LA/RJ:
+  6 de 6 iguais (e os 36 do LexPre seguem iguais).
 - **LexFlow, 12/11/2026:** Acordos e Recursal 10 de 10 iguais. Execução 6 de 6 com o **mesmo conteúdo**; só a ordem
   dos itens muda em `execucao_atividades_criadas_por_atividade_*` (e `execucao_taxa_conclusao_por_funcionario_LA`).
   A própria v1 muda essa ordem entre duas execuções (conferido rodando a v1 com `PYTHONHASHSEED` diferente): a
