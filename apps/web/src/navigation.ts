@@ -9,6 +9,7 @@ export type NavItem = {
     icon: IconName
     route: string // padrão da rota; ':org' vira a organização ativa
     active?: (pathname: string) => boolean // quando a regra "começa com a rota" não basta
+    badge?: 'access-requests' // contador ao lado do item (ex.: pedidos de acesso pendentes)
 }
 
 export type NavSection = { title: string; items: NavItem[]; platformOnly?: boolean }
@@ -87,6 +88,15 @@ export const NAV_SECTIONS: NavSection[] = [
                 description: 'As organizações atendidas pela plataforma.',
                 icon: 'building',
                 route: '/plataforma/clientes',
+            },
+            {
+                key: 'pedidos',
+                label: 'Pedidos de acesso',
+                title: 'Pedidos de acesso',
+                description: 'Quem entrou sem fazer parte de nenhuma organização e pediu acesso.',
+                icon: 'inbox',
+                route: '/plataforma/pedidos',
+                badge: 'access-requests',
             },
         ],
     },

@@ -15,6 +15,7 @@ import { BillingPage } from './pages/admin/billing/BillingPage.tsx'
 import { AccessPage } from './pages/admin/access/AccessPage.tsx'
 import { AuditPage } from './pages/admin/audit/AuditPage.tsx'
 import { ClientsPage } from './pages/platform/clients/ClientsPage.tsx'
+import { AccessRequestsPage } from './pages/platform/requests/AccessRequestsPage.tsx'
 import { SourcesPage } from './pages/admin/sources/SourcesPage.tsx'
 import { PageTransitionProvider } from './components/page_transition/PageTransitionProvider.tsx'
 
@@ -25,6 +26,7 @@ const PAGES: Record<string, ReactNode> = {
     acesso: <AccessPage />,
     auditoria: <AuditPage />,
     clientes: <ClientsPage />,
+    pedidos: <AccessRequestsPage />,
     unidades: <SourcesPage />,
 }
 

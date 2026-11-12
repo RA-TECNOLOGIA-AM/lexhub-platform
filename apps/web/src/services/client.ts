@@ -20,6 +20,9 @@ import type {
     SourcesResponse,
     ExportRequest,
     ExportFile,
+    AccessRequest,
+    ApprovalOrg,
+    ApprovalTarget,
 } from '../types/index.ts'
 
 // A única porta de entrada para dados. As telas só conhecem esta interface;
@@ -58,6 +61,16 @@ export interface DataClient {
     getDashboardData<T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery): Promise<T>
     // Relatório de um dashboard (CSV ou XLSX). Sem can_export ou sem acesso à unidade, rejeita com 403.
     exportDashboard(request: ExportRequest): Promise<ExportFile>
+
+    // Pedidos de acesso. Quem pede: logado e sem associação ativa (já tem acesso ou pedido pendente = 409).
+    requestAccess(office: string, message: string | null): Promise<AccessRequest>
+    getMyAccessRequest(): Promise<AccessRequest | null> // o último pedido (null = nunca pediu)
+    // Equipe RA (sem platform_staff = 403).
+    countPendingAccessRequests(): Promise<number>
+    listAccessRequests(status: 'pending' | 'decided'): Promise<AccessRequest[]>
+    getApprovalOptions(): Promise<ApprovalOrg[]>
+    approveAccessRequest(id: string, target: ApprovalTarget): Promise<AccessRequest>
+    rejectAccessRequest(id: string, note: string | null): Promise<AccessRequest>
 }
 
 // mock = dados fictícios; api = Supabase Auth (login) + API V2 (dados). Escolha em VITE_DATA_SOURCE.

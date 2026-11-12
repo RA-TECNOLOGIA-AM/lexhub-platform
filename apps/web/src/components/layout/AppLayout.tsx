@@ -6,6 +6,7 @@ import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { SearchBox } from './SearchBox.tsx'
 import { activeItem, NAV_SECTIONS, pathOf } from '../../navigation.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
 import { env } from '../../services/env.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 
@@ -14,6 +15,8 @@ export function AppLayout() {
     const menuButton = useRef<HTMLButtonElement>(null)
     const { pathname } = useLocation()
     const { me, signOut } = useAuth()
+    // Selo de pedidos de acesso pendentes: só a equipe RA busca.
+    const pending = usePendingRequests(!!me?.user.platform_staff)
 
     // Página atual: marca o item do menu e monta o breadcrumb ("Administração / Membros").
     const current = me ? activeItem(pathname, me.org.slug) : null
@@ -57,6 +60,11 @@ export function AppLayout() {
                             >
                                 <Icon name={item.icon} />
                                 {item.label}
+                                {item.badge === 'access-requests' && pending > 0 && (
+                                    <span className="count" aria-label={`${pending} pendentes`}>
+                                        {pending}
+                                    </span>
+                                )}
                             </PageTransitionLink>
                         ))}
                     </div>

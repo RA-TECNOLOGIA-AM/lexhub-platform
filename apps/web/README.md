@@ -71,7 +71,15 @@ Por enquanto é **fictício**: o `mockClient.ts` confere e-mail e senha contra a
 Com `VITE_DATA_SOURCE=api`, o botão do Google sai para o Google (Supabase Auth, fluxo PKCE) e volta em
 `<origem do app>/login`. Essa origem precisa estar em **Redirect URLs** no Supabase (ex.: `http://localhost:5173/**`), e o
 callback do Supabase (`https://<projeto>.supabase.co/auth/v1/callback`) precisa estar no client OAuth do Google Cloud.
-Quem entra, mas não faz parte de nenhuma organização (403 no `/me`), vê a tela "sem acesso".
+Quem entra, mas não faz parte de nenhuma organização (403 no `/me`), vê a tela "sem acesso" e pode **solicitar acesso**
+(escritório + mensagem). A equipe RA aprova ou recusa em **Plataforma → Pedidos de acesso** (selo com o número de
+pendentes no menu). Esses pedidos vão direto ao Supabase, nas funções do schema `api`
+(`services/accessRequests.ts`; migration `supabase/migrations/20261112160000_solicitar_acesso.sql`), e não pela API em
+Python. O schema `api` precisa estar em Settings → API → Exposed schemas.
+
+No mock: entre com `sem.acesso@exemplo.com`, peça acesso, saia, entre com `controller@lexgroup.com.br` (equipe RA),
+aprove em Pedidos de acesso e entre de novo com `sem.acesso@exemplo.com`: vai para o hub. Os pedidos ficam em memória
+(voltam ao exemplo no F5).
 
 Para outro usuário de teste, acrescente na lista `testUsers`. O usuário exibido depois de entrar é sempre o `me`
 de `services/mock/users.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`): sobrevive ao F5 e some ao

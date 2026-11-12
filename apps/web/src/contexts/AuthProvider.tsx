@@ -54,6 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if ((await dataClient.signInWithGoogle()) === 'signed-in') await afterSignIn()
     }
 
+    // Confere de novo se a pessoa já tem acesso (ex.: pedido aprovado). Com acesso, o login leva ao hub.
+    async function refreshSession() {
+        const state = await loadSession(dataClient)
+        if (state.status === 'signed-out') {
+            throw new DataError(0, 'Não foi possível conferir o seu acesso. Tente de novo.')
+        }
+        apply(state)
+    }
+
     // Padrão: 'Sair' do usuário (o próximo login vai para o hub).
     // returnHere: true = sessão caiu (401); o próximo login volta para a mesma página.
     async function signOut({ returnHere = false }: { returnHere?: boolean } = {}) {
@@ -69,7 +78,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [])
 
     return (
-        <AuthContext value={{ me, noAccess, loading, rememberLocation, signIn, signInWithGoogle, signOut, switchOrg }}>
+        <AuthContext
+            value={{
+                me,
+                noAccess,
+                loading,
+                rememberLocation,
+                signIn,
+                signInWithGoogle,
+                signOut,
+                switchOrg,
+                refreshSession,
+            }}
+        >
             {children}
         </AuthContext>
     )
