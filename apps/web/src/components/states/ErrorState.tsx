@@ -1,4 +1,4 @@
-import { Link } from 'react-router'
+import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 import { useAuth } from '../../contexts/auth-context.ts'
 import type { DataError } from '../../services/errors.ts'
 import type { IconName } from '../ui/Icon.tsx'
@@ -35,9 +35,9 @@ export function ErrorState({ error, backTo }: ErrorStateProps) {
                 Entrar de novo
             </button>
         ) : backTo ? (
-            <Link className="btn" to={backTo}>
+            <PageTransitionLink className="btn" to={backTo}>
                 Voltar aos dashboards
-            </Link>
+            </PageTransitionLink>
         ) : null
 
     return (

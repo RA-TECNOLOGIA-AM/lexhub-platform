@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link, Outlet, useLocation } from 'react-router'
+import { Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { Icon } from '../ui/Icon.tsx'
 import { OrgSwitcher } from './OrgSwitcher.tsx'
@@ -7,6 +7,7 @@ import { SearchBox } from './SearchBox.tsx'
 import { activeItem, NAV_SECTIONS, pathOf } from '../../navigation.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { env } from '../../services/env.ts'
+import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
@@ -47,7 +48,7 @@ export function AppLayout() {
                     <div key={section.title} className="stack" style={{ gap: 2 }}>
                         <span className="side-label">{section.title}</span>
                         {section.items.map((item) => (
-                            <Link
+                            <PageTransitionLink
                                 key={item.key}
                                 className="nav"
                                 to={pathOf(item, org.slug)}
@@ -56,7 +57,7 @@ export function AppLayout() {
                             >
                                 <Icon name={item.icon} />
                                 {item.label}
-                            </Link>
+                            </PageTransitionLink>
                         ))}
                     </div>
                 ))}

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 import { orgInitials } from '../../lib/orgs.ts'
 import type { Org } from '../../types/index.ts'
 import { Icon } from '../ui/Icon.tsx'
@@ -54,7 +54,7 @@ export function OrgSwitcher({ current, orgs, canCreate, onNavigate }: OrgSwitche
                 <div id="org-menu" className="org-menu">
                     <span className="org-menu-label">Suas organizações</span>
                     {orgs.map((o) => (
-                        <Link
+                        <PageTransitionLink
                             key={o.slug}
                             className="nav"
                             to={`/${o.slug}/dashboards`}
@@ -70,13 +70,13 @@ export function OrgSwitcher({ current, orgs, canCreate, onNavigate }: OrgSwitche
                                     <Icon name="check" size={16} />
                                 </span>
                             )}
-                        </Link>
+                        </PageTransitionLink>
                     ))}
                     {canCreate && (
-                        <Link className="nav" to="/plataforma/clientes" onClick={choose}>
+                        <PageTransitionLink className="nav" to="/plataforma/clientes" onClick={choose}>
                             <Icon name="plus" size={16} />
                             Criar organização
-                        </Link>
+                        </PageTransitionLink>
                     )}
                 </div>
             )}
