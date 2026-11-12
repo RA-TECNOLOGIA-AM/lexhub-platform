@@ -51,6 +51,9 @@ function fakeClient() {
         async setHubOrder(_org: string, keys: string[]) {
             state.order = keys
         },
+        async getDashboardData(key: string) {
+            return { meta: { synced_at: '2026-11-12T15:00:00Z', key } }
+        },
         async signIn() {},
         async signInWithGoogle() {
             return 'signed-in'
@@ -150,5 +153,15 @@ describe('withSessionCache', () => {
         await cached.signInWithGoogle()
         await cached.listDashboards('lexgroup')
         expect(state.calls.catalog).toBe(2)
+    })
+
+    it('dashboard carregado acerta a hora do card no catálogo guardado (sem buscar de novo)', async () => {
+        const { client, state } = fakeClient()
+        const cached = withSessionCache(client, 1000, () => 0)
+        const key = (await cached.listDashboards('lexgroup')).available[0].key
+        expect((await cached.listDashboards('lexgroup')).available[0].synced_at).toBeNull()
+        await cached.getDashboardData(key, { org: 'lexgroup', unit: 'NG' })
+        expect((await cached.listDashboards('lexgroup')).available[0].synced_at).toBe('2026-11-12T15:00:00Z')
+        expect(state.calls.catalog).toBe(1)
     })
 })

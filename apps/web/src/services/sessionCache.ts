@@ -1,5 +1,5 @@
 import type { DataClient } from './client.ts'
-import type { DashboardCatalog } from '../types/index.ts'
+import type { DashboardCatalog, DashboardQuery, Meta } from '../types/index.ts'
 
 type Entry<T> = { at: number; value: Promise<T> }
 
@@ -45,8 +45,31 @@ export function withSessionCache(client: DataClient, ttlMs = 5 * 60_000, now: ()
     const hubOrder = createOrgMemo<string[]>(ttlMs, now)
     const clearAll = () => [catalog, favorites, hubOrder].forEach((m) => m.clear())
 
+    // Um dashboard carregou: o card dele no hub passa a mostrar a mesma hora de atualização
+    // (o catálogo guardado pode ser de antes da primeira sincronização e dizer "Aguardando sincronização").
+    async function syncCard(org: string, key: string, syncedAt: string | null) {
+        const current = catalog.peek(org)
+        if (!current || !syncedAt) return
+        const value = await current
+        catalog.set(org, {
+            ...value,
+            available: value.available.map((d) => (d.key === key ? { ...d, synced_at: syncedAt } : d)),
+        })
+    }
+    // Busca os dados de um dashboard e, se deu certo, acerta o card no hub.
+    async function withCardSync<T extends { meta: Meta }>(org: string, key: string, load: Promise<T>): Promise<T> {
+        const data = await load
+        await syncCard(org, key, data.meta.synced_at).catch(() => undefined)
+        return data
+    }
+
     return {
         ...client,
+
+        getDashboardData: <T extends { meta: Meta }>(key: string, query: DashboardQuery) =>
+            withCardSync(query.org, key, client.getDashboardData<T>(key, query)),
+        getProtocolo: (query) => withCardSync(query.org, 'protocolo-lexpre', client.getProtocolo(query)),
+        getPendencias: (query) => withCardSync(query.org, 'pendencias-lexpre', client.getPendencias(query)),
 
         listDashboards: (org) => catalog.get(org, () => client.listDashboards(org)),
         listFavorites: (org) => favorites.get(org, () => client.listFavorites(org)),
