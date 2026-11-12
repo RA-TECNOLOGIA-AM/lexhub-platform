@@ -1,7 +1,7 @@
 import { Kpi } from '../../../components/dashboard/Kpi.tsx'
 import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
 import { fmt, show } from '../../../lib/format.ts'
-import { statsReader, type V1GenericoResponse } from '../v1Generico.ts'
+import { statsReader, type V1GenericoResponse } from '../v1Stats.ts'
 
 // Campos do Marketing NG na v1 levam o prefixo `marketing_ng_`.
 const P = 'marketing_ng_'

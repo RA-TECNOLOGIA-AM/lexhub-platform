@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Meta } from '../../types/index.ts'
-import { statsReader } from './v1Generico.ts'
+import { statsReader } from './v1Stats.ts'
 
 const meta = { unit: 'NG' } as Meta
 

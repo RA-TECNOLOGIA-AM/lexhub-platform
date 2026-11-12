@@ -2,7 +2,7 @@ import { Delta } from '../../../components/dashboard/Delta.tsx'
 import { Kpi } from '../../../components/dashboard/Kpi.tsx'
 import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
 import { fmt, show } from '../../../lib/format.ts'
-import { statsReader, type V1GenericoResponse } from '../v1Generico.ts'
+import { statsReader, type V1GenericoResponse } from '../v1Stats.ts'
 
 // Só o que é da Comissão Comercial (banco NG): os KPIs da página da v1 ("Cálculo e multiplicadores") e a
 // base do período de onde a comissão sai. Mesmo dado do Comercial NG (na v1 as duas páginas chamam /comercial).

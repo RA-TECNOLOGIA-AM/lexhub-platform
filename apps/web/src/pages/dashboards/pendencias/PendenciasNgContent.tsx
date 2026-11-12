@@ -1,7 +1,7 @@
 import { Kpi } from '../../../components/dashboard/Kpi.tsx'
 import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
 import { fmt, show } from '../../../lib/format.ts'
-import { statsReader, type V1GenericoResponse } from '../v1Generico.ts'
+import { statsReader, type V1GenericoResponse } from '../v1Stats.ts'
 
 // Só o que é de Pendências (banco NG): os KPIs da página Pendências NG da v1 ("Indicadores do período" e
 // "Taxas do período"). A página da v1 não mostra comparativos aqui, por isso não há Delta.

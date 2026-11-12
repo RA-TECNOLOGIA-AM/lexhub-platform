@@ -2,7 +2,7 @@ import { Delta } from '../../../components/dashboard/Delta.tsx'
 import { Kpi } from '../../../components/dashboard/Kpi.tsx'
 import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
 import { fmt, show } from '../../../lib/format.ts'
-import { statsReader, type V1GenericoResponse } from '../v1Generico.ts'
+import { statsReader, type V1GenericoResponse } from '../v1Stats.ts'
 
 // Só o que é da Organização de documentos (banco NG): os KPIs da página da v1 ("Indicadores do período" e
 // "Tempo de resolução e pendências acumuladas"). Carregar, erros e cabeçalho ficam no DashboardView.

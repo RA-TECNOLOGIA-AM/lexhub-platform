@@ -2,7 +2,7 @@ import { Delta } from '../../../components/dashboard/Delta.tsx'
 import { Kpi } from '../../../components/dashboard/Kpi.tsx'
 import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
 import { fmt, show } from '../../../lib/format.ts'
-import { statsReader, type V1GenericoResponse } from '../v1Generico.ts'
+import { statsReader, type V1GenericoResponse } from '../v1Stats.ts'
 
 // Canais de origem dos contratos, na ordem da página Comercial NG da v1 (rótulo, campo; o comparativo é
 // `comparativo_<campo>`).

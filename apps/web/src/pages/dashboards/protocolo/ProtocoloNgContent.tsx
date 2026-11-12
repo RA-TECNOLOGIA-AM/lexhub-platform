@@ -2,7 +2,7 @@ import { Delta } from '../../../components/dashboard/Delta.tsx'
 import { Kpi } from '../../../components/dashboard/Kpi.tsx'
 import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
 import { fmt, show } from '../../../lib/format.ts'
-import { statsReader, type V1GenericoResponse } from '../v1Generico.ts'
+import { statsReader, type V1GenericoResponse } from '../v1Stats.ts'
 
 // Só o que é do Protocolo (banco NG): os KPIs da página Protocolo NG da v1 ("Indicadores do período").
 // Carregar, erros e cabeçalho ficam no DashboardView.
