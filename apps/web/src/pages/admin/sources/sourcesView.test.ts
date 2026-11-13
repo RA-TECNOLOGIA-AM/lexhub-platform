@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { DataSource, UnitSources } from '../../../types/index.ts'
+import type { DataSource, SourceDetail, SyncRun, UnitSources } from '../../../types/index.ts'
 import {
     detailLabel,
+    durationLabel,
+    groupLabel,
     groupSources,
     lastFailureLabel,
+    ownerLabel,
     pickUnit,
     rowsLabel,
+    runResultLabel,
     statusOf,
     syncNote,
     unitLimitLabel,
@@ -103,5 +107,43 @@ describe('sourcesView', () => {
         expect(pickUnit(units, 'XX')?.unit.code).toBe('NG')
         expect(pickUnit(units, null)?.unit.code).toBe('NG')
         expect(pickUnit([], null)).toBeUndefined()
+    })
+    it('modal: tipo e quem cuida da fonte, visto da unidade', () => {
+        expect(groupLabel('product')).toBe('Produto contratado')
+        expect(groupLabel('connection')).toBe('Fonte conectada')
+        const detail = (owner: SourceDetail['owner']): SourceDetail => ({
+            unit: { code: 'RJ', name: 'LARJ' },
+            source: source({}),
+            owner,
+            dashboards: [],
+            runs: [],
+        })
+        expect(ownerLabel(detail(null))).toBe('A organização (vem do contrato)')
+        expect(ownerLabel(detail({ code: 'RJ', name: 'LARJ' }))).toBe('LARJ (esta unidade)')
+        expect(ownerLabel(detail({ code: 'NG', name: 'Nicolas Gomes' }))).toBe('Nicolas Gomes (gerencia a conexão)')
+    })
+
+    it('modal: duração e resultado de cada sincronização', () => {
+        const run = (over: Partial<SyncRun>): SyncRun => ({
+            startedAt: ago(10),
+            finishedAt: new Date(NOW - 10 * 60_000 + 42_000).toISOString(),
+            ok: true,
+            rows: 18_000,
+            error: null,
+            ...over,
+        })
+        expect(durationLabel(run({}))).toBe('42 s')
+        expect(durationLabel(run({ finishedAt: new Date(NOW - 10 * 60_000 + 125_000).toISOString() }))).toBe(
+            '2 min 5 s',
+        )
+        expect(durationLabel(run({ finishedAt: ago(7) }))).toBe('3 min')
+        expect(durationLabel(run({ finishedAt: null, ok: null }))).toBe('rodando')
+        expect(runResultLabel(run({}))).toBe('18 mil linhas')
+        expect(runResultLabel(run({ rows: null }))).toBe('Concluída')
+        expect(runResultLabel(run({ ok: false, rows: null, error: 'tempo esgotado (30 s)' }))).toBe(
+            'tempo esgotado (30 s)',
+        )
+        expect(runResultLabel(run({ ok: false, rows: null }))).toBe('Falhou')
+        expect(runResultLabel(run({ ok: null, finishedAt: null }))).toBe('Rodando')
     })
 })

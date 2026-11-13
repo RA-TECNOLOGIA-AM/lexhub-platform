@@ -21,6 +21,7 @@ import type {
     MemberAccessUpdate,
     AuditResponse,
     ClientsResponse,
+    SourceDetail,
     SourcesResponse,
     ExportRequest,
     ExportFile,
@@ -65,6 +66,8 @@ export interface DataClient {
     getMyAdminPermissions(org: string): Promise<AdminPermissions>
     getAudit(org: string): Promise<AuditResponse>
     getSources(org: string): Promise<SourcesResponse>
+    // Uma fonte vista de uma unidade (o modal). Unidade fora do escopo = 403; fonte que ela não usa = 409.
+    getSourceDetail(org: string, unit: string, source: string): Promise<SourceDetail>
     // Plataforma (só equipe RA): todas as organizações. Sem platform_staff, rejeita com 403.
     listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>

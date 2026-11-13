@@ -10,6 +10,8 @@ import { dataClient } from '../../../services/client.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
 import { SourceList } from './SourceList.tsx'
 import { UnitNav } from './UnitNav.tsx'
+import { SourceDetailDialog } from './SourceDetailDialog.tsx'
+import type { DataSource } from '../../../types/index.ts'
 import { lastFailureLabel, pickUnit, syncNote } from './sourcesView.ts'
 
 // Conectar fonte e criar unidade ainda não existem: os botões aparecem e explicam isso.
@@ -21,6 +23,7 @@ export function SourcesPage() {
     const { data, error } = useAsync(() => dataClient.getSources(org), [org])
     const [params, setParams] = useSearchParams()
     const [notice, setNotice] = useState<string | null>(null)
+    const [open, setOpen] = useState<DataSource | null>(null) // a fonte do modal de detalhe
 
     if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
@@ -66,11 +69,20 @@ export function SourcesPage() {
                                     tone={current.lastFailure ? 'warn' : undefined}
                                 />
                             </div>
-                            <SourceList sources={current.sources} />
+                            <SourceList sources={current.sources} onOpen={setOpen} />
                         </div>
                     )}
                 </div>
             </div>
+            {open && current && (
+                <SourceDetailDialog
+                    org={org}
+                    unit={current.unit.code}
+                    source={open.id}
+                    name={open.name}
+                    onClose={() => setOpen(null)}
+                />
+            )}
         </>
     )
 }
