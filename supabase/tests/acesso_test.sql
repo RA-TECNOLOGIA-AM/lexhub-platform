@@ -180,8 +180,9 @@ begin
     if not ok then raise exception 'FALHOU: Dev mudou o próprio papel'; end if;
 
     ok := false;
+    -- 42501 desde 20261113235900_protege_owner.sql (Dev nem chega a mexer no Owner)
     begin perform api.update_member_access('org-teste-acesso', '40000000-0000-4000-8000-0000000000c1', '[]', '{}', 'member');
-    exception when sqlstate 'P0001' then ok := true; end;
+    exception when sqlstate '42501' or sqlstate 'P0001' then ok := true; end;
     if not ok then raise exception 'FALHOU: rebaixou o Owner'; end if;
 
     ok := false;
