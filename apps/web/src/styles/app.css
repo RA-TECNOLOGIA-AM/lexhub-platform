@@ -424,6 +424,10 @@ button.org:hover {
 .source-list {
     overflow: hidden;
 }
+.source-group-head {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--divider);
+}
 .source {
     display: flex;
     flex-wrap: wrap;

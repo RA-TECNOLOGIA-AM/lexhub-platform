@@ -69,6 +69,7 @@ export const NAV_SECTIONS: NavSection[] = [
                 description: 'As unidades da organização e as fontes que alimentam os dashboards.',
                 icon: 'plug',
                 route: '/:org/admin/unidades',
+                requires: 'sources',
             },
             {
                 key: 'auditoria',
@@ -125,7 +126,7 @@ export function visibleItems(section: NavSection, perms: AdminPermissions | null
 // Esconder por erro tiraria o item até de Owner/Desenvolvedor.
 export function menuPermissions(data: AdminPermissions | null, error: unknown): AdminPermissions | null {
     if (data) return data
-    return error ? { access: true, members: true } : null
+    return error ? { access: true, members: true, sources: true } : null
 }
 
 export const pathOf = (item: NavItem, org: string) => item.route.replace(':org', org)
