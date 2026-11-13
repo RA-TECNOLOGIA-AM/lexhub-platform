@@ -797,7 +797,7 @@ button.org:hover {
 /* Dentro de .auth, os tokens de cor viram a versão "sobre fundo escuro": o card,
    os campos, os avisos e o NoAccessCard se adaptam sozinhos, sem regra por componente. */
 .auth {
-    --text: #FFFFFF;
+    --text: #ffffff;
     --text-2: rgba(255, 255, 255, 0.88);
     --text-muted: rgba(255, 255, 255, 0.74);
     --text-faint: rgba(255, 255, 255, 0.6);
@@ -807,9 +807,9 @@ button.org:hover {
     --border: rgba(255, 255, 255, 0.24);
     --border-strong: rgba(255, 255, 255, 0.3);
     --border-hover: rgba(255, 255, 255, 0.5);
-    --focus: #FFB46A;
+    --focus: #ffb46a;
     color: var(--text);
-    background: #120B07 url('/login-bg.jpg') center bottom / cover no-repeat;
+    background: #120b07 url('/login-bg.jpg') center bottom / cover no-repeat;
 }
 .auth-card {
     border-radius: 20px;
@@ -821,7 +821,7 @@ button.org:hover {
     width: 34px;
     height: 34px;
     border-radius: 9px;
-    background: #FFFFFF;
+    background: #ffffff;
 }
 .auth .field::placeholder {
     color: var(--text-faint);
@@ -834,20 +834,20 @@ button.org:hover {
 .auth .btn-provider {
     background: rgba(255, 255, 255, 0.92);
     border-color: transparent;
-    color: #15181D;
+    color: #15181d;
 }
 .auth .btn-provider:hover {
-    background: #FFFFFF;
-    color: #15181D;
+    background: #ffffff;
+    color: #15181d;
 }
 .auth .btn-primary {
-    background: linear-gradient(180deg, #E07A1F, var(--accent));
+    background: linear-gradient(180deg, #e07a1f, var(--accent));
 }
 .auth .btn-primary:hover {
     background: var(--accent-hover);
 }
 .auth .linkbtn {
-    color: #FFB874;
+    color: #ffb874;
 }
 
 /* Selo de contagem num item do menu (ex.: pedidos de acesso pendentes). */
