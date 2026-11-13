@@ -793,6 +793,63 @@ button.org:hover {
     cursor: not-allowed;
 }
 
+/* ---------- login: foto de fundo + card de vidro ---------- */
+/* Dentro de .auth, os tokens de cor viram a versão "sobre fundo escuro": o card,
+   os campos, os avisos e o NoAccessCard se adaptam sozinhos, sem regra por componente. */
+.auth {
+    --text: #ffffff;
+    --text-2: rgba(255, 255, 255, 0.88);
+    --text-muted: rgba(255, 255, 255, 0.74);
+    --text-faint: rgba(255, 255, 255, 0.6);
+    --surface: rgba(255, 255, 255, 0.1);
+    --surface-2: rgba(255, 255, 255, 0.16);
+    --surface-3: rgba(255, 255, 255, 0.2);
+    --border: rgba(255, 255, 255, 0.24);
+    --border-strong: rgba(255, 255, 255, 0.3);
+    --border-hover: rgba(255, 255, 255, 0.5);
+    --focus: #ffb46a;
+    color: var(--text);
+    background: #120b07 url('/login-bg.jpg') center bottom / cover no-repeat;
+}
+.auth-card {
+    border-radius: 20px;
+    background: rgba(20, 14, 10, 0.45);
+    backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+.auth .brand-mark {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: #ffffff;
+}
+.auth .field::placeholder {
+    color: var(--text-faint);
+}
+.auth .notice {
+    background: var(--surface);
+    color: var(--text);
+}
+/* Google fica branco sólido para o "G" colorido aparecer. */
+.auth .btn-provider {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: transparent;
+    color: #15181d;
+}
+.auth .btn-provider:hover {
+    background: #ffffff;
+    color: #15181d;
+}
+.auth .btn-primary {
+    background: linear-gradient(180deg, #e07a1f, var(--accent));
+}
+.auth .btn-primary:hover {
+    background: var(--accent-hover);
+}
+.auth .linkbtn {
+    color: #ffb874;
+}
+
 /* Selo de contagem num item do menu (ex.: pedidos de acesso pendentes). */
 .nav .count {
     margin-left: auto;

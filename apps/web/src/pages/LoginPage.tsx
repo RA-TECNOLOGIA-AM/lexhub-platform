@@ -82,7 +82,9 @@ export function LoginPage() {
         <main className="auth">
             <div className="card auth-card">
                 <div className="brand">
-                    <span className="brand-mark">LH</span>
+                    <span className="brand-mark">
+                        <img src="/logo-justica.svg" alt="" width={24} height={24} />
+                    </span>
                     <span>LexHub</span>
                 </div>
 
