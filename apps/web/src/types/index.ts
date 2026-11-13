@@ -389,6 +389,22 @@ export type AccessRequest = {
     result_org_id: string | null // organização em que entrou (aprovado)
 }
 
+// Uma notificação do sino (api.list_my_notifications). Tipo novo = um valor a mais em kind.
+export type AppNotification = {
+    id: string
+    kind: 'access_request.approved'
+    title: string
+    body: string | null
+    link: string | null // caminho dentro do app (ex.: /lexgroup/dashboards)
+    created_at: string // ISO
+    read_at: string | null // null = não lida
+}
+
+export type NotificationsResponse = {
+    items: AppNotification[] // as últimas, mais recentes primeiro
+    unread: number // total não lido (pode ser maior que o que veio em items)
+}
+
 // Organizações e unidades que a equipe RA pode escolher ao aprovar.
 export type ApprovalOrg = {
     id: string

@@ -20,3 +20,4 @@ export {
 export { sources } from './sources.ts'
 export { EXPORT_LABELS, exportRowsFor } from './exportRows.ts'
 export { createAccessRequestsStore } from './accessRequests.ts'
+export { createNotificationsStore } from './notifications.ts'

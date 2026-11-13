@@ -5,6 +5,7 @@ import { createAccessClient } from './accessClient.ts'
 import { createMembersClient } from './membersClient.ts'
 import { createSourcesClient } from './sourcesClient.ts'
 import { createAuditClient } from './auditClient.ts'
+import { createNotificationsClient } from './notifications.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
 import type {
@@ -49,6 +50,8 @@ export function createApiClient({
         ...createSourcesClient(auth),
         // Auditoria: também direto no Supabase (schema api).
         ...createAuditClient(auth),
+        // Notificações do sino: também direto no Supabase (schema api).
+        ...createNotificationsClient(auth),
 
         async signIn(email, password) {
             const { error } = await auth.auth.signInWithPassword({ email: email.trim(), password })

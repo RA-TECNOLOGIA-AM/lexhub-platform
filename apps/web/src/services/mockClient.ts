@@ -5,6 +5,7 @@ import {
     EXPORT_LABELS,
     exportRowsFor,
     createAccessRequestsStore,
+    createNotificationsStore,
     googleMockEmail,
     noAccessEmails,
     createAccessStore,
@@ -57,6 +58,8 @@ const accessStore = createAccessStore(memberStore)
 
 // Pedidos de acesso do mock: em memória (voltam ao exemplo no F5).
 const accessRequests = createAccessRequestsStore()
+// Notificações do mock: em memória (somem no F5). Aprovar um pedido avisa quem pediu (como o gatilho do banco).
+const notifications = createNotificationsStore()
 
 function requireSession() {
     if (sessionStorage.getItem(SESSION_KEY) === null) {
@@ -315,11 +318,27 @@ export function createMockClient(): DataClient {
         },
         async approveAccessRequest(id, target) {
             await wait()
-            return accessRequests.approve(who(), id, target)
+            const approved = accessRequests.approve(who(), id, target)
+            // O mock só tem a organização principal com dados: o link leva para ela.
+            notifications.add(approved.email, {
+                kind: 'access_request.approved',
+                title: 'Seu acesso foi aprovado',
+                body: `Você agora faz parte de ${me.org.name}.`,
+                link: `/${me.org.slug}/dashboards`,
+            })
+            return approved
         },
         async rejectAccessRequest(id, note) {
             await wait()
             return accessRequests.reject(who(), id, note)
+        },
+
+        async listMyNotifications() {
+            await wait()
+            return notifications.list(who().email)
+        },
+        async markNotificationsRead(ids) {
+            notifications.markRead(who().email, ids)
         },
 
         // Mesmas regras da API: sessão, organização, unidade liberada e can_export; registra na Auditoria.
