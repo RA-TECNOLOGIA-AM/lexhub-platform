@@ -232,11 +232,11 @@ export function createMockClient(): DataClient {
             return requireOrg(org) ? accessStore.overview(unit) : copy(onboardingAccess)
         },
 
-        // O mock entra como Desenvolvedor: gere acesso e membros e vê as fontes.
+        // O mock entra como Desenvolvedor: gere acesso e membros e vê as fontes e a auditoria.
         async getMyAdminPermissions(org) {
             requireSession()
             requireOrg(org)
-            return { access: true, members: true, sources: true }
+            return { access: true, members: true, sources: true, audit: true }
         },
 
         async updateMemberAccess(org, memberId, update) {

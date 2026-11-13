@@ -245,7 +245,8 @@ export type AccessOverview = {
 
 // O que a pessoa gere nesta organização (api.my_admin_permissions): o menu esconde o que não for dela.
 // sources = vê a aba Unidades e fontes (Owner/Desenvolvedor: todas; Gestor/Controller: as próprias unidades).
-export type AdminPermissions = { access: boolean; members: boolean; sources: boolean }
+// audit = vê a Auditoria (Owner/Desenvolvedor).
+export type AdminPermissions = { access: boolean; members: boolean; sources: boolean; audit: boolean }
 
 // O que o editor grava (api.update_member_access): estado desejado nas unidades geridas.
 export type MemberAccessUpdate = {
@@ -255,7 +256,20 @@ export type MemberAccessUpdate = {
 }
 
 // Auditoria: o que aconteceu na organização (entradas, exportações, acesso, suporte, fontes).
-export type AuditKind = 'login' | 'export' | 'access' | 'support' | 'source'
+// source = unidades e fontes (criar/editar unidade, sincronização); other = evento que a tela ainda não conhece
+export type AuditKind = 'login' | 'export' | 'access' | 'support' | 'source' | 'other'
+
+// Um evento como vem do banco (api.list_audit); services/auditEvents.ts traduz para AuditEvent.
+export type RawAuditEvent = {
+    id: string
+    at: string
+    action: string // 'dashboard.export', 'member.invited'...
+    actor: string // nome na organização, e-mail ou 'Sistema'
+    targetType: string | null
+    targetId: string | null
+    targetName: string | null // nome do dashboard, da unidade ou da pessoa, quando dá para achar
+    metadata: Record<string, unknown>
+}
 
 export type AuditEvent = {
     id: string
