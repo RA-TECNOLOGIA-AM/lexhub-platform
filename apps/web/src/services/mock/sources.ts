@@ -1,72 +1,93 @@
-import type { SourcesResponse, Unit } from '../../types/index.ts'
+import type { DataSource, SourcesResponse, Unit } from '../../types/index.ts'
 import { minAgo } from './helpers.ts'
 import { me } from './users.ts'
 
-// As fontes do protótipo (canvas "LexHub v2 — protótipo", tela Unidades e fontes).
+// As fontes da LexGroup no mock, no mesmo formato de api.list_sources (migration 20261113180000_unidades_fontes.sql).
+// Mapa combinado em 13/11: NG = LexPre, LexFlow, banco NG, 2 planilhas; LAAM = LexPre, LexFlow, banco LA,
+// planilha do financeiro; LARJ = LexPre, LexFlow e o banco NG (gerenciado pela unidade Nicolas Gomes).
 // Datas relativas a agora (minAgo), para "há 4 min" continuar verdade no F5.
 
 // Unidade pelo código, reaproveitando os nomes do users.ts (sem repetir 'Nicolas Gomes' aqui).
 const unit = (code: string): Unit => me.units.find((u) => u.code === code)!
 
+// Uma fonte saudável que sincronizou há `min` minutos; o resto vem por `over`.
+const healthy = (
+    min: number,
+    over: Omit<DataSource, 'syncedAt' | 'failures' | 'status' | 'rows' | 'managedBy'> & Partial<DataSource>,
+): DataSource => ({
+    syncedAt: minAgo(min),
+    rows: null,
+    failures: 0,
+    status: 'healthy',
+    managedBy: null,
+    ...over,
+})
+
+const lexpre = (escritorio: number) =>
+    healthy(7, {
+        id: 'lexpre',
+        kind: 'database',
+        group: 'product',
+        name: 'LexPre',
+        detail: `Comercial e pré-protocolo · escritório ${escritorio}`,
+    })
+
+const lexflow = (rows: number) =>
+    healthy(6, {
+        id: 'lexflow',
+        kind: 'flow',
+        group: 'product',
+        name: 'LexFlow',
+        detail: 'Execução, acordos, recursal e publicações',
+        rows,
+    })
+
+const ngDatabase = (managedBy: string | null) =>
+    healthy(4, {
+        id: 'ng',
+        kind: 'database',
+        group: 'connection',
+        name: 'Sistema jurídico NG',
+        detail: 'Postgres · somente leitura',
+        rows: 18_000,
+        managedBy,
+    })
+
 export const sources: SourcesResponse = {
-    syncEveryMin: 5,
+    syncEveryMin: 10,
     unitLimit: { used: 3, total: 5 },
     units: [
         {
             unit: unit('NG'),
             timezone: 'America/Manaus',
             dashboards: 14,
-            lastFailure: { at: minAgo(180), source: 'LexPre', message: 'tempo esgotado (30 s)' },
+            lastFailure: {
+                at: minAgo(180),
+                source: 'Planilha do protocolo passado',
+                message: 'planilha não encontrada',
+            },
             sources: [
+                lexflow(9_000),
+                lexpre(1),
+                ngDatabase(null),
+                healthy(9, {
+                    id: 'sheets_financeiro_ng',
+                    kind: 'sheet',
+                    group: 'connection',
+                    name: 'Planilha do financeiro',
+                    detail: 'Google Sheets · conta de serviço',
+                }),
                 {
-                    id: 'ng-juridico',
-                    kind: 'database',
-                    name: 'Sistema jurídico NG',
-                    detail: 'Postgres · réplica somente leitura',
-                    syncedAt: minAgo(4),
-                    rows: 18_000,
-                    failures: 0,
-                    status: 'healthy',
-                },
-                {
-                    id: 'ng-lexflow',
-                    kind: 'flow',
-                    name: 'LexFlow',
-                    detail: 'Execução, acordos, recursal e publicações',
-                    syncedAt: minAgo(6),
-                    rows: 9_000,
-                    failures: 0,
-                    status: 'healthy',
-                },
-                {
-                    id: 'ng-lexpre',
-                    kind: 'database',
-                    name: 'LexPre · escritório 1',
-                    detail: 'Comercial e pré-protocolo',
+                    id: 'sheets_protocolo_passado_ng',
+                    kind: 'sheet',
+                    group: 'connection',
+                    name: 'Planilha do protocolo passado',
+                    detail: 'Google Sheets · conta de serviço',
+                    managedBy: null,
                     syncedAt: minAgo(180),
                     rows: null,
                     failures: 2,
                     status: 'late',
-                },
-                {
-                    id: 'ng-contaazul',
-                    kind: 'finance',
-                    name: 'Conta Azul',
-                    detail: 'Contas a pagar e a receber · login seguro (OAuth)',
-                    syncedAt: null,
-                    rows: null,
-                    failures: 0,
-                    status: 'pending',
-                },
-                {
-                    id: 'ng-planilha',
-                    kind: 'sheet',
-                    name: 'Planilha do financeiro',
-                    detail: 'Google Sheets · conta de serviço',
-                    syncedAt: minAgo(9),
-                    rows: null,
-                    failures: 0,
-                    status: 'healthy',
                 },
             ],
         },
@@ -76,45 +97,27 @@ export const sources: SourcesResponse = {
             dashboards: 12,
             lastFailure: null,
             sources: [
-                {
-                    id: 'laam-juridico',
+                lexflow(7_000),
+                lexpre(2),
+                healthy(5, {
+                    id: 'laadv',
                     kind: 'database',
+                    group: 'connection',
                     name: 'Sistema jurídico LA',
                     detail: 'Postgres · somente leitura',
-                    syncedAt: minAgo(5),
                     rows: 15_000,
-                    failures: 0,
-                    status: 'healthy',
-                },
+                }),
                 {
-                    id: 'laam-lexflow',
-                    kind: 'flow',
-                    name: 'LexFlow',
-                    detail: 'Execução, acordos e recursal',
-                    syncedAt: minAgo(6),
-                    rows: 7_000,
-                    failures: 0,
-                    status: 'healthy',
-                },
-                {
-                    id: 'laam-lexpre',
-                    kind: 'database',
-                    name: 'LexPre · escritório 2',
-                    detail: 'Comercial e pré-protocolo',
-                    syncedAt: minAgo(7),
+                    id: 'sheets_financeiro_la',
+                    kind: 'sheet',
+                    group: 'connection',
+                    name: 'Planilha do financeiro',
+                    detail: 'Google Sheets · conta de serviço',
+                    managedBy: null,
+                    syncedAt: null,
                     rows: null,
                     failures: 0,
-                    status: 'healthy',
-                },
-                {
-                    id: 'laam-contaazul',
-                    kind: 'finance',
-                    name: 'Conta Azul',
-                    detail: 'Contas a pagar e a receber · OAuth',
-                    syncedAt: minAgo(10),
-                    rows: null,
-                    failures: 0,
-                    status: 'healthy',
+                    status: 'waiting',
                 },
             ],
         },
@@ -123,38 +126,7 @@ export const sources: SourcesResponse = {
             timezone: 'America/Sao_Paulo',
             dashboards: 9,
             lastFailure: null,
-            sources: [
-                {
-                    id: 'larj-lexflow',
-                    kind: 'flow',
-                    name: 'LexFlow · consultas RJ',
-                    detail: 'Protocolo, pendências, execução e acordos',
-                    syncedAt: minAgo(6),
-                    rows: 3_000,
-                    failures: 0,
-                    status: 'healthy',
-                },
-                {
-                    id: 'larj-lexpre',
-                    kind: 'database',
-                    name: 'LexPre · escritório 3',
-                    detail: 'Comercial e pré-protocolo',
-                    syncedAt: minAgo(7),
-                    rows: null,
-                    failures: 0,
-                    status: 'healthy',
-                },
-                {
-                    id: 'larj-contaazul',
-                    kind: 'finance',
-                    name: 'Conta Azul',
-                    detail: 'Contas a pagar e a receber · OAuth',
-                    syncedAt: minAgo(10),
-                    rows: null,
-                    failures: 0,
-                    status: 'healthy',
-                },
-            ],
+            sources: [lexflow(3_000), lexpre(3), ngDatabase(unit('NG').name)],
         },
     ],
 }

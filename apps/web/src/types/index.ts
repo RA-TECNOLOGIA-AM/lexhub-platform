@@ -244,7 +244,8 @@ export type AccessOverview = {
 }
 
 // O que a pessoa gere nesta organização (api.my_admin_permissions): o menu esconde o que não for dela.
-export type AdminPermissions = { access: boolean; members: boolean }
+// sources = vê a aba Unidades e fontes (Owner/Desenvolvedor: todas; Gestor/Controller: as próprias unidades).
+export type AdminPermissions = { access: boolean; members: boolean; sources: boolean }
 
 // O que o editor grava (api.update_member_access): estado desejado nas unidades geridas.
 export type MemberAccessUpdate = {
@@ -287,13 +288,18 @@ export type ClientsResponse = {
 
 // Unidades e fontes: de onde vêm os dados de cada unidade (conectores).
 export type SourceKind = 'database' | 'flow' | 'finance' | 'sheet' // define o ícone
-export type SourceStatus = 'healthy' | 'late' | 'pending' // pending = falta autorizar (ex.: Conta Azul)
+// pending = falta autorizar (ex.: Conta Azul); waiting = conectada, mas ainda não sincronizou nenhuma vez
+export type SourceStatus = 'healthy' | 'late' | 'pending' | 'waiting'
+// product = contratado pela organização (LexFlow, LexPre); connection = conectada por uma unidade (banco, planilha)
+export type SourceGroup = 'product' | 'connection'
 
 export type DataSource = {
     id: string
     kind: SourceKind
+    group: SourceGroup
     name: string // "LexPre · escritório 1"
     detail: string // "Comercial e pré-protocolo"
+    managedBy: string | null // nome da unidade dona quando é de outra unidade (LARJ usa o banco NG); null = desta
     syncedAt: string | null // ISO da última sincronização; null = nunca sincronizou
     rows: number | null // linhas na última sincronização; null = não se aplica
     failures: number // falhas seguidas (0 = nenhuma)
@@ -311,7 +317,7 @@ export type UnitSources = {
 export type SourcesResponse = {
     syncEveryMin: number // intervalo da sincronização (a tela monta o texto do cabeçalho)
     units: UnitSources[]
-    unitLimit: { used: number; total: number } // "3 de 5 unidades do plano"
+    unitLimit: { used: number; total: number } | null // "3 de 5 unidades do plano"; null = o plano não limita
 }
 
 // Exportar (como na v1, o servidor gera o arquivo): o relatório com o período e os filtros em uso.

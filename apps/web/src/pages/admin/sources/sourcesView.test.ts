@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { DataSource, UnitSources } from '../../../types/index.ts'
-import { lastFailureLabel, pickUnit, rowsLabel, syncNote, unitLimitLabel, unitSub, whenLabel } from './sourcesView.ts'
+import {
+    detailLabel,
+    groupSources,
+    lastFailureLabel,
+    pickUnit,
+    rowsLabel,
+    statusOf,
+    syncNote,
+    unitLimitLabel,
+    unitSub,
+    whenLabel,
+} from './sourcesView.ts'
 
 const NOW = Date.parse('2026-11-10T12:00:00Z')
 const ago = (min: number) => new Date(NOW - min * 60_000).toISOString()
@@ -8,8 +19,10 @@ const ago = (min: number) => new Date(NOW - min * 60_000).toISOString()
 const source = (over: Partial<DataSource>): DataSource => ({
     id: 's1',
     kind: 'database',
+    group: 'product',
     name: 'LexPre',
     detail: '',
+    managedBy: null,
     syncedAt: ago(4),
     rows: null,
     failures: 0,
@@ -60,6 +73,28 @@ describe('sourcesView', () => {
             ),
         ).toBe('LexPre: tempo esgotado (30 s)')
         expect(unitLimitLabel({ used: 3, total: 5 })).toBe('3 de 5 unidades do plano')
+        expect(unitLimitLabel(null)).toBeNull()
+    })
+
+    it('separa produtos contratados de fontes conectadas, nesta ordem, sem grupo vazio', () => {
+        const db = source({ id: 'ng', group: 'connection' })
+        const sections = groupSources([db, source({ id: 'lexpre' })])
+        expect(sections.map((s) => s.title)).toEqual(['Produtos contratados', 'Fontes conectadas'])
+        expect(sections[1].sources).toEqual([db])
+        expect(groupSources([db]).map((s) => s.group)).toEqual(['connection'])
+        expect(groupSources([])).toEqual([])
+    })
+
+    it('fonte de outra unidade diz quem gerencia', () => {
+        expect(detailLabel(source({ detail: 'Postgres', managedBy: 'Nicolas Gomes' }))).toBe(
+            'Postgres · gerenciada por Nicolas Gomes',
+        )
+        expect(detailLabel(source({ detail: 'Postgres' }))).toBe('Postgres')
+    })
+
+    it('fonte que ainda não sincronizou: aguardando', () => {
+        expect(statusOf('waiting')).toEqual({ label: 'Aguardando sync', badge: 'badge neutral' })
+        expect(whenLabel(source({ syncedAt: null, status: 'waiting' }), NOW)).toBe('Nunca sincronizada')
     })
 
     it('escolhe a unidade da URL ou a primeira', () => {

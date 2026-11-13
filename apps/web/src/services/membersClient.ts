@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DataClient } from './client.ts'
-import { toRpcError } from './rpcError.ts'
+import { createRpc } from './rpc.ts'
 import type { InviteResult, Member, MembersResponse } from '../types/index.ts'
 
 type MembersClient = Pick<
@@ -11,11 +11,7 @@ type MembersClient = Pick<
 // Módulo: Membros pelo Supabase (funções do schema api, sem passar pela API em Python).
 // Parâmetro: o cliente do Supabase já logado (as funções conferem quem chama e o que ela gere).
 export function createMembersClient(supabase: SupabaseClient): MembersClient {
-    async function call<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
-        const { data, error } = await supabase.schema('api').rpc(fn, args)
-        if (error) throw toRpcError(error)
-        return data as T
-    }
+    const call = createRpc(supabase)
 
     return {
         listMembers: (org) => call<MembersResponse>('list_members', { p_org: org }),

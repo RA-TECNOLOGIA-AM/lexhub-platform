@@ -59,7 +59,7 @@ export const onboardingAudit: AuditResponse = { events: [] }
 
 // Ainda sem fontes conectadas: só a unidade-sede, vazia.
 export const onboardingSources: SourcesResponse = {
-    syncEveryMin: 5,
+    syncEveryMin: 10,
     unitLimit: { used: 1, total: 1 },
     units: [
         {

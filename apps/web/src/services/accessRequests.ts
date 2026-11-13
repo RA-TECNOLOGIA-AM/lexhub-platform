@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DataClient } from './client.ts'
-import { toRpcError } from './rpcError.ts'
+import { createRpc } from './rpc.ts'
 import type { AccessRequest, ApprovalOrg } from '../types/index.ts'
 
 type AccessRequestsClient = Pick<
@@ -17,11 +17,7 @@ type AccessRequestsClient = Pick<
 // Módulo: os pedidos de acesso pelo Supabase (funções do schema api, sem passar pela API em Python).
 // Parâmetro: o cliente do Supabase já logado (o token vai junto e as funções conferem quem chama).
 export function createAccessRequestsClient(supabase: SupabaseClient): AccessRequestsClient {
-    async function call<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
-        const { data, error } = await supabase.schema('api').rpc(fn, args)
-        if (error) throw toRpcError(error)
-        return data as T
-    }
+    const call = createRpc(supabase)
 
     return {
         requestAccess: (office, message) =>

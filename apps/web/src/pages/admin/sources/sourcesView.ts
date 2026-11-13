@@ -1,4 +1,4 @@
-import type { DataSource, SourceStatus, UnitSources } from '../../../types/index.ts'
+import type { DataSource, SourceGroup, SourceStatus, UnitSources } from '../../../types/index.ts'
 import { timeAgo } from '../../../lib/format.ts'
 
 // Módulo: as regras de texto e cor da tela Unidades e fontes, sem React (testadas em sourcesView.test.ts).
@@ -12,9 +12,28 @@ const SOURCE_STATUS: Record<SourceStatus, { label: string; badge: string }> = {
     healthy: { label: 'Saudável', badge: 'badge ok' },
     late: { label: 'Atrasada', badge: 'badge warn' },
     pending: { label: 'Autorizar', badge: 'badge info' },
+    waiting: { label: 'Aguardando sync', badge: 'badge neutral' },
 }
 
 export const statusOf = (status: SourceStatus) => SOURCE_STATUS[status]
+
+// Os dois grupos da lista, nesta ordem. Grupo novo = uma linha aqui.
+const GROUPS: { group: SourceGroup; title: string; hint: string }[] = [
+    { group: 'product', title: 'Produtos contratados', hint: 'Vêm do contrato da organização' },
+    { group: 'connection', title: 'Fontes conectadas', hint: 'Bancos e planilhas conectados por uma unidade' },
+]
+
+export type SourceSection = { group: SourceGroup; title: string; hint: string; sources: DataSource[] }
+
+// As fontes separadas em grupos; grupo sem fonte não aparece.
+export const groupSources = (sources: DataSource[]): SourceSection[] =>
+    GROUPS.map((g) => ({ ...g, sources: sources.filter((s) => s.group === g.group) })).filter(
+        (g) => g.sources.length > 0,
+    )
+
+// A linha de baixo do nome: 'Postgres · somente leitura · gerenciada por NICOLAS GOMES' (fonte de outra unidade).
+export const detailLabel = (source: DataSource): string =>
+    source.managedBy ? `${source.detail} · gerenciada por ${source.managedBy}` : source.detail
 
 // 'fonte' / 'fontes', 'falha' / 'falhas'...
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
@@ -39,9 +58,9 @@ export const unitSub = (u: UnitSources): string => `${plural(u.sources.length, '
 export const lastFailureLabel = (u: UnitSources): string =>
     u.lastFailure ? `${u.lastFailure.source}: ${u.lastFailure.message}` : 'Nenhuma nos últimos 7 dias'
 
-// '3 de 5 unidades do plano'
-export const unitLimitLabel = ({ used, total }: { used: number; total: number }): string =>
-    `${used} de ${total} unidades do plano`
+// '3 de 5 unidades do plano'; null = o plano não limita (a linha some).
+export const unitLimitLabel = (limit: { used: number; total: number } | null): string | null =>
+    limit ? `${limit.used} de ${limit.total} unidades do plano` : null
 
 // A unidade escolhida (vem da URL: ?unidade=LA_AM). Código inválido ou ausente = a primeira.
 export const pickUnit = (units: UnitSources[], code: string | null): UnitSources | undefined =>

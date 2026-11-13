@@ -1,21 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { fakeSupabase } from './fakeSupabase.ts'
 import { createMembersClient } from './membersClient.ts'
 import { DataError } from './errors.ts'
-
-// Supabase falso: guarda o schema, a função e os parâmetros de cada rpc e devolve `result`.
-function fakeSupabase(result: { data?: unknown; error?: { code?: string; message?: string } }) {
-    const calls: { schema: string; fn: string; args: unknown }[] = []
-    const supabase = {
-        schema: (schema: string) => ({
-            rpc: async (fn: string, args?: unknown) => {
-                calls.push({ schema, fn, args })
-                return { data: result.data ?? null, error: result.error ?? null }
-            },
-        }),
-    } as unknown as SupabaseClient
-    return { supabase, calls }
-}
 
 describe('createMembersClient', () => {
     it('convite: chama invite_members no schema api com os parâmetros do banco', async () => {

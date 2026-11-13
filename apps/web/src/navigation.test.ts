@@ -4,26 +4,32 @@ import { menuPermissions, NAV_SECTIONS, visibleItems } from './navigation.ts'
 const admin = NAV_SECTIONS.find((s) => s.title === 'Administração')!
 const keys = (perms: Parameters<typeof visibleItems>[1]) => visibleItems(admin, perms).map((i) => i.key)
 
+const ALL = { access: true, members: true, sources: true }
+const NONE = { access: false, members: false, sources: false }
+
 describe('visibleItems', () => {
     it('Acesso só aparece para quem gere acesso (Owner, Desenvolvedor, Gestor, Controller)', () => {
-        expect(keys({ access: true, members: true })).toContain('acesso')
-        expect(keys({ access: false, members: false })).not.toContain('acesso')
+        expect(keys(ALL)).toContain('acesso')
+        expect(keys(NONE)).not.toContain('acesso')
     })
-    it('enquanto as permissões não chegam, Acesso fica escondido (não pisca para quem não gere)', () => {
+    it('Unidades e fontes só aparece para quem vê fontes (Owner, Desenvolvedor, Gestor, Controller)', () => {
+        expect(keys(ALL)).toContain('unidades')
+        expect(keys({ ...ALL, sources: false })).not.toContain('unidades')
+    })
+    it('enquanto as permissões não chegam, Acesso e Unidades ficam escondidos (não piscam para quem não gere)', () => {
         expect(keys(null)).not.toContain('acesso')
+        expect(keys(null)).not.toContain('unidades')
         expect(keys(null)).toContain('membros')
     })
 })
 
 describe('menuPermissions', () => {
     it('se a consulta falhar (ex.: função ainda não aplicada no banco), mostra os itens: a página protege sozinha', () => {
-        expect(menuPermissions(null, new Error('function api.my_admin_permissions does not exist'))).toEqual({
-            access: true,
-            members: true,
-        })
+        expect(menuPermissions(null, new Error('function api.my_admin_permissions does not exist'))).toEqual(ALL)
     })
     it('com resposta, usa a resposta; carregando, null', () => {
-        expect(menuPermissions({ access: false, members: true }, null)).toEqual({ access: false, members: true })
+        const some = { access: false, members: true, sources: false }
+        expect(menuPermissions(some, null)).toEqual(some)
         expect(menuPermissions(null, null)).toBeNull()
     })
 })
