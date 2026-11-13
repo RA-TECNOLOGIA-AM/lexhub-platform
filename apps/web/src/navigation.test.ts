@@ -20,10 +20,16 @@ describe('visibleItems', () => {
         expect(keys(ALL)).toContain('auditoria')
         expect(keys({ ...ALL, audit: false })).not.toContain('auditoria')
     })
-    it('enquanto as permissões não chegam, Acesso e Unidades ficam escondidos (não piscam para quem não gere)', () => {
+    it('enquanto as permissões não chegam, Membros, Acesso e Unidades ficam escondidos (não piscam para quem não gere)', () => {
         expect(keys(null)).not.toContain('acesso')
         expect(keys(null)).not.toContain('unidades')
-        expect(keys(null)).toContain('membros')
+        expect(keys(null)).not.toContain('membros')
+    })
+    it('Controller (acompanha) vê Unidades e fontes, mas não Membros nem Acesso', () => {
+        const controller = { access: false, members: false, sources: true, audit: false }
+        expect(keys(controller)).toContain('unidades')
+        expect(keys(controller)).not.toContain('membros')
+        expect(keys(controller)).not.toContain('acesso')
     })
 })
 

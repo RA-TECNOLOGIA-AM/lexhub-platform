@@ -164,6 +164,7 @@ export type Invitation = {
     invited_by: string | null
     created_at: string
     expires_at: string
+    can_revoke: boolean // quem pergunta pode cancelar (Gestor: só convite inteiro nas unidades dele)
 }
 
 export type MemberTeam = { id: string; name: string; unit: string } // unit = código da unidade

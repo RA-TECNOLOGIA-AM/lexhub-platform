@@ -8,6 +8,7 @@ import {
     isDirty,
     previewDashboards,
     previewText,
+    readOnlyReason,
     setUnitRole,
     toggleTeam,
     toUpdate,
@@ -44,9 +45,9 @@ export function AccessDialog({ member, overview, isSelf, onSave, onClose }: Acce
         }
     }
 
-    // Gestor/Controller não editam Owner/Desenvolvedor (o banco também recusa).
-    const orgWide = member.org_role === 'owner' || member.org_role === 'admin'
-    const readOnly = orgWide && !overview.can_set_org_role
+    // Gestor não edita Owner/Desenvolvedor nem o próprio acesso (o banco também recusa).
+    const readOnlyText = readOnlyReason(member, overview, isSelf)
+    const readOnly = readOnlyText !== null
     const dirty = isDirty(original, draft)
     const unitName = (code: string) => overview.units.find((u) => u.code === code)?.name ?? code
     const preview = previewDashboards(overview, draft)
@@ -72,7 +73,7 @@ export function AccessDialog({ member, overview, isSelf, onSave, onClose }: Acce
         >
             {readOnly && (
                 <p className="muted small" style={{ margin: 0 }}>
-                    Owner e Desenvolvedor: só Owner ou Desenvolvedor muda o acesso desta pessoa.
+                    {readOnlyText}
                 </p>
             )}
             {overview.can_set_org_role && member.org_role !== 'owner' && (

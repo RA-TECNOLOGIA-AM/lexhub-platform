@@ -43,7 +43,7 @@ export function AccessPage() {
                 <div className="stack">
                     <PermissionMatrix matrix={PERMISSIONS} />
                     <StateMessage icon="shield" title="Você não gere acesso nesta organização.">
-                        Quem muda cargos e equipes é o Owner, o Desenvolvedor ou o Gestor/Controller da unidade.
+                        Quem muda cargos e equipes é o Owner, o Desenvolvedor ou o Gestor da unidade.
                     </StateMessage>
                 </div>
             </>

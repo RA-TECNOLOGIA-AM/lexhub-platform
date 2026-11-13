@@ -91,6 +91,17 @@ export function previewDashboards(overview: AccessOverview, draft: AccessDraft):
 }
 
 // A frase da prévia de uma unidade ("todos os 12 dashboards", "2 de 12: Protocolo, Pendências"...).
+// Por que a janela abre só para ver (null = pode editar). As mesmas regras de api.update_member_access:
+// quem não é Owner/Desenvolvedor não mexe em Owner/Desenvolvedor nem no próprio acesso.
+export function readOnlyReason(member: Member, overview: AccessOverview, isSelf: boolean): string | null {
+    if (overview.can_set_org_role) return null
+    if (member.org_role === 'owner' || member.org_role === 'admin') {
+        return 'Owner e Desenvolvedor: só Owner ou Desenvolvedor muda o acesso desta pessoa.'
+    }
+    if (isSelf) return 'Você não muda o próprio acesso: peça ao Owner ou a um Desenvolvedor.'
+    return null
+}
+
 export function previewText(p: UnitPreview): string {
     if (p.total === 0) return 'nenhum dashboard ligado nesta unidade'
     if (p.all) return `todos os ${p.total} dashboards`

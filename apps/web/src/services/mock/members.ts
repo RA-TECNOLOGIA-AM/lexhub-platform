@@ -101,6 +101,7 @@ export const members: MembersResponse = {
             invited_by: 'Ana Ribeiro',
             created_at: daysFromNow(-2),
             expires_at: daysFromNow(5),
+            can_revoke: true,
         },
     ],
 }
@@ -134,6 +135,7 @@ export function createMembersStore(inviter: { name: string; email: string }) {
                         invited_by: inviter.name,
                         created_at: daysFromNow(0),
                         expires_at: daysFromNow(7),
+                        can_revoke: true,
                     })
                     result.invited.push(email)
                 }
