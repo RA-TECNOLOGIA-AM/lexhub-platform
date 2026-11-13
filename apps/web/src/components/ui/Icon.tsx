@@ -1,4 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useId, type CSSProperties, type ReactNode } from 'react'
+import moonImage from '../../assets/moon.png'
 
 // Ícones de traço 1.8 em 24x24 (os mesmos do template/app.js).
 const PATHS = {
@@ -211,19 +212,33 @@ const PATHS = {
     ),
     sun: (
         <>
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+            <circle cx="12" cy="12" r="6" />
+            <path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
         </>
     ),
-    moon: <path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z" />,
 } satisfies Record<string, ReactNode>
 
-export type IconName = keyof typeof PATHS
+export type IconName = keyof typeof PATHS | 'moon'
 
 type IconProps = {
     name: IconName
     size?: number
     style?: CSSProperties
+}
+
+function MoonMark() {
+    const maskId = useId()
+
+    return (
+        <>
+            <defs>
+                <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24" style={{ maskType: 'alpha' }}>
+                    <image href={moonImage} width="24" height="24" />
+                </mask>
+            </defs>
+            <rect width="24" height="24" fill="currentColor" mask={`url(#${maskId})`} />
+        </>
+    )
 }
 
 export function Icon({ name, size = 18, style }: IconProps) {
@@ -240,7 +255,7 @@ export function Icon({ name, size = 18, style }: IconProps) {
             aria-hidden="true"
             style={style}
         >
-            {PATHS[name]}
+            {name === 'moon' ? <MoonMark /> : PATHS[name]}
         </svg>
     )
 }
