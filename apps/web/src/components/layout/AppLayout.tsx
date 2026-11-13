@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { Icon } from '../ui/Icon.tsx'
+import { NotificationsBell } from './NotificationsBell.tsx'
 import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { SearchBox } from './SearchBox.tsx'
 import { TopbarSlotContext } from './topbar-slot.ts'
@@ -131,9 +132,7 @@ export function AppLayout() {
                     {/* A página atual pode ocupar este espaço (ex.: Período do dashboard). */}
                     <div className="topbar-slot" ref={setTopbarSlot} />
                     <SearchBox org={org.slug} />
-                    <button className="iconbtn" type="button" aria-label="Notificações">
-                        <Icon name="bell" />
-                    </button>
+                    <NotificationsBell staff={user.platform_staff} pending={pending} onNavigate={closeMenu} />
                 </header>
 
                 <main className="content">

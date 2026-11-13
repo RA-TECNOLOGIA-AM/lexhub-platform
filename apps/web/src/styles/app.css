@@ -809,6 +809,109 @@ button.org:hover {
     justify-content: center;
 }
 
+/* Sino da topbar e o painel de notificações. Só variáveis de cor: o modo escuro funciona sem mexer aqui. */
+.notif {
+    position: relative;
+}
+.notif-btn {
+    position: relative;
+}
+.notif-dot {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: var(--r-pill);
+    background: var(--accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--surface);
+}
+.notif-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    z-index: 50;
+    width: min(360px, calc(100vw - 32px));
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: var(--surface);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+    overflow: hidden;
+}
+.notif-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+}
+.notif-list {
+    max-height: min(420px, 70vh);
+    overflow-y: auto;
+}
+.notif-item {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 14px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    background: none;
+    font: inherit;
+    text-align: left;
+    color: var(--text);
+    text-decoration: none;
+    cursor: pointer;
+}
+.notif-item:last-child {
+    border-bottom: 0;
+}
+.notif-item:hover {
+    background: var(--surface-2);
+}
+.notif-item.unread {
+    background: var(--accent-soft);
+}
+.notif-item.unread:hover {
+    background: var(--surface-3);
+}
+.notif-icon {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-pill);
+    background: var(--surface-3);
+    color: var(--accent);
+}
+.notif-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.notif-title {
+    font-weight: 600;
+}
+.notif-when {
+    color: var(--text-faint);
+}
+.notif-empty {
+    margin: 0;
+    padding: 20px 14px;
+    text-align: center;
+}
+
 /* ---------- layout pedido pelo gestor (12/11) ---------- */
 /* Conteúdo ocupa a largura toda (antes parava em 1400px e sobrava faixa vazia à direita). */
 .content {

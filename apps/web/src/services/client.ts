@@ -30,6 +30,7 @@ import type {
     AccessRequest,
     ApprovalOrg,
     ApprovalTarget,
+    NotificationsResponse,
 } from '../types/index.ts'
 
 // A única porta de entrada para dados. As telas só conhecem esta interface;
@@ -92,6 +93,10 @@ export interface DataClient {
     getApprovalOptions(): Promise<ApprovalOrg[]>
     approveAccessRequest(id: string, target: ApprovalTarget): Promise<AccessRequest>
     rejectAccessRequest(id: string, note: string | null): Promise<AccessRequest>
+
+    // Notificações do sino: só as de quem está logado.
+    listMyNotifications(): Promise<NotificationsResponse>
+    markNotificationsRead(ids: string[] | null): Promise<void> // null = todas
 }
 
 // mock = dados fictícios; api = Supabase Auth (login) + API V2 (dados). Escolha em VITE_DATA_SOURCE.
