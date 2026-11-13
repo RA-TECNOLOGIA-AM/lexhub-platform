@@ -336,6 +336,14 @@ export type SourcesResponse = {
     syncEveryMin: number // intervalo da sincronização (a tela monta o texto do cabeçalho)
     units: UnitSources[]
     unitLimit: { used: number; total: number } | null // "3 de 5 unidades do plano"; null = o plano não limita
+    canManageUnits: boolean // Owner/Desenvolvedor: criar unidade e editar nome/fuso
+}
+
+// O que o formulário de unidade grava (api.create_unit / api.update_unit). O código só vale na criação.
+export type UnitInput = {
+    code: string
+    name: string
+    timezone: string
 }
 
 // Exportar (como na v1, o servidor gera o arquivo): o relatório com o período e os filtros em uso.

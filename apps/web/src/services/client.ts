@@ -23,6 +23,8 @@ import type {
     ClientsResponse,
     SourceDetail,
     SourcesResponse,
+    UnitInput,
+    UnitSources,
     ExportRequest,
     ExportFile,
     AccessRequest,
@@ -68,6 +70,9 @@ export interface DataClient {
     getSources(org: string): Promise<SourcesResponse>
     // Uma fonte vista de uma unidade (o modal). Unidade fora do escopo = 403; fonte que ela não usa = 409.
     getSourceDetail(org: string, unit: string, source: string): Promise<SourceDetail>
+    // Owner/Desenvolvedor: criar unidade e mudar nome/fuso (o código não muda). Regra quebrada = 409 com a mensagem.
+    createUnit(org: string, unit: UnitInput): Promise<UnitSources>
+    updateUnit(org: string, unit: UnitInput): Promise<UnitSources>
     // Plataforma (só equipe RA): todas as organizações. Sem platform_staff, rejeita com 403.
     listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>

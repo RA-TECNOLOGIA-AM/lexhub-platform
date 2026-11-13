@@ -19,6 +19,19 @@ describe('createSourcesClient', () => {
         ])
     })
 
+    it('createUnit e updateUnit mandam os parâmetros com os nomes do banco', async () => {
+        const { supabase, calls } = fakeSupabase({ data: {} })
+        const client = createSourcesClient(supabase)
+        const unit = { code: 'LASP', name: 'Luis Albert SP', timezone: 'America/Sao_Paulo' }
+        await client.createUnit('lexgroup', unit)
+        await client.updateUnit('lexgroup', unit)
+        const args = { p_org: 'lexgroup', p_code: 'LASP', p_name: 'Luis Albert SP', p_timezone: 'America/Sao_Paulo' }
+        expect(calls).toEqual([
+            { schema: 'api', fn: 'create_unit', args },
+            { schema: 'api', fn: 'update_unit', args },
+        ])
+    })
+
     it('quem não vê fontes (42501) recebe DataError 403', async () => {
         const { supabase } = fakeSupabase({
             error: { code: '42501', message: 'Você não vê as fontes desta organização.' },

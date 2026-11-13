@@ -6,7 +6,7 @@ type UnitNavProps = {
     selected?: string // código da unidade aberta
     limit: { used: number; total: number } | null // null = o plano não limita
     onPick: (code: string) => void
-    onAdd: () => void
+    onAdd?: () => void // sem onAdd (quem não cria unidade), o "+ Nova unidade" não aparece
 }
 
 // Módulo: a lista de unidades da página (escolher uma, "+ Nova unidade" e o limite do plano).
@@ -27,9 +27,11 @@ export function UnitNav({ units, selected, limit, onPick, onAdd }: UnitNavProps)
                     <span className="unit-sub">{unitSub(u)}</span>
                 </button>
             ))}
-            <button type="button" className="unit-btn unit-add" onClick={onAdd}>
-                + Nova unidade
-            </button>
+            {onAdd && (
+                <button type="button" className="unit-btn unit-add" onClick={onAdd}>
+                    + Nova unidade
+                </button>
+            )}
             {limitLabel && <span className="unit-limit">{limitLabel}</span>}
         </nav>
     )
