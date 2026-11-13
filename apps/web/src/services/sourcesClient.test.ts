@@ -11,6 +11,14 @@ describe('createSourcesClient', () => {
         expect(calls).toEqual([{ schema: 'api', fn: 'list_sources', args: { p_org: 'lexgroup' } }])
     })
 
+    it('getSourceDetail chama api.source_detail com organização, unidade e fonte', async () => {
+        const { supabase, calls } = fakeSupabase({ data: {} })
+        await createSourcesClient(supabase).getSourceDetail('lexgroup', 'RJ', 'ng')
+        expect(calls).toEqual([
+            { schema: 'api', fn: 'source_detail', args: { p_org: 'lexgroup', p_unit: 'RJ', p_source: 'ng' } },
+        ])
+    })
+
     it('quem não vê fontes (42501) recebe DataError 403', async () => {
         const { supabase } = fakeSupabase({
             error: { code: '42501', message: 'Você não vê as fontes desta organização.' },

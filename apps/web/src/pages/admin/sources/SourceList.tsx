@@ -11,11 +11,13 @@ const KIND_ICON: Record<SourceKind, IconName> = {
     sheet: 'sheet',
 }
 
-// Módulo: uma fonte (ícone, nome, de quem é, última sincronização e status).
-function SourceRow({ source }: { source: DataSource }) {
+type OpenSource = (source: DataSource) => void
+
+// Módulo: uma fonte (ícone, nome, de quem é, última sincronização e status). Clicar abre o detalhe (onOpen).
+function SourceRow({ source, onOpen }: { source: DataSource; onOpen: OpenSource }) {
     const status = statusOf(source.status)
     return (
-        <div className="source">
+        <button type="button" className="source source-btn" onClick={() => onOpen(source)}>
             <span className="source-icon">
                 <Icon name={KIND_ICON[source.kind]} />
             </span>
@@ -25,12 +27,12 @@ function SourceRow({ source }: { source: DataSource }) {
             </div>
             <span className="muted small source-when">{whenLabel(source)}</span>
             <span className={status.badge}>{status.label}</span>
-        </div>
+        </button>
     )
 }
 
 // Módulo: um grupo de fontes num card ("Produtos contratados", "Fontes conectadas"). O título vem por parâmetro.
-function SourceGroupCard({ section }: { section: SourceSection }) {
+function SourceGroupCard({ section, onOpen }: { section: SourceSection; onOpen: OpenSource }) {
     return (
         <section className="card source-list" aria-label={section.title}>
             <div className="card-head source-group-head">
@@ -38,14 +40,14 @@ function SourceGroupCard({ section }: { section: SourceSection }) {
                 <span className="muted small">{section.hint}</span>
             </div>
             {section.sources.map((s) => (
-                <SourceRow key={s.id} source={s} />
+                <SourceRow key={s.id} source={s} onOpen={onOpen} />
             ))}
         </section>
     )
 }
 
-// Módulo: as fontes de uma unidade, separadas em grupos.
-export function SourceList({ sources }: { sources: DataSource[] }) {
+// Módulo: as fontes de uma unidade, separadas em grupos. Clicar numa fonte avisa quem usa (onOpen).
+export function SourceList({ sources, onOpen }: { sources: DataSource[]; onOpen: OpenSource }) {
     if (sources.length === 0) {
         return (
             <StateMessage icon="plug" title="Nenhuma fonte conectada">
@@ -56,7 +58,7 @@ export function SourceList({ sources }: { sources: DataSource[] }) {
     return (
         <>
             {groupSources(sources).map((section) => (
-                <SourceGroupCard key={section.group} section={section} />
+                <SourceGroupCard key={section.group} section={section} onOpen={onOpen} />
             ))}
         </>
     )

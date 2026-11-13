@@ -314,6 +314,24 @@ export type UnitSources = {
     sources: DataSource[]
 }
 
+// Uma sincronização de uma fonte (app.source_sync_runs). ok/finishedAt null = ainda rodando.
+export type SyncRun = {
+    startedAt: string
+    finishedAt: string | null
+    ok: boolean | null
+    rows: number | null
+    error: string | null
+}
+
+// O modal de uma fonte, vista de uma unidade (api.source_detail).
+export type SourceDetail = {
+    unit: Unit
+    source: DataSource
+    owner: Unit | null // unidade dona; null = produto contratado pela organização
+    dashboards: { key: string; name: string }[] // os desta unidade que usam a fonte
+    runs: SyncRun[] // as 10 últimas, da mais recente para a mais antiga
+}
+
 export type SourcesResponse = {
     syncEveryMin: number // intervalo da sincronização (a tela monta o texto do cabeçalho)
     units: UnitSources[]

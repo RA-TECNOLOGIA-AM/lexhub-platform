@@ -29,6 +29,7 @@ import {
 } from './mock/index.ts'
 import type { DashboardQuery, Meta } from '../types/index.ts'
 import { metaFor } from './mock/helpers.ts'
+import { sourceDetailFor } from './mock/sourceDetail.ts'
 import { toCsv } from '../lib/csv.ts'
 import { periodLabel } from '../lib/period.ts'
 
@@ -254,6 +255,14 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             return copy(requireOrg(org) ? sources : onboardingSources)
+        },
+
+        async getSourceDetail(org, unit, source) {
+            await wait()
+            requireSession()
+            const detail = sourceDetailFor(requireOrg(org) ? sources : onboardingSources, catalog, unit, source)
+            if (!detail) throw new DataError(409, 'Esta unidade não usa essa fonte.')
+            return copy(detail)
         },
 
         // Mesma regra da API: só a equipe RA (platform_staff) vê os clientes.

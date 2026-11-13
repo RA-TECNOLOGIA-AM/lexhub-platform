@@ -1,4 +1,4 @@
-import type { DataSource, SourceGroup, SourceStatus, UnitSources } from '../../../types/index.ts'
+import type { DataSource, SourceDetail, SourceGroup, SourceStatus, SyncRun, UnitSources } from '../../../types/index.ts'
 import { timeAgo } from '../../../lib/format.ts'
 
 // Módulo: as regras de texto e cor da tela Unidades e fontes, sem React (testadas em sourcesView.test.ts).
@@ -18,18 +18,32 @@ const SOURCE_STATUS: Record<SourceStatus, { label: string; badge: string }> = {
 export const statusOf = (status: SourceStatus) => SOURCE_STATUS[status]
 
 // Os dois grupos da lista, nesta ordem. Grupo novo = uma linha aqui.
-const GROUPS: { group: SourceGroup; title: string; hint: string }[] = [
-    { group: 'product', title: 'Produtos contratados', hint: 'Vêm do contrato da organização' },
-    { group: 'connection', title: 'Fontes conectadas', hint: 'Bancos e planilhas conectados por uma unidade' },
+// title = título do card (plural); one = como uma fonte se descreve no modal (singular).
+const GROUPS: { group: SourceGroup; title: string; one: string; hint: string }[] = [
+    {
+        group: 'product',
+        title: 'Produtos contratados',
+        one: 'Produto contratado',
+        hint: 'Vêm do contrato da organização',
+    },
+    {
+        group: 'connection',
+        title: 'Fontes conectadas',
+        one: 'Fonte conectada',
+        hint: 'Bancos e planilhas conectados por uma unidade',
+    },
 ]
 
 export type SourceSection = { group: SourceGroup; title: string; hint: string; sources: DataSource[] }
 
 // As fontes separadas em grupos; grupo sem fonte não aparece.
 export const groupSources = (sources: DataSource[]): SourceSection[] =>
-    GROUPS.map((g) => ({ ...g, sources: sources.filter((s) => s.group === g.group) })).filter(
-        (g) => g.sources.length > 0,
-    )
+    GROUPS.map(({ group, title, hint }) => ({
+        group,
+        title,
+        hint,
+        sources: sources.filter((s) => s.group === group),
+    })).filter((g) => g.sources.length > 0)
 
 // A linha de baixo do nome: 'Postgres · somente leitura · gerenciada por NICOLAS GOMES' (fonte de outra unidade).
 export const detailLabel = (source: DataSource): string =>
@@ -65,3 +79,42 @@ export const unitLimitLabel = (limit: { used: number; total: number } | null): s
 // A unidade escolhida (vem da URL: ?unidade=LA_AM). Código inválido ou ausente = a primeira.
 export const pickUnit = (units: UnitSources[], code: string | null): UnitSources | undefined =>
     units.find((u) => u.unit.code === code) ?? units[0]
+
+// ---------------------------------------------------------------------------
+// Modal de detalhe da fonte
+// ---------------------------------------------------------------------------
+
+// 'Produto contratado' / 'Fonte conectada'
+export const groupLabel = (group: SourceGroup): string => GROUPS.find((g) => g.group === group)!.one
+
+// Quem cuida da fonte, visto desta unidade.
+export function ownerLabel(detail: SourceDetail): string {
+    if (!detail.owner) return 'A organização (vem do contrato)'
+    if (detail.owner.code === detail.unit.code) return `${detail.owner.name} (esta unidade)`
+    return `${detail.owner.name} (gerencia a conexão)`
+}
+
+// Quanto durou: '42 s', '2 min 5 s', '3 min'; ainda rodando = 'rodando'.
+export function durationLabel(run: SyncRun): string {
+    if (!run.finishedAt) return 'rodando'
+    const s = Math.max(0, Math.round((Date.parse(run.finishedAt) - Date.parse(run.startedAt)) / 1000))
+    if (s < 60) return `${s} s`
+    const rest = s % 60
+    return rest ? `${Math.floor(s / 60)} min ${rest} s` : `${s / 60} min`
+}
+
+// O resultado de uma sincronização: '18 mil linhas', 'Concluída', o erro, ou 'Rodando'.
+export function runResultLabel(run: SyncRun): string {
+    if (run.ok === null) return 'Rodando'
+    if (run.ok) return run.rows === null ? 'Concluída' : rowsLabel(run.rows)
+    return run.error ?? 'Falhou'
+}
+
+// '13/11 14:05' no fuso de quem olha (a lista é curta e recente: dia e hora bastam).
+const dayTime = new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+})
+export const runWhenLabel = (run: SyncRun): string => dayTime.format(new Date(run.startedAt)).replace(',', '')

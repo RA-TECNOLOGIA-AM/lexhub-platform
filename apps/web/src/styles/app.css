@@ -428,6 +428,72 @@ button.org:hover {
     padding-bottom: 10px;
     border-bottom: 1px solid var(--divider);
 }
+/* A linha da fonte é um botão (abre o detalhe): sem a cara de botão, com hover e foco visível. */
+.source-btn {
+    width: 100%;
+    border: 0;
+    border-bottom: 1px solid var(--divider);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.source-btn:hover {
+    background: var(--surface-2);
+}
+.source-btn:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+}
+/* Modal de detalhe da fonte */
+.source-dialog .export-body {
+    gap: 18px;
+}
+.source-facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 6px 16px;
+    margin: 0;
+}
+.source-facts dt {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+}
+.source-facts dd {
+    margin: 0;
+}
+.source-section-title {
+    margin: 0 0 8px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text-2);
+}
+.source-dashboards {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+}
+.source-runs {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-sm);
+}
+.source-runs th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--text-muted);
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--divider);
+}
+.source-runs td {
+    padding: 6px 8px 6px 0;
+    border-bottom: 1px solid var(--divider);
+}
+.source-runs .run-failed td {
+    color: var(--danger);
+}
 .source {
     display: flex;
     flex-wrap: wrap;
