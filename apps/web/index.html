@@ -5,6 +5,16 @@
         <link rel="icon" type="image/svg+xml" href="/logo-justica.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>LexHub</title>
+        <!-- Tema antes do React (senão a tela pisca clara ao abrir). Mesma regra de src/lib/theme.ts. -->
+        <script>
+            try {
+                var t = localStorage.getItem('lexhub.theme')
+                if (t !== 'light' && t !== 'dark') {
+                    t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+                }
+                document.documentElement.dataset.theme = t
+            } catch (e) {}
+        </script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link

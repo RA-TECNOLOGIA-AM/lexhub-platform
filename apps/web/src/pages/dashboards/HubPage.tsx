@@ -161,7 +161,7 @@ export function HubPage() {
                                 key={d.title}
                                 className="card dcard"
                                 aria-disabled="true"
-                                style={{ borderStyle: 'dashed', background: '#FAFBFC', cursor: 'default' }}
+                                style={{ borderStyle: 'dashed', background: 'var(--card-muted)', cursor: 'default' }}
                             >
                                 <span className="title">{d.title}</span>
                                 <span className="desc">{d.area}</span>
