@@ -30,6 +30,7 @@ import {
 import type { DashboardQuery, Meta } from '../types/index.ts'
 import { metaFor } from './mock/helpers.ts'
 import { sourceDetailFor } from './mock/sourceDetail.ts'
+import { createUnitIn, updateUnitIn } from './mock/units.ts'
 import { toCsv } from '../lib/csv.ts'
 import { periodLabel } from '../lib/period.ts'
 
@@ -263,6 +264,19 @@ export function createMockClient(): DataClient {
             const detail = sourceDetailFor(requireOrg(org) ? sources : onboardingSources, catalog, unit, source)
             if (!detail) throw new DataError(409, 'Esta unidade não usa essa fonte.')
             return copy(detail)
+        },
+
+        // O mock entra como Desenvolvedor: pode criar e editar unidades.
+        async createUnit(org, unit) {
+            await wait()
+            requireSession()
+            return copy(createUnitIn(requireOrg(org) ? sources : onboardingSources, unit))
+        },
+
+        async updateUnit(org, unit) {
+            await wait()
+            requireSession()
+            return copy(updateUnitIn(requireOrg(org) ? sources : onboardingSources, unit))
         },
 
         // Mesma regra da API: só a equipe RA (platform_staff) vê os clientes.

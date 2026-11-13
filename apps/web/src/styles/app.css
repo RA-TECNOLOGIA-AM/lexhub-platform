@@ -447,6 +447,19 @@ button.org:hover {
     outline-offset: -2px;
 }
 /* Modal de detalhe da fonte */
+/* Formulário de unidade: modal estreito, campos um embaixo do outro */
+.unit-dialog {
+    width: min(480px, calc(100vw - 32px));
+}
+.unit-dialog .export-body {
+    gap: 14px;
+}
+.kpi-edit {
+    margin-left: 8px;
+    padding: 2px 8px;
+    font-size: var(--fs-xs);
+    vertical-align: middle;
+}
 .source-dialog .export-body {
     gap: 18px;
 }

@@ -61,6 +61,7 @@ export const onboardingAudit: AuditResponse = { events: [] }
 export const onboardingSources: SourcesResponse = {
     syncEveryMin: 10,
     unitLimit: { used: 1, total: 1 },
+    canManageUnits: true,
     units: [
         {
             unit: { code: 'CP', name: 'Parceiro · sede' },
