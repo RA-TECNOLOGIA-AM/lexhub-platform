@@ -2,7 +2,7 @@
     position: fixed;
     inset: 0;
 
-    background: #0f172a;
+    background: var(--loader-bg);
 
     display: flex;
     justify-content: center;
@@ -21,7 +21,7 @@
     width: 220px;
     height: 220px;
 
-    filter: drop-shadow(0 0 8px #ff790055);
+    filter: drop-shadow(0 0 8px var(--loader-glow));
 }
 
 /* Saída da transição */
@@ -44,4 +44,9 @@
     .transition-overlay {
         animation-duration: 0.01ms !important;
     }
+}
+
+/* A balança do loading acompanha o tema (cores em --loader-* no tokens.css). */
+.transition-overlay .logo-justica {
+    color: var(--loader-logo);
 }

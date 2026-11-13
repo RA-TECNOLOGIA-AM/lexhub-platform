@@ -67,10 +67,10 @@
     background: var(--surface-3);
 }
 .fav-btn[aria-pressed='true'] {
-    color: #b37d00;
+    color: var(--fav);
 }
 .fav-btn[aria-pressed='true'] svg {
-    fill: #e5a100;
+    fill: var(--fav-fill);
 }
 /* Topo das páginas do menu: título à esquerda, ações à direita (quebram no celular). */
 .page-header {
@@ -97,8 +97,8 @@
     color: var(--warn);
 }
 .pro {
-    background: #f3ecfc;
-    color: #6d3fc0;
+    background: var(--pro-bg);
+    color: var(--pro);
 }
 /* Barra de filtros: a busca cresce; os selects têm largura fixa e quebram no celular. */
 .filters {
@@ -290,7 +290,7 @@
 
 /* Auditoria: a sessão de suporte aparece destacada (mesmo tom do selo "Plataforma"). */
 .tbl tr.row-support td {
-    background: #fbf8ff;
+    background: var(--row-support);
 }
 .nowrap {
     white-space: nowrap;
@@ -326,7 +326,7 @@
 }
 button.org {
     width: 100%;
-    border: 1px solid #2a313b;
+    border: 1px solid var(--chip);
     color: #fff;
     font: inherit;
     text-align: left;
@@ -346,7 +346,7 @@ button.org:hover {
     flex-direction: column;
     gap: 2px;
     padding: 6px;
-    border: 1px solid #2a313b;
+    border: 1px solid var(--chip);
     border-radius: var(--r-md);
     background: var(--side-hover);
 }
@@ -808,6 +808,10 @@ button.org:hover {
     --border-strong: rgba(255, 255, 255, 0.3);
     --border-hover: rgba(255, 255, 255, 0.5);
     --focus: #ffb46a;
+    /* o login já é escuro (foto): mantém o laranja da marca nos dois temas */
+    --accent: #b35500;
+    --accent-hover: #994800;
+    --on-accent: #ffffff;
     color: var(--text);
     background: #120b07 url('/login-bg.jpg') center bottom / cover no-repeat;
 }
@@ -858,7 +862,7 @@ button.org:hover {
     padding: 0 6px;
     border-radius: var(--r-pill);
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
     font-size: 11px;
     font-weight: 700;
     display: inline-flex;
@@ -882,7 +886,7 @@ button.org:hover {
     padding: 0 5px;
     border-radius: var(--r-pill);
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
     font-size: 10px;
     font-weight: 700;
     display: inline-flex;
@@ -899,7 +903,7 @@ button.org:hover {
     border: 1px solid var(--border);
     border-radius: var(--r-lg);
     background: var(--surface);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
+    box-shadow: var(--shadow-pop);
     overflow: hidden;
 }
 .notif-head {
@@ -1003,6 +1007,16 @@ button.org:hover {
 .topbar-slot:empty {
     display: none;
 }
+/* O breadcrumb encolhe (com reticências) antes de a topbar quebrar linha: assim o Período,
+   a busca, o sino e o botão de tema cabem numa linha só nos dashboards. */
+.topbar .crumb {
+    flex: 1 1 160px;
+}
+.topbar .crumb > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 /* Faixa logo abaixo da topbar nos dashboards: filtros em uso à esquerda, Filtros e Exportar à direita.
    Encostada na topbar (margem negativa anula o espaço do .content) e presa ao rolar. */
@@ -1100,7 +1114,7 @@ div.org {
     padding: 2px 8px;
     border-radius: var(--r-sm);
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
 }
 .doc-toc {
     padding: 14px 16px;
@@ -1236,7 +1250,7 @@ div.org {
 }
 .doc-watch {
     background: var(--warn-bg);
-    border: 1px solid #f2d8a7;
+    border: 1px solid var(--warn-line);
     color: var(--warn);
 }
 .doc-watch > svg {

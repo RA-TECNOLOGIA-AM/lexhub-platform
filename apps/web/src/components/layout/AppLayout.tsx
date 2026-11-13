@@ -5,6 +5,7 @@ import { Icon } from '../ui/Icon.tsx'
 import { NotificationsBell } from './NotificationsBell.tsx'
 import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { SearchBox } from './SearchBox.tsx'
+import { ThemeToggle } from './ThemeToggle.tsx'
 import { TopbarSlotContext } from './topbar-slot.ts'
 import { activeItem, menuPermissions, NAV_SECTIONS, pathOf, visibleItems } from '../../navigation.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
@@ -133,6 +134,7 @@ export function AppLayout() {
                     <div className="topbar-slot" ref={setTopbarSlot} />
                     <SearchBox org={org.slug} />
                     <NotificationsBell staff={user.platform_staff} pending={pending} onNavigate={closeMenu} />
+                    <ThemeToggle />
                 </header>
 
                 <main className="content">
