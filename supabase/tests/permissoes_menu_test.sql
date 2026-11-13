@@ -28,25 +28,25 @@ set local role authenticated;
 
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000d1","role":"authenticated"}';
 do $$ begin
-    if api.my_admin_permissions('org-teste-menu') <> '{"access":true,"members":true,"sources":true}'::jsonb then
+    if api.my_admin_permissions('org-teste-menu') <> '{"access":true,"members":true,"sources":true,"audit":true}'::jsonb then
         raise exception 'FALHOU: Dev: %', api.my_admin_permissions('org-teste-menu');
     end if;
 end $$;
 
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000d2","role":"authenticated"}';
 do $$ begin
-    if api.my_admin_permissions('org-teste-menu') <> '{"access":true,"members":true,"sources":true}'::jsonb then
+    if api.my_admin_permissions('org-teste-menu') <> '{"access":true,"members":true,"sources":true,"audit":false}'::jsonb then
         raise exception 'FALHOU: Gestor: %', api.my_admin_permissions('org-teste-menu');
     end if;
 end $$;
 
 set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000000d3","role":"authenticated"}';
 do $$ begin
-    if api.my_admin_permissions('org-teste-menu') <> '{"access":false,"members":false,"sources":false}'::jsonb then
+    if api.my_admin_permissions('org-teste-menu') <> '{"access":false,"members":false,"sources":false,"audit":false}'::jsonb then
         raise exception 'FALHOU: Colaborador: %', api.my_admin_permissions('org-teste-menu');
     end if;
     -- Organização de que não faz parte (ou que não existe): tudo falso, sem erro
-    if api.my_admin_permissions('nao-existe') <> '{"access":false,"members":false,"sources":false}'::jsonb then
+    if api.my_admin_permissions('nao-existe') <> '{"access":false,"members":false,"sources":false,"audit":false}'::jsonb then
         raise exception 'FALHOU: org inexistente';
     end if;
     raise notice 'OK: todos os casos passaram (o rollback abaixo desfaz tudo)';

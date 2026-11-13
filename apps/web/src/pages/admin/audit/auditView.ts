@@ -6,7 +6,8 @@ export const KIND: Record<AuditKind, { label: string; badge: string }> = {
     export: { label: 'Exportações', badge: 'badge info' },
     access: { label: 'Acesso', badge: 'badge neutral' },
     support: { label: 'Suporte', badge: 'badge pro' },
-    source: { label: 'Fontes de dados', badge: 'badge warn' },
+    source: { label: 'Unidades e fontes', badge: 'badge warn' },
+    other: { label: 'Outros', badge: 'badge neutral' },
 }
 
 // '2026-10-30T14:02:00-04:00' -> '30/10 14:02' no fuso informado (padrão: Manaus, onde fica a LexGroup).

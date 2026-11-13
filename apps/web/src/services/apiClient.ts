@@ -4,6 +4,7 @@ import { createAccessRequestsClient } from './accessRequests.ts'
 import { createAccessClient } from './accessClient.ts'
 import { createMembersClient } from './membersClient.ts'
 import { createSourcesClient } from './sourcesClient.ts'
+import { createAuditClient } from './auditClient.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
 import type {
@@ -14,7 +15,6 @@ import type {
     Meta,
     PendenciasResponse,
     ProtocoloResponse,
-    AuditResponse,
     ClientsResponse,
 } from '../types/index.ts'
 import { paramsFromQuery } from '../lib/dashboardQuery.ts'
@@ -47,6 +47,8 @@ export function createApiClient({
         ...createAccessClient(auth),
         // Unidades e fontes: também direto no Supabase (schema api).
         ...createSourcesClient(auth),
+        // Auditoria: também direto no Supabase (schema api).
+        ...createAuditClient(auth),
 
         async signIn(email, password) {
             const { error } = await auth.auth.signInWithPassword({ email: email.trim(), password })
@@ -89,7 +91,6 @@ export function createApiClient({
             await http.put(`/orgs/${org}/hub-order`, keys)
         },
 
-        getAudit: (org) => http.get<AuditResponse>(`/orgs/${org}/audit`),
         listClients: () => http.get<ClientsResponse>('/platform/clients'),
         getBilling: (org) => http.get<BillingResponse>(`/orgs/${org}/billing`),
         getProtocolo: dashboard<ProtocoloResponse>('protocolo-lexpre'),
