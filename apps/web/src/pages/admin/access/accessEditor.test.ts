@@ -8,6 +8,7 @@ import {
     isDirty,
     previewDashboards,
     previewText,
+    readOnlyReason,
     setUnitRole,
     toggleTeam,
     toUpdate,
@@ -122,5 +123,27 @@ describe('previewText', () => {
         expect(previewText({ unit: 'NG', all: false, titles: [], total: 2 })).toBe(
             'nenhum — marque uma equipe que libere dashboards',
         )
+    })
+})
+
+describe('readOnlyReason', () => {
+    const all = members.list().members
+    const admin = all.find((m) => m.org_role === 'admin' || m.org_role === 'owner')!
+    const plain = all.find((m) => m.org_role === 'member')!
+    const asGestor = { ...overview, can_set_org_role: false }
+    const asDev = { ...overview, can_set_org_role: true }
+
+    it('Gestor edita outra pessoa comum', () => {
+        expect(readOnlyReason(plain, asGestor, false)).toBeNull()
+    })
+    it('Gestor não edita o próprio acesso', () => {
+        expect(readOnlyReason(plain, asGestor, true)).toMatch(/próprio acesso/)
+    })
+    it('Gestor não edita Owner/Desenvolvedor', () => {
+        expect(readOnlyReason(admin, asGestor, false)).toMatch(/Owner e Desenvolvedor/)
+    })
+    it('Owner/Desenvolvedor editam todos, inclusive a si', () => {
+        expect(readOnlyReason(admin, asDev, true)).toBeNull()
+        expect(readOnlyReason(plain, asDev, false)).toBeNull()
     })
 })

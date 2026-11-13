@@ -50,7 +50,7 @@ export function MembersPage() {
             <>
                 <PageHeader title="Membros" description="Quem faz parte da organização." />
                 <StateMessage icon="users" title="Você não gere membros nesta organização.">
-                    Quem convida e desativa pessoas é o Owner, o Desenvolvedor ou o Gestor/Controller da unidade.
+                    Quem convida e desativa pessoas é o Owner, o Desenvolvedor ou o Gestor da unidade.
                 </StateMessage>
             </>
         )

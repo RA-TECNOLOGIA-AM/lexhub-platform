@@ -110,14 +110,21 @@ export function MemberPanel({ row, isSelf, accessHref, onSetStatus, onRevoke, on
                         <span className="lbl">Link para mandar à pessoa</span>
                         <CopyLink link={inviteLink(window.location.origin)} />
                     </div>
-                    <button
-                        className="btn"
-                        type="button"
-                        disabled={busy}
-                        onClick={() => run(`Cancelar o convite de ${row.invitation.email}?`, onRevoke)}
-                    >
-                        Cancelar convite
-                    </button>
+                    {row.invitation.can_revoke ? (
+                        <button
+                            className="btn"
+                            type="button"
+                            disabled={busy}
+                            onClick={() => run(`Cancelar o convite de ${row.invitation.email}?`, onRevoke)}
+                        >
+                            Cancelar convite
+                        </button>
+                    ) : (
+                        <p className="muted small" style={{ margin: 0 }}>
+                            Este convite também vale para unidades que você não gere: quem cancela é o Owner ou um
+                            Desenvolvedor.
+                        </p>
+                    )}
                 </>
             )}
 

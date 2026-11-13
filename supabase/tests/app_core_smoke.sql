@@ -121,7 +121,10 @@ begin
     -- cargo por companhia
     assert app_private.dashboard_scope('00000000-0000-0000-0000-0000000000a7', ng, 'pendencias') = 'all',       'controller vê tudo da NG';
     assert app_private.dashboard_scope('00000000-0000-0000-0000-0000000000a7', la, 'protocolo-lexpre') = 'all', 'controller (leitor na LA) vê o que o setor libera';
-    assert app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', ng, 'unit.members.manage'),     'controller atribui na NG';
+    -- desde 20261113235950_seguranca_membros.sql o Controller acompanha: vê e exporta, não gere pessoas
+    assert not app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', ng, 'unit.members.manage'), 'controller não gere membros na NG';
+    assert not app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', ng, 'unit.access.manage'),  'controller não gere acesso na NG';
+    assert app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', ng, 'unit.sources.view'),       'controller vê fontes da NG';
     assert not app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', la, 'unit.members.manage'), 'controller não atribui na LA';
     assert app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', ng, 'dashboards.export'),       'controller exporta na NG';
     assert not app_private.has_unit_permission('00000000-0000-0000-0000-0000000000a7', la, 'dashboards.export'),   'controller não exporta na LA (leitor)';
@@ -184,9 +187,10 @@ end $$;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a7","role":"authenticated"}', true);
 do $$
 begin
-    assert (select count(*) from app.memberships) = 5,      'controller vê as associações da NG (e a própria)';
-    assert (select count(*) from app.membership_units) = 6, 'controller vê os cargos da NG + o próprio na LA';
-    assert (select count(*) from app.access_rules) = 2,     'controller vê só as regras da NG';
+    -- Controller acompanha (20261113235950_seguranca_membros.sql): não gere pessoas, então só vê o que é dele
+    assert (select count(*) from app.memberships) = 1,      'controller vê só a própria associação';
+    assert (select count(*) from app.membership_units) = 2, 'controller vê só os próprios cargos (NG e LA)';
+    assert (select count(*) from app.access_rules) = 0,     'controller não vê regras de acesso';
     assert (select count(*) from app.my_dashboards()) = 3,  'hub: 2 da NG + 1 da LA';
     raise notice 'OK: RLS do controller por companhia';
 end $$;

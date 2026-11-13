@@ -51,6 +51,7 @@ export const NAV_SECTIONS: NavSection[] = [
                 description: 'Quem faz parte da organização. Todos entram por convite ou pedido aprovado.',
                 icon: 'users',
                 route: '/:org/admin/membros',
+                requires: 'members',
             },
             {
                 key: 'acesso',
