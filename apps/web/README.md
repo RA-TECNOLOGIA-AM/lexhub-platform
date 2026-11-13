@@ -1,7 +1,8 @@
 # LexHub V2 — front (`apps/web`)
 
-React 19 + Vite 8 + TypeScript, com React Router para as rotas, Oxlint como linter e Prettier como formatador.
-Visual e contrato de dados vêm do template estático em [`template/`](template/README.md).
+React 19 + Vite 8 + TypeScript, com React Router, Oxlint e Prettier. A aplicação oferece login, hub, dashboards,
+documentação, administração da organização e ferramentas da equipe RA. O protótipo estático em
+[`template/`](template/README.md) é uma referência visual e de dados, não é executado pelo React.
 
 ## Rodar local
 
@@ -11,12 +12,12 @@ Tudo é rodado **dentro de `apps/web`** (confira o prompt: `...\apps\web>`):
 ```powershell
 cd apps\web
 npm ci                              # instala exatamente as versões do package-lock.json
-Copy-Item .env.example .env.local   # opcional: hoje só tem VITE_DATA_SOURCE=mock
+Copy-Item .env.example .env.local   # opcional no modo mock; configure para usar a API
 npm run dev
 ```
 
 Login de teste: `controller@lexgroup.com.br` / `lexhub123` (ver [Login](#login)).
-Não precisa da API nem do banco: com `VITE_DATA_SOURCE=mock` (o padrão), tudo vem de `src/services/mock/`.
+Não precisa da API nem do banco: `VITE_DATA_SOURCE=mock` (o padrão) usa `src/services/mock/`.
 
 Abre em http://localhost:5173. É a porta que a API libera em `CORS_ORIGINS`; se ela estiver ocupada, o Vite usa a
 próxima (5174...) e as chamadas à API passam a ser recusadas por CORS.
@@ -56,8 +57,8 @@ configurações do usuário (`Preferences: Open User Settings (JSON)`):
 
 ## Login
 
-Por enquanto é **fictício**: o `mockClient.ts` confere e-mail e senha contra a lista `testUsers` de
-`services/mock/users.ts` (sem banco; esses usuários só existem no navegador).
+Em modo `mock`, o `mockClient.ts` confere e-mail e senha contra a lista `testUsers` de `services/mock/users.ts`
+(sem banco; esses usuários só existem no navegador). Em modo `api`, a autenticação usa Supabase Auth.
 
 | Para testar             | E-mail                               | Senha       | Resultado                                     |
 | ----------------------- | ------------------------------------ | ----------- | --------------------------------------------- |
@@ -68,9 +69,9 @@ Por enquanto é **fictício**: o `mockClient.ts` confere e-mail e senha contra a
 | Sem organização (403)   | `sem.acesso@exemplo.com`             | `lexhub123` | tela "Você ainda não tem acesso"              |
 | Google                  | botão "Entrar com conta corporativa" | —           | no mock, entra direto (sem sair do app)       |
 
-Com `VITE_DATA_SOURCE=api`, o botão do Google sai para o Google (Supabase Auth, fluxo PKCE) e volta em
-`<origem do app>/login`. Essa origem precisa estar em **Redirect URLs** no Supabase (ex.: `http://localhost:5173/**`), e o
-callback do Supabase (`https://<projeto>.supabase.co/auth/v1/callback`) precisa estar no client OAuth do Google Cloud.
+Com `VITE_DATA_SOURCE=api`, o botão do Google redireciona para o Google via Supabase Auth (PKCE) e retorna a
+`<origem do app>/login`. Cadastre essa URL em **Redirect URLs** no Supabase (ex.: `http://localhost:5173/login`), e o
+callback do Supabase (`https://<projeto>.supabase.co/auth/v1/callback`) no client OAuth do Google Cloud.
 Quem entra, mas não faz parte de nenhuma organização (403 no `/me`), vê a tela "sem acesso" e pode **solicitar acesso**
 (escritório + mensagem). A equipe RA aprova ou recusa em **Plataforma → Pedidos de acesso** (selo com o número de
 pendentes no menu). Esses pedidos vão direto ao Supabase, nas funções do schema `api`
@@ -81,14 +82,11 @@ No mock: entre com `sem.acesso@exemplo.com`, peça acesso, saia, entre com `cont
 aprove em Pedidos de acesso e entre de novo com `sem.acesso@exemplo.com`: vai para o hub. Os pedidos ficam em memória
 (voltam ao exemplo no F5).
 
-Para outro usuário de teste, acrescente na lista `testUsers`. O usuário exibido depois de entrar é sempre o `me`
-de `services/mock/users.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`): sobrevive ao F5 e some ao
+No mock, para outro usuário de teste, acrescente na lista `testUsers`; o usuário exibido vem do `me` em
+`services/mock/users.ts`. A sessão fica no `sessionStorage` (chave `lexhub.mock.session`): sobrevive ao F5 e some ao
 fechar a aba. Para simular sessão expirada: `sessionStorage.clear()` no console e trocar de unidade.
 
 Estados do login: `/login?convite=abc` e `/login?estado=sessao-expirada`.
-
-No final, troca pelo Supabase Auth, com usuários de teste no projeto de staging
-(com vínculo à NG = sucesso; sem vínculo = 403).
 
 ### Para onde o login leva
 
@@ -105,16 +103,17 @@ No final, troca pelo Supabase Auth, com usuários de teste no projeto de staging
 
 ## Rotas
 
-| URL                                    | Tela                                                        | Moldura |
-| -------------------------------------- | ----------------------------------------------------------- | ------- |
-| `/login`                               | Login (única rota aberta sem sessão)                        | não     |
-| `/:org/dashboards`                     | Hub de dashboards (ex.: `/lexgroup/dashboards`)             | sim     |
-| `/:org/:unit/dashboards/:dashboardKey` | Dashboard (ex.: `/lexgroup/NG/dashboards/protocolo-lexpre`) | sim     |
-| qualquer outra                         | redireciona para o hub da organização de quem está logado   | —       |
+| URL | Tela |
+|---|---|
+| `/login` | Login, sem a moldura do app. |
+| `/:org/dashboards` | Hub da organização, por exemplo `/lexgroup/dashboards`. |
+| `/:org/:unit/dashboards/:dashboardKey` | Dashboard de uma unidade. A unidade está na URL, então recarregar ou compartilhar o link mantém a seleção. |
+| `/:org/documentacao/:slug` | Guia de um dashboard. |
+| `/:org/admin/membros`, `/:org/admin/acesso`, `/:org/admin/unidades`, `/:org/admin/auditoria`, `/:org/admin/plano` | Administração da organização. |
+| `/plataforma/clientes`, `/plataforma/pedidos` | Ferramentas da equipe RA. |
 
-As rotas de dashboard seguem a API: `GET /orgs/{org}/units/{unit}/dashboards/{key}`.
-A **unidade é a URL**: as pílulas de unidade são links, então F5, voltar e compartilhar o link mantêm a unidade.
-A moldura (barra lateral + cabeçalho) é o `<AppLayout>`, uma rota de layout sem `path`; a tela filha entra no `<Outlet />`.
+As páginas protegidas ficam sob `RequireAuth`; `OrgScope` valida a organização da URL. A moldura compartilhada é
+`AppLayout`. Rotas desconhecidas redirecionam para o hub da organização ativa.
 
 ## Módulos
 
@@ -128,8 +127,8 @@ Pastas por tipo, como no LexHub v1: o nome da pasta diz o que tem dentro.
 
 - **Tela:** `pages/`. Dashboards em `pages/dashboards/`; telas da seção Administração do menu em `pages/admin/<tela>/`;
   telas da seção Plataforma (equipe RA) em `pages/platform/<tela>/`.
-- **Peça visual reaproveitada:** `components/<tipo>/` (`layout`, `dashboard`, `ui`, `auth`, `states`).
-- **Contexto React:** `contexts/`. **Porta de dados e mock:** `services/`. **Formato dos dados:** `types/`.
+- **Peça visual reaproveitada:** `components/<tipo>/` (`layout`, `dashboard`, `ui`, `auth`, `states`, `page_transition`).
+- **Contexto React:** `contexts/`. **Porta de dados, clientes e mocks:** `services/`. **Formato dos dados:** `types/`.
 
 ```
 src/
@@ -162,11 +161,13 @@ src/
     admin/billing/         Plano e cobrança: plano atual com uso, planos e faturas
     admin/access/          Acesso: matriz de papéis, regras por equipe e simulador
     admin/audit/           Auditoria: eventos com filtros de tipo e pessoa na URL
-    platform/clients/      Clientes (só equipe RA): indicadores, organizações e sessão de suporte
+    admin/sources/         Unidades, fontes e detalhes da fonte
+    documentacao/          Catálogo e guias de dashboards
+    platform/              Clientes e pedidos de acesso (equipe RA)
   styles/
-    tokens.css             cópia inteira do template (não editar aqui)
-    app.css                estilos novos do app React
-template/                  HTML estático de referência (não é usado pelo app)
+    tokens.css             tokens visuais baseados no template
+    app.css                estilos do app React
+template/                  protótipo HTML estático, separado do app
 ```
 
 Testes ficam ao lado do arquivo testado, com o mesmo nome + `.test.ts` (ex.: `services/mock/protocolo.test.ts`).
@@ -179,84 +180,79 @@ Por enquanto só funções puras (sem React), em ambiente Node.
 - **Filtro por unidade:** as pílulas viram `?unidade=NG` na URL (F5, voltar e compartilhar mantêm). Com filtro, o card
   abre o dashboard nessa unidade.
 - **Favoritos:** a estrela sobe o card para a seção "Favoritos" no topo, com animação. No mock ficam no `localStorage`
-  (`lexhub.mock.favorites`; padrão: Funil comercial e Protocolo). Para voltar ao padrão:
+  (`lexhub.mock.favorites`; padrão: Comercial (LexPre) e Protocolo (LexPre)). Para voltar ao padrão:
   `localStorage.removeItem('lexhub.mock.favorites')` no console.
 
 ## Dashboards
 
-Todo dashboard segue o mesmo roteiro, que fica no `pages/dashboards/DashboardView.tsx`: buscar os dados da unidade e o
-catálogo, mostrar carregando/erro, o cabeçalho e o conteúdo. Cada dashboard só informa o que é dele
-(contrato `DashboardModule` em `pages/dashboards/types.ts`):
+Todo dashboard usa `pages/dashboards/DashboardView.tsx` para buscar dados, apresentar carregamento/erro, cabeçalho,
+filtros, exportação e conteúdo. Cada módulo declara a key, a função de busca e seu conteúdo em
+`pages/dashboards/<key>/index.ts`; `pages/dashboards/registry.tsx` associa a key à página.
 
-```ts
-export const pendencias: DashboardModule<PendenciasResponse> = {
-    key: 'pendencias', // o mesmo do catálogo e da API
-    fetch: (query) => dataClient.getPendencias(query), // como buscar os dados de uma unidade
-    Content: PendenciasContent, // o miolo da página (KPIs, gráficos...)
-}
-```
+O registro do front contém módulos para Comercial e Comissão (`comercial`, `comercial-lexpre`, `comissao`,
+`comissao-lexpre`); Marketing (`marketing`, `marketing-lexpre`); NPS (`nps`); Protocolo, Pendências, Organização de
+Documentos e Peticionamento nas variantes NG/LexPre; Pré-protocolo; Execução, Acordos e Recursal; Estratégico,
+Despesas e Meta anual.
 
-**Para criar um dashboard novo:**
+O registro de cálculos da API tem 18 keys: `comercial`, `comercial-lexpre`, `comissao`, `comissao-lexpre`,
+`marketing`, `nps`, `protocolo`, `protocolo-lexpre`, `pendencias`, `pendencias-lexpre`, `org-documentos`,
+`org-documentos-lexpre`, `peticionamento`, `peticionamento-lexpre`, `pre-protocolo`, `execucao`, `acordos` e
+`recursal`. `marketing-lexpre`, `estrategico`, `despesas` e `meta-anual` ainda não estão nesse registro; uma página no
+front não significa que a API já forneça seus dados.
 
-1. Pasta `pages/dashboards/<nome>/` com o `<Nome>Content.tsx` (recebe `data`) e o `index.ts` (o módulo acima).
-2. Uma linha em `pages/dashboards/registry.tsx`: `[<nome>.key]: toPage(<nome>)`.
-3. No mock: o tipo da resposta em `types/index.ts`, o `<nome>For(unit)` em `services/mock/` e o método no `DataClient`.
-
-Dashboard que está no catálogo mas não no registro abre "Em construção".
-
-| Dashboard  | Key                | Página                                 |
-| ---------- | ------------------ | -------------------------------------- |
-| Protocolo  | `protocolo-lexpre` | KPIs ("No período" e "Situação atual") |
-| Pendências | `pendencias`       | KPIs ("No período" e "Situação atual") |
+Para criar um dashboard, adicione o tipo de resposta, o módulo e conteúdo, registre a página e implemente o cálculo e
+as regras do catálogo na API/banco. Os dados fictícios completos estão disponíveis para Protocolo (LexPre) e
+Pendências (LexPre); os demais módulos do mock recebem uma resposta estrutural vazia, não métricas reais.
 
 ## Camada de dados
 
-Arquivos em `src/services/`; o formato das respostas fica em `src/types/index.ts`.
-
-As telas **só** importam `dataClient` de `src/services/client.ts` e nunca sabem de onde vêm os dados.
+As telas usam a interface `DataClient` de `src/services/client.ts`; `VITE_DATA_SOURCE` seleciona `mockClient` ou
+`apiClient`.
 
 ```
-telas  →  dataClient (interface DataClient)  →  mockClient  →  services/mock/
-                                             →  apiClient   →  FastAPI   (a fazer)
+telas → dataClient → mockClient → services/mock/
+                    apiClient  → Supabase Auth + FastAPI + funções RPC do schema `api` no Supabase
 ```
 
-| Arquivo         | O que é                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------ |
-| `client.ts`     | Interface `DataClient` (sessão + dados) e escolha da implementação por `VITE_DATA_SOURCE`                    |
-| `errors.ts`     | `DataError` com o status HTTP (401, 403...) e `toDataError`                                                  |
-| `mockClient.ts` | O "servidor" fictício: espera 300 ms, 401 sem sessão, 403 fora das unidades liberadas, aplica o período      |
-| `mock/`         | Os dados fictícios: `users`, `catalog`, `protocolo`, `pendencias` e `helpers` (porta de entrada: `index.ts`) |
+No modo `api`, login é via Supabase Auth. `/me`, catálogo, favoritos, ordem do hub, dados e exportação de dashboards
+passam pela FastAPI. Membros/convites, permissões, unidades/fontes, auditoria, notificações e pedidos de acesso usam
+funções RPC autenticadas do schema `api` no Supabase; esse schema precisa estar exposto nas configurações de API do
+projeto Supabase.
 
-**Dados por unidade:** NG é a base; LA AM tem 62% e LA RJ 38% do volume (`UNIT_SIZE` em `mock/helpers.ts`).
-Contagens, valores e séries escalam (`unitScale`); tempos, taxas e médias por pessoa, não.
+Plano/cobrança e clientes da plataforma são chamados pelo cliente web como rotas da API, mas não há rotas
+correspondentes no backend Python atual. Erros de API são convertidos em `DataError`, mantendo o status HTTP (por
+exemplo, 401, 403 ou 404).
 
-Para trocar pela API real: escrever um `apiClient.ts` que implemente `DataClient` e escolhê-lo em `createDataClient()`.
-Nenhuma tela muda, e a pasta `mock/` deixa de ser usada.
+`services/mock/` mantém a sessão e vários dados de demonstração no navegador; alguns são mantidos em memória e voltam
+ao estado inicial ao recarregar. Os detalhes de persistência estão em `mockClient.ts`. Respostas sem implementação na
+API retornam 404; cálculos registrados mas ainda não habilitados podem retornar 501.
 
 ## Variáveis de ambiente
 
-Opcionais por enquanto. Ficam em `apps/web/.env.local` (não versionado).
-Só variáveis com prefixo `VITE_` chegam ao navegador, e qualquer uma delas fica visível para quem abrir o site:
-**nunca colocar segredo em `VITE_*`**.
+Configure em `apps/web/.env.local` (não versionado). Todo valor `VITE_*` fica visível no navegador; nunca inclua
+senhas, chaves secretas ou `service_role`.
 
-| Variável           | Padrão | Uso                                                 |
-| ------------------ | ------ | --------------------------------------------------- |
-| `VITE_DATA_SOURCE` | `mock` | `mock` = dados fictícios; outro valor ainda dá erro |
+| Variável | Uso |
+|---|---|
+| `VITE_DATA_SOURCE` | `mock` (padrão) ou `api`. |
+| `VITE_BASE_API_URL` | URL base da API FastAPI, por exemplo `http://localhost:8000`. |
+| `VITE_SUPABASE_URL` | URL pública do projeto Supabase. |
+| `VITE_SUPABASE_ANON_KEY` | Chave pública/anon para Supabase Auth e RPC autorizadas. |
 
-Modelo em [`.env.example`](.env.example).
+Use [`.env.example`](.env.example) como modelo. Em modo `api`, configure também `CORS_ORIGINS` na API e as URLs de
+redirecionamento do login no Supabase.
 
-## Estado atual (card #121, até 12/11)
+## Testes
 
-- [x] Base: Vite + React + TS, `tokens.css` inteiro, fonte Inter, Prettier, Vitest
-- [x] Rotas, `<AppLayout>` (inclui menu do celular) e login fictício com rotas protegidas
-- [x] Hub: os 15 cards do protótipo por área, filtro por unidade, favoritos no topo
-- [x] Dashboard como módulo (`DashboardView` + registro) e estados reutilizáveis (carregando, erro por status)
-- [x] Protocolo e Pendências: cabeçalho, troca de unidade e KPIs, com dados por unidade no mock
-- [x] Contrato do Protocolo (v1 LexPre + novos da V2) e mock com filtros e testes
-- [ ] Layout padrão para os dashboards sem página (hoje "Em construção")
-- [ ] Páginas do menu: Membros, Acesso, Auditoria, Plano e cobrança, Clientes, Unidades e fontes
-- [ ] Breadcrumb com o título do dashboard (hoje mostra a key)
-- [ ] `apiClient` + Supabase Auth (card #123)
+Os testes Vitest ficam próximos ao código testado:
 
-O conteúdo de cada dashboard (gráficos, filtros, comissão, exportar) fica com outro dev. Desenho e contrato do
-Protocolo: [`docs/superpowers/specs/2026-11-09-protocolo-unificado-design.md`](../../docs/superpowers/specs/2026-11-09-protocolo-unificado-design.md).
+```powershell
+npx tsc -b
+npm run lint
+npm run format:check
+npm test
+npm run build
+```
+
+O workflow de CI executa essas verificações. Referência do contrato inicial e das decisões visuais:
+[`docs/superpowers/specs/2026-11-09-protocolo-unificado-design.md`](../../docs/superpowers/specs/2026-11-09-protocolo-unificado-design.md).

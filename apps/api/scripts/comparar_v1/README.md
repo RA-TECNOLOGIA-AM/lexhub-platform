@@ -1,19 +1,26 @@
-# Comparar V2 × v1 (dashboards LexPre e LexFlow)
+# Comparar V2 × V1 (dashboards LexPre, NG e LexFlow)
 
 Roda o cálculo da v1 (`api_dashboards`) e o módulo da V2 sobre as **mesmas linhas** do banco de origem e compara o
-JSON campo a campo. `opcoes_filtro` (novo da V2) fica fora da comparação.
+JSON campo a campo. `opcoes_filtro` (novo da V2) fica fora da comparação. As fontes aceitas pelo `fetch_rows.py` e pelo comparador V2 são
+`lexpre`, `lexflow` e `ng`.
 
 Casos, sempre × mês fechado anterior e mês corrente até hoje, sem filtros (visão de quem gere a unidade):
 
 - **LexPre** (`compare_v1.py`, os `_build_*_response` da v1): Protocolo, Pendências, Organização de Documentos,
   Peticionamento, Comercial e Comissão Comercial (LexPre) × NG/LA/RJ.
+- **NG** (`compare_v1_lexflow.py` com `ng`): Protocolo, Peticionamento, Organização de Documentos, Pendências e
+  Comercial × NG/RJ; Marketing e NPS × NG.
 - **LexFlow** (`compare_v1_lexflow.py`, as rotas da v1): Execução e Acordos × NG/LA/RJ; Recursal × NG/LA (a v1 não
   tem RJ). Do lado da v1 só a camada de cache (`fetch_data_with_cache`) é trocada para devolver as linhas de
   `rows.pkl`, com o mesmo recorte de situação do processo.
 
-Precisa das duas pastas lado a lado (`C:\workspace\api_dashboards` e `C:\workspace\lexhub-platform`) e do `.env` da V2
-com o banco (LexPre e LexFlow abrem de qualquer rede). Em PowerShell, trocando `lexpre` por `lexflow` e
-`compare_v1.py` por `compare_v1_lexflow.py` para o LexFlow:
+Precisa das duas pastas (`C:\workspace\api_dashboards` e `C:\workspace\lexhub-platform`) e do `.env` da V2 com acesso à
+fonte comparada. O primeiro passo salva as linhas consultadas em `rows.pkl`; mantenha a pasta de saída local, fora do
+Git, pois ela contém dados dos bancos de origem. Em PowerShell, use `lexpre` com `compare_v1.py`, ou `lexflow`/`ng`
+com `compare_v1_lexflow.py`:
+
+No fluxo LexFlow ou NG, passe a mesma fonte (`lexflow` ou `ng`) nos passos 1 e 3 e use
+`compare_v1_lexflow.py <saida> <fonte>` no passo 2.
 
 ```powershell
 $out = "$env:TEMP\comparar_v1_lexpre"
@@ -30,7 +37,8 @@ $env:PYTHONPATH = "$PWD\src"
 .venv\Scripts\python.exe scripts\comparar_v1\compare_v2.py $out lexpre    # 3. V2 e comparação
 ```
 
-O passo 3 imprime `IGUAL` ou o número de diferenças por caso e grava `relatorio.json` com exemplos (caminho, v1, V2).
+O passo 3 imprime `IGUAL` ou o número de diferenças por caso e grava `relatorio.json` com exemplos (caminho, V1,
+V2). Os resultados abaixo são registros de execuções nas datas indicadas; rode novamente para validar dados atuais.
 
 ## Resultados
 

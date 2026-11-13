@@ -1,73 +1,75 @@
-# LexHub Platform (V2)
+# LexHub Platform
 
-Monorepo do LexHub V2: SaaS multi-tenant de dashboards (organização > unidade > equipe > membro).
-O front só fala com a API; a API decide o acesso e lê o banco.
+Monorepo da plataforma multi-organização de dashboards. A hierarquia de acesso é organização, unidade, equipe e membro; as permissões são verificadas no servidor, não apenas no menu do front.
 
-```
-apps/
-  api/        FastAPI (Python 3.12)            -> Google Cloud Run
-  web/        React + Vite + TypeScript        -> Vercel        (em construção, dados fictícios)
-workers/      sync dos bancos de origem -> Supabase staging (a criar)
-supabase/
-  migrations/ schema "app" (V2) — aplicar SEMPRE na branch staging primeiro
-  tests/      testes do banco (rodam e desfazem tudo)
-docs/         referências (estrutura da V1) e desenhos/planos (docs/superpowers/)
-```
+## Mapa do repositório
+
+| Caminho | Responsabilidade |
+|---|---|
+| [`apps/web/`](apps/web/README.md) | Aplicação React, rotas, dashboards e telas de administração. O modo `mock` roda sem serviços externos. |
+| [`apps/api/`](apps/api/README.md) | API FastAPI para sessão `/me`, catálogo, preferências do hub, acesso e dados/exportação de dashboards. |
+| [`supabase/`](supabase/README.md) | Migrations e testes dos schemas `app`, `app_private` e `api`, além dos scripts de importação da V1. |
+| [`apps/web/template/`](apps/web/template/README.md) | Protótipo HTML/CSS/JS de referência, separado da aplicação React. |
+| `docs/` | Contratos, referências da V1 e especificações. |
+| `workers/` | Diretório reservado; ainda não há worker implementado. |
+
+No modo `api`, a autenticação do front usa Supabase Auth. Dados de dashboard e algumas operações do hub passam pela API Python; operações de administração, notificações e pedidos de acesso usam funções autorizadas do schema `api` no Supabase. A API consulta os bancos operacionais configurados em modo somente leitura.
 
 ## Pré-requisitos
 
-| Ferramenta | Versão | Para quê |
+| Ferramenta | Versão | Uso |
 |---|---|---|
-| Git | qualquer recente | clonar |
-| Node.js + npm | 22.12+, 24 ou 26 (testado com 26) | front (`apps/web`) |
+| Git | versão recente | Clonar o repositório |
+| Node.js + npm | 22.12+, 24 ou 26+ | Front (`apps/web`; Node 25 não é suportado pelo Vitest) |
 | Python | 3.12 | API (`apps/api`) |
-| `psql` (PostgreSQL 17) | opcional | testar as migrations localmente |
-| `make` | opcional | atalhos da API |
+| PostgreSQL/`psql` | 17 | Opcional; testes locais de migrations e integração |
+| `make` | Opcional | Atalhos da API |
 
-Editor sugerido: VS Code, com as extensões recomendadas do repositório (aparecem ao abrir a pasta).
+## Primeiros passos
 
-## Primeiros passos (quem acabou de clonar)
+Os comandos abaixo usam PowerShell a partir da raiz.
 
-Os comandos são do PowerShell, a partir da raiz do repositório.
+### Front em modo mock
 
-**Front (não precisa de API nem banco: roda com dados fictícios)**
+Não requer API, banco ou variáveis de ambiente:
 
 ```powershell
 cd apps\web
 npm ci
-npm run dev    # http://localhost:5173 · login: controller@lexgroup.com.br / lexhub123
+npm run dev
 ```
 
-**API**
+Abra http://localhost:5173. Credencial de teste: `controller@lexgroup.com.br` / `lexhub123`. O modo mock é o padrão; detalhes e outros usuários estão em [apps/web/README.md](apps/web/README.md).
+
+### API
 
 ```powershell
 cd apps\api
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt -r requirements-dev.txt
-python -m pytest -q                         # não precisa de .env
-Copy-Item .env.example .env                 # para rodar: pedir as chaves do staging a quem administra o Supabase
+python -m pytest -q
+Copy-Item .env.example .env
+# Preencha as credenciais de desenvolvimento/staging antes de iniciar a API.
 python -m uvicorn app.main:app --reload --app-dir src --port 8000
 ```
 
-Detalhes: [apps/web/README.md](apps/web/README.md) · [apps/api/README.md](apps/api/README.md) ·
-[supabase/README.md](supabase/README.md).
+Os testes unitários não precisam de `.env`. Para usar os endpoints protegidos, configure o Supabase, `DATABASE_URL` e as fontes de dados necessárias. Consulte [apps/api/README.md](apps/api/README.md).
 
-## Banco
+## Banco de dados
 
-Projeto Supabase `lexhub` (mesmo da V1). A V2 vive no schema `app`; o `public` é da V1 e não é alterado.
-Detalhes e como aplicar: [supabase/README.md](supabase/README.md).
+As migrations da V2 vivem em `supabase/migrations/`; o projeto também contém dados da V1 no schema `public`. A V2 usa schemas separados e não deve alterar o schema `public`. Aplique e valide migrations primeiro em staging. Veja [supabase/README.md](supabase/README.md).
 
-## CI
+## Verificações e CI
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em todo push na `main` e em todo PR:
+O workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) roda em PRs e em pushes para `main`:
 
-- **API:** ruff + pytest (com Postgres e as migrations).
-- **Banco:** migrations + testes do banco + teste da importação V1.
-- **Front:** tipos, Oxlint, Prettier, Vitest e build.
+- **API:** Ruff e Pytest, incluindo testes contra PostgreSQL com as migrations.
+- **Banco:** migrations, testes SQL e importação V1 → V2.
+- **Front:** TypeScript, Oxlint, Prettier, Vitest e build.
 
 ## Regras do repositório
 
-- Nunca versionar `.env`, dumps ou backups (ver `.gitignore`). Modelos de configuração ficam em `.env.example`.
-- Mudança de banco = nova migration em `supabase/migrations/` + teste em `supabase/tests/`.
-- Quebras de linha: CRLF na cópia de trabalho, LF no repositório (`.editorconfig` + `.gitattributes`).
+- Não versione `.env`, credenciais, dumps ou backups. Use os arquivos `.env.example` como modelos; nunca coloque segredos em variáveis `VITE_*`.
+- Mudanças no banco exigem uma migration nova e testes SQL relacionados.
+- Preserve as regras de formatação e fim de linha configuradas em `.editorconfig` e `.gitattributes`.
