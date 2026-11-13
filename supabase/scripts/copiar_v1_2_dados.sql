@@ -99,7 +99,9 @@ contadores as (
 ),
 usuarios as (
     select format(
-        E'insert into auth.users (id, email, aud, role, created_at, updated_at)\nselect id, email, aud, role, created_at, updated_at\nfrom json_populate_recordset(null::auth.users, %L)\non conflict (id) do nothing;',
+        -- Os 4 campos de token vão como '' (texto vazio): NULL faz o Supabase Auth
+        -- responder 500 em qualquer login.
+        E'insert into auth.users (id, email, aud, role, created_at, updated_at,\n    confirmation_token, recovery_token, email_change_token_new, email_change)\nselect id, email, aud, role, created_at, updated_at, '''', '''', '''', ''''\nfrom json_populate_recordset(null::auth.users, %L)\non conflict (id) do nothing;',
         coalesce(json_agg(json_build_object(
             'id', u.id, 'email', u.email, 'aud', u.aud, 'role', u.role,
             'created_at', u.created_at, 'updated_at', u.updated_at)), '[]')::text) as sql
