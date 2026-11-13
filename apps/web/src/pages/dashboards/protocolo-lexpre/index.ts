@@ -12,4 +12,12 @@ export const protocoloLexpre: DashboardModule<ProtocoloResponse> = {
     Content: ProtocoloContent,
     filters: (data) => protocoloFilters(data.opcoes_filtro),
     exportFields: protocoloExport,
+    commission: (data) => ({
+        quantityLabel: 'Protocolados',
+        rows: (data.comissionamento_por_funcionario ?? []).map((c) => ({
+            funcionario: c.funcionario,
+            quantidade: c.qtd_protocolados,
+            valor: c.valor_comissao,
+        })),
+    }),
 }

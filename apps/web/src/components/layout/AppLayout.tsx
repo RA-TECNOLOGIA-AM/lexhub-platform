@@ -132,7 +132,8 @@ export function AppLayout() {
                     {env.dataSource === 'mock' && <span className="badge warn">Dados fictícios</span>}
                     {/* A página atual pode ocupar este espaço (ex.: Período do dashboard). */}
                     <div className="topbar-slot" ref={setTopbarSlot} />
-                    <SearchBox org={org.slug} />
+                    {/* Busca de dashboards só fora deles (hub, admin...): dentro de um dashboard sai da frente. */}
+                    {!dashboardKey && <SearchBox org={org.slug} />}
                     <NotificationsBell staff={user.platform_staff} pending={pending} onNavigate={closeMenu} />
                     <ThemeToggle />
                 </header>

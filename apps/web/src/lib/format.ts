@@ -36,6 +36,20 @@ export const fmt = {
     brlShort: (v: number) => brlCompact.format(v), // R$ 18,4 mi
     pct: (v: number) => nf1.format(v) + '%', // 8,2%
     dias: (v: number) => nf1.format(v) + (Math.abs(v - 1) < 0.05 ? ' dia' : ' dias'), // 2,4 dias
+    pct2: (v: number) => nf2.format(v) + '%', // 46,53% (comparativo "vs mês anterior" da v1)
+    duracao, // 0,34 dia -> 8h 10min (tempos no setor, como na v1)
+}
+
+// Tempo em dias (como a API manda) no formato da v1: '58min', '8h 10min', '2d 3h'.
+export function duracao(dias: number): string {
+    const totalMin = Math.max(0, Math.round(dias * 24 * 60))
+    if (totalMin < 60) return `${totalMin}min`
+    const h = Math.floor(totalMin / 60)
+    const min = totalMin % 60
+    if (h < 24) return min ? `${h}h ${min}min` : `${h}h`
+    const d = Math.floor(h / 24)
+    const hr = h % 24
+    return hr ? `${d}d ${hr}h` : `${d}d`
 }
 
 // Valor que pode faltar na resposta (campo null ou ausente, ex.: mock sem números): '—'.

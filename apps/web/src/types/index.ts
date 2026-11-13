@@ -89,8 +89,8 @@ export type ProtocoloResponse = {
     represados_por_funcionario: Point[]
     media_protocolados_por_funcionario: Point[]
     valor_causa_por_funcionario: Point[]
-    protocolados_por_mes: Point[] // name = 'AAAA-MM'
-    represados_por_mes: Point[] // name = 'AAAA-MM'
+    protocolados_por_mes: Point[] // name = 'nov 2026' na API (igual à v1); 'AAAA-MM' no mock (lib/charts.ts lê os dois)
+    represados_por_mes: Point[] // idem
     // Quem gere a unidade vê de todos; os demais, só a própria linha ([] sem vínculo com a fonte).
     comissionamento_por_funcionario?: { funcionario: string; qtd_protocolados: number; valor_comissao: number }[]
     // --- Novos na V2 (não existem na v1). null = regra ainda não definida (a tela mostra "—") ---
