@@ -232,7 +232,15 @@ function MoonMark() {
     return (
         <>
             <defs>
-                <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24" style={{ maskType: 'alpha' }}>
+                <mask
+                    id={maskId}
+                    maskUnits="userSpaceOnUse"
+                    x="0"
+                    y="0"
+                    width="24"
+                    height="24"
+                    style={{ maskType: 'alpha' }}
+                >
                     <image href={moonImage} width="24" height="24" />
                 </mask>
             </defs>

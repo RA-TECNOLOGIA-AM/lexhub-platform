@@ -103,14 +103,14 @@ Estados do login: `/login?convite=abc` e `/login?estado=sessao-expirada`.
 
 ## Rotas
 
-| URL | Tela |
-|---|---|
-| `/login` | Login, sem a moldura do app. |
-| `/:org/dashboards` | Hub da organização, por exemplo `/lexgroup/dashboards`. |
-| `/:org/:unit/dashboards/:dashboardKey` | Dashboard de uma unidade. A unidade está na URL, então recarregar ou compartilhar o link mantém a seleção. |
-| `/:org/documentacao/:slug` | Guia de um dashboard. |
-| `/:org/admin/membros`, `/:org/admin/acesso`, `/:org/admin/unidades`, `/:org/admin/auditoria`, `/:org/admin/plano` | Administração da organização. |
-| `/plataforma/clientes`, `/plataforma/pedidos` | Ferramentas da equipe RA. |
+| URL                                                                                                               | Tela                                                                                                       |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `/login`                                                                                                          | Login, sem a moldura do app.                                                                               |
+| `/:org/dashboards`                                                                                                | Hub da organização, por exemplo `/lexgroup/dashboards`.                                                    |
+| `/:org/:unit/dashboards/:dashboardKey`                                                                            | Dashboard de uma unidade. A unidade está na URL, então recarregar ou compartilhar o link mantém a seleção. |
+| `/:org/documentacao/:slug`                                                                                        | Guia de um dashboard.                                                                                      |
+| `/:org/admin/membros`, `/:org/admin/acesso`, `/:org/admin/unidades`, `/:org/admin/auditoria`, `/:org/admin/plano` | Administração da organização.                                                                              |
+| `/plataforma/clientes`, `/plataforma/pedidos`                                                                     | Ferramentas da equipe RA.                                                                                  |
 
 As páginas protegidas ficam sob `RequireAuth`; `OrgScope` valida a organização da URL. A moldura compartilhada é
 `AppLayout`. Rotas desconhecidas redirecionam para o hub da organização ativa.
@@ -232,12 +232,12 @@ API retornam 404; cálculos registrados mas ainda não habilitados podem retorna
 Configure em `apps/web/.env.local` (não versionado). Todo valor `VITE_*` fica visível no navegador; nunca inclua
 senhas, chaves secretas ou `service_role`.
 
-| Variável | Uso |
-|---|---|
-| `VITE_DATA_SOURCE` | `mock` (padrão) ou `api`. |
-| `VITE_BASE_API_URL` | URL base da API FastAPI, por exemplo `http://localhost:8000`. |
-| `VITE_SUPABASE_URL` | URL pública do projeto Supabase. |
-| `VITE_SUPABASE_ANON_KEY` | Chave pública/anon para Supabase Auth e RPC autorizadas. |
+| Variável                 | Uso                                                           |
+| ------------------------ | ------------------------------------------------------------- |
+| `VITE_DATA_SOURCE`       | `mock` (padrão) ou `api`.                                     |
+| `VITE_BASE_API_URL`      | URL base da API FastAPI, por exemplo `http://localhost:8000`. |
+| `VITE_SUPABASE_URL`      | URL pública do projeto Supabase.                              |
+| `VITE_SUPABASE_ANON_KEY` | Chave pública/anon para Supabase Auth e RPC autorizadas.      |
 
 Use [`.env.example`](.env.example) como modelo. Em modo `api`, configure também `CORS_ORIGINS` na API e as URLs de
 redirecionamento do login no Supabase.
