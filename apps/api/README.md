@@ -37,6 +37,12 @@ python -m uvicorn app.main:app --reload --app-dir src --port 8000
 Com `make` instalado, os atalhos do [`Makefile`](Makefile) fazem o mesmo no Windows e no Linux:
 `make setup`, `make run`, `make dev-test` (sobe a API, testa `/health` e derruba), `make test`, `make lint`, `make check`.
 
+- `make setup` cria a venv com Python 3.12 (`py -3.12` no Windows, `python3.12` no Linux; troque com
+  `PYTHON=...`), instala as deps e cria o `.env` a partir do `.env.example` se ainda não existir.
+  Rodar de novo não reinstala nada; `run`/`test`/`lint` reinstalam sozinhos quando um `requirements*.txt` muda.
+- `make run PORT=8001` e `make dev-test PORT=8001` trocam a porta. O `dev-test` recusa rodar se a porta já
+  estiver ocupada (senão testaria outro servidor).
+
 - `GET /health` — liveness da API
 - `GET /health/supabase` — verifica se o projeto Supabase responde (503 se não)
 - `GET /orgs/{org}/units/{UNIDADE}/dashboards/{dashboard}/access` — confere o acesso do usuário logado
