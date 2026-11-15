@@ -28,7 +28,7 @@ export function ExportButton({ canExport, title, groups, onExport }: ExportButto
         <>
             <button
                 ref={button}
-                className="btn btn-primary"
+                className="btn"
                 type="button"
                 disabled={empty}
                 title={empty ? 'Sem dados para exportar ainda' : undefined}

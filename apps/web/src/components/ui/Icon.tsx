@@ -61,6 +61,43 @@ const PATHS = {
             <path d="M12 16v-4M12 8h.01" />
         </>
     ),
+    'check-circle': (
+        <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8.5 12.5l2.5 2.5 4.5-5" />
+        </>
+    ),
+    'x-circle': (
+        <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M9 9l6 6M15 9l-6 6" />
+        </>
+    ),
+    refresh: <path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4" />,
+    'file-down': (
+        <>
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+            <path d="M14 3v5h5M12 11v6M9 14l3 3 3-3" />
+        </>
+    ),
+    sliders: <path d="M4 6h16M7 12h10M10 18h4" />,
+    briefcase: (
+        <>
+            <rect x="3" y="7" width="18" height="13" rx="2" />
+            <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18" />
+        </>
+    ),
+    pin: (
+        <>
+            <path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" />
+            <circle cx="12" cy="9.5" r="2.5" />
+        </>
+    ),
+    undo: <path d="M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />,
+    'trend-up': <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />,
+    'trend-down': <path d="M3 7l6 6 4-4 8 8M15 17h6v-6" />,
+    'chevron-up': <path d="M6 15l6-6 6 6" />,
+    'chevron-down': <path d="M6 9l6 6 6-6" />,
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
     lock: (
         <>

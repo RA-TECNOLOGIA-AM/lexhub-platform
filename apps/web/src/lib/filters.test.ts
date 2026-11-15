@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { countFilters, filterChips, toggleFilter, type FilterField } from './filters.ts'
+import { clearFilter, countFilters, filterChips, pickerLabel, toggleFilter, type FilterField } from './filters.ts'
 
 describe('filters', () => {
     it('conta todos os valores escolhidos', () => {
@@ -45,5 +45,30 @@ describe('filterChips', () => {
 
     it('sem filtros: nenhuma etiqueta', () => {
         expect(filterChips(fields, {})).toEqual([])
+    })
+})
+
+describe('pickerLabel e clearFilter', () => {
+    const field: FilterField = {
+        key: 'uf',
+        label: 'UF',
+        options: [
+            { value: 'AM', label: 'AM' },
+            { value: 'PA', label: 'Pará' },
+        ],
+    }
+
+    it('nome, opção escolhida ou "+n"', () => {
+        expect(pickerLabel(field, [])).toBe('UF')
+        expect(pickerLabel(field, ['PA'])).toBe('Pará')
+        expect(pickerLabel(field, ['AM', 'PA'])).toBe('AM +1')
+    })
+
+    it('chip traz o valor sozinho para a faixa', () => {
+        expect(filterChips([field], { uf: ['PA'] })[0]).toMatchObject({ text: 'Pará', label: 'UF: Pará' })
+    })
+
+    it('tira o filtro inteiro', () => {
+        expect(clearFilter({ uf: ['AM'], materia: ['ANP'] }, 'uf')).toEqual({ materia: ['ANP'] })
     })
 })
