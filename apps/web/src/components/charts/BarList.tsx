@@ -13,6 +13,7 @@ type BarListProps = {
     onSelect?: (name: string) => void // clicar numa linha filtra o dashboard por ela
     selectLabel?: string // "Filtrar pela matéria" (leitor de tela)
     stacked?: string[] // linhas que são um pacote (rubrica reunida): ganham o ícone de camadas
+    wrapNames?: boolean // nome longo quebra linha em vez de cortar (cartão estreito, poucas linhas)
 }
 
 // Módulo: barras horizontais sobre um trilho, com o nome à esquerda e o % à direita (Top 10 por matéria).
@@ -26,13 +27,14 @@ export function BarList({
     onSelect,
     selectLabel = 'Filtrar por',
     stacked = [],
+    wrapNames = false,
 }: BarListProps) {
     if (items.length === 0) return <ChartEmpty />
     const base = total ?? items.reduce((sum, p) => sum + p.value, 0)
     const top = Math.max(...items.map((p) => p.value)) || 1
 
     return (
-        <ul className={showShare ? 'barlist share' : 'barlist'} role="list">
+        <ul className={['barlist', showShare && 'share', wrapNames && 'wrap'].filter(Boolean).join(' ')} role="list">
             {items.map((p) => {
                 const pct = (p.value / top) * 100
                 const active = selected.includes(p.name)

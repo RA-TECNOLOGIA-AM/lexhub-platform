@@ -55,8 +55,16 @@ export function LineChart({
     const step = labels.length > 1 ? plotW / (labels.length - 1) : 0
     const x = (i: number) => PAD.left + (labels.length > 1 ? step * i : plotW / 2)
     const y = (v: number) => base - (v / max) * plotH
-    // Rótulos do eixo x sem encavalar: no máximo um a cada ~72px.
-    const every = Math.max(1, Math.ceil(72 / Math.max(step, 1)))
+    // Rótulos do eixo x sem encavalar: o espaço de um rótulo depende do maior texto ('jan' cabe mais junto
+    // que 'setembro'); onde não há rótulo, o ponto também fica sem o número.
+    const maior = Math.max(...labels.map((l) => l.length))
+    const gap = Math.max(40, maior * 7.5 + 14)
+    const every = Math.max(1, Math.ceil(gap / Math.max(step, 1)))
+    // O último ponto sempre tem rótulo; se ficar colado no rótulo regular anterior, este some no lugar dele.
+    const ultimo = labels.length - 1
+    const ultimoRegular = Math.floor(ultimo / every) * every
+    const colado = ultimo !== ultimoRegular && (ultimo - ultimoRegular) * step < gap
+    const comRotulo = (i: number) => i === ultimo || (i % every === 0 && !(colado && i === ultimoRegular))
     const hasData = labels.map((_, i) => series.some((s) => s.values[i] !== null && s.values[i] !== undefined))
 
     const indexAt = (clientX: number, el: Element) => {
@@ -104,7 +112,7 @@ export function LineChart({
                 ))}
                 <line className="chart-baseline" x1={PAD.left} x2={PAD.left + plotW} y1={base} y2={base} />
                 {labels.map((l, i) =>
-                    i % every === 0 || i === labels.length - 1 ? (
+                    comRotulo(i) ? (
                         <g key={l}>
                             <line className="chart-grid" x1={x(i)} x2={x(i)} y1={PAD.top} y2={base} />
                             <text
@@ -159,7 +167,7 @@ export function LineChart({
                                         cy={y(v)}
                                         r={hover === i ? 6 : 5}
                                     />
-                                    {k === series.length - 1 && (i % every === 0 || i === s.values.length - 1) && (
+                                    {k === series.length - 1 && comRotulo(i) && (
                                         <text className="chart-val" x={x(i)} y={y(v) - 13} textAnchor="middle">
                                             {format(v)}
                                         </text>

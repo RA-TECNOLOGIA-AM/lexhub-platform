@@ -33,7 +33,8 @@ export function HeroStat({ label, icon, tone, value, aside, below, footer, hint,
                 <span className="hero-v num">{value}</span>
                 {aside}
             </div>
-            {below && <div className="hero-below">{below}</div>}
+            {/* Sempre presente (vazio sem comparativo): na fileira da seção 01, cada card tem as mesmas 4 linhas. */}
+            <div className="hero-below">{below}</div>
             {footer && <div className="hero-foot">{footer}</div>}
         </div>
     )
