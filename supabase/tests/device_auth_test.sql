@@ -32,6 +32,7 @@ declare
     v_claim_id    uuid := '30000000-0000-0000-0000-000000000002';
     v_result      text;
     v_user_id     uuid;
+    v_consumed    boolean;
 begin
     if not api.consume_device_auth_rate_limit(repeat('c', 64), 2, 60)
        or not api.consume_device_auth_rate_limit(repeat('c', 64), 2, 60)
@@ -52,8 +53,16 @@ begin
         raise exception 'a sessão aprovada deveria ser reivindicada pelo backend';
     end if;
 
-    if not api.finish_device_auth_session(v_device_code, v_claim_id, true)
-       or exists (select 1 from api.device_auth_sessions where device_code = v_device_code) then
+    -- Em dois comandos: num comando só, o "exists" usa a foto do banco de antes do comando e
+    -- ainda enxergaria a linha que a própria função acabou de apagar.
+    v_consumed := api.finish_device_auth_session(v_device_code, v_claim_id, true);
+    if not v_consumed then
+        raise exception 'a sessão aprovada deveria ser consumida';
+    end if;
+    if exists (select 1 from api.device_auth_sessions where device_code = v_device_code) then
+        raise exception 'a sessão consumida deveria ter saído da tabela';
+    end if;
+    if api.finish_device_auth_session(v_device_code, v_claim_id, true) then
         raise exception 'a sessão aprovada deveria ser consumida uma única vez';
     end if;
 end;
