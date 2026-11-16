@@ -119,6 +119,14 @@ async def _prepare(
         filters=filters,
         can_see_commission=access.can_see_commission,
         own_ref=own_ref,
+        extra_sources={
+            db: sources(db) for db in module.extra_queries if access.source_refs.get(db) is not None
+        },
+        extra_refs={
+            db: ref
+            for db in module.extra_queries
+            if (ref := access.source_refs.get(db)) is not None
+        },
     )
     return module, ctx
 

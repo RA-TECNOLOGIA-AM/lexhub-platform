@@ -14,6 +14,8 @@ type BarListProps = {
     selectLabel?: string // "Filtrar pela matéria" (leitor de tela)
     stacked?: string[] // linhas que são um pacote (rubrica reunida): ganham o ícone de camadas
     wrapNames?: boolean // nome longo quebra linha em vez de cortar (cartão estreito, poucas linhas)
+    ranked?: boolean // posição antes do nome (1º, 2º...), como o ranking da v1
+    valueOutside?: boolean // valor à direita da barra, não dentro (valores longos, ex.: R$ 1.221.277,44)
 }
 
 // Módulo: barras horizontais sobre um trilho, com o nome à esquerda e o % à direita (Top 10 por matéria).
@@ -28,14 +30,21 @@ export function BarList({
     selectLabel = 'Filtrar por',
     stacked = [],
     wrapNames = false,
+    ranked = false,
+    valueOutside = false,
 }: BarListProps) {
     if (items.length === 0) return <ChartEmpty />
     const base = total ?? items.reduce((sum, p) => sum + p.value, 0)
     const top = Math.max(...items.map((p) => p.value)) || 1
 
     return (
-        <ul className={['barlist', showShare && 'share', wrapNames && 'wrap'].filter(Boolean).join(' ')} role="list">
-            {items.map((p) => {
+        <ul
+            className={['barlist', showShare && 'share', wrapNames && 'wrap', valueOutside && 'out']
+                .filter(Boolean)
+                .join(' ')}
+            role="list"
+        >
+            {items.map((p, i) => {
                 const pct = (p.value / top) * 100
                 const active = selected.includes(p.name)
                 const dim = selected.length > 0 && !active
@@ -44,6 +53,7 @@ export function BarList({
                 const content = (
                     <>
                         <span className="barlist-name num" title={p.name}>
+                            {ranked && <span className="barlist-rank">{i + 1}º</span>}
                             {stacked.includes(p.name) && (
                                 <span className="barlist-stack" title="Rubrica reunida: clique para ver as rubricas">
                                     <Icon name="layers" size={13} />
@@ -53,9 +63,10 @@ export function BarList({
                         </span>
                         <span className="barlist-track">
                             <span className="barlist-bar" style={style}>
-                                <span className="barlist-v num">{label}</span>
+                                {!valueOutside && <span className="barlist-v num">{label}</span>}
                             </span>
                         </span>
+                        {valueOutside && <span className="barlist-out num">{label}</span>}
                         {showShare && (
                             <span className="barlist-share num">{base ? Math.round((p.value / base) * 100) : 0}%</span>
                         )}

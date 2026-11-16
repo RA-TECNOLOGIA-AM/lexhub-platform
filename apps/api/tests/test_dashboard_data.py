@@ -364,6 +364,86 @@ def test_comercial_e_comissao_lexpre_rodam_o_calculo_da_v1(client, signer, repo,
         assert r.status_code == 200, key
         assert r.json()["stats"]["comissao_base"] == 0.0
         assert set(r.json()["opcoes_filtro"]) == {"atendentes", "areas", "ufs", "segmentos"}
+        # Meta Inteligente: só no Comercial (a Comissão é o escopo da própria pessoa), nas três janelas.
+        meta = r.json().get("meta_inteligente")
+        if key == "comercial-lexpre":
+            assert set(meta) == {"3", "6", "12"}
+            assert meta["6"]["meses_considerados"] == 6 and meta["6"]["atendentes"] == []
+        else:
+            assert meta is None
+            assert "valor_causa_protocolado_legado" not in r.json()
+
+
+def _protocolo_legado(saida, valor, atendente="Ana Souza", status="PROTOCOLADO", uf="AM"):
+    return {
+        "UF": uf,
+        "SAIDA": saida,
+        "STATUS": status,
+        "REAJUIZAMENTO": False,
+        "MATERIA": "MORA",
+        "VALOR_CAUSA": valor,
+        "ATENDENTE": atendente,
+    }
+
+
+def _comercial_ng(repo, sources, ng_ref="NG"):
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    if ng_ref:
+        repo.unit_refs[(repo.units[("lexgroup", "NG")], "ng")] = ng_ref
+    for q in DASHBOARDS["comercial-lexpre"].queries:
+        sources.data[q] = []
+    repo.grant(USER_ID, "NG", "comercial-lexpre", "all")
+
+
+def test_comercial_lexpre_soma_o_protocolado_do_banco_legado(client, signer, repo, sources):
+    """Meta anual: o ano todo de 2026 no legado (sem período); Meta por Atendente: só o período."""
+    _comercial_ng(repo, sources)
+    sources.data["setor_protocolo"] = [
+        _protocolo_legado("2026-10-15", 1000.0),
+        _protocolo_legado("2026-02-01", 500.0, atendente="Bruno Lima"),
+        _protocolo_legado("2025-12-30", 9999.0),  # outro ano
+        _protocolo_legado("2026-10-20", 7777.0, status="EM ANDAMENTO"),  # não protocolado
+        _protocolo_legado("2026-10-21", 300.0, atendente="Wellison Rocha", uf="RJ"),  # do RJ
+    ]
+    r = client.get(
+        "/orgs/lexgroup/units/NG/dashboards/comercial-lexpre?from=2026-10-01&to=2026-12-31",
+        headers=auth(signer),
+    )
+    assert r.status_code == 200
+    body = r.json()
+    # Meta anual: o banco legado inteiro, como na v1; Meta por Atendente: sem quem é do RJ.
+    assert body["valor_causa_protocolado_legado"] == 1800.0
+    assert body["valor_causa_protocolado_por_atendente_legado"] == {"Ana": 1000.0}
+
+
+def test_comercial_lexpre_sem_legado_ligado_ou_fora_do_ar(
+    client, signer, repo, sources, monkeypatch
+):
+    # RJ (ref do banco ng diferente de NG) não somava na v1.
+    _comercial_ng(repo, sources, ng_ref="RJ")
+    url = "/orgs/lexgroup/units/NG/dashboards/comercial-lexpre"
+    body = client.get(url, headers=auth(signer)).json()
+    assert body["valor_causa_protocolado_legado"] is None
+    assert body["valor_causa_protocolado_por_atendente_legado"] == {}
+
+    # Legado fora do ar: a página continua só com o LexPre.
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "ng")] = "NG"
+    original = sources.factory
+
+    def factory(db_name):
+        fonte = original(db_name)
+        if db_name == "ng":
+
+            async def fora(query_name):
+                raise SourceUnavailable(query_name)
+
+            fonte.fetch = fora
+        return fonte
+
+    monkeypatch.setattr(sources, "factory", factory)
+    r = client.get(url, headers=auth(signer))
+    assert r.status_code == 200
+    assert r.json()["valor_causa_protocolado_legado"] is None
 
 
 def _lexflow(repo, sources, key, unidade="NG"):

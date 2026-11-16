@@ -1,131 +1,239 @@
-import { Delta } from '../../../components/dashboard/Delta.tsx'
-import { Kpi } from '../../../components/dashboard/Kpi.tsx'
-import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
-import { fmt, show } from '../../../lib/format.ts'
+import { useState } from 'react'
+import { BarList } from '../../../components/charts/BarList.tsx'
+import { ChartCard } from '../../../components/charts/ChartCard.tsx'
+import { PieChart } from '../../../components/charts/PieChart.tsx'
+import { DashSection } from '../../../components/dashboard/DashSection.tsx'
+import { FootRow, HeroStat } from '../../../components/dashboard/StatCard.tsx'
+import { CountUp } from '../../../components/ui/CountUp.tsx'
+import { Icon } from '../../../components/ui/Icon.tsx'
+import { topN } from '../../../lib/charts.ts'
+import { pickSingle } from '../../../lib/filters.ts'
+import { fmt } from '../../../lib/format.ts'
+import type { ContentProps } from '../types.ts'
+import { isPlaceholder } from '../setor/setor.ts'
+import { CaptacaoSection } from '../comercial-lexpre/CaptacaoSection.tsx'
+import { rotuloCanal } from '../comercial-lexpre/comercial.ts'
+import { linhasValorRubricas, proximaOrdem, type OrdemRubricas } from './comissao.ts'
 import type { ComissaoLexpreResponse } from './types.ts'
 
-// Desconto aparece negativo, como na v1 ("- R$ 120,00"); zero fica "R$ 0,00".
-const desconto = (v: number) => (v > 0 ? `- ${fmt.brl(v)}` : fmt.brl(v))
+const brl = (v: number | null) => (v === null ? '—' : fmt.brl(v))
 
-// Só o que é da Comissão: os KPIs e a tabela. Carregar, erros e cabeçalho ficam no DashboardView.
-export function ComissaoLexpreContent({ data }: { data: ComissaoLexpreResponse }) {
+// Comissão Comercial (LexPre): a Captação igual à do Comercial; depois o cálculo da comissão e o detalhamento
+// (protocoladas por atendente, valor das rubricas e a pizza). Quem não gere a unidade vê tudo só com os
+// próprios dados (a API já manda recortado).
+export function ComissaoLexpreContent({
+    data,
+    filters = {},
+    onToggleFilter,
+    onFiltersChange,
+}: ContentProps<ComissaoLexpreResponse>) {
+    const [canal, setCanal] = useState('total')
+    const [ordem, setOrdem] = useState<OrdemRubricas>({ key: 'acoes', dir: 'desc' })
     const s = data.stats
-    const atendentes = s.comissionamento_por_atendente ?? []
+    const porAtendente =
+        onToggleFilter && ((name: string) => void (!isPlaceholder(name) && onToggleFilter('atendente_comercial', name)))
+    const porRubrica = onFiltersChange && ((name: string) => onFiltersChange(pickSingle(filters, 'rubrica', name)))
+
+    const protocoladas = topN(
+        Object.entries(s.valor_causa_protocolado_por_atendente_periodo ?? {}).map(([name, value]) => ({
+            name,
+            value: Number(value) || 0,
+        })),
+        100,
+    )
+    const canais = Object.keys(s.acoes_fechadas_por_rubrica)
+    const pontos = topN(s.acoes_fechadas_por_rubrica[canal] ?? [], 200)
+    const tabela = linhasValorRubricas(pontos, s.rubricas_total_tabela?.[canal] ?? [], ordem)
+    const recorte = canal === 'total' ? 'total de rubricas' : rotuloCanal(canal).toLowerCase()
+    const desconto = s.desconto_cancelamentos ?? 0
+
+    const seta = (key: OrdemRubricas['key']) =>
+        ordem.key === key ? <Icon name={ordem.dir === 'asc' ? 'chevron-up' : 'chevron-down'} size={14} /> : null
 
     return (
-        <>
-            <KpiSection
-                id="calculo"
-                title="Cálculo da comissão"
-                subtitle="Comissão base × fator multiplicador = comissão com FM; menos o desconto de cancelamentos = comissão líquida."
+        <div className="dsecs">
+            <CaptacaoSection stats={s} />
+
+            <DashSection
+                index={2}
+                eyebrow="Comissão"
+                title="Cálculo e multiplicadores"
+                subtitle="Base de comissão, fator multiplicador e proporcionais aplicados no período."
             >
-                <Kpi
-                    label="Comissão Base"
-                    value={show(s.comissao_base, fmt.brl)}
-                    note="Soma do valor de cada rubrica × ações fechadas"
-                />
-                <Kpi
-                    label="Valor FM"
-                    value={show(s.fator_multiplicador, fmt.fator)}
-                    note="Conta a partir de R$ 2,5 mi protocolados; trava em 4 ao atingir R$ 4 mi"
-                />
-                <Kpi
-                    label="Comissão com FM (bruta)"
-                    value={show(s.comissao_com_fm, fmt.brl)}
-                    note="Comissão base × fator multiplicador"
-                />
-                <Kpi
-                    label="Desconto por cancelamento"
-                    value={show(s.desconto_cancelamentos, desconto)}
-                    note="Comissionadas antes e canceladas no período (valor cheio, sem FM)"
-                />
-                <Kpi
-                    label="Comissão com FM"
-                    value={show(s.comissao_com_fm_liquida, fmt.brl)}
-                    note="Líquida: o pool repartido entre AM/PA e PB"
-                />
-            </KpiSection>
-
-            <KpiSection
-                id="proporcionais"
-                title="Divisão por estado"
-                subtitle="Como a comissão líquida se reparte: a PB pela fatia do valor de causa protocolado lá; AM/PA fica com o restante."
-            >
-                <Kpi
-                    label="Proporcional AM/PA"
-                    value={show(s.proporcional_am_pa, fmt.brl)}
-                    note="Valor da comissão proporcional aos estados AM e PA"
-                />
-                <Kpi
-                    label="Proporcional PB"
-                    value={show(s.proporcional_pb, fmt.brl)}
-                    note="Valor da comissão proporcional ao estado da PB"
-                />
-            </KpiSection>
-
-            <KpiSection id="base" title="Base do período" subtitle="Os números do Comercial de onde a comissão sai.">
-                <Kpi
-                    label="Ações Fechadas"
-                    value={show(s.acoes_fechadas?.total, fmt.int)}
-                    note={`${show(s.rubricas_reunidas_fechadas, fmt.int)} rubricas reunidas`}
-                />
-                <Kpi
-                    label="Protocolados"
-                    value={show(s.protocolados?.total, fmt.int)}
-                    note={<Delta value={s.protocolados?.comparativo ?? null} />}
-                />
-                <Kpi
-                    label="Valor de causa protocolado"
-                    value={show(s.valor_causa_protocolado?.total, fmt.brl)}
-                    note={<Delta value={s.valor_causa_protocolado?.comparativo ?? null} />}
-                />
-                <Kpi
-                    label="Cancelados"
-                    value={show(s.demandas_canceladas?.total, fmt.int)}
-                    note={<Delta value={s.demandas_canceladas?.comparativo ?? null} betterWhenDown />}
-                />
-            </KpiSection>
-
-            <section className="card" style={{ overflow: 'hidden' }} aria-labelledby="por-atendente">
-                <div className="card-head" style={{ paddingBottom: 12 }}>
-                    <h2 className="h2" id="por-atendente">
-                        Comissão por atendente
-                    </h2>
-                    <p className="muted small">Mesmo cálculo, linha a linha (é o conteúdo do PDF de comissão da v1).</p>
+                <div className="grid grid-stat comissao-grid">
+                    <HeroStat
+                        label="Comissão base"
+                        icon="dollar"
+                        tone="accent"
+                        value={<CountUp value={s.comissao_base ?? 0} format={fmt.brl} />}
+                        hint="Soma do valor de cada rubrica (VALOR_AM) × a quantidade de ações fechadas no período."
+                        footer={<FootRow left="Rubricas × ações fechadas" />}
+                    />
+                    <HeroStat
+                        label="Valor FM"
+                        icon="trend-up"
+                        tone="info"
+                        value={<CountUp value={s.fator_multiplicador ?? 0} format={fmt.fator} />}
+                        hint="Fator multiplicador do período, pelo valor de causa protocolado (conta a partir de R$ 2,5 mi; trava em 4 ao chegar a R$ 4 mi)."
+                        footer={<FootRow left="Fator multiplicador do período" />}
+                    />
+                    <HeroStat
+                        label="Proporcional AM/PA"
+                        icon="users"
+                        tone="neutral"
+                        value={<CountUp value={s.proporcional_am_pa ?? 0} format={fmt.brl} />}
+                        hint="Parte da comissão com FM (já sem o desconto) que vai para os estados AM e PA."
+                        footer={<FootRow left="Comissão dos estados AM e PA" />}
+                    />
+                    <HeroStat
+                        label="Proporcional PB"
+                        icon="users"
+                        tone="neutral"
+                        value={<CountUp value={s.proporcional_pb ?? 0} format={fmt.brl} />}
+                        hint="Parte da comissão com FM (já sem o desconto) que vai para a PB."
+                        footer={<FootRow left="Comissão do estado da PB" />}
+                    />
+                    <HeroStat
+                        label="Comissão com FM"
+                        icon="check-circle"
+                        tone="ok"
+                        value={<CountUp value={s.comissao_com_fm_liquida ?? 0} format={fmt.brl} />}
+                        hint={`Comissão base × FM, já sem o desconto de cancelamentos tardios (comissionadas antes e canceladas neste período: o valor cheio, sem FM). Bruta, sem o desconto: ${fmt.brl(s.comissao_com_fm ?? 0)}. É o que os proporcionais dividem.`}
+                        footer={
+                            <FootRow
+                                left="Desconto por cancelamento"
+                                right={
+                                    <strong className={`num${desconto > 0 ? ' tone-text-danger' : ''}`}>
+                                        {desconto > 0 ? `− ${fmt.brl(desconto)}` : fmt.brl(0)}
+                                    </strong>
+                                }
+                            />
+                        }
+                    />
                 </div>
-                {atendentes.length === 0 ? (
-                    <p className="card-pad muted small">Sem dados de comissão para o período selecionado.</p>
-                ) : (
-                    <div className="tblwrap">
-                        <table className="tbl" style={{ minWidth: 760 }}>
-                            <thead>
-                                <tr>
-                                    <th>Atendente</th>
-                                    <th className="num">Ações</th>
-                                    <th className="num">Comissão base</th>
-                                    <th className="num">Comissão com FM</th>
-                                    <th className="num">Desconto de cancelamentos</th>
-                                    <th className="num">Proporcional AM/PA</th>
-                                    <th className="num">Proporcional PB</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {atendentes.map((a) => (
-                                    <tr key={a.atendente}>
-                                        <td>{a.atendente}</td>
-                                        <td className="num">{show(a.acoes, fmt.int)}</td>
-                                        <td className="num">{show(a.comissao_base, fmt.brl)}</td>
-                                        <td className="num">{show(a.comissao_com_fm, fmt.brl)}</td>
-                                        <td className="num">{show(a.desconto_cancelamentos, desconto)}</td>
-                                        <td className="num">{show(a.proporcional_am_pa, fmt.brl)}</td>
-                                        <td className="num">{show(a.proporcional_pb, fmt.brl)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+            </DashSection>
+
+            <DashSection
+                index={3}
+                eyebrow="Detalhamento"
+                title="Protocoladas, rubricas e distribuição"
+                subtitle="Valor de causa por atendente, tabela de rubricas e visão consolidada no gráfico."
+            >
+                <div className="grid comissao-detalhe">
+                    <div className="comissao-col">
+                        <ChartCard
+                            title="Protocoladas · valor de causa"
+                            subtitle={`${protocoladas.length} ${protocoladas.length === 1 ? 'atendente' : 'atendentes'} · clique para filtrar`}
+                        >
+                            <div className="comissao-scroll">
+                                <BarList
+                                    items={protocoladas}
+                                    format={fmt.brl}
+                                    ranked
+                                    valueOutside
+                                    selected={filters.atendente_comercial}
+                                    onSelect={porAtendente}
+                                    selectLabel="Filtrar pelo atendente"
+                                />
+                            </div>
+                        </ChartCard>
+                        <ChartCard
+                            title="Valor das rubricas"
+                            subtitle={`Mesmo recorte do gráfico de rubricas (${recorte})`}
+                        >
+                            <div className="at-table-wrap comissao-scroll">
+                                <table className="at-table rv-table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">
+                                                <button
+                                                    type="button"
+                                                    className="rv-sort"
+                                                    onClick={() => setOrdem((o) => proximaOrdem(o, 'rubrica'))}
+                                                >
+                                                    Rubrica {seta('rubrica')}
+                                                </button>
+                                            </th>
+                                            <th scope="col" className="num">
+                                                <button
+                                                    type="button"
+                                                    className="rv-sort"
+                                                    onClick={() => setOrdem((o) => proximaOrdem(o, 'acoes'))}
+                                                >
+                                                    Ações {seta('acoes')}
+                                                </button>
+                                            </th>
+                                            <th scope="col" className="num">
+                                                Valor AM
+                                            </th>
+                                            <th scope="col" className="num">
+                                                Total
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {tabela.linhas.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="rv-vazio">
+                                                    Não há rubricas para este filtro.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            tabela.linhas.map((l) => (
+                                                <tr key={l.rubrica}>
+                                                    <th scope="row" title={l.rubrica}>
+                                                        {l.rubrica}
+                                                    </th>
+                                                    <td className="num">{fmt.int(l.acoes)}</td>
+                                                    <td className="num">{brl(l.valorAm)}</td>
+                                                    <td className="num strong">{brl(l.total)}</td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                    {tabela.linhas.length > 0 && (
+                                        <tfoot>
+                                            <tr>
+                                                <th scope="row">Total</th>
+                                                <td className="num">{fmt.int(tabela.totalAcoes)}</td>
+                                                <td className="num muted">—</td>
+                                                <td className="num">{fmt.brl(tabela.totalValor)}</td>
+                                            </tr>
+                                        </tfoot>
+                                    )}
+                                </table>
+                            </div>
+                        </ChartCard>
                     </div>
-                )}
-            </section>
-        </>
+                    <ChartCard
+                        className="comissao-pie"
+                        title="Rubricas total"
+                        subtitle={`${fmt.int(tabela.totalAcoes)} ações fechadas · ${pontos.length} rubricas`}
+                        action={
+                            <label className="field-select">
+                                <span className="sr-only">Origem</span>
+                                <select value={canal} onChange={(e) => setCanal(e.target.value)}>
+                                    {canais.map((c) => (
+                                        <option key={c} value={c}>
+                                            {c === 'total' ? 'Total de rubricas' : rotuloCanal(c)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        }
+                    >
+                        <PieChart
+                            items={pontos}
+                            size={260}
+                            centerLabel="ações fechadas"
+                            labels
+                            selected={filters.rubrica}
+                            onSelect={porRubrica}
+                            selectLabel="Filtrar pela rubrica"
+                        />
+                    </ChartCard>
+                </div>
+            </DashSection>
+        </div>
     )
 }

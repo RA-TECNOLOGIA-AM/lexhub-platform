@@ -1548,6 +1548,45 @@ QUERIES: dict[str, dict] = {
         ),
         "params": []
     },
+    # v1: queries.py:235, "setor_protocolo_LA" (copiada em 16/11/2026). comercial-lexpre (meta anual e meta por atendente: protocolado no legado LA).
+    "setor_protocolo_LA": {
+        "database": "laadv",
+        "query": """
+        SELECT
+            pro.id,
+            pro."NOME",
+            pro."ENTRADA",
+            pro."PROCESSO_ID",
+            atendente.nome AS "ATENDENTE",
+            pro."MATERIA",
+            pro."PARTE_ADVERSA",
+            pro."VALOR_CAUSA",
+            pro."SISTEMA",
+            pro."UF",
+            pro."STATUS",
+            pro."SAIDA",
+            pro."ACTION_ID",
+            pro."FUNCIONARIO_ID",
+            responsavel.nome AS "FUNCIONARIO",
+            pro."REAJUIZAMENTO",
+            COALESCE(pro."DANO_MORAL", pet."DANO_MORAL") AS "DANO_MORAL",
+            COALESCE(pro."DANO_MATERIAL", pet."DANO_MATERIAL") AS "DANO_MATERIAL",
+            pro."DATA_CONTRATACAO",
+            r.area_atuacao_id AS "AREA_ATUACAO_ID",
+            aa.nome_area AS "AREA_ATUACAO"
+
+        FROM protocolo.protocolo pro
+        LEFT JOIN "public".actions a ON pro."ACTION_ID" = a.id_action
+        LEFT JOIN "Setores".funcionarios atendente ON a.atendente_comercial = atendente.id
+        LEFT JOIN "Setores".funcionarios responsavel ON pro."FUNCIONARIO_ID" = responsavel.id
+        LEFT JOIN juridico.processos jp ON pro."PROCESSO_ID" = jp.id
+        LEFT JOIN juridico.rubricas r ON jp.rubrica_id = r.id
+        LEFT JOIN juridico.area_atuacao aa ON r.area_atuacao_id = aa.id
+        LEFT JOIN peticionamento.peticionamento pet ON pro."PROCESSO_ID" = pet."PROCESSO_ID"
+        """,
+        "description": "Protocolo do banco LAADV",
+        "params": []
+    },
     # v1: queries.py:1047, "setor_protocolo" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "setor_protocolo": {
         "database": "ng",
