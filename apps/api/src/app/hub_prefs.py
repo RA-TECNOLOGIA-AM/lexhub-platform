@@ -1,8 +1,9 @@
 """Preferências do hub da pessoa numa organização: favoritos e ordem dos cards.
 
-Dividido em duas partes trocáveis:
-  * HubPrefsRepo  só lê e grava no banco (PgHubPrefsRepo em produção, um falso nos testes);
-  * clean_order   limpa a ordem recebida do front (função pura).
+Dividido em partes trocáveis:
+  * HubPrefsRepo        só lê e grava no banco (PgHubPrefsRepo em produção, um falso nos testes);
+  * CachedHubPrefsRepo  o mesmo repo com cache-aside no Redis (lê do cache; toda escrita invalida);
+  * clean_order         limpa a ordem recebida do front (função pura).
 Tudo é por associação (memberships.id): a mesma pessoa tem preferências separadas em cada organização.
 """
 
@@ -12,6 +13,8 @@ import asyncpg
 from fastapi import Depends
 
 from app.access import get_db_pool
+from app.cache import CacheService, get_cache, get_or_load
+from app.config import Settings, get_settings
 
 MAX_ORDER = 200  # mesmo limite do banco (app.hub_orders.keys)
 
@@ -108,5 +111,60 @@ class PgHubPrefsRepo:
         await self._pool.execute(_SET_ORDER_SQL, user_id, org_id, keys)
 
 
-def get_hub_prefs_repo(pool: Annotated[asyncpg.Pool, Depends(get_db_pool)]) -> HubPrefsRepo:
-    return PgHubPrefsRepo(pool)
+class CachedHubPrefsRepo:
+    """HubPrefsRepo com cache-aside. Chaves por organização e pessoa:
+
+    hub:favorites:<org_id>:<user_id>  e  hub:order:<org_id>:<user_id>  (+ CACHE_KEY_PREFIX).
+    Escrita vai primeiro ao banco e depois apaga a chave; a próxima leitura recarrega.
+    """
+
+    def __init__(self, inner: HubPrefsRepo, cache: CacheService, ttl: int):
+        self._inner = inner
+        self._cache = cache
+        self._ttl = ttl
+
+    @staticmethod
+    def favorites_key(user_id: str, org_id: str) -> str:
+        return f"hub:favorites:{org_id}:{user_id}"
+
+    @staticmethod
+    def order_key(user_id: str, org_id: str) -> str:
+        return f"hub:order:{org_id}:{user_id}"
+
+    async def list_favorites(self, user_id: str, org_id: str) -> list[str]:
+        key = self.favorites_key(user_id, org_id)
+        return list(
+            await get_or_load(
+                self._cache, key, self._ttl, lambda: self._inner.list_favorites(user_id, org_id)
+            )
+        )
+
+    async def add_favorite(self, user_id: str, org_id: str, dashboard_key: str) -> bool:
+        saved = await self._inner.add_favorite(user_id, org_id, dashboard_key)
+        if saved:
+            await self._cache.delete(self.favorites_key(user_id, org_id))
+        return saved
+
+    async def remove_favorite(self, user_id: str, org_id: str, dashboard_key: str) -> None:
+        await self._inner.remove_favorite(user_id, org_id, dashboard_key)
+        await self._cache.delete(self.favorites_key(user_id, org_id))
+
+    async def get_order(self, user_id: str, org_id: str) -> list[str]:
+        key = self.order_key(user_id, org_id)
+        return list(
+            await get_or_load(
+                self._cache, key, self._ttl, lambda: self._inner.get_order(user_id, org_id)
+            )
+        )
+
+    async def set_order(self, user_id: str, org_id: str, keys: list[str]) -> None:
+        await self._inner.set_order(user_id, org_id, keys)
+        await self._cache.delete(self.order_key(user_id, org_id))
+
+
+def get_hub_prefs_repo(
+    pool: Annotated[asyncpg.Pool, Depends(get_db_pool)],
+    cache: Annotated[CacheService, Depends(get_cache)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> HubPrefsRepo:
+    return CachedHubPrefsRepo(PgHubPrefsRepo(pool), cache, settings.CACHE_TTL_DEFAULT)

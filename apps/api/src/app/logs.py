@@ -19,6 +19,7 @@ _SCOPES: tuple[tuple[str, str], ...] = (
     ("app.database", "bancos"),
     ("app.source_cache", "cache"),
     ("app.cache_warmer", "aquecedor"),
+    ("app.cache", "redis"),  # depois do cache_warmer (o prefixo "app.cache" também casaria)
     ("app.analyses", "cálculo"),
     ("app.dashboards", "cálculo"),
     ("uvicorn", "uvicorn"),
