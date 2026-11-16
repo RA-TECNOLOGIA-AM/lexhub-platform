@@ -1,0 +1,22 @@
+# Só requirements.txt e src/ entram na imagem; o resto fica de fora.
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Ambiente local e caches
+.venv/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.ruff_cache/
+.vscode/
+
+# Fora da imagem de produção
+tests/
+scripts/
+Makefile
+requirements-dev.txt
+README.md
+Dockerfile
+.dockerignore

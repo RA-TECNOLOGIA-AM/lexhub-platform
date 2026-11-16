@@ -37,6 +37,19 @@ Documentação OpenAPI: http://localhost:8000/docs.
 
 Com `make` instalado, o [`Makefile`](Makefile) oferece `make setup`, `make run`, `make dev-test`, `make test`, `make lint`, `make fmt` e `make check`. `PORT=8001` altera a porta de `run` e `dev-test`. `make dev-test` falha se a porta já estiver ocupada, para não testar outro servidor por engano.
 
+## Docker
+
+A imagem de produção é definida em [`Dockerfile`](Dockerfile) e roda num nó do Docker Swarm, com **1 réplica**. Ela leva só `requirements.txt` e `src/` (ver [`.dockerignore`](.dockerignore)), roda com usuário sem privilégios e tem healthcheck em `/health`. Os segredos não entram na imagem: vêm do ambiente ou dos secrets da stack, com as mesmas variáveis do `.env`.
+
+```powershell
+docker build -t lexhub-api:dev .
+docker run --rm --env-file .env -p 8001:8000 lexhub-api:dev
+```
+
+- **Uma réplica e um worker do uvicorn:** o cache das fontes e o aquecedor ficam em memória. Mais processos multiplicam as consultas nos bancos de origem.
+- **Atrás do proxy:** defina `FORWARDED_ALLOW_IPS` com o IP ou a rede do proxy reverso. Assim, o IP real do cliente chega à auditoria e ao limite do login por TV.
+- **Fuso:** `TZ=America/Sao_Paulo` já vem na imagem. `PORT` (padrão 8000) muda a porta interna.
+
 ## Endpoints implementados
 
 Rotas de usuário exigem `Authorization: Bearer <token>`. O código e o polling do login por dispositivo são públicos; a aprovação exige a sessão Supabase do celular:
