@@ -1,4 +1,6 @@
+import { Suspense } from 'react'
 import { useParams } from 'react-router'
+import { LoadingState } from '../../components/states/LoadingState.tsx'
 import { StateMessage } from '../../components/states/StateMessage.tsx'
 import { DASHBOARD_PAGES } from './registry.tsx'
 
@@ -14,5 +16,10 @@ export function DashboardPage() {
             </StateMessage>
         )
     }
-    return <Page />
+    // O dashboard é baixado na 1ª vez que abre: enquanto isso, o mesmo esqueleto do carregamento dos dados.
+    return (
+        <Suspense fallback={<LoadingState variant="dashboard" />}>
+            <Page />
+        </Suspense>
+    )
 }

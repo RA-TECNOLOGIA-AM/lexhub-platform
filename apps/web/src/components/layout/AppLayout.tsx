@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
+import { LoadingState } from '../states/LoadingState.tsx'
 import { Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { Icon } from '../ui/Icon.tsx'
@@ -140,7 +141,10 @@ export function AppLayout() {
 
                 <main className="content">
                     <TopbarSlotContext value={topbarSlot}>
-                        <Outlet />
+                        {/* Páginas carregadas sob demanda (lazy): o "carregando" fica só no miolo. */}
+                        <Suspense fallback={<LoadingState />}>
+                            <Outlet />
+                        </Suspense>
                     </TopbarSlotContext>
                 </main>
             </div>
