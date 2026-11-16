@@ -1,0 +1,110 @@
+# Imagem da API (apps/api) no GHCR + atualização da stack no Portainer (padrão da Lex).
+#
+# A cada push na main que mexe na API: testa, publica a imagem como :X.Y.Z, aponta a :latest
+# para ela e chama o Service webhook do Portainer, que baixa a latest de novo.
+#
+# Versão X.Y.Z: X.Y vem do "version" de apps/api/pyproject.toml e Z é o número da execução
+# deste workflow. Para subir X ou Y, edite o pyproject (ex.: 0.1.0 -> 0.2.0).
+#
+# Segredo do repositório (Settings → Secrets and variables → Actions):
+#   PORTAINER_WEBHOOK_URL  URL do Service webhook do serviço lexhub-api_lexhub-api.
+#                          Enquanto não existir, a imagem é publicada e o webhook é pulado.
+
+name: API (imagem e deploy)
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "apps/api/**"
+            - ".github/workflows/api-image.yml"
+            - "!apps/api/**/*.md"
+    # Permite publicar de novo pela aba Actions (Run workflow), sem push.
+    workflow_dispatch:
+
+# Uma publicação por vez: um push novo espera o anterior terminar (não cancela um deploy no meio).
+concurrency:
+    group: api-image
+    cancel-in-progress: false
+
+env:
+    IMAGE: ghcr.io/ra-tecnologia-am/lexhub-api
+
+jobs:
+    test:
+        name: Testes da API
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        defaults:
+            run:
+                working-directory: apps/api
+        steps:
+            -   uses: actions/checkout@v4
+            -   uses: actions/setup-python@v5
+                with:
+                    python-version: "3.12"
+                    cache: pip
+                    cache-dependency-path: |
+                        apps/api/requirements.txt
+                        apps/api/requirements-dev.txt
+            -   run: python -m pip install -r requirements.txt -r requirements-dev.txt
+            -   run: python -m ruff check src tests
+            # Sem TEST_DATABASE_URL, os testes de SQL real ficam de fora (eles rodam no CI).
+            -   run: python -m pytest -q
+
+    image:
+        name: Publica a imagem e atualiza a stack
+        needs: test
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            -   uses: actions/checkout@v4
+
+            -   name: Versão X.Y.Z
+                id: version
+                run: |
+                    base=$(python3 -c "import tomllib; print(tomllib.load(open('apps/api/pyproject.toml','rb'))['project']['version'])")
+                    major_minor=$(echo "$base" | cut -d. -f1,2)
+                    version="${major_minor}.${GITHUB_RUN_NUMBER}"
+                    echo "version=$version" >> "$GITHUB_OUTPUT"
+                    echo "Versão da imagem: $version (commit ${GITHUB_SHA::7})"
+
+            -   uses: docker/setup-buildx-action@v3
+
+            -   uses: docker/login-action@v3
+                with:
+                    registry: ghcr.io
+                    username: ${{ github.actor }}
+                    password: ${{ secrets.GITHUB_TOKEN }}
+
+            -   name: Build e push (X.Y.Z, latest e sha)
+                uses: docker/build-push-action@v6
+                with:
+                    context: apps/api
+                    platforms: linux/amd64
+                    push: true
+                    tags: |
+                        ${{ env.IMAGE }}:${{ steps.version.outputs.version }}
+                        ${{ env.IMAGE }}:latest
+                        ${{ env.IMAGE }}:sha-${{ github.sha }}
+                    # Liga o pacote do GHCR a este repositório e registra versão e commit na imagem.
+                    labels: |
+                        org.opencontainers.image.source=https://github.com/${{ github.repository }}
+                        org.opencontainers.image.version=${{ steps.version.outputs.version }}
+                        org.opencontainers.image.revision=${{ github.sha }}
+                    cache-from: type=gha
+                    cache-to: type=gha,mode=max
+
+            -   name: Atualiza a stack (webhook do Portainer)
+                env:
+                    PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+                run: |
+                    if [ -z "$PORTAINER_WEBHOOK_URL" ]; then
+                        echo "::notice::PORTAINER_WEBHOOK_URL não configurado: imagem publicada, deploy não disparado."
+                        exit 0
+                    fi
+                    curl -fsS -X POST --max-time 30 "$PORTAINER_WEBHOOK_URL" > /dev/null
+                    echo "Webhook chamado: o Portainer vai baixar ${IMAGE}:latest (${{ steps.version.outputs.version }})."
