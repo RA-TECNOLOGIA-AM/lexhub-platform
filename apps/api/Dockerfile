@@ -20,9 +20,14 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
-    TZ=America/Sao_Paulo \
+    TZ=America/Manaus \
     NO_COLOR=1 \
     PORT=8000
+
+# tini como PID 1: repassa o SIGTERM do Swarm para o uvicorn e recolhe processos órfãos.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tini \
+    && rm -rf /var/lib/apt/lists/*
 
 # Usuário sem privilégios: o processo da API nunca roda como root.
 RUN groupadd --system app && useradd --system --gid app --no-create-home app
@@ -41,4 +46,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # 1 worker de propósito: o cache das fontes e o aquecedor ficam em memória (um processo só).
 # Atrás do proxy do Swarm, defina FORWARDED_ALLOW_IPS com o IP/rede do proxy para o uvicorn
 # confiar no X-Forwarded-For (IP real do cliente na auditoria e no limite do login por TV).
-CMD ["sh", "-c", "exec uvicorn app.main:app --app-dir src --host 0.0.0.0 --port ${PORT} --proxy-headers --no-server-header"]
+# Desligamento limpo: no SIGTERM o uvicorn para de aceitar conexões e espera até 25 s pelas
+# requisições em andamento (menos que o stop_grace_period de 30 s da stack).
+ENTRYPOINT ["tini", "--"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --app-dir src --host 0.0.0.0 --port ${PORT} --proxy-headers --no-server-header --timeout-graceful-shutdown 25"]

@@ -48,7 +48,10 @@ docker run --rm --env-file .env -p 8001:8000 lexhub-api:dev
 
 - **Uma réplica e um worker do uvicorn:** o cache das fontes e o aquecedor ficam em memória. Mais processos multiplicam as consultas nos bancos de origem.
 - **Atrás do proxy:** defina `FORWARDED_ALLOW_IPS` com o IP ou a rede do proxy reverso. Assim, o IP real do cliente chega à auditoria e ao limite do login por TV.
-- **Fuso:** `TZ=America/Sao_Paulo` já vem na imagem. `PORT` (padrão 8000) muda a porta interna.
+- **Fuso:** `TZ=America/Manaus` já vem na imagem. `PORT` (padrão 8000) muda a porta interna.
+- **Desligamento:** o `tini` é o PID 1. No SIGTERM, o uvicorn espera até 25 s pelas requisições em andamento.
+- **Memória:** com o cache cheio (37 consultas), a API usa cerca de 1,8 GB.
+- **Stack do Portainer:** [`deploy/stack.yml`](deploy/stack.yml), no padrão da Lex (Traefik, GHCR, webhook). Para validar: `docker stack config -c deploy/stack.yml`, com as variáveis do cabeçalho definidas.
 
 ## Endpoints implementados
 
