@@ -1,26 +1,19 @@
 import type { ComponentType } from 'react'
-import { AcordosDoc } from './conteudo/Acordos.tsx'
-import { ComercialLexpreDoc } from './conteudo/ComercialLexpre.tsx'
-import { ComissaoLexpreDoc } from './conteudo/ComissaoLexpre.tsx'
-import { ExecucaoDoc } from './conteudo/Execucao.tsx'
-import { OrgDocumentosLexpreDoc } from './conteudo/OrgDocumentosLexpre.tsx'
-import { PendenciasLexpreDoc } from './conteudo/PendenciasLexpre.tsx'
-import { PeticionamentoLexpreDoc } from './conteudo/PeticionamentoLexpre.tsx'
-import { ProtocoloLexpreDoc } from './conteudo/ProtocoloLexpre.tsx'
-import { RecursalLADoc } from './conteudo/RecursalLA.tsx'
-import { RecursalNGDoc } from './conteudo/RecursalNG.tsx'
+import { lazyNamed } from '../../lib/lazyNamed.ts'
 
 // Módulo: o conteúdo de cada guia, pelo slug do registro (docRegistry.ts).
 // Slug sem conteúdo aqui = a página mostra "Em construção".
+// Cada guia é carregado sob demanda (lazy): o texto só é baixado quando a pessoa abre o guia.
+// Assim o cabeçalho do dashboard pode perguntar "este guia existe?" sem trazer os textos junto.
 export const DOC_PAGES: Record<string, ComponentType> = {
-    'protocolo-lexpre': ProtocoloLexpreDoc,
-    'pendencias-lexpre': PendenciasLexpreDoc,
-    'org-documentos-lexpre': OrgDocumentosLexpreDoc,
-    'peticionamento-lexpre': PeticionamentoLexpreDoc,
-    'comercial-lexpre': ComercialLexpreDoc,
-    'comissao-lexpre': ComissaoLexpreDoc,
-    execucao: ExecucaoDoc,
-    acordos: AcordosDoc,
-    'recursal-ng': RecursalNGDoc,
-    'recursal-la': RecursalLADoc,
+    'protocolo-lexpre': lazyNamed(() => import('./conteudo/ProtocoloLexpre.tsx'), 'ProtocoloLexpreDoc'),
+    'pendencias-lexpre': lazyNamed(() => import('./conteudo/PendenciasLexpre.tsx'), 'PendenciasLexpreDoc'),
+    'org-documentos-lexpre': lazyNamed(() => import('./conteudo/OrgDocumentosLexpre.tsx'), 'OrgDocumentosLexpreDoc'),
+    'peticionamento-lexpre': lazyNamed(() => import('./conteudo/PeticionamentoLexpre.tsx'), 'PeticionamentoLexpreDoc'),
+    'comercial-lexpre': lazyNamed(() => import('./conteudo/ComercialLexpre.tsx'), 'ComercialLexpreDoc'),
+    'comissao-lexpre': lazyNamed(() => import('./conteudo/ComissaoLexpre.tsx'), 'ComissaoLexpreDoc'),
+    execucao: lazyNamed(() => import('./conteudo/Execucao.tsx'), 'ExecucaoDoc'),
+    acordos: lazyNamed(() => import('./conteudo/Acordos.tsx'), 'AcordosDoc'),
+    'recursal-ng': lazyNamed(() => import('./conteudo/RecursalNG.tsx'), 'RecursalNGDoc'),
+    'recursal-la': lazyNamed(() => import('./conteudo/RecursalLA.tsx'), 'RecursalLADoc'),
 }
