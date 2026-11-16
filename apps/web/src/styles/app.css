@@ -3093,3 +3093,93 @@ button.fpcard-who:focus-visible {
 .grid-mini-stack .mini {
     grid-template-rows: 1fr auto;
 }
+
+/* Card grande sem comparativo: a linha do comparativo some fora da fileira com subgrade... */
+.hero-below:empty {
+    display: none;
+}
+/* ...mas fica (vazia) dentro dela, para o rodapé continuar na 4ª linha e alinhado com os vizinhos. */
+.grid-stat:not(.grid-mini) > .hero > .hero-below:empty {
+    display: block;
+}
+
+/* ---------- Medidor em meia-lua (Taxas do período · Pendências) ---------- */
+.gauge-chart {
+    position: relative;
+    margin: 8px auto 0;
+    max-width: 100%;
+}
+.gauge-chart svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+.gauge-track,
+.gauge-fill {
+    fill: none;
+}
+.gauge-track {
+    stroke: var(--surface-3);
+}
+.gauge-fill {
+    transition: stroke-dasharray 0.9s cubic-bezier(0.33, 1, 0.68, 1);
+}
+.gauge-marker {
+    stroke: var(--text);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+}
+.gauge-center {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 26px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+}
+.gauge-center strong {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text);
+}
+.gauge-scale {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 4px 0;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+.taxas-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+    .taxas-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .gauge-fill {
+        transition: none;
+    }
+}
+/* Pendências · Análises: origem (estreito) e o mês a mês (largo), como na v1. */
+.origem-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+@media (max-width: 1100px) {
+    .origem-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.barlist.wrap .barlist-name {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+}
+.barlist.wrap .barlist-hit {
+    grid-template-columns: minmax(110px, 40%) 1fr 44px;
+}

@@ -118,13 +118,19 @@ export type PendenciasResponse = {
         mediana_tempo_resolvidos_pendencia: number
         comparativo_pendencias_resolvidas: number | null
         comparativo_tempo_medio_resolvidos_pendencia: number | null
+        comparativo_mediana_tempo_resolvidos_pendencia?: number | null
+        // Acumulados (não dependem do período).
         pendencias_nao_resolvidas: number
-        pendencias_nao_resolvidas_com_atraso: number
+        pendencias_nao_resolvidas_com_atraso: number // em aberto há mais de 5 dias
         pendencias_triagem: number
+        pendencias_nao_resolvidas_reajuizamento?: number // o LexPre ainda não registra: 0
+        pendencias_resolvidas_reajuizamento?: number
     }
-    pendencias_resolvidas_por_dia: Point[]
-    pendencias_nao_resolvidas_por_origem: Point[]
-    media_pendencias_resolvidas_por_funcionario: Point[]
+    pendencias_resolvidas_por_dia: Point[] // name = 'AAAA-MM-DD'
+    pendencias_resolvidas_por_mes?: Point[] // name = 'nov 2026' (API) ou 'AAAA-MM' (mock)
+    pendencias_nao_resolvidas_por_origem: Point[] // setor de onde a pendência veio
+    media_pendencias_resolvidas_por_funcionario: Point[] // resolvidas por dia, por pessoa (todos veem)
+    // Quem gere a unidade vê de todos; os demais, só a própria linha. Taxas em %.
     comissionamento_pendencias_por_funcionario: {
         funcionario: string
         taxa_resolvido: number
@@ -134,6 +140,11 @@ export type PendenciasResponse = {
         qtd_x_valor: number
         comissao: number
     }[]
+    opcoes_filtro?: {
+        funcionarios?: string[]
+        ufs?: string[]
+        areas?: { id: number; nome: string }[]
+    }
 }
 // --- Membros ---
 // Papel na organização inteira (admin = Desenvolvedor; member = o acesso vem do cargo em cada unidade).

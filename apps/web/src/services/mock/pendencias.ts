@@ -1,4 +1,4 @@
-import type { PendenciasResponse } from '../../types/index.ts'
+import type { DashboardQuery, PendenciasResponse } from '../../types/index.ts'
 import { funcionarios, metaFor, unitScale } from './helpers.ts'
 
 // Números-base (NG) da equipe de Pendências (os 5 primeiros funcionários).
@@ -8,9 +8,11 @@ const TAXA_RESOLVIDO = [98.1, 96.2, 91.0, 86.4, 79.5]
 const TAXA_CANCELAMENTO = [1.2, 2.4, 3.1, 6.0, 4.4]
 const QTD_RESOLVIDO = [182, 157, 141, 102, 73]
 
-// Resposta fictícia de Pendências para uma unidade.
-export function pendenciasFor(unit: string): PendenciasResponse {
+// Resposta fictícia de Pendências para uma unidade (filtro de funcionário recorta a equipe).
+export function pendenciasFor(unit: string, query?: DashboardQuery): PendenciasResponse {
     const { count, series, named } = unitScale(unit)
+    const escolhidos = query?.filters?.funcionario ?? []
+    const naEquipe = (name: string) => !escolhidos.length || escolhidos.includes(name)
 
     return {
         meta: metaFor(unit),
@@ -25,10 +27,18 @@ export function pendenciasFor(unit: string): PendenciasResponse {
             mediana_tempo_resolvidos_pendencia: 2.0,
             comparativo_pendencias_resolvidas: 6.4,
             comparativo_tempo_medio_resolvidos_pendencia: -9.3,
+            comparativo_mediana_tempo_resolvidos_pendencia: -4.8,
             pendencias_nao_resolvidas: count(68),
             pendencias_nao_resolvidas_com_atraso: count(23),
             pendencias_triagem: count(12),
+            pendencias_nao_resolvidas_reajuizamento: 0,
+            pendencias_resolvidas_reajuizamento: 0,
         },
+        pendencias_resolvidas_por_mes: [
+            { name: '2026-08', value: count(612) },
+            { name: '2026-09', value: count(701) },
+            { name: '2026-10', value: count(655) },
+        ],
         pendencias_resolvidas_por_dia: series(30, 8),
         pendencias_nao_resolvidas_por_origem: named([
             ['Organização de documentos', 29],
@@ -39,8 +49,9 @@ export function pendenciasFor(unit: string): PendenciasResponse {
         media_pendencias_resolvidas_por_funcionario: EQUIPE.map((name, i) => ({
             name,
             value: MEDIA_RESOLVIDAS_POR_FUNC[i],
-        })),
-        comissionamento_pendencias_por_funcionario: EQUIPE.map((funcionario, i) => {
+        })).filter((p) => naEquipe(p.name)),
+        comissionamento_pendencias_por_funcionario: EQUIPE.filter(naEquipe).map((funcionario) => {
+            const i = EQUIPE.indexOf(funcionario)
             const tr = TAXA_RESOLVIDO[i]
             const tc = TAXA_CANCELAMENTO[i]
             const q = count(QTD_RESOLVIDO[i])
@@ -56,5 +67,13 @@ export function pendenciasFor(unit: string): PendenciasResponse {
                 comissao: q * valor,
             }
         }),
+        opcoes_filtro: {
+            funcionarios: EQUIPE,
+            ufs: [],
+            areas: [
+                { id: 1, nome: 'Bancário' },
+                { id: 2, nome: 'Consumidor' },
+            ],
+        },
     }
 }
