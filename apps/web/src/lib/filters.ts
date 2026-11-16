@@ -7,6 +7,7 @@ export type FilterField = {
     key: keyof DashboardFilters
     label: string
     options: { value: string; label: string }[]
+    single?: boolean // um valor só (a API só usa o primeiro): escolher outro troca, não soma
 }
 
 // Quantos valores estão escolhidos no total: o "(2)" do botão Filtros.
@@ -57,4 +58,9 @@ export function clearFilter(filters: DashboardFilters, key: keyof DashboardFilte
     const result = { ...filters }
     delete result[key]
     return result
+}
+
+// Marca um valor num filtro de escolha única: o mesmo valor desmarca; outro troca.
+export function pickSingle(filters: DashboardFilters, key: keyof DashboardFilters, value: string): DashboardFilters {
+    return filters[key]?.includes(value) ? clearFilter(filters, key) : { ...filters, [key]: [value] }
 }

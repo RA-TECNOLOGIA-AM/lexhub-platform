@@ -22,4 +22,5 @@ export type ContentProps<T> = {
     data: T
     filters?: DashboardFilters
     onToggleFilter?: (key: keyof DashboardFilters, value: string) => void
+    onFiltersChange?: (filters: DashboardFilters) => void // troca todos de uma vez (ex.: filtro de valor único)
 }

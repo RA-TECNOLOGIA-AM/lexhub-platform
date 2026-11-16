@@ -27,6 +27,7 @@ import {
     protocoloFor,
     peticionamentoFor,
     orgDocumentosFor,
+    comercialFor,
     sources,
     testUsers,
 } from './mock/index.ts'
@@ -121,6 +122,8 @@ async function dashboardResponse<T extends { meta: Meta }>(
 const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unknown> = {
     'peticionamento-lexpre': peticionamentoFor,
     'org-documentos-lexpre': orgDocumentosFor,
+    'comercial-lexpre': comercialFor,
+    'comissao-lexpre': comercialFor, // a v1 usava o mesmo endpoint do Comercial
 }
 
 export function createMockClient(): DataClient {

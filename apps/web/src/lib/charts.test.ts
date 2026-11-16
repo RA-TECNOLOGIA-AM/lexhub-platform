@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { monthLabel, niceScale, parseMonth, seriesByYear, smoothPath, sortByMonth, topN } from './charts.ts'
+import {
+    monthLabel,
+    niceScale,
+    parseMonth,
+    seriesByYear,
+    smoothPath,
+    sortByMonth,
+    spreadLabels,
+    pieSlices,
+    arcPath,
+    spreadColumn,
+    topN,
+} from './charts.ts'
 
 describe('niceScale', () => {
     it('arredonda o topo do eixo como a v1', () => {
@@ -78,5 +90,76 @@ describe('topN', () => {
             { name: 'c', value: 1 },
         ]
         expect(topN(pts, 2).map((p) => p.name)).toEqual(['b', 'a'])
+    })
+})
+
+describe('spreadLabels', () => {
+    it('mantém no meio da parte os rótulos que não encostam', () => {
+        expect(spreadLabels([300, 250, 200])).toEqual([300, 250, 200])
+    })
+    it('empurra para cima o rótulo que encosta no de baixo', () => {
+        expect(spreadLabels([300, 296, 293])).toEqual([300, 287, 274])
+    })
+    it('lista vazia', () => {
+        expect(spreadLabels([])).toEqual([])
+    })
+})
+
+describe('pieSlices', () => {
+    const items = [
+        { name: 'A', value: 50 },
+        { name: 'B', value: 30 },
+        { name: 'C', value: 0 },
+        { name: 'D', value: 10 },
+        { name: 'E', value: 10 },
+    ]
+    it('ordena do maior ao menor, sem fatias zeradas, e fecha a volta', () => {
+        const s = pieSlices(items)
+        expect(s.map((p) => p.name)).toEqual(['A', 'B', 'D', 'E'])
+        expect(s[0]).toMatchObject({ start: 0, end: 0.5, share: 50, others: 0 })
+        expect(s[s.length - 1].end).toBe(1)
+    })
+    it('junta o que passa do limite em "Outras"', () => {
+        const s = pieSlices(items, 2)
+        expect(s.map((p) => [p.name, p.value, p.others])).toEqual([
+            ['A', 50, 0],
+            ['B', 30, 0],
+            ['Outras', 20, 2],
+        ])
+    })
+    it('não cria "Outras" com uma rubrica só', () => {
+        expect(pieSlices(items, 3).map((p) => p.name)).toEqual(['A', 'B', 'D', 'E'])
+    })
+    it('sort = false mantém a ordem recebida', () => {
+        expect(pieSlices(items, 10, 'Outras', false).map((p) => p.name)).toEqual(['A', 'B', 'D', 'E'])
+        const inv = [...items].reverse()
+        expect(pieSlices(inv, 10, 'Outras', false).map((p) => p.name)).toEqual(['E', 'D', 'B', 'A'])
+    })
+    it('sem valores, sem fatias', () => {
+        expect(pieSlices([{ name: 'A', value: 0 }])).toEqual([])
+    })
+})
+
+describe('arcPath', () => {
+    it('meia volta a partir do topo', () => {
+        expect(arcPath(100, 100, 50, 0, 0.5)).toBe('M100,100L100.00,50.00A50,50 0 0 1 100.00,150.00Z')
+    })
+    it('fatia de rosca: arco de fora, desce ao anel de dentro e volta', () => {
+        expect(arcPath(100, 100, 50, 0, 0.25, 30)).toBe(
+            'M100.00,50.00A50,50 0 0 1 150.00,100.00L130.00,100.00A30,30 0 0 0 100.00,70.00Z',
+        )
+    })
+})
+
+describe('spreadColumn', () => {
+    it('não mexe em quem já está longe', () => {
+        expect(spreadColumn([10, 50, 90], 15, 0, 100)).toEqual([10, 50, 90])
+    })
+    it('afasta os que se encostam, mantendo a ordem da entrada', () => {
+        expect(spreadColumn([52, 50, 51], 15, 0, 200)).toEqual([80, 50, 65])
+    })
+    it('respeita os limites de cima e de baixo', () => {
+        expect(spreadColumn([95, 96, 97], 10, 0, 100)).toEqual([80, 90, 100])
+        expect(spreadColumn([-5, 0], 10, 0, 100)).toEqual([0, 10])
     })
 })

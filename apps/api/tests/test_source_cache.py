@@ -164,6 +164,16 @@ def test_alvos_do_aquecedor_sem_repetir():
     assert warm_targets([a, b, c]) == [("lexpre", "log"), ("lexpre", "outra"), ("lexflow", "log")]
 
 
+def test_alvos_do_aquecedor_incluem_os_bancos_extras():
+    async def build(ctx):
+        return {}
+
+    m = DashboardModule(
+        "m", "lexpre", "LexPre", build, queries=("log",), extra_queries={"ng": ("setor_protocolo",)}
+    )
+    assert warm_targets([m]) == [("lexpre", "log"), ("ng", "setor_protocolo")]
+
+
 def test_aquecedor_pula_banco_fora_e_segue_apos_falha():
     cache, _clock, origin = make()
     broken = Origin()

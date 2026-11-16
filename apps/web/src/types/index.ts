@@ -58,6 +58,10 @@ export type DashboardFilters = {
     funcionario?: string[]
     area_atuacao_id?: string[]
     uf?: string[]
+    // Comercial (LexPre): atendente, canal de origem (a v1 usa um só) e rubrica (uma só).
+    atendente_comercial?: string[]
+    segmento_comercial?: string[]
+    rubrica?: string[]
 }
 
 export type DashboardQuery = { org: string; unit: string; from?: string; to?: string; filters?: DashboardFilters }

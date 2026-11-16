@@ -42,6 +42,10 @@ class DashboardContext:
     # Quem a pessoa é na fonte (app.member_source_refs). Só vem preenchido nos módulos com
     # own_rows_only e para quem não gere a unidade; None = sem vínculo (a página zera).
     own_ref: str | None = None
+    # Outros bancos que o módulo lê além do seu (DashboardModule.extra_queries), só os que a unidade tem
+    # ligados (app.unit_source_refs): banco -> busca e banco -> ref da unidade nele.
+    extra_sources: dict[str, SourceFetcher] = field(default_factory=dict)
+    extra_refs: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -71,6 +75,9 @@ class DashboardModule:
     # A página inteira só com os dados da própria pessoa para quem não gere a unidade
     # (v1: escopo_proprio da Comissão Comercial). A casca preenche ctx.own_ref.
     own_rows_only: bool = False
+    # Queries de outros bancos que o módulo também lê (banco -> queries), ex.: o Comercial (LexPre) soma o
+    # protocolado no banco legado. A casca entrega ctx.extra_sources dos bancos ligados à unidade.
+    extra_queries: dict[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 class NotReady(Exception):
