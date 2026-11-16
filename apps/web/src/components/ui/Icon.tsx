@@ -73,6 +73,7 @@ const PATHS = {
             <path d="M9 9l6 6M15 9l-6 6" />
         </>
     ),
+    layers: <path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 17.5l9 5 9-5" />,
     refresh: <path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4" />,
     'file-down': (
         <>

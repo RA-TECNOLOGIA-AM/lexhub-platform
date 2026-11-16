@@ -2,6 +2,8 @@
 export { catalog } from './catalog.ts'
 export { pendenciasFor } from './pendencias.ts'
 export { protocoloFor } from './protocolo.ts'
+export { peticionamentoFor } from './peticionamento.ts'
+export { orgDocumentosFor } from './orgDocumentos.ts'
 export { googleMockEmail, me, meFor, noAccessEmails, orgs, testUsers } from './users.ts'
 export { defaultFavorites } from './favorites.ts'
 export { createMembersStore, members } from './members.ts'

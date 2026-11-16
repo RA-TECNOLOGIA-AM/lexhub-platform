@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { Point } from '../../types/index.ts'
 import { fmt } from '../../lib/format.ts'
+import { Icon } from '../ui/Icon.tsx'
 import { ChartEmpty } from './ChartCard.tsx'
 
 type BarListProps = {
@@ -11,6 +12,7 @@ type BarListProps = {
     selected?: string[] // linhas do filtro em uso (destacadas)
     onSelect?: (name: string) => void // clicar numa linha filtra o dashboard por ela
     selectLabel?: string // "Filtrar pela matéria" (leitor de tela)
+    stacked?: string[] // linhas que são um pacote (rubrica reunida): ganham o ícone de camadas
 }
 
 // Módulo: barras horizontais sobre um trilho, com o nome à esquerda e o % à direita (Top 10 por matéria).
@@ -23,6 +25,7 @@ export function BarList({
     selected = [],
     onSelect,
     selectLabel = 'Filtrar por',
+    stacked = [],
 }: BarListProps) {
     if (items.length === 0) return <ChartEmpty />
     const base = total ?? items.reduce((sum, p) => sum + p.value, 0)
@@ -39,6 +42,11 @@ export function BarList({
                 const content = (
                     <>
                         <span className="barlist-name num" title={p.name}>
+                            {stacked.includes(p.name) && (
+                                <span className="barlist-stack" title="Rubrica reunida: clique para ver as rubricas">
+                                    <Icon name="layers" size={13} />
+                                </span>
+                            )}
                             {p.name}
                         </span>
                         <span className="barlist-track">
@@ -58,7 +66,7 @@ export function BarList({
                                 type="button"
                                 className="barlist-hit"
                                 aria-pressed={active}
-                                aria-label={`${selectLabel} ${p.name} (${label})`}
+                                aria-label={`${stacked.includes(p.name) ? 'Ver as rubricas de' : selectLabel} ${p.name} (${label})`}
                                 onClick={() => onSelect(p.name)}
                             >
                                 {content}
