@@ -19,12 +19,14 @@ Uso (PowerShell, em apps/api):
 import argparse
 import ast
 import builtins
+import os
 import re
 import shutil
 import sys
 from pathlib import Path
 
-V1_APP = Path(r"C:\workspace\api_dashboards\src\app")
+# Onde está a v1 (api_dashboards/src/app); a variável V1_APP troca (ex.: no WSL).
+V1_APP = Path(os.environ.get("V1_APP", r"C:\workspace\api_dashboards\src\app"))
 V2_APP = Path(__file__).resolve().parents[2] / "src" / "app"
 ROUTES = V1_APP / "dashboard_routes.py"
 

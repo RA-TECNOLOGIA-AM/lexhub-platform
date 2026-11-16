@@ -64,7 +64,11 @@ export function DevolucaoCard({
     comparativo: number | null
     hint: string
 }) {
-    const leitura = leituraDevolucao(value, comparativo)
+    // Sem comparativo (ex.: o banco legado só tem o acumulado): diz que é o total, sem "vs mês anterior".
+    const leitura =
+        comparativo === null && value > 0
+            ? { text: 'Total acumulado', tone: 'neutral' as const }
+            : leituraDevolucao(value, comparativo)
     return (
         <HeroStat
             label={label}
@@ -77,7 +81,7 @@ export function DevolucaoCard({
             footer={
                 <FootRow
                     left={<span className={`tone-text-${leitura.tone}`}>{leitura.text}</span>}
-                    right="vs mês anterior"
+                    right={comparativo === null ? undefined : 'vs mês anterior'}
                 />
             }
         />

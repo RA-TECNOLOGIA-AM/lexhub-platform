@@ -2029,6 +2029,10 @@ div.org {
     stroke-width: 3;
     stroke-linecap: round;
 }
+.chart-line.dashed {
+    stroke-width: 2.5;
+    stroke-dasharray: 7 6;
+}
 .chart-dot {
     fill: currentColor;
     stroke: var(--surface);
@@ -2106,6 +2110,9 @@ div.org {
 .chart-key.line {
     height: 3px;
     width: 16px;
+}
+.chart-key.line.dashed {
+    background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 8px);
 }
 .chart-key.dot {
     width: 8px;
@@ -4085,4 +4092,36 @@ button.at-name:hover {
     padding: 24px;
     text-align: center;
     color: var(--text-muted);
+}
+/* Protocolo (banco legado) · 03 e 04 */
+.ptl-prod {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+}
+.ptl-mes {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+}
+@media (max-width: 1100px) {
+    .ptl-prod,
+    .ptl-mes {
+        grid-template-columns: 1fr;
+    }
+}
+/* Peticionamento (banco legado) · 02: os dois de reajuizamento empilhados ao lado dos medidores */
+.pet-reaj {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    min-width: 0;
+}
+.pet-reaj > * {
+    flex: 1;
+}
+/* Pré-protocolo · 04: a produção diária dos 4 setores, dois por linha */
+.pre-dias {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+    .pre-dias {
+        grid-template-columns: 1fr;
+    }
 }

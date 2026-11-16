@@ -62,6 +62,8 @@ export type DashboardFilters = {
     atendente_comercial?: string[]
     segmento_comercial?: string[]
     rubrica?: string[]
+    // Protocolo (banco legado): sistema de protocolo (a v1 usa um só).
+    sistema?: string[]
 }
 
 export type DashboardQuery = { org: string; unit: string; from?: string; to?: string; filters?: DashboardFilters }

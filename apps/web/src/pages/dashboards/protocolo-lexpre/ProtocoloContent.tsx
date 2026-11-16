@@ -366,7 +366,6 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                     <LineChart
                         height={340}
                         legend
-                        area={anos.length === 1}
                         emphasizeData
                         labels={MESES}
                         partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
@@ -375,6 +374,9 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                             label: String(a.year),
                             color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
                             values: a.values,
+                            // anos anteriores tracejados; o ano atual cheio, com o degradê
+                            dashed: i < ultimo,
+                            area: i === ultimo,
                         }))}
                     />
                 </ChartCard>
