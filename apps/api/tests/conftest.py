@@ -18,6 +18,7 @@ os.environ.update(
     SUPABASE_JWT_SECRET="",
     DATABASE_URL="",
     SOURCE_CACHE_WARM_ENABLED="false",  # sem tarefa de fundo nos testes
+    CACHE_ENABLED="false",  # nunca conecta no Redis do .env local
 )
 # Bancos de origem desligados: os testes nunca podem conectar nos bancos reais do .env.
 for _db in ("NG", "LAADV", "LEXFLOW", "LEXPRE"):

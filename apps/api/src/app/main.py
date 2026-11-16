@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import build_verifier
+from app.cache import CacheService, build_cache, safe_redis_target
 from app.cache_warmer import warm_loop, warm_targets
 from app.config import Settings, get_settings
 from app.dashboards import DASHBOARDS
@@ -16,7 +17,7 @@ from app.database import DatabaseManager
 from app.logs import configure_logging, seconds
 from app.request_log import RequestLogMiddleware
 from app.routes import catalog, dashboards, device_auth, health, hub, me
-from app.source_cache import MemoryStore, SourceCache
+from app.source_cache import MemoryStore, SourceCache, ttl_by_query
 from app.sources import PgSourceFetcher
 from app.supabase_client import create_supabase
 
@@ -35,6 +36,21 @@ async def _start_warmer(app: FastAPI, settings) -> None:
         lambda db: databases.status().get(db) == "up",
         interval=settings.SOURCE_CACHE_WARM_INTERVAL,
     )
+
+
+async def _log_cache(cache: CacheService, settings: Settings) -> None:
+    """Estado do Redis na subida (o RedisCache já avisa sozinho se não conectar)."""
+    state = await cache.status()
+    if state == "off":
+        logger.info("Redis desligado (CACHE_ENABLED=false): cache só em memória, por réplica")
+    elif state == "up":
+        logger.info(
+            "Redis ligado em %s (prefixo '%s'; TTL %s, pesadas %s)",
+            safe_redis_target(settings.REDIS_URL),
+            settings.CACHE_KEY_PREFIX,
+            seconds(settings.CACHE_TTL_DEFAULT),
+            seconds(settings.CACHE_TTL_HEAVY),
+        )
 
 
 def _log_auth(settings: Settings) -> None:
@@ -87,13 +103,18 @@ def create_app() -> FastAPI:
         # Bancos de origem da v1 (NG, LAADV, LEXFLOW, LEXPRE). Igual à v1: obrigatório fora do ar
         # impede a subida; o LEXPRE é opcional. Sem variáveis no .env, o banco fica desligado.
         app.state.databases = DatabaseManager(settings)
+        # Redis (L2): igual à v1, opcional; fora do ar = só memória, sem impedir a subida.
+        app.state.cache = build_cache(settings)
         app.state.source_cache = SourceCache(
             MemoryStore(settings.SOURCE_CACHE_MAX_ENTRIES),
             ttl=settings.SOURCE_CACHE_TTL,
             stale_max_age=settings.SOURCE_CACHE_STALE_MAX_AGE,
+            shared=app.state.cache,
+            shared_ttl=ttl_by_query(settings.CACHE_TTL_HEAVY, settings.CACHE_TTL_DEFAULT),
         )
         warmer = None
         try:
+            await _log_cache(app.state.cache, settings)
             await app.state.databases.initialize()
             logger.info(
                 "Cache: dados valem %s; se o banco cair, serve o último dado bom por até %s",
@@ -115,6 +136,7 @@ def create_app() -> FastAPI:
             if warmer is not None:
                 warmer.cancel()
             await app.state.databases.close()
+            await app.state.cache.close()
             if app.state.db_pool is not None:
                 await app.state.db_pool.close()
             logger.info("API desligada")
