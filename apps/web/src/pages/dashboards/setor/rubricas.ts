@@ -23,3 +23,15 @@ export function contagemAbas(demandas: Demanda[]): Record<Aba, number> {
         protocolados: daAba(demandas, 'protocolados').length,
     }
 }
+
+// O que a API manda em `rubricas_reunidas` (Peticionamento e Org. Documentos): por matéria reunida (pacote),
+// as demandas resolvidas no período ou represadas agora, com o cliente e as rubricas de cada uma.
+export type DemandaReunida = {
+    id_demanda: number | string
+    cliente: string | null
+    situacao: 'resolvido' | 'represado'
+    protocolado: boolean
+    rubricas: string[]
+}
+
+export type RubricaReunida = { materia: string; demandas: DemandaReunida[] }

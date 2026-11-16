@@ -26,6 +26,7 @@ import {
     pendenciasFor,
     protocoloFor,
     peticionamentoFor,
+    orgDocumentosFor,
     sources,
     testUsers,
 } from './mock/index.ts'
@@ -114,6 +115,12 @@ async function dashboardResponse<T extends { meta: Meta }>(
     data.meta.from = query.from ?? data.meta.from
     data.meta.to = query.to ?? data.meta.to
     return data
+}
+
+// Dashboards que têm resposta fictícia completa no mock (key -> montagem).
+const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unknown> = {
+    'peticionamento-lexpre': peticionamentoFor,
+    'org-documentos-lexpre': orgDocumentosFor,
 }
 
 export function createMockClient(): DataClient {
@@ -295,12 +302,11 @@ export function createMockClient(): DataClient {
         getPendencias: (query) => dashboardResponse('pendencias-lexpre', query, pendenciasFor),
         // Sem números fictícios: as telas novas mostram 0/—; os números de verdade vêm da API.
         getDashboardData: <T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery) =>
-            dashboardResponse(dashboardKey, query, (unit, q) =>
-                // Peticionamento (LexPre) tem dados fictícios completos; os demais, só o `meta` e `stats` vazio.
-                dashboardKey === 'peticionamento-lexpre'
-                    ? (peticionamentoFor(unit, q) as unknown as T)
-                    : ({ meta: metaFor(unit), stats: {} } as unknown as T),
-            ),
+            dashboardResponse(dashboardKey, query, (unit, q) => {
+                // Dashboards com dados fictícios completos; os demais, só o `meta` e `stats` vazio.
+                const completo = MOCK_COMPLETO[dashboardKey]
+                return (completo ? completo(unit, q) : { meta: metaFor(unit), stats: {} }) as unknown as T
+            }),
 
         // Pedidos de acesso: mesmas regras das funções do schema api (ver mock/accessRequests.ts).
         async requestAccess(office, message) {

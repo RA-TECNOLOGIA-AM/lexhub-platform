@@ -1,4 +1,5 @@
 import type { Meta, Point, WithComparison } from '../../../types/index.ts'
+import type { RubricaReunida } from '../setor/rubricas.ts'
 
 // Resposta do dashboard Peticionamento (LexPre): os campos da v1 (PeticionamentoLexpreNGResponse) que a tela
 // usa + `opcoes_filtro` (novo na V2). Tempos em dias; comparativos em % vs mês anterior.
@@ -58,13 +59,3 @@ export type PeticionamentoLexpreResponse = {
         areas: { id: number; nome: string }[]
     }
 }
-
-export type DemandaReunida = {
-    id_demanda: number | string
-    cliente: string | null
-    situacao: 'resolvido' | 'represado'
-    protocolado: boolean
-    rubricas: string[]
-}
-
-export type RubricaReunida = { materia: string; demandas: DemandaReunida[] }

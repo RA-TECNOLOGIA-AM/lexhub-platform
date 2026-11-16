@@ -278,6 +278,48 @@ def test_setores_lexpre_rodam_o_calculo_da_v1(
     assert body["opcoes_filtro"]["ufs"] == ["AM"]  # a linha do RJ (escritório 2) fica fora
 
 
+@pytest.mark.parametrize("key", ["org-documentos-lexpre", "peticionamento-lexpre"])
+def test_rubricas_reunidas_na_resposta(client, signer, repo, sources, key):
+    """Org. Doc e Peticionamento: o pacote (rubrica reunida) na fila vem com as rubricas da demanda."""
+    repo.grant(USER_ID, "NG", key, "all")
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    setor_atual = 3 if key == "org-documentos-lexpre" else 4  # Org. Doc / Peticionamento
+    sources.data["log_setor_demanda_lexpre_NG"] = LOG_ROWS + [
+        log_row(
+            TIPO="entrada",
+            MOVIMENTACAO_ID=30,
+            DATA=datetime(2026, 11, 4, 9),
+            ID_DEMANDA=4204,
+            MATERIA="RUBRICAS_REUNIDAS",
+            RUBRICA_REUNIDA=True,
+            CLIENTE_NOME="CIVAL OLIVEIRA",
+            SETOR_ID=setor_atual,
+            SETOR_ATUAL_ID=setor_atual,
+            STATUS_DEMANDA_ID=1,
+        )
+    ]
+    sources.data["setor_func_lexpre_NG"] = []
+    sources.data["demanda_rubrica_reunida_lexpre_NG"] = [
+        {"DEMANDA_ID": 4204, "RUBRICA_ASSOCIADA_NOME": "OP_VENCIDAS"},
+        {"DEMANDA_ID": 4204, "RUBRICA_ASSOCIADA_NOME": "CESTA"},
+    ]
+    body = client.get(f"/orgs/lexgroup/units/NG/dashboards/{key}", headers=auth(signer)).json()
+    assert body["rubricas_reunidas"] == [
+        {
+            "materia": "RUBRICAS_REUNIDAS",
+            "demandas": [
+                {
+                    "id_demanda": 4204,
+                    "cliente": "CIVAL OLIVEIRA",
+                    "situacao": "represado",
+                    "protocolado": False,
+                    "rubricas": ["OP_VENCIDAS", "CESTA"],
+                }
+            ],
+        }
+    ]
+
+
 def _own_rows_module(monkeypatch):
     """Módulo falso com own_rows_only (como a Comissão Comercial): devolve o que a casca passou."""
 

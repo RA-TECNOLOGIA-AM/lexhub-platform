@@ -1603,7 +1603,6 @@ div.org {
 
 /* card grande: rótulo + ícone, valor com selo, rodapé depois do divisor */
 .hero {
-    container-type: inline-size;
     position: relative;
     padding: 22px 22px 18px;
     display: flex;
@@ -1644,6 +1643,8 @@ div.org {
     color: var(--text-muted);
 }
 .hero-mid {
+    /* Contêiner do valor (cqi): fica aqui e não no card, porque contêiner no card desliga a subgrade. */
+    container-type: inline-size;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1652,7 +1653,7 @@ div.org {
 }
 .hero-v {
     /* Cresce com o card, sem quebrar R$ 5.907.062,43 em duas linhas. */
-    font-size: clamp(22px, 11cqi, 38px);
+    font-size: clamp(22px, 10.5cqi, 38px);
     font-weight: 700;
     line-height: 1.1;
     letter-spacing: -0.02em;

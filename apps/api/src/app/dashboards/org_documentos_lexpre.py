@@ -11,6 +11,9 @@ from datetime import date
 from typing import Any
 
 from app.analyses.NG.org_doc_lexpre import (
+    SETOR_ORG_DOC_IDS as SETOR_ORG_DOC_IDS_LEXPRE,
+)
+from app.analyses.NG.org_doc_lexpre import (
     _entradas_org_doc as entradas_org_doc_lexpre,
 )
 from app.analyses.NG.org_doc_lexpre import (
@@ -27,6 +30,12 @@ from app.analyses.NG.org_doc_lexpre import (
 )
 from app.analyses.NG.org_doc_lexpre import (
     _indexar_movimentacoes as indexar_movimentacoes_org_doc_lexpre,
+)
+from app.analyses.NG.org_doc_lexpre import (
+    _is_cancelado as is_cancelado_org_doc_lexpre,
+)
+from app.analyses.NG.org_doc_lexpre import (
+    _is_protocolado as is_protocolado_org_doc_lexpre,
 )
 from app.analyses.NG.org_doc_lexpre import (
     _normalizar_materia,
@@ -152,8 +161,9 @@ from app.analyses.v1_routes import (
 )
 from app.dashboards.base import DashboardContext, DashboardModule, ExportSpec
 from app.dashboards.opcoes_lexpre import opcoes_filtro_setor
+from app.dashboards.rubricas_reunidas import componentes_por_demanda, rubricas_reunidas
 
-QUERIES = ("log_setor_demanda_lexpre_NG",)
+QUERIES = ("log_setor_demanda_lexpre_NG", "demanda_rubrica_reunida_lexpre_NG")
 
 
 def opcoes_filtro(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -354,7 +364,30 @@ async def build(ctx: DashboardContext) -> dict:
         funcionarios_org_doc=list_funcionarios_org_doc_lexpre(rows),
     )
     # --- saída (V2): o JSON da v1 + opcoes_filtro ---
-    return {**response.model_dump(), "opcoes_filtro": opcoes}
+    # V2: o modal "Rubricas dentro de <pacote>" da v1 (ver rubricas_reunidas.py). Protocolado = mesmo
+    # critério do card "Protocolados" (data de protocolo no período e status Aguardando Despacho Inicial).
+    reunidas = rubricas_reunidas(
+        rows,
+        resolvidos={r.get("ID_DEMANDA") for r in saidas_periodo},
+        protocolados={
+            r.get("ID_DEMANDA")
+            for r in saidas_protocoladas_periodo
+            if not is_cancelado_org_doc_lexpre(r) and is_protocolado_org_doc_lexpre(r)
+        },
+        em_fila=lambda r: (
+            r.get("SETOR_ATUAL_ID") in SETOR_ORG_DOC_IDS_LEXPRE
+            and not is_cancelado_org_doc_lexpre(r)
+        ),
+        componentes=componentes_por_demanda(
+            await ctx.source.fetch("demanda_rubrica_reunida_lexpre_NG")
+        ),
+        normalizar=_normalizar_materia,
+    )
+    return {
+        **response.model_dump(),
+        "opcoes_filtro": opcoes,
+        "rubricas_reunidas": reunidas,
+    }
 
 
 async def export_rows(ctx: DashboardContext) -> list[dict]:
