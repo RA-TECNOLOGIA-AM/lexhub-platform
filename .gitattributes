@@ -5,3 +5,5 @@
 # Rodam no Linux e quebram com CRLF: sempre LF, em qualquer sistema.
 Makefile text eol=lf
 *.sh text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
