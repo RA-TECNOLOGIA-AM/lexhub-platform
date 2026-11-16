@@ -81,6 +81,19 @@ class Settings(BaseSettings):
     SOURCE_CACHE_WARM_ENABLED: bool = True
     SOURCE_CACHE_WARM_INTERVAL: int = Field(default=240, ge=30)
 
+    # Redis: cache compartilhado (L2) atrás do cache em memória (L1). Mesmos nomes e padrões da v1
+    # (api_dashboards). Desligado = só memória. Ver app/cache.py.
+    CACHE_ENABLED: bool = False
+    REDIS_URL: str = "redis://127.0.0.1:6379/0"
+    # TTL no Redis: queries pesadas (HEAVY_QUERIES em app/source_cache.py) e as demais chaves.
+    CACHE_TTL_HEAVY: int = Field(default=600, ge=60)
+    CACHE_TTL_DEFAULT: int = Field(default=300, ge=30)
+    # Prefixo das chaves (na v1: "api_dashboards:"), para dividir o mesmo Redis com outras apps.
+    CACHE_KEY_PREFIX: str = "lexhub_platform:"
+    # Timeout de conexão/comando (v1: 2 s) e espera antes de tentar de novo após uma falha.
+    REDIS_SOCKET_TIMEOUT: float = Field(default=2.0, gt=0, le=30)
+    REDIS_RETRY_AFTER: float = Field(default=30.0, ge=1)
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]

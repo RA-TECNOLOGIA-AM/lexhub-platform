@@ -4,6 +4,7 @@ import httpx
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.cache import CacheService, get_cache
 from app.config import Settings, get_settings
 from app.database import DatabaseManager, get_databases
 
@@ -37,6 +38,12 @@ async def health_supabase(settings: Annotated[Settings, Depends(get_settings)]):
     return JSONResponse(
         status_code=503, content={"status": "error", "supabase": "down", "detail": err}
     )
+
+
+@router.get("/cache")
+async def health_cache(cache: Annotated[CacheService, Depends(get_cache)]):
+    """Redis: up, down ou off. Sempre 200: sem Redis a API segue (só memória), apenas mais lenta."""
+    return {"status": "ok", "cache": await cache.status()}
 
 
 @router.get("/sources")

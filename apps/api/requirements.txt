@@ -36,6 +36,7 @@ pytest==9.2.0
 python-dotenv==1.2.4
 PyYAML==6.0.3
 realtime==2.34.0
+redis==8.1.0
 ruff==0.17.3
 setuptools==84.2.1
 starlette==1.10.0

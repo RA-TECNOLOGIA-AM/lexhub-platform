@@ -1,23 +1,3 @@
-# Stack da lexhub-api (Portainer → Stacks → lexhub-api).
-# API do LexHub V2 (FastAPI): dados dos dashboards, /me, catálogo e login por TV.
-#
-# Variáveis definidas no Portainer, em "Environment variables" da stack
-# (nunca neste arquivo):
-#   APP_VERSION               tag da imagem no GHCR: latest (o webhook atualiza sozinho)
-#                             ou um número para fixar uma versão, ex.: 1.4.0
-#   SUPABASE_URL              URL do projeto Supabase da V2 (https://<ref>.supabase.co)
-#   SUPABASE_PUBLISHABLE_KEY  chave publishable do Supabase (sb_publishable_...)
-#   SUPABASE_SECRET_KEY       chave secreta do Supabase (sb_secret_...): login por TV e admin
-#   DATABASE_URL              conexão Postgres do banco da plataforma (pooler do Supabase)
-#   DB_NG_HOST, DB_NG_PORT, DB_NG_NAME, DB_NG_USER, DB_NG_PASSWORD
-#                             banco de origem NG (mesmos nomes da v1)
-#   DB_LAADV_HOST, DB_LAADV_PORT, DB_LAADV_NAME, DB_LAADV_USER, DB_LAADV_PASSWORD
-#                             banco de origem LAADV
-#   DB_LEXFLOW_HOST, DB_LEXFLOW_PORT, DB_LEXFLOW_NAME, DB_LEXFLOW_USER, DB_LEXFLOW_PASSWORD
-#                             banco de origem LexFlow
-#   DB_LEXPRE_HOST, DB_LEXPRE_PORT, DB_LEXPRE_NAME, DB_LEXPRE_USER, DB_LEXPRE_PASSWORD
-#                             banco de origem LexPre
-#   As portas (DB_*_PORT) são opcionais: vazias, ficam 5432.
 
 version: "3.7"
 
@@ -26,9 +6,10 @@ services:
   lexhub-api:
     # Usa a imagem da lexhub-api no GHCR (versão na variável APP_VERSION)
     image: ghcr.io/ra-tecnologia-am/lexhub-api:${APP_VERSION}
-    # Define a rede que o container vai usar (a mesma do Traefik)
+    # Redes: a do Traefik (entrada) e a interna, onde fica o Redis
     networks:
       - network_public
+      - lexhub_internal
     # Define as variaveis de ambiente
     environment:
       # Define o fuso horário (usado no "hoje" dos cálculos copiados da v1)
@@ -76,6 +57,10 @@ services:
       - DB_LEXPRE_NAME=${DB_LEXPRE_NAME}
       - DB_LEXPRE_USER=${DB_LEXPRE_USER}
       - DB_LEXPRE_PASSWORD=${DB_LEXPRE_PASSWORD}
+      # Redis da própria stack (serviço lexhub-redis abaixo): cache compartilhado que
+      # sobrevive a deploy/restart da API. Fora do ar, a API segue só com o cache em memória
+      - CACHE_ENABLED=true
+      - REDIS_URL=redis://lexhub-redis:6379/0
     # Tempo que o Swarm espera antes de matar o container: a aplicação
     # termina as requisições em andamento ao receber SIGTERM (até 25 s)
     stop_grace_period: 30s
@@ -83,8 +68,9 @@ services:
     deploy:
       # Define o modo de deploy do container
       mode: replicated
-      # Uma réplica só: o cache dos bancos de origem fica em memória, e cada
-      # réplica a mais repetiria as consultas no NG, LAADV, LexFlow e LexPre
+      # Uma réplica só: cada réplica tem o próprio aquecedor, que repetiria as consultas
+      # no NG, LAADV, LexFlow e LexPre (o Redis já compartilha o cache entre elas, mas
+      # ainda não há trava para um aquecedor só)
       replicas: 1
       placement:
         constraints:
@@ -134,7 +120,44 @@ services:
         - traefik.http.services.lexhubapi.loadbalancer.healthcheck.path=/health
         - traefik.http.services.lexhubapi.loadbalancer.healthcheck.interval=15s
 
+  # Define o serviço lexhub-redis (cache da lexhub-api; nada aqui é a única cópia de um dado)
+  lexhub-redis:
+    image: redis:8-alpine
+    # Sem disco (é só cache), teto de memória e, cheio, sai a chave usada há mais tempo
+    command:
+      - redis-server
+      - --save
+      - ""
+      - --appendonly
+      - "no"
+      - --maxmemory
+      - 1gb
+      - --maxmemory-policy
+      - allkeys-lru
+    # Só na rede interna: o Redis não fica acessível pelo Traefik nem por outras stacks
+    networks:
+      - lexhub_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker
+      resources:
+        limits:
+          cpus: "0.5"
+          # maxmemory (1 GB) + folga para o próprio processo
+          memory: 1280M
+        reservations:
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+
 networks:
   network_public:
     external: true
     name: network_public
+  # Rede só desta stack (API <-> Redis)
+  lexhub_internal:
+    driver: overlay
+    internal: true

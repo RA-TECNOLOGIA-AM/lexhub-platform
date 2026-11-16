@@ -1,13 +1,20 @@
 """Cache das queries dos bancos de origem (5 min), no padrão da v1 (fetch_data_with_cache).
 
 Protege os bancos de origem e evita que o usuário espere a query pesada (LexPre: ~22 a 50 s):
-  * fresco (até `ttl`): devolve da memória, sem ir ao banco;
-  * vencido: UMA busca por chave, mesmo com várias pessoas abrindo juntas (trava por chave);
-  * banco fora do ar: devolve o último dado bom até `stale_max_age` (igual à v1); depois, o erro;
+  * fresco (até `ttl`): devolve da memória (L1), sem ir ao banco;
+  * vencido na memória: tenta o Redis (L2, compartilhado e que sobrevive a restart/deploy);
+  * vencido nos dois: UMA busca por chave, mesmo com várias pessoas abrindo juntas (trava por chave),
+    e grava no L1 e no L2;
+  * banco fora do ar: devolve o último dado bom (L1 ou L2) até `stale_max_age` (igual à v1);
+    depois, o erro;
   * o aquecedor (cache_warmer.py) renova antes de vencer, então a tela quase nunca espera.
 
+Diferença para a v1: o dado do Redis só vale como "fresco" se `fetched_at` estiver dentro do `ttl`
+(a v1 aceitava qualquer coisa ainda no Redis e reiniciava o relógio, podendo servir dado de 15 min).
+
 Peças trocáveis:
-  * CacheStore    onde guarda (MemoryStore hoje; Redis depois, com a mesma interface);
+  * CacheStore    L1, na memória do processo (MemoryStore);
+  * CacheService  L2 compartilhado (RedisCache, ou NullCache = desligado), ver app/cache.py;
   * SourceCache   as regras acima (independe de banco);
   * CachedSourceFetcher  o SourceFetcher com cache, que os módulos de dashboard usam sem saber.
 """
@@ -19,6 +26,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from app.cache import CacheService, NullCache
 from app.dashboards.base import SourceFetcher
 from app.logs import seconds
 
@@ -26,6 +34,28 @@ logger = logging.getLogger(__name__)
 
 Rows = list[dict[str, Any]]
 Clock = Callable[[], float]
+TtlFor = Callable[[str], int]
+
+# Queries pesadas da v1 (HEAVY_DB_QUERIES): ficam mais tempo no Redis (CACHE_TTL_HEAVY),
+# cobrindo o intervalo entre dois ciclos do aquecedor.
+HEAVY_QUERIES: frozenset[str] = frozenset(
+    {
+        "comercial_geral_NG",
+        "comercial_geral_LA",
+        "actions_NG_2",
+        "andamento_processual_NG",
+        "andamento_processual_LA",
+    }
+)
+
+
+def ttl_by_query(heavy_ttl: int, default_ttl: int) -> TtlFor:
+    """TTL no Redis por chave 'banco:query' (regra `_redis_ttl` da v1)."""
+
+    def ttl_for(key: str) -> int:
+        return heavy_ttl if key.split(":", 1)[-1] in HEAVY_QUERIES else default_ttl
+
+    return ttl_for
 
 
 @dataclass(frozen=True)
@@ -64,11 +94,15 @@ class SourceCache:
         ttl: float = 300,
         stale_max_age: float = 3600,
         clock: Clock = time.time,
+        shared: CacheService | None = None,
+        shared_ttl: TtlFor | None = None,
     ):
         self._store = store
         self._ttl = ttl
         self._stale_max_age = stale_max_age
         self._clock = clock
+        self._shared: CacheService = shared or NullCache()
+        self._shared_ttl: TtlFor = shared_ttl or (lambda _key: int(ttl))
         self._locks: dict[str, asyncio.Lock] = {}
 
     def fetched_at(self, key: str) -> float | None:
@@ -79,8 +113,15 @@ class SourceCache:
     def _fresh(self, entry: Entry | None) -> bool:
         return entry is not None and self._clock() - entry.fetched_at < self._ttl
 
+    async def _from_shared(self, key: str) -> Entry | None:
+        value = await self._shared.get(key)
+        return value if isinstance(value, Entry) else None
+
     async def get(self, key: str, load: Callable[[], Awaitable[Rows]]) -> Entry:
-        """Do cache se fresco; senão busca (uma vez por chave); banco fora = último dado bom."""
+        """Memória se fresco; senão Redis se fresco; senão busca (uma vez por chave).
+
+        Banco fora = último dado bom (o mais recente entre memória e Redis).
+        """
         entry = self._store.get(key)
         if self._fresh(entry):
             return entry
@@ -89,6 +130,18 @@ class SourceCache:
             entry = self._store.get(key)  # outra requisição pode ter buscado enquanto esperávamos
             if self._fresh(entry):
                 return entry
+            shared = await self._from_shared(key)
+            if shared is not None:
+                if self._fresh(shared):
+                    logger.info(
+                        "%s: veio do Redis (de %s atrás)",
+                        key,
+                        seconds(self._clock() - shared.fetched_at),
+                    )
+                    self._store.set(key, shared)
+                    return shared
+                if entry is None or shared.fetched_at > entry.fetched_at:
+                    entry = shared  # melhor candidato a "último dado bom"
             try:
                 return await self._load(key, load)
             except Exception as exc:
@@ -118,6 +171,9 @@ class SourceCache:
             raise
         entry = Entry(data=data, fetched_at=self._clock())
         self._store.set(key, entry)
+        await self._shared.set(
+            key, entry, self._shared_ttl(key)
+        )  # nunca levanta (ver app/cache.py)
         logger.info(
             "%s: %s linhas em %s (vale por %s)",
             key,
