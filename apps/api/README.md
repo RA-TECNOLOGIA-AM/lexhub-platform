@@ -37,6 +37,22 @@ Documentação OpenAPI: http://localhost:8000/docs.
 
 Com `make` instalado, o [`Makefile`](Makefile) oferece `make setup`, `make run`, `make dev-test`, `make test`, `make lint`, `make fmt` e `make check`. `PORT=8001` altera a porta de `run` e `dev-test`. `make dev-test` falha se a porta já estiver ocupada, para não testar outro servidor por engano.
 
+## Docker
+
+A imagem de produção é definida em [`Dockerfile`](Dockerfile) e roda num nó do Docker Swarm, com **1 réplica**. Ela leva só `requirements.txt` e `src/` (ver [`.dockerignore`](.dockerignore)), roda com usuário sem privilégios e tem healthcheck em `/health`. Os segredos não entram na imagem: vêm do ambiente ou dos secrets da stack, com as mesmas variáveis do `.env`.
+
+```powershell
+docker build -t lexhub-api:dev .
+docker run --rm --env-file .env -p 8001:8000 lexhub-api:dev
+```
+
+- **Uma réplica e um worker do uvicorn:** o cache das fontes e o aquecedor ficam em memória. Mais processos multiplicam as consultas nos bancos de origem.
+- **Atrás do proxy:** defina `FORWARDED_ALLOW_IPS` com o IP ou a rede do proxy reverso. Assim, o IP real do cliente chega à auditoria e ao limite do login por TV.
+- **Fuso:** `TZ=America/Manaus` já vem na imagem. `PORT` (padrão 8000) muda a porta interna.
+- **Desligamento:** o `tini` é o PID 1. No SIGTERM, o uvicorn espera até 25 s pelas requisições em andamento.
+- **Memória:** com o cache cheio (37 consultas), a API usa cerca de 1,8 GB.
+- **Stack do Portainer:** [`deploy/stack.yml`](deploy/stack.yml), no padrão da Lex (Traefik, GHCR, webhook). Para validar: `docker stack config -c deploy/stack.yml`, com as variáveis do cabeçalho definidas.
+
 ## Endpoints implementados
 
 Rotas de usuário exigem `Authorization: Bearer <token>`. O código e o polling do login por dispositivo são públicos; a aprovação exige a sessão Supabase do celular:
