@@ -44,11 +44,12 @@ type MiniStatProps = {
     icon: IconName
     tone: Tone
     value: ReactNode
-    extra?: ReactNode // ao lado do valor ("no período", DeltaPill pequeno)
+    extra?: ReactNode // ao lado do valor ("no período")
+    below?: ReactNode // linha centralizada embaixo (o comparativo vs mês anterior)
     hint?: string
 }
 
-export function MiniStat({ label, icon, tone, value, extra, hint }: MiniStatProps) {
+export function MiniStat({ label, icon, tone, value, extra, below, hint }: MiniStatProps) {
     return (
         <div className="card mini">
             <div className="mini-text">
@@ -62,6 +63,7 @@ export function MiniStat({ label, icon, tone, value, extra, hint }: MiniStatProp
                 {hint && <InfoTip text={hint} />}
                 <ToneIcon icon={icon} tone={tone} />
             </span>
+            {below && <div className="mini-below">{below}</div>}
         </div>
     )
 }
@@ -79,6 +81,7 @@ export function Pill({ tone = 'neutral', children }: { tone?: Tone; children: Re
 }
 
 // "↗ +52,73%" (ou "0,00%"). null = sem comparativo: não mostra nada.
+// Com legenda ("vs mês anterior"), ela vai numa linha embaixo da porcentagem, como na v1.
 export function DeltaPill({
     value,
     betterWhenDown = false,
@@ -87,7 +90,7 @@ export function DeltaPill({
 }: {
     value: number | null
     betterWhenDown?: boolean
-    suffix?: string // " vs mês anterior"
+    suffix?: string // "vs mês anterior"
     plain?: boolean // sem fundo (dentro do MiniStat)
 }) {
     if (value === null) return null
@@ -98,11 +101,30 @@ export function DeltaPill({
             {value !== 0 && <span aria-hidden="true">{value > 0 ? '↗' : '↘'}</span>}
             {sign}
             {fmt.pct2(Math.abs(value))}
-            {suffix}
         </>
     )
-    if (plain) return <span className={`delta-plain num tone-${tone}`}>{content}</span>
-    return <Pill tone={tone}>{content}</Pill>
+    const delta = plain ? (
+        <span className={`delta-plain num tone-${tone}`}>{content}</span>
+    ) : (
+        <Pill tone={tone}>{content}</Pill>
+    )
+    if (!suffix) return delta
+    return (
+        <span className="delta-stack">
+            {delta}
+            <span className="delta-caption">{suffix.trim()}</span>
+        </span>
+    )
+}
+
+// Um número com legenda embaixo, no formato do comparativo (ex.: "39,8%" / "na fila").
+export function StackedRate({ text, caption, tone }: { text: string; caption: string; tone: Tone }) {
+    return (
+        <span className="delta-stack">
+            <span className={`delta-plain num tone-${tone}`}>{text}</span>
+            <span className="delta-caption">{caption}</span>
+        </span>
+    )
 }
 
 // "i" que mostra a explicação ao passar o mouse ou focar com o teclado.

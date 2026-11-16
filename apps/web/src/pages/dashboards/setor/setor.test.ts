@@ -1,42 +1,67 @@
 import { describe, expect, it } from 'vitest'
-import { devolucoes, funcionarios, initials, isPlaceholder, leituraDevolucao, mesParcial, share } from './charts.ts'
+import {
+    devolucoes,
+    filaTone,
+    funcionarios,
+    initials,
+    isPlaceholder,
+    leituraDevolucao,
+    mesParcial,
+    share,
+} from './setor.ts'
 
 describe('funcionarios', () => {
     it('junta as listas por pessoa, maior total primeiro', () => {
         const rows = funcionarios({
-            protocolados_por_funcionario: [
+            feitos: [
                 { name: 'Ana', value: 10 },
                 { name: 'Raimunda Moura', value: 168 },
             ],
-            represados_por_funcionario: [
+            pendentes: [
                 { name: 'Raimunda Moura', value: 1 },
                 { name: 'Bia', value: 2 },
             ],
-            media_protocolados_por_funcionario: [{ name: 'Raimunda Moura', value: 21 }],
-            valor_causa_por_funcionario: [{ name: 'Raimunda Moura', value: 5907062.43 }],
+            media: [{ name: 'Raimunda Moura', value: 21 }],
+            valor: [{ name: 'Raimunda Moura', value: 5907062.43 }],
         })
         expect(rows.map((r) => r.name)).toEqual(['Raimunda Moura', 'Ana', 'Bia'])
         expect(rows[0]).toEqual({
             name: 'Raimunda Moura',
-            protocolados: 168,
-            represados: 1,
+            feitos: 168,
+            pendentes: 1,
             mediaDiaria: 21,
             valorCausa: 5907062.43,
+            valorSecundario: null,
         })
-        expect(rows[2]).toMatchObject({ protocolados: 0, represados: 2, mediaDiaria: null })
+        expect(rows[2]).toMatchObject({ feitos: 0, pendentes: 2, mediaDiaria: null })
+    })
+
+    it('valor secundário (ex.: protocolado) quando o setor tem', () => {
+        const [row] = funcionarios({
+            feitos: [{ name: 'Milena Graça', value: 71 }],
+            pendentes: [],
+            media: [],
+            valor: [{ name: 'Milena Graça', value: 1706716.3 }],
+            valorSecundario: [{ name: 'Milena Graça', value: 1557402.66 }],
+        })
+        expect(row.valorSecundario).toBe(1557402.66)
     })
 })
 
 describe('devolucoes', () => {
     it('total e % de cada setor', () => {
-        const d = devolucoes({ devolvido_peticionamento: 110, devolvido_org_doc: 105, devolvido_pendencia: 0 })
+        const d = devolucoes([
+            { key: 'peticionamento', label: 'Peticionamento', value: 110 },
+            { key: 'org_doc', label: 'Org Doc', value: 105 },
+            { key: 'pendencia', label: 'Pendência', value: 0 },
+        ])
         expect(d.total).toBe(215)
         expect(d.partes.map((p) => Math.round(p.pct * 10) / 10)).toEqual([51.2, 48.8, 0])
     })
 
     it('sem devolução: tudo 0%', () => {
-        const d = devolucoes({ devolvido_peticionamento: 0, devolvido_org_doc: 0, devolvido_pendencia: 0 })
-        expect(d.partes.every((p) => p.pct === 0)).toBe(true)
+        const d = devolucoes([{ key: 'org_doc', label: 'Org Doc', value: 0 }])
+        expect(d.partes[0].pct).toBe(0)
     })
 })
 
@@ -51,11 +76,12 @@ describe('leituraDevolucao', () => {
 })
 
 describe('auxiliares', () => {
-    it('iniciais, %, placeholder e mês parcial', () => {
+    it('iniciais, %, fila, placeholder e mês parcial', () => {
         expect(initials('Raimunda Moura')).toBe('RM')
         expect(initials('Ana')).toBe('A')
         expect(share(1, 169)).toBeCloseTo(0.59, 2)
         expect(share(1, 0)).toBe(0)
+        expect([filaTone(0.6), filaTone(7), filaTone(39.8)]).toEqual(['ok', 'warn', 'danger'])
         expect(isPlaceholder('Sem matéria')).toBe(true)
         expect(isPlaceholder('ANP')).toBe(false)
         expect(mesParcial(2026, new Date(2026, 10, 13))).toBe(10)

@@ -4,36 +4,33 @@ import { ChartCard } from '../../../components/charts/ChartCard.tsx'
 import { ColumnChart } from '../../../components/charts/ColumnChart.tsx'
 import { LineChart } from '../../../components/charts/LineChart.tsx'
 import { DashSection } from '../../../components/dashboard/DashSection.tsx'
-import { DeltaPill, FootRow, HeroStat, MiniStat, Pill, ToneIcon } from '../../../components/dashboard/StatCard.tsx'
-import { deltaTone } from '../../../components/dashboard/tone.ts'
-import { parseMonth, seriesByYear, sortByMonth, topN } from '../../../lib/charts.ts'
+import { DeltaPill, FootRow, HeroStat, MiniStat, Pill, StackedRate } from '../../../components/dashboard/StatCard.tsx'
+import { CountUp } from '../../../components/ui/CountUp.tsx'
+import { seriesByYear, sortByMonth, topN } from '../../../lib/charts.ts'
 import { fmt } from '../../../lib/format.ts'
 import type { ProtocoloResponse } from '../../../types/index.ts'
 import type { ContentProps } from '../types.ts'
-import { FuncionarioPanel } from './FuncionarioPanel.tsx'
-import { devolucoes, funcionarios, isPlaceholder, leituraDevolucao, mesParcial, share } from './charts.ts'
+import { CORES_ANO, MESES, diaCurto, diaLongo, mesBarra, mesNome, periodo } from '../setor/datas.ts'
+import { DevolucaoCard, DevolucaoResumo, Velocidade } from '../setor/Devolucao.tsx'
+import { FuncionarioPanel, type PainelLabels } from '../setor/FuncionarioPanel.tsx'
+import {
+    META_POR_FUNCIONARIO_V1,
+    devolucoes,
+    filaTone as tomDaFila,
+    funcionarios,
+    isPlaceholder,
+    mesParcial,
+    share,
+} from '../setor/setor.ts'
 
-// Meta diária de protocolos por funcionário da v1 (a linha "Meta: 20"). A V2 manda `metas` quando
-// a regra for definida; até lá, vale a da v1.
-const META_POR_FUNCIONARIO_V1 = 20
-
-const MESES = [
-    'janeiro',
-    'fevereiro',
-    'março',
-    'abril',
-    'maio',
-    'junho',
-    'julho',
-    'agosto',
-    'setembro',
-    'outubro',
-    'novembro',
-    'dezembro',
-]
-const MES_CURTO = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-// Uma cor por ano; o ano mais recente fica sempre com a cor principal.
-const CORES_ANO = ['var(--chart-1)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)']
+const PAINEL: PainelLabels = {
+    setor: 'Protocolo',
+    feitos: 'Protocolados',
+    pendentes: 'Represados',
+    alerta: 'não protocolados',
+    media: 'Média diária',
+    valor: 'Valor protocolado',
+}
 
 // O Protocolo (LexPre): as métricas da v1 no layout novo. Carregar, erros, cabeçalho, período e
 // filtros ficam no DashboardView; clicar numa matéria ou num funcionário liga o filtro.
@@ -50,11 +47,15 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
     const operacao = protocolados + s.represados // tudo o que passou pelo setor: protocolado ou na fila
     const eficiencia = share(protocolados, operacao)
     const fila = share(s.represados, operacao)
-    // Fila pequena é saudável; acima de 5% pede atenção e acima de 15%, ação.
-    const filaTone = fila < 5 ? 'ok' : fila < 15 ? 'warn' : 'danger'
+    const filaTone = tomDaFila(fila)
     const topRepresado = topN(data.represados_por_materia, 1)[0]?.name ?? null
 
-    const pessoas = funcionarios(data)
+    const pessoas = funcionarios({
+        feitos: data.protocolados_por_funcionario,
+        pendentes: data.represados_por_funcionario,
+        media: data.media_protocolados_por_funcionario,
+        valor: data.valor_causa_por_funcionario,
+    })
     const meta = data.metas?.protocolados_por_funcionario ?? META_POR_FUNCIONARIO_V1
     // Meta do setor por dia = meta por pessoa x quem protocolou no período.
     const produtores = Math.max(1, data.media_protocolados_por_funcionario.length)
@@ -62,7 +63,11 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
 
     const top10 = topN(data.protocolados_por_materia)
     const top10Soma = top10.reduce((sum, p) => sum + p.value, 0)
-    const dev = devolucoes(s)
+    const dev = devolucoes([
+        { key: 'peticionamento', label: 'Peticionamento', value: s.devolvido_peticionamento },
+        { key: 'org_doc', label: 'Org Doc', value: s.devolvido_org_doc },
+        { key: 'pendencia', label: 'Pendência', value: s.devolvido_pendencia },
+    ])
 
     const naoProtocoladosMes = sortByMonth(data.represados_por_mes)
     const anos = seriesByYear(data.protocolados_por_mes)
@@ -103,14 +108,13 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         label="Protocolados"
                         icon="check-circle"
                         tone="accent"
-                        value={fmt.int(protocolados)}
-                        aside={<DeltaPill value={s.protocolados_total.comparativo} />}
+                        value={<CountUp value={protocolados} format={fmt.int} />}
+                        below={<DeltaPill value={s.protocolados_total.comparativo} suffix=" vs mês anterior" plain />}
                         hint="Demandas que saíram do Protocolo como protocoladas (Aguardando Despacho Inicial) no período."
                         footer={
                             <>
                                 <FootRow
                                     left={<span className="tone-text-ok">{fmt.dec1(eficiencia)}% eficiência</span>}
-                                    right={<span className="num">{fmt.dec1(eficiencia)}%</span>}
                                 />
                                 <span className="progress" aria-hidden="true">
                                     <span style={{ '--w': `${eficiencia}%` } as CSSProperties} />
@@ -122,8 +126,8 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         label="Represados"
                         icon="x-circle"
                         tone="danger"
-                        value={fmt.int(s.represados)}
-                        aside={<Pill tone="warn">{fmt.dec1(fila)}% fila</Pill>}
+                        value={<CountUp value={s.represados} format={fmt.int} />}
+                        below={<StackedRate text={`${fmt.dec1(fila)}%`} caption="na fila" tone={filaTone} />}
                         hint="Demandas no Protocolo agora, ainda sem protocolo. Não depende do período."
                         footer={
                             <FootRow
@@ -136,8 +140,10 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         label="Valor de causa protocolado"
                         icon="dollar"
                         tone="ok"
-                        value={fmt.brl(s.valor_causa_protocolado.total)}
-                        below={<DeltaPill value={s.valor_causa_protocolado.comparativo} suffix=" vs mês anterior" />}
+                        value={<CountUp value={s.valor_causa_protocolado.total} format={fmt.brl} />}
+                        below={
+                            <DeltaPill value={s.valor_causa_protocolado.comparativo} suffix=" vs mês anterior" plain />
+                        }
                         hint="Soma do valor de causa das demandas protocoladas no período."
                         footer={
                             <FootRow
@@ -150,24 +156,26 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         label="Média de tempo protocolado"
                         icon="clock"
                         tone="info"
-                        value={fmt.duracao(s.media_tempo_protocolado)}
-                        aside={<DeltaPill value={s.comparativo_tempo_medio_protocolado} betterWhenDown />}
-                        hint="Tempo médio entre a entrada no Protocolo e o protocolo, nas demandas protocoladas no período."
-                        footer={
-                            <FootRow
-                                left={<Velocidade value={s.comparativo_tempo_medio_protocolado} />}
-                                right="vs mês anterior"
+                        value={<CountUp value={s.media_tempo_protocolado} format={fmt.duracao} />}
+                        below={
+                            <DeltaPill
+                                value={s.comparativo_tempo_medio_protocolado}
+                                betterWhenDown
+                                suffix=" vs mês anterior"
+                                plain
                             />
                         }
+                        hint="Tempo médio entre a entrada no Protocolo e o protocolo, nas demandas protocoladas no período."
+                        footer={<FootRow left={<Velocidade value={s.comparativo_tempo_medio_protocolado} />} />}
                     />
                 </div>
-                <div className="grid grid-stat grid-mini">
+                <div className="grid grid-stat grid-mini grid-mini-stack">
                     <MiniStat
                         label="Protocolados de reajuizamento"
                         icon="check-circle"
                         tone="neutral"
                         value={fmt.int(0)}
-                        extra={<span className="muted small">no período</span>}
+                        below={<StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
                         hint="O LexPre ainda não registra reajuizamento: fica 0, como na v1."
                     />
                     <MiniStat
@@ -175,23 +183,32 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         icon="x-circle"
                         tone="neutral"
                         value={fmt.int(0)}
-                        extra={<span className="muted small">no período</span>}
+                        below={<StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
                         hint="O LexPre ainda não registra reajuizamento: fica 0, como na v1."
                     />
                     <MiniStat
                         label="Ticket médio protocolado"
                         icon="dollar"
                         tone="ok"
-                        value={fmt.brl(s.ticket_medio_protocolado.total)}
-                        extra={<DeltaPill value={s.ticket_medio_protocolado.comparativo} plain />}
+                        value={<CountUp value={s.ticket_medio_protocolado.total} format={fmt.brl} />}
+                        below={
+                            <DeltaPill value={s.ticket_medio_protocolado.comparativo} suffix=" vs mês anterior" plain />
+                        }
                         hint="Valor de causa protocolado dividido pela quantidade de protocolados no período."
                     />
                     <MiniStat
                         label="Mediana de tempo protocolado"
                         icon="clock"
                         tone="info"
-                        value={fmt.duracao(s.mediana_tempo_protocolado)}
-                        extra={<DeltaPill value={s.comparativo_mediana_tempo_protocolado} betterWhenDown plain />}
+                        value={<CountUp value={s.mediana_tempo_protocolado} format={fmt.duracao} />}
+                        below={
+                            <DeltaPill
+                                value={s.comparativo_mediana_tempo_protocolado}
+                                betterWhenDown
+                                suffix=" vs mês anterior"
+                                plain
+                            />
+                        }
                         hint="Metade das demandas protocoladas no período levou até este tempo no Protocolo."
                     />
                 </div>
@@ -203,60 +220,17 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                 title="Devolvido para outros setores"
                 subtitle="Demandas devolvidas do Protocolo — valores sempre totais, independentes do período selecionado."
             >
-                <div className="card dev-sum">
-                    <ToneIcon icon="undo" tone="accent" />
-                    <div className="dev-sum-text">
-                        <span className="dev-sum-title">
-                            <span className="hero-l">Total de devoluções ativas:</span>
-                            <strong className="num">{fmt.int(dev.total)}</strong>
-                            <Pill>Escopo global (independe do filtro de data)</Pill>
-                        </span>
-                        <span className="muted small">
-                            Distribuição proporcional entre Peticionamento ({fmt.dec1(dev.partes[0].pct)}%), Organização
-                            Documental ({fmt.dec1(dev.partes[1].pct)}%) e Pendência ({fmt.dec1(dev.partes[2].pct)}%).
-                        </span>
-                    </div>
-                    {dev.total > 0 && (
-                        <div className="dev-bar">
-                            <div className="dev-bar-labels num">
-                                {dev.partes
-                                    .filter((p) => p.value > 0)
-                                    .map((p) => (
-                                        <span key={p.key} className={`dev-${p.key}`}>
-                                            {p.label}: {fmt.dec1(p.pct)}%
-                                        </span>
-                                    ))}
-                            </div>
-                            <div className="split" aria-hidden="true">
-                                {dev.partes.map((p) => (
-                                    <span key={p.key} className={`dev-${p.key}`} style={{ flexGrow: p.value }} />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
+                <DevolucaoResumo dev={dev} />
                 <div className="grid grid-stat-3">
-                    {devCards.map((c) => {
-                        const leitura = leituraDevolucao(c.value, c.comparativo)
-                        return (
-                            <HeroStat
-                                key={c.label}
-                                label={c.label}
-                                icon="x-circle"
-                                tone={c.value === 0 ? 'neutral' : deltaTone(c.comparativo, true)}
-                                outline
-                                value={fmt.int(c.value)}
-                                aside={<DeltaPill value={c.comparativo} betterWhenDown />}
-                                hint={`Demandas que o Protocolo devolveu para ${c.setor} (total histórico).`}
-                                footer={
-                                    <FootRow
-                                        left={<span className={`tone-text-${leitura.tone}`}>{leitura.text}</span>}
-                                        right="vs mês anterior"
-                                    />
-                                }
-                            />
-                        )
-                    })}
+                    {devCards.map((c) => (
+                        <DevolucaoCard
+                            key={c.label}
+                            label={c.label}
+                            value={c.value}
+                            comparativo={c.comparativo}
+                            hint={`Demandas que o Protocolo devolveu para ${c.setor} (total histórico).`}
+                        />
+                    ))}
                 </div>
             </DashSection>
 
@@ -299,10 +273,9 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                             people={pessoas}
                             unit={unit}
                             meta={meta}
-                            represadoMateria={topRepresado}
+                            labels={PAINEL}
                             filteredTo={filters.funcionario ?? []}
                             onFilterPerson={porFuncionario}
-                            onFilterMateria={porMateria}
                         />
                     </ChartCard>
                 </div>
@@ -397,7 +370,7 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         emphasizeData
                         labels={MESES}
                         partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
-                        tooltip={{ heading: 'Mês', title: (i) => MESES[i][0].toUpperCase() + MESES[i].slice(1) }}
+                        tooltip={{ heading: 'Mês', title: mesNome }}
                         series={anos.map((a, i) => ({
                             label: String(a.year),
                             color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
@@ -408,40 +381,4 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
             </DashSection>
         </div>
     )
-}
-
-// "Ganho de velocidade" quando o tempo caiu; "Perda" quando subiu.
-function Velocidade({ value }: { value: number | null }) {
-    if (!value) return <span className="muted">Sem variação</span>
-    return value < 0 ? (
-        <span className="tone-text-ok">Ganho de velocidade</span>
-    ) : (
-        <span className="tone-text-danger">Perda de velocidade</span>
-    )
-}
-
-// '2026-11-03' -> '03/11' (o ano já está no Período).
-function diaCurto(iso: string): string {
-    const m = /^\d{4}-(\d{2})-(\d{2})$/.exec(iso)
-    return m ? `${m[2]}/${m[1]}` : iso
-}
-
-// '2026-11-03' -> '03/11/2026' (caixa do cursor).
-function diaLongo(iso: string | undefined): string {
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '')
-    return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso ?? '')
-}
-
-// '2026-11-04' a '2026-11-13' -> '04/11 a 13/11/2026'.
-function periodo(from: string, to: string): string {
-    if (!from || !to) return 'Período selecionado'
-    const a = diaLongo(from)
-    const b = diaLongo(to)
-    return from.slice(0, 4) === to.slice(0, 4) ? `${a.slice(0, 5)} a ${b}` : `${a} a ${b}`
-}
-
-// 'nov 2026' -> 'Nov / 2026' (rótulo da barra).
-function mesBarra(name: string): string {
-    const m = parseMonth(name)
-    return m ? `${MES_CURTO[m.month - 1]} / ${m.year}` : name
 }

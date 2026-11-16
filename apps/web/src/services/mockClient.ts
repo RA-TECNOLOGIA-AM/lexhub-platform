@@ -25,6 +25,7 @@ import {
     onboardingSources,
     pendenciasFor,
     protocoloFor,
+    peticionamentoFor,
     sources,
     testUsers,
 } from './mock/index.ts'
@@ -294,7 +295,12 @@ export function createMockClient(): DataClient {
         getPendencias: (query) => dashboardResponse('pendencias-lexpre', query, pendenciasFor),
         // Sem números fictícios: as telas novas mostram 0/—; os números de verdade vêm da API.
         getDashboardData: <T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery) =>
-            dashboardResponse(dashboardKey, query, (unit) => ({ meta: metaFor(unit), stats: {} }) as unknown as T),
+            dashboardResponse(dashboardKey, query, (unit, q) =>
+                // Peticionamento (LexPre) tem dados fictícios completos; os demais, só o `meta` e `stats` vazio.
+                dashboardKey === 'peticionamento-lexpre'
+                    ? (peticionamentoFor(unit, q) as unknown as T)
+                    : ({ meta: metaFor(unit), stats: {} } as unknown as T),
+            ),
 
         // Pedidos de acesso: mesmas regras das funções do schema api (ver mock/accessRequests.ts).
         async requestAccess(office, message) {

@@ -51,17 +51,17 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
     const { from, to } = data.meta
     const period = from && to ? { from, to } : null
 
-    const commission = module.commission?.(data)
+    // Comissão: só para quem vê a de todos (Gestor/Desenvolvedor), como na v1.
+    const commission = summary.can_see_commission ? module.commission?.(data) : undefined
     function printCommission() {
-        if (!commission || !summary || !from || !to) return
+        if (!commission || !from || !to) return
         printHtml(
             commissionHtml({
-                title: `Comissão — ${summary.title}`,
+                ...commission,
+                title: `Comissão — ${summary?.title ?? module.key}`,
                 unit,
                 from,
                 to,
-                quantityLabel: commission.quantityLabel,
-                rows: commission.rows,
                 generatedAt: new Date(),
             }),
         )

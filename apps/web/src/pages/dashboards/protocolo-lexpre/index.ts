@@ -1,3 +1,5 @@
+import { COL_COMISSAO, COL_FUNCIONARIO } from '../../../lib/commissionReport.ts'
+import { fmt } from '../../../lib/format.ts'
 import { dataClient } from '../../../services/client.ts'
 import type { ProtocoloResponse } from '../../../types/index.ts'
 import type { DashboardModule } from '../types.ts'
@@ -13,11 +15,12 @@ export const protocoloLexpre: DashboardModule<ProtocoloResponse> = {
     filters: (data) => protocoloFilters(data.opcoes_filtro),
     exportFields: protocoloExport,
     commission: (data) => ({
-        quantityLabel: 'Protocolados',
-        rows: (data.comissionamento_por_funcionario ?? []).map((c) => ({
-            funcionario: c.funcionario,
-            quantidade: c.qtd_protocolados,
-            valor: c.valor_comissao,
-        })),
+        columns: [
+            COL_FUNCIONARIO,
+            { key: 'qtd_protocolados', label: 'Protocolados', format: fmt.int, sum: true },
+            COL_COMISSAO,
+        ],
+        rows: data.comissionamento_por_funcionario ?? [],
+        sortBy: 'valor_comissao',
     }),
 }

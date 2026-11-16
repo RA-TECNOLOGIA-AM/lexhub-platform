@@ -3,15 +3,27 @@ import { fmt } from './format.ts'
 // Módulo: o relatório de comissão de um dashboard em HTML pronto para imprimir (sem React; testado em
 // commissionReport.test.ts). Quem chama manda o HTML para a impressão do navegador ("Salvar como PDF").
 
-export type CommissionRow = { funcionario: string; quantidade: number; valor: number }
+export type CommissionCell = string | number | null
 
-export type CommissionReport = {
+// Uma coluna: de onde vem o valor, como mostrar e se soma na linha Total.
+export type CommissionColumn = {
+    key: string
+    label: string
+    format?: (v: number) => string // sem = texto (ex.: o nome); com = número alinhado à direita
+    sum?: boolean // entra na linha Total
+}
+
+export type CommissionTable = {
+    columns: CommissionColumn[]
+    rows: Record<string, CommissionCell>[]
+    sortBy: string // coluna que ordena (maior primeiro), em geral a comissão
+}
+
+export type CommissionReport = CommissionTable & {
     title: string // "Comissão — Protocolo (LexPre)"
-    unit: string // "Nicolas Gomes (NG)"
+    unit: string // "NG"
     from: string // AAAA-MM-DD
     to: string
-    quantityLabel: string // "Protocolados"
-    rows: CommissionRow[]
     generatedAt: Date
 }
 
@@ -24,37 +36,50 @@ const dia = (iso: string) => {
     return m ? `${m[3]}/${m[2]}/${m[1]}` : iso
 }
 
+const num = (v: CommissionCell) => (typeof v === 'number' ? v : 0)
+
+function cell(col: CommissionColumn, v: CommissionCell): string {
+    if (!col.format) return `<td>${esc(String(v ?? ''))}</td>`
+    return `<td class="n">${v === null || v === undefined ? '—' : esc(col.format(num(v)))}</td>`
+}
+
 export function commissionHtml(r: CommissionReport): string {
-    const rows = [...r.rows].sort((a, b) => b.valor - a.valor || a.funcionario.localeCompare(b.funcionario))
-    const totalQtd = rows.reduce((sum, x) => sum + x.quantidade, 0)
-    const totalValor = rows.reduce((sum, x) => sum + x.valor, 0)
-    const body = rows
-        .map(
-            (x) =>
-                `<tr><td>${esc(x.funcionario)}</td><td class="n">${fmt.int(x.quantidade)}</td><td class="n">${esc(fmt.brl(x.valor))}</td></tr>`,
-        )
+    const textKey = r.columns.find((c) => !c.format)?.key
+    const rows = [...r.rows].sort(
+        (a, b) =>
+            num(b[r.sortBy]) - num(a[r.sortBy]) ||
+            String(textKey ? a[textKey] : '').localeCompare(String(textKey ? b[textKey] : '')),
+    )
+    const head = r.columns.map((c) => `<th${c.format ? ' class="n"' : ''}>${esc(c.label)}</th>`).join('')
+    const body = rows.map((row) => `<tr>${r.columns.map((c) => cell(c, row[c.key])).join('')}</tr>`).join('')
+    const total = r.columns
+        .map((c, i) => {
+            if (i === 0) return '<td>Total</td>'
+            if (!c.sum || !c.format) return '<td></td>'
+            return `<td class="n">${esc(c.format(rows.reduce((sum, row) => sum + num(row[c.key]), 0)))}</td>`
+        })
         .join('')
     const gerado = r.generatedAt.toLocaleString('pt-BR')
     return `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8" /><title>${esc(r.title)} · ${esc(r.unit)}</title>
 <style>
-  @page { size: A4; margin: 16mm; }
+  @page { size: A4 ${r.columns.length > 4 ? 'landscape' : 'portrait'}; margin: 14mm; }
   body { font-family: Inter, system-ui, sans-serif; color: #15181d; font-size: 12px; }
   h1 { font-size: 18px; margin: 0 0 4px; }
   .meta { color: #5b6370; margin-bottom: 16px; }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 7px 8px; border-bottom: 1px solid #e3e6eb; text-align: left; }
   th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #5b6370; }
-  .n { text-align: right; font-variant-numeric: tabular-nums; }
+  .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   tfoot td { font-weight: 700; border-top: 2px solid #15181d; border-bottom: 0; }
   .foot { margin-top: 20px; color: #8a93a0; font-size: 10px; }
 </style></head><body>
 <h1>${esc(r.title)}</h1>
 <div class="meta">${esc(r.unit)} · Período: ${dia(r.from)} a ${dia(r.to)}</div>
 <table>
-  <thead><tr><th>Funcionário</th><th class="n">${esc(r.quantityLabel)}</th><th class="n">Comissão</th></tr></thead>
-  <tbody>${body || '<tr><td colspan="3">Sem comissão no período.</td></tr>'}</tbody>
-  <tfoot><tr><td>Total</td><td class="n">${fmt.int(totalQtd)}</td><td class="n">${esc(fmt.brl(totalValor))}</td></tr></tfoot>
+  <thead><tr>${head}</tr></thead>
+  <tbody>${body || `<tr><td colspan="${r.columns.length}">Sem comissão no período.</td></tr>`}</tbody>
+  <tfoot><tr>${total}</tr></tfoot>
 </table>
 <div class="foot">Gerado pelo LexHub em ${esc(gerado)}.</div>
 </body></html>`
@@ -81,3 +106,7 @@ export function printHtml(html: string) {
     // print() segura até a janela fechar na maioria dos navegadores; o iframe sai logo depois.
     setTimeout(() => frame.remove(), 1000)
 }
+
+// Colunas usadas por mais de um dashboard.
+export const COL_FUNCIONARIO: CommissionColumn = { key: 'funcionario', label: 'Funcionário' }
+export const COL_COMISSAO: CommissionColumn = { key: 'valor_comissao', label: 'Comissão', format: fmt.brl, sum: true }
