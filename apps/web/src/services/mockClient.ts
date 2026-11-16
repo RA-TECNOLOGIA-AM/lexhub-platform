@@ -1,4 +1,4 @@
-import type { DataClient } from './client.ts'
+import type { DataClient, DeviceSession } from './client.ts'
 import { DataError } from './errors.ts'
 import {
     addAuditEvent,
@@ -136,7 +136,7 @@ export function createMockClient(): DataClient {
         },
 
         // Sem Google de verdade: entra direto com a conta de mock/users.ts (sem sair do app).
-        async signInWithGoogle() {
+        async signInWithGoogle(_returnTo) {
             await wait()
             sessionStorage.setItem(SESSION_KEY, googleMockEmail)
             return 'signed-in'
@@ -148,6 +148,26 @@ export function createMockClient(): DataClient {
 
         async getSessionEmail() {
             return sessionStorage.getItem(SESSION_KEY)
+        },
+
+        async getSessionAccessToken() {
+            throw new DataError(501, 'Login por dispositivo só está disponível no modo API.')
+        },
+
+        async createDeviceCode() {
+            throw new DataError(501, 'Login por dispositivo só está disponível no modo API.')
+        },
+
+        async pollDeviceToken() {
+            throw new DataError(501, 'Login por dispositivo só está disponível no modo API.')
+        },
+
+        async authorizeDevice() {
+            throw new DataError(501, 'Login por dispositivo só está disponível no modo API.')
+        },
+
+        async setDeviceSession(_session: DeviceSession) {
+            throw new DataError(501, 'Login por dispositivo só está disponível no modo API.')
         },
 
         async getMe(org) {

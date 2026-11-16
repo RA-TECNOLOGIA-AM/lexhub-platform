@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { DataClient } from './client.ts'
+import type { DataClient, DeviceCodeResponse, DeviceSession, DeviceTokenResult } from './client.ts'
 import { createAccessRequestsClient } from './accessRequests.ts'
 import { createAccessClient } from './accessClient.ts'
 import { createMembersClient } from './membersClient.ts'
@@ -64,10 +64,12 @@ export function createApiClient({
 
         // Sai do app: o navegador vai para o Google e volta em /login?code=..., onde o cliente
         // do Supabase troca o código pela sessão sozinho (ver supabase.ts).
-        async signInWithGoogle() {
+        async signInWithGoogle(returnTo) {
+            const callback = new URL('/login', siteUrl)
+            if (returnTo) callback.searchParams.set('returnTo', returnTo)
             const { error } = await auth.auth.signInWithOAuth({
                 provider: 'google',
-                options: { redirectTo: `${siteUrl.replace(/\/+$/, '')}/login` },
+                options: { redirectTo: callback.toString() },
             })
             if (error) throw new DataError(error.status ?? 0, 'Não foi possível abrir o login do Google.')
             return 'redirecting'
@@ -80,6 +82,38 @@ export function createApiClient({
         async getSessionEmail() {
             const { data } = await auth.auth.getSession()
             return data.session?.user.email ?? null
+        },
+
+        async getSessionAccessToken() {
+            const { data } = await auth.auth.getSession()
+            return data.session?.access_token ?? null
+        },
+
+        createDeviceCode: () => http.post<DeviceCodeResponse>('/auth/device/code'),
+        async pollDeviceToken(deviceCode): Promise<DeviceTokenResult> {
+            try {
+                const session = await http.get<DeviceSession>(
+                    `/auth/device/token?device_code=${encodeURIComponent(deviceCode)}`,
+                )
+                return { status: 'approved', ...session }
+            } catch (error) {
+                if (error instanceof DataError) {
+                    if (error.code === 'authorization_pending') return { status: 'authorization_pending' }
+                    if (error.code === 'slow_down' || error.status === 429) return { status: 'slow_down' }
+                    if (error.code === 'expired_token') return { status: 'expired_token' }
+                }
+                throw error
+            }
+        },
+        async authorizeDevice(userCode) {
+            await http.post('/auth/device/authorize', { user_code: userCode })
+        },
+        async setDeviceSession(session: DeviceSession) {
+            const { error } = await auth.auth.setSession({
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+            })
+            if (error) throw new DataError(error.status ?? 0, 'Não foi possível iniciar a sessão da TV.')
         },
 
         getMe: (org) => http.get<Me>(org ? `/me?org=${encodeURIComponent(org)}` : '/me'),

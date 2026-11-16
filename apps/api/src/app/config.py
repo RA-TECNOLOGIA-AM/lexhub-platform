@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     SUPABASE_SECRET_KEY: str = ""
     # Nome usado na v1 para a mesma chave (service_role). Vale quando SUPABASE_SECRET_KEY está vazia.
     SUPABASE_SERVICE_ROLE_KEY: str = ""
+    # Origem do frontend, usada para montar a URL de ativação exibida no QR Code.
+    WEB_BASE_URL: str = ""
     # Só para projetos com o segredo JWT legado (HS256). Projetos novos usam
     # chaves assimétricas publicadas no JWKS e não precisam disto.
     SUPABASE_JWT_SECRET: str = ""

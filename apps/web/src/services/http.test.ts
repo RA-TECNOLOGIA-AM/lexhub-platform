@@ -45,6 +45,17 @@ describe('createHttp', () => {
         await expect(http.get('/x')).rejects.toEqual(new DataError(403, 'Sem acesso'))
     })
 
+    it('preserva o código e a descrição de erros OAuth', async () => {
+        const http = createHttp({
+            baseUrl: 'http://api.test',
+            getToken: async () => 'tok',
+            fetch: fakeFetch(400, { error: 'authorization_pending', error_description: 'Aguardando aprovação.' }, []),
+        })
+        await expect(http.get('/x')).rejects.toEqual(
+            new DataError(400, 'Aguardando aprovação.', 'authorization_pending'),
+        )
+    })
+
     it('API fora do ar vira DataError 0', async () => {
         const http = createHttp({
             baseUrl: 'http://api.test',

@@ -50,18 +50,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Na API, o navegador sai para o Google: nada a fazer aqui (a volta recarrega o app e o
     // useEffect acima confere a sessão). No mock, entra direto: confere a sessão como no signIn.
-    async function signInWithGoogle() {
-        if ((await dataClient.signInWithGoogle()) === 'signed-in') await afterSignIn()
+    async function signInWithGoogle(returnTo?: string) {
+        if ((await dataClient.signInWithGoogle(returnTo)) === 'signed-in') await afterSignIn()
     }
 
     // Confere de novo se a pessoa já tem acesso (ex.: pedido aprovado). Com acesso, o login leva ao hub.
-    async function refreshSession() {
+    const refreshSession = useCallback(async () => {
         const state = await loadSession(dataClient)
         if (state.status === 'signed-out') {
             throw new DataError(0, 'Não foi possível conferir o seu acesso. Tente de novo.')
         }
         apply(state)
-    }
+    }, [apply])
 
     // Padrão: 'Sair' do usuário (o próximo login vai para o hub).
     // returnHere: true = sessão caiu (401); o próximo login volta para a mesma página.

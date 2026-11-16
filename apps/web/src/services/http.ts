@@ -32,7 +32,7 @@ export function createHttp({ baseUrl, getToken, fetch: doFetch = (url, init) => 
         } catch {
             throw new DataError(0, 'Não foi possível falar com a API. Confira a conexão.')
         }
-        if (!res.ok) throw new DataError(res.status, await detailOf(res))
+        if (!res.ok) throw await errorOf(res)
         return res
     }
 
@@ -59,15 +59,24 @@ export function createHttp({ baseUrl, getToken, fetch: doFetch = (url, init) => 
 
 export type Http = ReturnType<typeof createHttp>
 
-// A FastAPI devolve { detail: '...' }; sem isso, uma mensagem pelo status.
-async function detailOf(res: Response): Promise<string> {
+// FastAPI devolve { detail }; erros OAuth seguem { error, error_description }.
+async function errorOf(res: Response): Promise<DataError> {
     try {
-        const body = (await res.json()) as { detail?: unknown }
-        if (typeof body.detail === 'string') return body.detail
+        const body = (await res.json()) as {
+            detail?: unknown
+            error?: unknown
+            error_description?: unknown
+        }
+        if (typeof body.error === 'string') {
+            const message =
+                typeof body.error_description === 'string' ? body.error_description : `Erro ${res.status} da API`
+            return new DataError(res.status, message, body.error)
+        }
+        if (typeof body.detail === 'string') return new DataError(res.status, body.detail)
     } catch {
         // corpo vazio ou não-JSON
     }
-    return `Erro ${res.status} da API`
+    return new DataError(res.status, `Erro ${res.status} da API`)
 }
 
 // 'attachment; filename="protocolo.xlsx"' -> 'protocolo.xlsx' (também o formato filename*=UTF-8''...).

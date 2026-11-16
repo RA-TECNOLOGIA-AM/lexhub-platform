@@ -93,14 +93,19 @@ export function withSessionCache(client: DataClient, ttlMs = 5 * 60_000, now: ()
             await client.signIn(email, password)
         },
 
-        async signInWithGoogle() {
+        async signInWithGoogle(returnTo) {
             clearAll()
-            return client.signInWithGoogle()
+            return client.signInWithGoogle(returnTo)
         },
 
         async signOut() {
             clearAll()
             await client.signOut()
+        },
+
+        async setDeviceSession(session) {
+            clearAll()
+            await client.setDeviceSession(session)
         },
     }
 }
