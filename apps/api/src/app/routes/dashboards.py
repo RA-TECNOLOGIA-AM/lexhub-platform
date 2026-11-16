@@ -101,19 +101,21 @@ async def _prepare(
     except DashboardInputError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from None
 
-    unit_ref = access.source_refs.get(module.source_db)
-    if unit_ref is None:
+    picked = module.pick_source(access.source_refs)
+    if picked is None:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"A unidade {access.unit_code} ainda não está ligada à fonte {module.source_label}",
         )
+    source_db, unit_ref = picked
 
     own_ref = None
     if module.own_rows_only and not access.can_see_commission:
-        own_ref = await refs.member_ref(access.user.user_id, access.org_id, module.source_db)
+        own_ref = await refs.member_ref(access.user.user_id, access.org_id, source_db)
 
     ctx = DashboardContext(
-        source=sources(module.source_db),
+        source=sources(source_db),
+        source_db=source_db,
         unit_ref=unit_ref,
         period=period,
         filters=filters,
@@ -165,14 +167,14 @@ async def dashboard_data(
         "unit": access.unit_code,
         "from": ctx.period.start.isoformat(),
         "to": ctx.period.end.isoformat(),
-        "source": module.source_label,
+        "source": module.label_of(ctx.source_db),
         "synced_at": _iso(ctx.source.synced_at()),  # quando o dado veio do banco (cache)
         "timezone": access.timezone,
     }
     # Quem não gere a unidade vê só a própria comissão: precisa saber quem a pessoa é na fonte.
     own_ref = None
     if module.commission_fields and not access.can_see_commission:
-        own_ref = await refs.member_ref(access.user.user_id, access.org_id, module.source_db)
+        own_ref = await refs.member_ref(access.user.user_id, access.org_id, ctx.source_db)
     return shape_response(module, data, meta, access.can_see_commission, own_ref)
 
 

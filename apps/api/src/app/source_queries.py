@@ -2026,4 +2026,193 @@ QUERIES: dict[str, dict] = {
         "description": "Respostas de NPS (Net Promoter Score) do banco NG — tabela relatorios.nps_escritorio.",
         "params": []
     },
+    # v1: queries.py:20, "comercial_geral_LA" (copiada em 16/11/2026). protocolo_LA.
+    "comercial_geral_LA": {
+        "database": "laadv",
+        "query": """
+        SELECT
+            a.id_action AS "ID_ACTION",
+            a."date" AS "ENTRADA",
+            c.id AS "ID_CUSTOMER",
+            c.nome AS "CLIENTE",
+            c.telefone1 AS "WHATSAPP",
+            f.nome AS "ATENDENTE",
+            GREATEST(s.fechado_em, s.data_upsell) AS "ASSINADO_EM",
+            ts.status AS "STATUS",
+            s.status_id,
+            s.motivo_encerramento,
+            tse.nome AS "MOTIVO_ENCERRAMENTO_NOME",
+            tu.uf AS "UF",
+            t.nome_campanha AS "CAMPANHA",
+            t.canal_aquisicao AS "CANAL_AQUISICAO",
+            p.id AS "ID_PROCESSO",
+            p.rubrica_id AS "ID_RUBRICA",
+            p.reajuizamento AS "REAJUIZAMENTO",
+            rub."RUBRICA",
+            rub."AREA_ATUACAO",
+            rub."VALOR",
+            rub."AREA_ATUACAO_ID",
+            jpa."EMPRESA",
+            tsp.status AS "STATUS_PROCESSO",
+            f.ativo AS "ATIVO"
+        FROM "public".actions a
+        LEFT JOIN "public".customers c ON a.customer_id = c.id
+        LEFT JOIN "Setores".funcionarios f ON a.atendente_comercial = f.id
+        LEFT JOIN "public".actions_status s ON a.action_status_id = s.id
+        LEFT JOIN "public".type_uf_end tu ON a.uf_id = tu.id_uf_end
+        LEFT JOIN "public".type_status ts ON s.status_id = ts.id
+        LEFT JOIN "public".type_status_encerramento tse ON s.motivo_encerramento = tse.id
+        LEFT JOIN "public".trackeamento t ON a.trackeamento_id = t.id
+        LEFT JOIN juridico.processos p ON a.id_action = p.action_id
+        LEFT JOIN juridico.partes_adversas jpa ON p.parte_adversa_id = jpa.id
+        LEFT JOIN juridico.type_status_processo tsp ON p.status = tsp.id
+        JOIN LATERAL (
+            -- Se for rubrica reunida (184 ou 209), busca as rubricas reais
+            SELECT r2."RUBRICA", aa2.nome_area AS "AREA_ATUACAO", r2.valor AS "VALOR", r2.area_atuacao_id AS "AREA_ATUACAO_ID"
+            FROM juridico.processo_rubricas_reunidas prr
+            JOIN juridico.rubricas r2
+                ON r2.id = prr.rubrica_id
+            LEFT JOIN juridico.area_atuacao aa2
+                ON r2.area_atuacao_id = aa2.id
+            WHERE p.rubrica_id IN (184, 209)
+              AND prr.processo_id = p.id
+            UNION ALL
+            -- Se não for reunida, busca a rubrica direta + área
+            SELECT r1."RUBRICA", aa1.nome_area AS "AREA_ATUACAO", r1.valor AS "VALOR", r1.area_atuacao_id AS "AREA_ATUACAO_ID"
+            FROM juridico.rubricas r1
+            LEFT JOIN juridico.area_atuacao aa1
+                ON r1.area_atuacao_id = aa1.id
+            WHERE p.rubrica_id NOT IN (184, 209)
+              AND r1.id = p.rubrica_id
+        ) rub ON TRUE
+        ORDER BY a.id_action DESC
+        """,
+        "description": "Dados comerciais gerais do banco LAADV",
+        "params": []
+    },
+    # v1: queries.py:177, "setor_confeccao_LA" (copiada em 16/11/2026). protocolo_LA, peticionamento_LA.
+    "setor_confeccao_LA": {
+        "database": "laadv",
+        "query": """
+        WITH cte_log_fase AS (
+            SELECT
+                processo_id,
+                
+                -- PETICIONAMENTO
+                MAX(CASE WHEN subfase_id = 5 AND acao = 1 THEN data END) AS dt_entrada_pet,
+                MAX(CASE WHEN subfase_id = 5 AND acao = 2 THEN data END) AS dt_saida_pet,
+                
+                -- PROTOCOLO
+                MAX(CASE WHEN subfase_id = 6 AND acao = 1 THEN data END) AS dt_entrada_protocolo,
+                MAX(CASE WHEN subfase_id = 6 AND acao = 2 THEN data END) AS dt_saida_protocolo
+                
+                FROM juridico.log_fase
+                GROUP BY processo_id
+        )
+        SELECT
+            pp.id,
+            pp."NOME",
+            pp."PROCESSO_ID",
+            atendente.nome AS "ATENDENTE",
+            pp."ENTRADA",
+            pp."ACTION_ID",
+            pp."UF",
+            pp."STATUS",
+            pp."SAIDA",
+            pp."MATERIA",
+            pp."PARTE_ADVERSA",
+            pp."VALOR_CAUSA",
+            pp."SISTEMA",
+            pp."FUNCIONARIO_ID",
+            responsavel.nome AS "FUNCIONARIO",
+            pp."PET_AUTO",
+            pp."REAJUIZAMENTO",
+            pp."DANO_MORAL",
+            pp."DANO_MATERIAL",
+            lf.dt_entrada_pet AS "DATA_ENTRADA_PET",
+            lf.dt_saida_pet AS "DATA_SAIDA_PET",
+            lf.dt_entrada_protocolo AS "DATA_ENTRADA_PROTOCOLO",
+            lf.dt_saida_protocolo AS "DATA_SAIDA_PROTOCOLO",
+            r.area_atuacao_id AS "AREA_ATUACAO_ID",
+            aa.nome_area AS "AREA_ATUACAO"
+
+        FROM peticionamento.peticionamento pp
+        LEFT JOIN "public".actions a ON pp."ACTION_ID" = a.id_action
+        LEFT JOIN "Setores".funcionarios atendente ON a.atendente_comercial = atendente.id
+        LEFT JOIN "Setores".funcionarios responsavel ON pp."FUNCIONARIO_ID" = responsavel.id
+        LEFT JOIN cte_log_fase lf ON pp."PROCESSO_ID" = lf.processo_id
+        LEFT JOIN juridico.processos jp ON pp."PROCESSO_ID" = jp.id
+        LEFT JOIN juridico.rubricas r ON jp.rubrica_id = r.id
+        LEFT JOIN juridico.area_atuacao aa ON r.area_atuacao_id = aa.id
+        """,
+        "description": "Confecção de petições do banco LAADV",
+        "params": []
+    },
+    # v1: queries.py:142, "setor_org_documentos_LA" (copiada em 16/11/2026). protocolo_LA, peticionamento_LA, org_doc_LA.
+    "setor_org_documentos_LA": {
+        "database": "laadv",
+        "query": """
+        SELECT
+            od.id,
+            od."NOME",
+            od."ENTRADA",
+            od."UF",
+            od."STATUS",
+            od."SETOR_ORIGEM",
+            od."ATENDENTE_COMERCIAL",
+            od."ACTION_ID",
+            od."SAIDA",
+            od."PROCESSO_ID",
+            od."MATERIA",
+            od."DATA_CONTRATACAO",
+            od."FUNCIONARIO_ID",
+            f.nome AS "FUNCIONARIO",
+            p."VALOR_CAUSA",
+            p."REAJUIZAMENTO",
+            p."DANO_MORAL",
+            p."PET_AUTO",
+            r.area_atuacao_id AS "AREA_ATUACAO_ID",
+            aa.nome_area AS "AREA_ATUACAO"
+        FROM organizacao_doc.organizacao_documentos od
+        LEFT JOIN "Setores".funcionarios f ON od."FUNCIONARIO_ID" = f.id
+        LEFT JOIN peticionamento.peticionamento p ON od."PROCESSO_ID" = p."PROCESSO_ID"
+        LEFT JOIN juridico.processos jp ON od."PROCESSO_ID" = jp.id
+        LEFT JOIN juridico.rubricas r ON jp.rubrica_id = r.id
+        LEFT JOIN juridico.area_atuacao aa ON r.area_atuacao_id = aa.id
+        """,
+        "description": "Organização de documentos do banco LAADV",
+        "params": []
+    },
+    # v1: queries.py:110, "setor_pendencia_LA" (copiada em 16/11/2026). protocolo_LA, peticionamento_LA, org_doc_LA, pendencia_LA.
+    "setor_pendencia_LA": {
+        "database": "laadv",
+        "query": """
+        SELECT
+            pp.id,
+            pp."NOME",
+            pp."ACTION_ID",
+            pp."UF",
+            pp."ENTRADA",
+            pp."STATUS",
+            pp."ATENDENTE",
+            pp."SAIDA",
+            pp."SETOR_ORIGEM",
+            pp."PROCESSO_ID",
+            p.motivo_cancelamento AS "MOTIVO_CANCELAMENTO",
+            pp."TIPO_PENDENCIA",
+            f.nome AS "FUNCIONARIO",
+            pp."FUNCIONARIO_ID",
+            pp."DATA_CONTRATACAO",
+            pp."REAJUIZAMENTOS" AS "REAJUIZAMENTO",
+        r.area_atuacao_id AS "AREA_ATUACAO_ID",
+        aa.nome_area AS "AREA_ATUACAO"
+        FROM pendencias_de_processos.pendencias_de_processos pp
+        LEFT JOIN "Setores".funcionarios f ON pp."FUNCIONARIO_ID" = f.id
+        LEFT JOIN juridico.processos p ON pp."PROCESSO_ID" = p.id
+        LEFT JOIN juridico.rubricas r ON p.rubrica_id = r.id
+        LEFT JOIN juridico.area_atuacao aa ON r.area_atuacao_id = aa.id
+        """,
+        "description": "Pendências de processos do banco LAADV",
+        "params": []
+    },
 }

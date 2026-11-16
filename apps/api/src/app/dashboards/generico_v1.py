@@ -22,12 +22,19 @@ A resposta é a mesma DashboardResponse da v1 (model_dump). As opções dos filt
 import inspect
 import typing
 from collections.abc import Callable
+from datetime import date
 from types import ModuleType
 from typing import Any
 
 from app.analyses import v1_dashboard_generico as v1
 from app.analyses.situacao_processo import _situacoes_processo_ctx, parse_situacoes_processo
-from app.dashboards.base import DashboardContext, DashboardInputError, DashboardModule, NotReady
+from app.dashboards.base import (
+    AltSource,
+    DashboardContext,
+    DashboardInputError,
+    DashboardModule,
+    NotReady,
+)
 
 FILTRO_SITUACAO = "situacao_processo"  # v1: PARAM_SITUACAO_PROCESSO, lido pelo middleware
 
@@ -71,19 +78,30 @@ def modulo(
     copia: ModuleType = v1,
     source_db: str = "lexflow",
     source_label: str = "LexFlow",
+    alternativas: dict[str, tuple[ModuleType, str]] | None = None,
+    commission_fields: tuple[str, ...] = (),
+    historico: tuple[str, ...] = (),
 ) -> DashboardModule:
     """DashboardModule de um dashboard genérico da v1.
 
     `v1_por_unidade`: ref da unidade na fonte -> nome do dashboard na v1. `copia`: o módulo com a cópia
     da v1 (v1_dashboard_generico = LexFlow; v1_dashboard_generico_ng = banco NG), lido pelo banco `source_db`.
+    `alternativas`: outros bancos (banco -> (cópia, rótulo)) para as unidades sem `source_db`, ex.: a LA,
+    que na v1 tem as rotas _LA no banco laadv. `commission_fields`: as listas de comissão da resposta (quem
+    não gere a unidade recebe só a própria linha). `historico`: campos que vêm do histórico todo (o mesmo
+    handler sem período), como os gráficos "mês a mês", que na v1 a página buscava numa chamada sem data;
+    "stats.<campo>" para um número de dentro de `stats`.
     """
+    alternativas = alternativas or {}
+    copias = {source_db: copia, **{db: c for db, (c, _) in alternativas.items()}}
 
     async def build(ctx: DashboardContext) -> dict:
+        copia = copias.get(ctx.source_db, copias[source_db])
         nome = v1_por_unidade.get(ctx.unit_ref)
-        if nome is None:
+        if nome is None or nome not in copia.HANDLERS:
             raise NotReady(descricao_falta)
         handler = copia.HANDLERS[nome]
-        kwargs: dict[str, Any] = {"from_date": ctx.period.start, "to_date": ctx.period.end}
+        kwargs: dict[str, Any] = {}
         for n, p in _parametros(handler).items():
             valores = ctx.filters.get(n, [])
             kwargs[n] = (valores or None) if _e_lista(p.annotation) else next(iter(valores), None)
@@ -92,21 +110,50 @@ def modulo(
         except ValueError as exc:
             raise DashboardInputError(str(exc)) from None
 
-        token_fonte = copia.usar_fonte(ctx.source)
-        token_situacao = _situacoes_processo_ctx.set(situacao)
-        try:
-            response = await handler(**kwargs)
-        finally:
-            _situacoes_processo_ctx.reset(token_situacao)
-            copia._fonte_ctx.reset(token_fonte)
-        return response.model_dump()
+        async def rodar(de: date | None, ate: date | None) -> dict:
+            token_fonte = copia.usar_fonte(ctx.source)
+            token_situacao = _situacoes_processo_ctx.set(situacao)
+            try:
+                response = await handler(from_date=de, to_date=ate, **kwargs)
+            finally:
+                _situacoes_processo_ctx.reset(token_situacao)
+                copia._fonte_ctx.reset(token_fonte)
+            return response.model_dump()
 
-    nomes = list(dict.fromkeys(v1_por_unidade.values()))
+        body = await rodar(ctx.period.start, ctx.period.end)
+        if historico:
+            # Os mesmos filtros, sem período (na v1, a segunda chamada da página sem data).
+            todo = await rodar(None, None)
+            for campo in historico:
+                # "stats.x" = um número de dentro de stats (ex.: uma fila que não depende do período)
+                origem, destino, nome = (
+                    (todo.get("stats") or {}, body.setdefault("stats", {}), campo[6:])
+                    if campo.startswith("stats.")
+                    else (todo, body, campo)
+                )
+                if nome in origem:
+                    destino[nome] = origem[nome]
+        return body
+
+    def nomes_de(c: ModuleType) -> list[str]:
+        return [n for n in dict.fromkeys(v1_por_unidade.values()) if n in c.HANDLERS]
+
+    def queries_de(c: ModuleType) -> tuple[str, ...]:
+        return tuple(dict.fromkeys(q for n in nomes_de(c) for q in c.QUERIES_POR_DASHBOARD[n]))
+
+    filtros: dict[str, type] = {}
+    for c in copias.values():
+        for n, t in _filtros(c, nomes_de(c)).items():
+            filtros.setdefault(n, t)
     return DashboardModule(
         key=key,
         source_db=source_db,
         source_label=source_label,
         build=build,
-        filters=_filtros(copia, nomes),
-        queries=tuple(dict.fromkeys(q for n in nomes for q in copia.QUERIES_POR_DASHBOARD[n])),
+        filters=filtros,
+        queries=queries_de(copia),
+        alt_sources={
+            db: AltSource(rotulo, queries_de(c)) for db, (c, rotulo) in alternativas.items()
+        },
+        commission_fields=commission_fields,
     )

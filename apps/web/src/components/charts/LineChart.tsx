@@ -4,7 +4,13 @@ import { fmt } from '../../lib/format.ts'
 import { ChartEmpty } from './ChartCard.tsx'
 import { useWidth } from './useWidth.ts'
 
-export type LineSeries = { label: string; color: string; values: (number | null)[] } // null = sem dado no ponto
+export type LineSeries = {
+    label: string
+    color: string
+    values: (number | null)[] // null = sem dado no ponto
+    dashed?: boolean // linha tracejada (ex.: anos anteriores no "mês a mês")
+    area?: boolean // degradê embaixo só desta série (vale mais que o `area` do gráfico)
+}
 
 type LineChartProps = {
     labels: string[] // eixo x
@@ -144,13 +150,13 @@ export function LineChart({
                             const d = smoothPath(pts)
                             return (
                                 <g key={seg[0].i}>
-                                    {area && pts.length > 1 && (
+                                    {(s.area ?? area) && pts.length > 1 && (
                                         <path
                                             d={`${d}L${pts[pts.length - 1].x},${base}L${pts[0].x},${base}Z`}
                                             fill={`url(#${gradId}-${k})`}
                                         />
                                     )}
-                                    <path className="chart-line" d={d} />
+                                    <path className={s.dashed ? 'chart-line dashed' : 'chart-line'} d={d} />
                                 </g>
                             )
                         })}
@@ -173,7 +179,13 @@ export function LineChart({
                                         </text>
                                     )}
                                     {isPartial && (
-                                        <text className="chart-partial" x={x(i)} y={y(v) + 26} textAnchor="middle">
+                                        // "parcial" embaixo do ponto; perto do eixo (ia cobrir o mês), em cima do valor
+                                        <text
+                                            className="chart-partial"
+                                            x={x(i)}
+                                            y={y(v) + 26 <= base - 8 ? y(v) + 26 : y(v) - 32}
+                                            textAnchor="middle"
+                                        >
                                             parcial
                                         </text>
                                     )}
@@ -214,7 +226,10 @@ export function LineChart({
                 <ul className="chart-legend" role="list">
                     {series.map((s) => (
                         <li key={s.label}>
-                            <span className="chart-key line" style={{ background: s.color }} />
+                            <span
+                                className={s.dashed ? 'chart-key line dashed' : 'chart-key line'}
+                                style={s.dashed ? { color: s.color } : { background: s.color }}
+                            />
                             {s.label}
                         </li>
                     ))}

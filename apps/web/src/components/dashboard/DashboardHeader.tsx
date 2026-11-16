@@ -28,7 +28,8 @@ export function DashboardHeader({ org, dashboard, meta, actions }: DashboardHead
             <div className="dhead-main">
                 <span className="dhead-trail">
                     <PageTransitionLink to={`/${org}/dashboards`}>Dashboards</PageTransitionLink>
-                    {[dashboard.area, meta.unit, meta.source].filter(Boolean).map((part) => (
+                    {/* unidade e fonte com o mesmo nome (NG · NG) aparecem uma vez só */}
+                    {[...new Set([dashboard.area, meta.unit, meta.source].filter(Boolean))].map((part) => (
                         <span key={part}> · {part}</span>
                     ))}
                 </span>

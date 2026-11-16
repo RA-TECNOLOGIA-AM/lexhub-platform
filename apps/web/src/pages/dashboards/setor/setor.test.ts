@@ -7,6 +7,7 @@ import {
     isPlaceholder,
     leituraDevolucao,
     mesParcial,
+    nomesFuncionarios,
     share,
 } from './setor.ts'
 
@@ -86,5 +87,16 @@ describe('auxiliares', () => {
         expect(isPlaceholder('ANP')).toBe(false)
         expect(mesParcial(2026, new Date(2026, 10, 13))).toBe(10)
         expect(mesParcial(2025, new Date(2026, 10, 13))).toBeNull()
+    })
+})
+
+describe('nomesFuncionarios', () => {
+    it('nomes curtos dos gráficos + da lista completa só quem não está neles', () => {
+        expect(
+            nomesFuncionarios(
+                ['Millena de', 'Larissa dos', 'Millena de'],
+                ['Millena de Souza Sá Graça', 'Larissa dos Santos', 'Elizabeth Alves'],
+            ),
+        ).toEqual(['Elizabeth Alves', 'Larissa dos', 'Millena de'])
     })
 })

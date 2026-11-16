@@ -23,7 +23,8 @@ def warm_targets(modules: Iterable[DashboardModule]) -> list[Target]:
     modules = list(modules)
     proprias = ((m.source_db, q) for m in modules for q in m.queries)
     extras = ((db, q) for m in modules for db, qs in m.extra_queries.items() for q in qs)
-    return list(dict.fromkeys([*proprias, *extras]))
+    alternativas = ((db, q) for m in modules for db, a in m.alt_sources.items() for q in a.queries)
+    return list(dict.fromkeys([*proprias, *extras, *alternativas]))
 
 
 async def warm_once(
