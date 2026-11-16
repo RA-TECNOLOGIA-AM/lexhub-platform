@@ -8,6 +8,16 @@ import { DataError } from '../services/errors.ts'
 import { NoAccessCard } from './login/NoAccessCard.tsx'
 import { usePageTransition } from '../components/page_transition/usePageTransition.ts'
 
+function internalPath(value: string | null | undefined): string | null {
+    if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return null
+    try {
+        const url = new URL(value, window.location.origin)
+        return url.origin === window.location.origin ? `${url.pathname}${url.search}${url.hash}` : null
+    } catch {
+        return null
+    }
+}
+
 // Entrada: Google (principal) ou e-mail + senha, e entrada por convite (?convite=<token>).
 // ?estado=sessao-expirada = veio de um 401 da API.
 // Logado sem organização (403 no /me): o card vira "sem acesso" (NoAccessCard).
@@ -27,7 +37,8 @@ export function LoginPage() {
         params.get('estado') === 'sessao-expirada' ? 'Sua sessão expirou. Entre de novo para continuar.' : '',
     )
 
-    const from = (location.state as { from?: string } | null)?.from
+    const from =
+        internalPath((location.state as { from?: string } | null)?.from) ?? internalPath(params.get('returnTo'))
     const destination = me ? (from ?? `/${me.org.slug}/dashboards`) : null
     const isGoogleSignIn = params.has('code') || googleSignInStarted
 
@@ -41,6 +52,9 @@ export function LoginPage() {
     if (me) {
         if (isGoogleSignIn) return null
         return <Navigate to={from ?? `/${me.org.slug}/dashboards`} replace />
+    }
+    if (noAccess && from?.split('?')[0] === '/ativar') {
+        return <Navigate to={from} replace />
     }
 
     async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -70,7 +84,7 @@ export function LoginPage() {
         setGoogleSignInStarted(true)
         setSubmitting(true)
         try {
-            await signInWithGoogle()
+            await signInWithGoogle(from ?? undefined)
         } catch (err) {
             setError(err instanceof DataError ? err.message : 'Não foi possível abrir o login do Google.')
             setGoogleSignInStarted(false)

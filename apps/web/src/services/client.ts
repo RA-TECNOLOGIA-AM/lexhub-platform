@@ -33,6 +33,25 @@ import type {
     NotificationsResponse,
 } from '../types/index.ts'
 
+export type DeviceCodeResponse = {
+    device_code: string
+    user_code: string
+    verification_uri: string
+    interval: number
+    expires_in: number
+}
+
+export type DeviceSession = {
+    access_token: string
+    refresh_token: string
+    expires_in: number
+}
+
+export type DeviceTokenResult =
+    | { status: 'authorization_pending' | 'slow_down' }
+    | { status: 'expired_token' }
+    | ({ status: 'approved' } & DeviceSession)
+
 // A única porta de entrada para dados. As telas só conhecem esta interface;
 // trocar o mock pela API real = escrever outra implementação e mudar createDataClient.
 export interface DataClient {
@@ -41,10 +60,15 @@ export interface DataClient {
     // Login com a conta Google (corporativa ou não).
     // 'redirecting' = o navegador está indo para o Google (API) e volta em /login;
     // 'signed-in' = já entrou sem sair do app (mock).
-    signInWithGoogle(): Promise<'redirecting' | 'signed-in'>
+    signInWithGoogle(returnTo?: string): Promise<'redirecting' | 'signed-in'>
     signOut(): Promise<void>
     // E-mail de quem está logado (null = sem sessão). Serve à tela "sem acesso", quando o /me dá 403.
     getSessionEmail(): Promise<string | null>
+    getSessionAccessToken(): Promise<string | null>
+    createDeviceCode(): Promise<DeviceCodeResponse>
+    pollDeviceToken(deviceCode: string): Promise<DeviceTokenResult>
+    authorizeDevice(userCode: string): Promise<void>
+    setDeviceSession(session: DeviceSession): Promise<void>
     // org = slug da organização ativa (vem da URL); sem org, a organização padrão da pessoa.
     // Organização de que a pessoa não faz parte: rejeita com 403.
     getMe(org?: string): Promise<Me>

@@ -16,6 +16,11 @@ import { lazyNamed } from './lib/lazyNamed.ts'
 // Hub e DashboardPage (a casca; cada dashboard é carregado à parte no registry) ficam no bundle
 // inicial: são a 1ª tela de quem entra. O resto só é baixado quando a pessoa abre a página.
 const LoginPage = lazyNamed(() => import('./pages/LoginPage.tsx'), 'LoginPage')
+const DeviceActivationPage = lazyNamed(
+    () => import('./pages/device-auth/DeviceActivationPage.tsx'),
+    'DeviceActivationPage',
+)
+const TvLoginScreen = lazyNamed(() => import('./pages/device-auth/TvLoginScreen.tsx'), 'TvLoginScreen')
 const MembersPage = lazyNamed(() => import('./pages/admin/members/MembersPage.tsx'), 'MembersPage')
 const BillingPage = lazyNamed(() => import('./pages/admin/billing/BillingPage.tsx'), 'BillingPage')
 const AccessPage = lazyNamed(() => import('./pages/admin/access/AccessPage.tsx'), 'AccessPage')
@@ -63,6 +68,8 @@ function App() {
                     <Suspense fallback={<LoadingState />}>
                         <Routes>
                             <Route path="/login" element={<LoginPage />} />
+                            <Route path="/ativar" element={<DeviceActivationPage />} />
+                            <Route path="/tv-login" element={<TvLoginScreen />} />
                             <Route element={<RequireAuth />}>
                                 <Route element={<AppLayout />}>
                                     {/* Tudo de uma organização: o OrgScope garante que a ativa é a da URL. */}

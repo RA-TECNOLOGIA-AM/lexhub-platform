@@ -106,6 +106,8 @@ Estados do login: `/login?convite=abc` e `/login?estado=sessao-expirada`.
 | URL                                                                                                               | Tela                                                                                                       |
 | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `/login`                                                                                                          | Login, sem a moldura do app.                                                                               |
+| `/ativar?code=XXXX-XXXX`                                                                                          | Aprova no celular o login da TV; exige uma sessão autenticada.                                             |
+| `/tv-login`                                                                                                       | Tela pública da TV: QR Code e código para entrada manual.                                                  |
 | `/:org/dashboards`                                                                                                | Hub da organização, por exemplo `/lexgroup/dashboards`.                                                    |
 | `/:org/:unit/dashboards/:dashboardKey`                                                                            | Dashboard de uma unidade. A unidade está na URL, então recarregar ou compartilhar o link mantém a seleção. |
 | `/:org/documentacao/:slug`                                                                                        | Guia de um dashboard.                                                                                      |
@@ -113,7 +115,8 @@ Estados do login: `/login?convite=abc` e `/login?estado=sessao-expirada`.
 | `/plataforma/clientes`, `/plataforma/pedidos`                                                                     | Ferramentas da equipe RA.                                                                                  |
 
 As páginas protegidas ficam sob `RequireAuth`; `OrgScope` valida a organização da URL. A moldura compartilhada é
-`AppLayout`. Rotas desconhecidas redirecionam para o hub da organização ativa.
+`AppLayout`. `/ativar` e `/tv-login` são públicas; `/ativar` preserva o código ao redirecionar uma pessoa não
+autenticada para o login. Rotas desconhecidas redirecionam para o hub da organização ativa.
 
 ## Módulos
 

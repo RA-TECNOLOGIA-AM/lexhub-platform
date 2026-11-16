@@ -10,7 +10,7 @@ export type AuthValue = {
     rememberLocation: boolean
     signIn(email: string, password: string): Promise<void>
     // Na API, sai do app para o Google; na volta, o AuthProvider confere a sessão ao abrir.
-    signInWithGoogle(): Promise<void>
+    signInWithGoogle(returnTo?: string): Promise<void>
     // returnHere: true quando a sessão caiu (401) e o usuário deve voltar para a mesma página depois de entrar
     signOut(options?: { returnHere?: boolean }): Promise<void>
     // Confere de novo se quem está "sem acesso" já tem acesso (ex.: depois de um pedido aprovado).

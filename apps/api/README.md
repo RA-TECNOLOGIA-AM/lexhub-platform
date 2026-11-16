@@ -18,7 +18,8 @@ Preencha o `.env` com valores de desenvolvimento/staging fornecidos pela equipe.
 |---|---|
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Validar tokens via JWKS e consultar o health check do Supabase. |
 | `DATABASE_URL` | Banco da plataforma: usuário, organizações, permissões, catálogo e auditoria. |
-| `SUPABASE_SECRET_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` | Acesso server-side ao Supabase quando necessário; nunca expor no front. |
+| `SUPABASE_SECRET_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` | Obrigatória para login por dispositivo e operações administrativas; nunca expor no front. |
+| `WEB_BASE_URL` | URL pública do front, usada para montar o QR Code (`/ativar?code=...`). |
 | `SUPABASE_JWT_SECRET` | Opcional; somente para projetos que ainda assinam JWT legado com HS256. |
 | `CORS_ORIGINS` | Origens web permitidas, separadas por vírgula. Vazio significa nenhuma origem. |
 | `DB_<FONTE>_URL` ou `DB_<FONTE>_NAME/USER/PASSWORD/HOST/PORT` | Conexões das fontes `NG`, `LAADV`, `LEXFLOW` e `LEXPRE`. URL tem prioridade; fonte sem configuração fica desligada. |
@@ -38,13 +39,16 @@ Com `make` instalado, o [`Makefile`](Makefile) oferece `make setup`, `make run`,
 
 ## Endpoints implementados
 
-As rotas, exceto os health checks, exigem `Authorization: Bearer <token>`:
+Rotas de usuário exigem `Authorization: Bearer <token>`. O código e o polling do login por dispositivo são públicos; a aprovação exige a sessão Supabase do celular:
 
 | Método e caminho | Finalidade |
 |---|---|
 | `GET /health` | Liveness da API. |
 | `GET /health/supabase` | Verifica conectividade com o Supabase. |
 | `GET /health/sources` | Estado `up`, `down` ou `off` de cada banco de origem; responde 503 se algum configurado estiver fora. |
+| `POST /auth/device/code` | Inicia sessão da TV e retorna códigos com validade de 10 minutos. |
+| `GET /auth/device/token?device_code=...` | Polling da TV; retorna `authorization_pending`, `slow_down`, `expired_token` ou a sessão Supabase de uso único. |
+| `POST /auth/device/authorize` | Aprova o código curto com um access token Supabase válido. |
 | `GET /me?org=<slug>` | Identidade, organizações, unidade e permissões do usuário atual. |
 | `GET /orgs/{org_slug}/dashboards` | Catálogo de dashboards que o usuário pode abrir. |
 | `GET/POST/DELETE /orgs/{org_slug}/favorites[/{dashboard_key}]` | Preferências de favoritos. |
@@ -61,6 +65,7 @@ O registro de cálculos está em `app/dashboards/`. Uma key no catálogo ou no f
 - `/me` e o escopo do dashboard são determinados pelo banco da plataforma; as rotas de dashboard usam `require_dashboard` em `app/access.py`.
 - Token ausente, inválido, expirado ou de outro projeto: 401. Organização/unidade/dashboard sem permissão: 403; tentativas negadas são auditadas.
 - `DATABASE_URL` vazio ou dependência indisponível: 503.
+- Login por dispositivo exige `SUPABASE_SECRET_KEY` ou `SUPABASE_SERVICE_ROLE_KEY` e `WEB_BASE_URL`. Códigos são armazenados como HMAC, tentativas são limitadas por IP no banco e a sessão aprovada é reivindicada e consumida atomicamente.
 - O front também chama funções de administração e notificações no schema `api` do Supabase diretamente. Essas funções não são rotas desta API; veja [README do front](../web/README.md) e [README do banco](../../supabase/README.md).
 
 ## Testes e lint

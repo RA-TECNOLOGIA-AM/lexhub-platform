@@ -49,7 +49,19 @@ export function PageTransitionProvider({ children }: { children: ReactNode }) {
 
     const transitionTo = useCallback(
         (to: To): void => {
-            if (phaseRef.current !== 'idle') return
+            // 'loading': já tem uma navegação agendada; esta seria um clique repetido.
+            if (phaseRef.current === 'loading') return
+
+            // 'waiting'/'exiting': o overlay já está na tela (ex.: abertura do app na volta do Google).
+            // Antes a chamada era descartada e a página que esperava por ela ficava preta para sempre;
+            // agora navega na hora e o overlay continua até o destino terminar de carregar.
+            if (phaseRef.current !== 'idle') {
+                clearTimers()
+                navigate(to)
+                changePhase('waiting')
+                later(exit, MAX_WAIT_MS)
+                return
+            }
 
             const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
             changePhase('loading')
