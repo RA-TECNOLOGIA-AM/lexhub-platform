@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from app.dashboards.base import SourceFetcher
+from app.logs import seconds
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,10 @@ class SourceCache:
             except Exception as exc:
                 if entry is not None and self._clock() - entry.fetched_at <= self._stale_max_age:
                     logger.warning(
-                        "[cache] '%s' vencido servido após falha: %s", key, type(exc).__name__
+                        "%s: banco falhou (%s); servindo o último dado bom, de %s atrás",
+                        key,
+                        type(exc).__name__,
+                        seconds(self._clock() - entry.fetched_at),
                     )
                     return entry
                 raise
@@ -104,10 +108,23 @@ class SourceCache:
 
     async def _load(self, key: str, load: Callable[[], Awaitable[Rows]]) -> Entry:
         started = self._clock()
-        data = await load()
+        logger.info("%s: buscando no banco...", key)
+        try:
+            data = await load()
+        except Exception as exc:
+            logger.warning(
+                "%s: falhou após %s (%s)", key, seconds(self._clock() - started), type(exc).__name__
+            )
+            raise
         entry = Entry(data=data, fetched_at=self._clock())
         self._store.set(key, entry)
-        logger.info("[cache] '%s': %d linhas em %.1fs", key, len(data), entry.fetched_at - started)
+        logger.info(
+            "%s: %s linhas em %s (vale por %s)",
+            key,
+            f"{len(data):,}".replace(",", "."),
+            seconds(entry.fetched_at - started),
+            seconds(self._ttl),
+        )
         return entry
 
 

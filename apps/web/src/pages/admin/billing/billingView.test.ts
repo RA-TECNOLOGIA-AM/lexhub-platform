@@ -10,6 +10,7 @@ import {
     priceLabel,
     usagePct,
     usageTone,
+    usageText,
 } from './billingView.ts'
 
 const plan = (over: Partial<Plan>): Plan => ({
@@ -61,6 +62,12 @@ describe('uso do plano', () => {
         expect(usageTone(12, 15)).toBe('normal')
         expect(usageTone(24, 24)).toBe('full')
         expect(usageTone(61, 60)).toBe('full')
+        // sem teto (null): sem barra e nunca 'full'
+        expect(usagePct(74, null)).toBe(0)
+        expect(usageTone(74, null)).toBe('normal')
+        expect(usageText(42, 60)).toBe('42 de 60')
+        expect(usageText(24, 24, 'meses')).toBe('24 de 24 meses')
+        expect(usageText(74, null)).toBe('74 · sem limite')
     })
 })
 

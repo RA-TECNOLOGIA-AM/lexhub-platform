@@ -69,28 +69,30 @@ export function AppLayout() {
                     onNavigate={closeMenu}
                 />
 
-                {NAV_SECTIONS.filter((section) => !section.platformOnly || user.platform_staff).map((section) => (
-                    <div key={section.title} className="stack" style={{ gap: 2 }}>
-                        <span className="side-label">{section.title}</span>
-                        {visibleItems(section, perms).map((item) => (
-                            <PageTransitionLink
-                                key={item.key}
-                                className="nav"
-                                to={pathOf(item, org.slug)}
-                                aria-current={current?.item.key === item.key ? 'page' : undefined}
-                                onClick={closeMenu}
-                            >
-                                <Icon name={item.icon} />
-                                {item.label}
-                                {item.badge === 'access-requests' && pending > 0 && (
-                                    <span className="count" aria-label={`${pending} pendentes`}>
-                                        {pending}
-                                    </span>
-                                )}
-                            </PageTransitionLink>
-                        ))}
-                    </div>
-                ))}
+                {NAV_SECTIONS.map((section) => ({ section, items: visibleItems(section, perms, user.platform_staff) }))
+                    .filter(({ items }) => items.length > 0)
+                    .map(({ section, items }) => (
+                        <div key={section.title} className="stack" style={{ gap: 2 }}>
+                            <span className="side-label">{section.title}</span>
+                            {items.map((item) => (
+                                <PageTransitionLink
+                                    key={item.key}
+                                    className="nav"
+                                    to={pathOf(item, org.slug)}
+                                    aria-current={current?.item.key === item.key ? 'page' : undefined}
+                                    onClick={closeMenu}
+                                >
+                                    <Icon name={item.icon} />
+                                    {item.label}
+                                    {item.badge === 'access-requests' && pending > 0 && (
+                                        <span className="count" aria-label={`${pending} pendentes`}>
+                                            {pending}
+                                        </span>
+                                    )}
+                                </PageTransitionLink>
+                            ))}
+                        </div>
+                    ))}
 
                 <div className="side-user">
                     <span className="av">{user.initials}</span>

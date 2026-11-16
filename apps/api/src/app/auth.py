@@ -6,6 +6,7 @@ intervalo para que tokens forjados não virem um laço de requisições ao Supab
 """
 
 import asyncio
+import logging
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -16,6 +17,8 @@ import jwt
 from fastapi import Depends, HTTPException, Request, status
 
 from app.config import Settings, get_settings
+
+logger = logging.getLogger(__name__)
 
 JwksLoader = Callable[[], Awaitable[dict[str, Any]]]
 
@@ -66,8 +69,13 @@ class TokenVerifier:
             self._loaded = True
             try:
                 data = await self._load()
-            except (httpx.HTTPError, ValueError):
-                return  # mantém as chaves que já tinha; o token cai como inválido
+            except (httpx.HTTPError, ValueError) as exc:
+                # Mantém as chaves que já tinha; o token cai como inválido.
+                logger.warning(
+                    "Não deu para buscar as chaves públicas do Supabase Auth (%s): logins vão falhar",
+                    type(exc).__name__,
+                )
+                return
             keys = {}
             for jwk in data.get("keys", []):
                 try:
@@ -75,6 +83,11 @@ class TokenVerifier:
                 except (KeyError, jwt.PyJWKError):
                     continue
             self._keys = keys
+            logger.info(
+                "%d chave(s) pública(s) do Supabase Auth carregada(s)%s",
+                len(keys),
+                " (rotação de chave)" if force else "",
+            )
 
     async def _key_for(self, kid: str | None) -> jwt.PyJWK | None:
         if not self._loaded:
@@ -145,9 +158,16 @@ async def get_current_user(
     if scheme.lower() != "bearer" or not token.strip():
         raise _unauthorized()
     try:
-        return await verifier.verify(token.strip())
-    except InvalidToken:
+        user = await verifier.verify(token.strip())
+    except InvalidToken as exc:
+        # Motivo só em DEBUG (expirado, assinatura...); a linha da requisição já mostra o 401.
+        reason = type(exc.__cause__).__name__ if exc.__cause__ else "chave desconhecida"
+        logger.debug("Token recusado: %s", reason)
         raise _unauthorized() from None
+    # Para a linha da requisição (app.request_log) dizer quem pediu.
+    request.state.user_id = user.user_id
+    request.state.user_email = user.email
+    return user
 
 
 def build_verifier(settings: Settings | None = None) -> TokenVerifier:

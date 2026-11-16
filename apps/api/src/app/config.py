@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     # acesso (app_private) e a auditoria. Vazio = rotas protegidas respondem 503.
     DATABASE_URL: str = ""
     CORS_ORIGINS: str = Field(default="", description="Origens separadas por vírgula")
+    # Logs do terminal: DEBUG mostra também health checks, preflight e o motivo de token recusado.
+    LOG_LEVEL: str = Field(default="INFO", pattern=r"(?i)^(DEBUG|INFO|WARNING|ERROR)$")
 
     # --- Bancos de origem (iguais à v1). Banco sem variáveis = desligado. ---
     DB_NG_URL: str = ""

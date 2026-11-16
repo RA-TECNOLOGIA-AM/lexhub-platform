@@ -1,5 +1,6 @@
 import type { BillingResponse } from '../../../types/index.ts'
-import { dayMonthLabel, joinPt, usagePct, usageTone } from './billingView.ts'
+import { dayMonthLabel, joinPt, usageText } from './billingView.ts'
+import { UsageMeter } from './UsageMeter.tsx'
 
 type CurrentPlanCardProps = {
     current: BillingResponse['current']
@@ -35,24 +36,9 @@ export function CurrentPlanCard({ current, title, usage }: CurrentPlanCardProps)
                     <div key={u.key} className="usage">
                         <div className="usage-head small">
                             <span className="muted">{u.label}</span>
-                            <span style={{ fontWeight: 500 }}>
-                                {u.used} de {u.total}
-                                {u.unit ? ` ${u.unit}` : ''}
-                            </span>
+                            <span style={{ fontWeight: 500 }}>{usageText(u.used, u.total, u.unit)}</span>
                         </div>
-                        <div
-                            className="usage-track"
-                            role="meter"
-                            aria-label={u.label}
-                            aria-valuemin={0}
-                            aria-valuemax={u.total}
-                            aria-valuenow={u.used}
-                        >
-                            <div
-                                className={`usage-fill ${usageTone(u.used, u.total)}`}
-                                style={{ width: `${usagePct(u.used, u.total)}%` }}
-                            />
-                        </div>
+                        <UsageMeter label={u.label} used={u.used} total={u.total} />
                     </div>
                 ))}
             </div>

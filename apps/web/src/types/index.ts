@@ -192,8 +192,8 @@ export type Plan = {
     features: string[]
 }
 
-// Uma barra de uso do plano ("Assentos 42 de 60", "Histórico 24 de 24 meses").
-export type PlanUsage = { key: string; label: string; used: number; total: number; unit?: string }
+// Uma barra de uso do plano ("Assentos 42 de 60", "Histórico 24 de 24 meses"). total null = sem teto.
+export type PlanUsage = { key: string; label: string; used: number; total: number | null; unit?: string }
 
 export type InvoiceStatus = 'paid' | 'open' | 'overdue'
 
@@ -246,8 +246,16 @@ export type AccessOverview = {
 
 // O que a pessoa gere nesta organização (api.my_admin_permissions): o menu esconde o que não for dela.
 // sources = vê a aba Unidades e fontes (Owner/Desenvolvedor: todas; Gestor/Controller: as próprias unidades).
-// audit = vê a Auditoria (Owner/Desenvolvedor).
-export type AdminPermissions = { access: boolean; members: boolean; sources: boolean; audit: boolean }
+// audit = vê a Auditoria (Owner/Desenvolvedor). billing = vê Plano e cobrança (Owner/Desenvolvedor e equipe RA).
+// clients = vê Clientes (Owner/Desenvolvedor da LexGroup, dona da plataforma, e equipe RA).
+export type AdminPermissions = {
+    access: boolean
+    members: boolean
+    sources: boolean
+    audit: boolean
+    billing: boolean
+    clients: boolean
+}
 
 // O que o editor grava (api.update_member_access): estado desejado nas unidades geridas.
 export type MemberAccessUpdate = {
@@ -291,7 +299,7 @@ export type PlatformClient = {
     name: string
     sub: string // "3 unidades · cliente desde a v1"
     plan: ClientPlan
-    seats: { used: number; total: number }
+    seats: { used: number; total: number | null } // total null = sem teto
     failingSources: number // fontes atrasadas ou com falha agora
     billing: 'ok' | 'onboarding_paid' | 'overdue'
 }

@@ -6,9 +6,11 @@ pulando bancos desligados ou fora do ar; falha de uma não interrompe as outras.
 
 import asyncio
 import logging
+import time
 from collections.abc import Callable, Iterable
 
 from app.dashboards.base import DashboardModule, SourceFetcher
+from app.logs import seconds
 from app.source_cache import SourceCache
 
 logger = logging.getLogger(__name__)
@@ -28,9 +30,11 @@ async def warm_once(
     is_up: Callable[[str], bool],
 ) -> int:
     """Um ciclo. Devolve quantas queries foram renovadas."""
-    ok = 0
+    ok = failed = skipped = 0
+    started = time.perf_counter()
     for db, query in targets:
         if not is_up(db):
+            skipped += 1
             continue
         try:
             await cache.refresh(
@@ -38,7 +42,16 @@ async def warm_once(
             )
             ok += 1
         except Exception:
-            logger.exception("[warm] falha em '%s:%s'", db, query)
+            failed += 1
+            logger.exception("falha ao renovar '%s:%s'", db, query)
+    logger.log(
+        logging.WARNING if failed else logging.INFO,
+        "ciclo terminado em %s: %d renovadas, %d com falha, %d puladas (banco fora/desligado)",
+        seconds(time.perf_counter() - started),
+        ok,
+        failed,
+        skipped,
+    )
     return ok
 
 
@@ -53,7 +66,12 @@ async def warm_loop(
     """Tarefa de fundo: espera a API subir, aquece e repete a cada `interval` segundos."""
     if not targets:
         return
-    logger.info("[warm] iniciado: %d queries, a cada %ds", len(targets), interval)
+    logger.info(
+        "ligado: %d queries, a cada %s; primeiro ciclo em %s",
+        len(targets),
+        seconds(interval),
+        seconds(initial_delay),
+    )
     await asyncio.sleep(initial_delay)
     while True:
         await warm_once(cache, fetcher_for, targets, is_up)

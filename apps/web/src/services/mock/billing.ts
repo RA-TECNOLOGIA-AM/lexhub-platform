@@ -43,9 +43,9 @@ export const plans: Plan[] = [
     },
 ]
 
-// Módulo: a cobrança da organização no mock.
-// Parâmetro: os assentos (vêm de Membros, para as duas telas mostrarem o mesmo número).
-export function billingFor(seats: { used: number; total: number }): BillingResponse {
+// Módulo: a cobrança da LexGroup no mock: Pro sem teto (como no banco); os limites valem para as operações novas.
+// Parâmetro: os assentos usados (vêm de Membros, para as duas telas mostrarem o mesmo número).
+export function billingFor(seatsUsed: number): BillingResponse {
     return {
         current: {
             plan: 'pro',
@@ -55,10 +55,9 @@ export function billingFor(seats: { used: number; total: number }): BillingRespo
             gateway: null,
         },
         usage: [
-            { key: 'seats', label: 'Assentos', ...seats },
-            { key: 'units', label: 'Unidades', used: 3, total: 5 },
-            { key: 'sources', label: 'Fontes de dados', used: 12, total: 15 },
-            { key: 'history', label: 'Histórico', used: 24, total: 24, unit: 'meses' },
+            { key: 'seats', label: 'Assentos', used: seatsUsed, total: null },
+            { key: 'units', label: 'Unidades', used: 3, total: null },
+            { key: 'sources', label: 'Fontes de dados', used: 12, total: null },
         ],
         plans: structuredClone(plans),
         invoices: [

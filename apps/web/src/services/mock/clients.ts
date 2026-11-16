@@ -9,7 +9,7 @@ export const clients: ClientsResponse = {
             name: 'LexGroup',
             sub: '3 unidades · cliente desde a v1',
             plan: 'pro',
-            seats: { used: 42, total: 60 },
+            seats: { used: 42, total: null }, // Pro sem teto (a LexGroup é a dona da plataforma)
             failingSources: 1,
             billing: 'ok',
         },

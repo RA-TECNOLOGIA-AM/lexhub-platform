@@ -5,18 +5,17 @@ import { createAccessClient } from './accessClient.ts'
 import { createMembersClient } from './membersClient.ts'
 import { createSourcesClient } from './sourcesClient.ts'
 import { createAuditClient } from './auditClient.ts'
+import { createBillingClient } from './billingClient.ts'
 import { createNotificationsClient } from './notifications.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
 import type {
-    BillingResponse,
     DashboardCatalog,
     DashboardQuery,
     Me,
     Meta,
     PendenciasResponse,
     ProtocoloResponse,
-    ClientsResponse,
 } from '../types/index.ts'
 import { paramsFromQuery } from '../lib/dashboardQuery.ts'
 
@@ -50,6 +49,8 @@ export function createApiClient({
         ...createSourcesClient(auth),
         // Auditoria: também direto no Supabase (schema api).
         ...createAuditClient(auth),
+        // Plano e cobrança e Clientes (plataforma): também direto no Supabase (schema api).
+        ...createBillingClient(auth),
         // Notificações do sino: também direto no Supabase (schema api).
         ...createNotificationsClient(auth),
 
@@ -94,8 +95,6 @@ export function createApiClient({
             await http.put(`/orgs/${org}/hub-order`, keys)
         },
 
-        listClients: () => http.get<ClientsResponse>('/platform/clients'),
-        getBilling: (org) => http.get<BillingResponse>(`/orgs/${org}/billing`),
         getProtocolo: dashboard<ProtocoloResponse>('protocolo-lexpre'),
         getPendencias: dashboard<PendenciasResponse>('pendencias-lexpre'),
         getDashboardData: <T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery) =>

@@ -25,14 +25,21 @@ export function monthLabel(month: string): string {
 // '2026-12-01' -> '1 de dezembro'
 export const dayMonthLabel = (date: string): string => dayMonthFmt.format(new Date(`${date}T00:00:00Z`))
 
-// Quanto da barra pintar (0 a 100).
-export function usagePct(used: number, total: number): number {
-    if (total <= 0) return 0
+// Quanto da barra pintar (0 a 100). Sem teto (null) não tem barra: a tela nem a desenha.
+export function usagePct(used: number, total: number | null): number {
+    if (total === null || total <= 0) return 0
     return Math.min(100, Math.max(0, (used / total) * 100))
 }
 
 // 'full' = chegou no limite do plano (barra âmbar, como "Histórico 24 de 24").
-export const usageTone = (used: number, total: number): 'normal' | 'full' => (used >= total ? 'full' : 'normal')
+export const usageTone = (used: number, total: number | null): 'normal' | 'full' =>
+    total !== null && used >= total ? 'full' : 'normal'
+
+// '42 de 60', '24 de 24 meses' ou, sem teto, '74 · sem limite'.
+export function usageText(used: number, total: number | null, unit?: string): string {
+    if (total === null) return `${used}${unit ? ` ${unit}` : ''} · sem limite`
+    return `${used} de ${total}${unit ? ` ${unit}` : ''}`
+}
 
 // ['boleto', 'PIX'] -> 'boleto e PIX'
 export function joinPt(items: string[]): string {

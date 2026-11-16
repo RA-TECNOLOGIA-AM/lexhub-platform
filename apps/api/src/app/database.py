@@ -8,6 +8,8 @@ limite de consultas por banco aqui dentro; gerenciador entregue por get_database
 
 import asyncio
 import logging
+import socket
+import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -16,6 +18,7 @@ import asyncpg
 from fastapi import Request
 
 from app.config import SOURCE_DATABASES, Settings
+from app.logs import seconds
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +42,22 @@ _CONNECT_ERRORS: tuple[type[Exception], ...] = (
     ConnectionResetError,
     OSError,
 )
+
+
+def _connect_hint(exc: BaseException) -> str:
+    """Tipo do erro + uma dica do que costuma ser (sem a mensagem, que pode trazer host/usuário)."""
+    name = type(exc).__name__
+    if isinstance(exc, asyncpg.InvalidPasswordError):
+        return f"{name} (usuário ou senha errados)"
+    if isinstance(exc, asyncpg.InvalidCatalogNameError):
+        return f"{name} (banco não existe: confira DB_*_NAME)"
+    if isinstance(exc, ConnectionRefusedError):
+        return f"{name} (porta fechada ou servidor desligado)"
+    if isinstance(exc, TimeoutError):
+        return f"{name} (sem resposta: rede/VPN ou IP não liberado no banco)"
+    if isinstance(exc, socket.gaierror):
+        return f"{name} (host não encontrado: confira DB_*_HOST)"
+    return name
 
 
 def _backoff(attempt: int) -> float:
@@ -84,47 +103,73 @@ class DatabaseManager:
         for name in SOURCE_DATABASES:
             target = self._settings.source_dsn(name)
             if target is None:
-                continue  # sem variáveis no .env: desligado
+                logger.info("%s desligado (sem DB_%s_* no .env)", name, name.upper())
+                continue
             self._limits[name] = asyncio.Semaphore(self._settings.source_concurrency(name))
             pending.append(self._open_pool(name, target))
         # Espera todos terminarem (sucesso ou falha) e só então repassa o erro de um obrigatório.
         results = await asyncio.gather(*pending, return_exceptions=True)
+        logger.info("Bancos de origem: %s", self.summary())
         errors = [r for r in results if isinstance(r, BaseException)]
         if errors:
             raise errors[0]
 
+    def summary(self) -> str:
+        """Uma linha com o estado de todos: 'ng no ar · laadv no ar · lexflow FORA · lexpre desligado'."""
+        words = {"up": "no ar", "down": "FORA", "off": "desligado"}
+        return " · ".join(f"{name} {words[state]}" for name, state in self._status.items())
+
     async def _open_pool(self, name: str, target: dict) -> None:
         optional = name in OPTIONAL_DATABASES
+        kind = "opcional" if optional else "obrigatório"
+        logger.info("%s: conectando (%s)...", name, kind)
+        started = time.perf_counter()
         for attempt in range(1, MAX_DB_CONNECTION_RETRIES + 1):
             try:
                 self._pools[name] = await asyncpg.create_pool(**target, **self._pool_kwargs())
                 self._status[name] = "up"
-                logger.info("Conexão com banco '%s' estabelecida", name)
+                s = self._settings
+                logger.info(
+                    "%s conectado em %s (pool %d-%d, até %d consultas simultâneas, só leitura)",
+                    name,
+                    seconds(time.perf_counter() - started),
+                    s.DB_POOL_MIN_SIZE,
+                    s.DB_POOL_MAX_SIZE,
+                    s.source_concurrency(name),
+                )
                 return
             except _CONNECT_ERRORS as exc:
                 # Só o tipo do erro: a mensagem pode trazer host ou usuário do .env.
                 logger.warning(
-                    "Falha ao conectar ao banco '%s' (tentativa %d/%d): %s",
+                    "%s: falha ao conectar (tentativa %d/%d): %s",
                     name,
                     attempt,
                     MAX_DB_CONNECTION_RETRIES,
-                    type(exc).__name__,
+                    _connect_hint(exc),
                 )
                 if attempt < MAX_DB_CONNECTION_RETRIES:
                     await asyncio.sleep(_backoff(attempt))
         self._status[name] = "down"
         if not optional:
+            logger.error(
+                "%s: banco obrigatório fora do ar após %d tentativas (%s): a API não vai subir",
+                name,
+                MAX_DB_CONNECTION_RETRIES,
+                seconds(time.perf_counter() - started),
+            )
             raise RuntimeError(
                 f"Banco obrigatório '{name}' indisponível na subida (ver DB_{name.upper()}_*)"
             )
-        logger.warning("Banco opcional '%s' indisponível: a API sobe sem esse pool", name)
+        logger.warning("%s: banco opcional fora do ar; a API sobe sem ele", name)
 
     async def close(self) -> None:
         """Fecha todos os pools."""
-        for name, pool in self._pools.items():
+        names = list(self._pools)
+        for pool in self._pools.values():
             await pool.close()
-            logger.info("Conexão com banco '%s' fechada", name)
         self._pools.clear()
+        if names:
+            logger.info("Conexões fechadas: %s", ", ".join(names))
 
     def status(self) -> dict[str, Status]:
         """Estado de cada banco: up, down ou off (sem variáveis)."""

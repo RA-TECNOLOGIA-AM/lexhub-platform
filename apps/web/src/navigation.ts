@@ -14,6 +14,7 @@ export type NavItem = {
     requires?: keyof AdminPermissions // só aparece para quem gere isso (api.my_admin_permissions)
 }
 
+// platformOnly: itens sem `requires` só aparecem para a equipe RA (platform_staff).
 export type NavSection = { title: string; items: NavItem[]; platformOnly?: boolean }
 
 // Módulo: o mapa do app. Menu, breadcrumb e rotas leem esta lista; página nova = um item aqui.
@@ -88,11 +89,12 @@ export const NAV_SECTIONS: NavSection[] = [
                 description: 'O plano da organização, o uso e as faturas.',
                 icon: 'receipt',
                 route: '/:org/admin/plano',
+                requires: 'billing',
             },
         ],
     },
     {
-        title: 'Plataforma · equipe RA',
+        title: 'Plataforma',
         platformOnly: true,
         items: [
             {
@@ -102,6 +104,8 @@ export const NAV_SECTIONS: NavSection[] = [
                 description: 'As organizações atendidas pela plataforma.',
                 icon: 'building',
                 route: '/plataforma/clientes',
+                // Owner/Desenvolvedor da LexGroup (dão acesso às operações novas) e equipe RA.
+                requires: 'clients',
             },
             {
                 key: 'pedidos',
@@ -119,8 +123,12 @@ export const NAV_SECTIONS: NavSection[] = [
 // Endereço de verdade de um item: '/:org/admin/membros' -> '/lexgroup/admin/membros'.
 // Itens que a pessoa vê numa seção. perms null = ainda carregando: esconde os que exigem permissão
 // (melhor aparecer um instante depois do que piscar para quem não gere).
-export function visibleItems(section: NavSection, perms: AdminPermissions | null): NavItem[] {
-    return section.items.filter((item) => !item.requires || perms?.[item.requires] === true)
+// staff = equipe RA: vê os itens da Plataforma que não pedem permissão (ex.: Pedidos de acesso).
+// Seção sem nenhum item visível some do menu.
+export function visibleItems(section: NavSection, perms: AdminPermissions | null, staff = false): NavItem[] {
+    return section.items.filter((item) =>
+        item.requires ? perms?.[item.requires] === true : !section.platformOnly || staff,
+    )
 }
 
 // As permissões que o menu usa. Se a consulta falhar (ex.: a função ainda não foi aplicada no banco),
@@ -128,7 +136,7 @@ export function visibleItems(section: NavSection, perms: AdminPermissions | null
 // Esconder por erro tiraria o item até de Owner/Desenvolvedor.
 export function menuPermissions(data: AdminPermissions | null, error: unknown): AdminPermissions | null {
     if (data) return data
-    return error ? { access: true, members: true, sources: true, audit: true } : null
+    return error ? { access: true, members: true, sources: true, audit: true, billing: true, clients: true } : null
 }
 
 export const pathOf = (item: NavItem, org: string) => item.route.replace(':org', org)

@@ -74,7 +74,7 @@ export interface DataClient {
     // Owner/Desenvolvedor: criar unidade e mudar nome/fuso (o código não muda). Regra quebrada = 409 com a mensagem.
     createUnit(org: string, unit: UnitInput): Promise<UnitSources>
     updateUnit(org: string, unit: UnitInput): Promise<UnitSources>
-    // Plataforma (só equipe RA): todas as organizações. Sem platform_staff, rejeita com 403.
+    // Plataforma: todas as organizações. Só Owner/Desenvolvedor da LexGroup e equipe RA; os outros recebem 403.
     listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>

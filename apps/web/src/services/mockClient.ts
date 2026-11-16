@@ -234,7 +234,7 @@ export function createMockClient(): DataClient {
             if (!requireOrg(org)) return copy(onboardingBilling)
             const list = memberStore.list()
             const used = 37 + list.members.filter((m) => m.status === 'active').length + list.invitations.length
-            return billingFor({ used, total: 60 })
+            return billingFor(used)
         },
 
         async getAccessOverview(org, unit) {
@@ -243,11 +243,11 @@ export function createMockClient(): DataClient {
             return requireOrg(org) ? accessStore.overview(unit) : copy(onboardingAccess)
         },
 
-        // O mock entra como Desenvolvedor: gere acesso e membros e vê as fontes e a auditoria.
+        // O mock entra como Desenvolvedor da LexGroup: gere acesso e membros e vê fontes, auditoria, cobrança e clientes.
         async getMyAdminPermissions(org) {
             requireSession()
             requireOrg(org)
-            return { access: true, members: true, sources: true, audit: true }
+            return { access: true, members: true, sources: true, audit: true, billing: true, clients: true }
         },
 
         async updateMemberAccess(org, memberId, update) {

@@ -6,7 +6,6 @@ import { StateMessage } from '../../../components/states/StateMessage.tsx'
 import { DataTable } from '../../../components/ui/DataTable.tsx'
 import { Icon } from '../../../components/ui/Icon.tsx'
 import { Notice } from '../../../components/ui/Notice.tsx'
-import { useAuth } from '../../../contexts/auth-context.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
 import { dataClient } from '../../../services/client.ts'
 import type { PlatformClient } from '../../../types/index.ts'
@@ -15,26 +14,22 @@ import { clientColumns } from './clientColumns.tsx'
 import { kpisOf } from './clientsView.ts'
 import { SupportPanel } from './SupportPanel.tsx'
 
-// Porteiro da página: só a equipe RA (platform_staff) entra. O menu já esconde o item,
-// mas quem digitar o endereço cai aqui. A API também barra (403).
+// A página: busca os clientes e junta indicadores, tabela e o painel de suporte.
+// Quem vê: Owner/Desenvolvedor da LexGroup e equipe RA. O menu já esconde o item; quem digitar o
+// endereço sem poder recebe 403 do banco (api.list_clients) e cai na mensagem abaixo.
 export function ClientsPage() {
-    const { me } = useAuth()
-    if (!me?.user.platform_staff) {
-        return (
-            <StateMessage icon="lock" title="Área da equipe RA Tecnologia" alert>
-                Esta página mostra todas as organizações da plataforma e é só para a equipe RA.
-            </StateMessage>
-        )
-    }
-    return <ClientsContent />
-}
-
-// A página em si: busca os clientes e junta indicadores, tabela e o painel de suporte.
-function ClientsContent() {
     const { data, error } = useAsync(() => dataClient.listClients(), [])
     const [notice, setNotice] = useState<string | null>(null)
     const [supportFor, setSupportFor] = useState<PlatformClient | null>(null)
 
+    if (error?.status === 403) {
+        return (
+            <StateMessage icon="lock" title="Área da plataforma" alert>
+                Esta página mostra todas as organizações da plataforma. Só Owner e Desenvolvedor da LexGroup (e a equipe
+                RA) veem.
+            </StateMessage>
+        )
+    }
     if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
 
@@ -50,7 +45,7 @@ function ClientsContent() {
             <PageHeader
                 title="Clientes"
                 badge={<span className="badge pro">Plataforma</span>}
-                description="Visível só para a equipe RA Tecnologia. O suporte nunca contorna o isolamento: só lê, com motivo, MFA e prazo."
+                description="As operações que usam o LexHub. Só Owner e Desenvolvedor da LexGroup veem. O suporte nunca contorna o isolamento: só lê, com motivo, MFA e prazo."
                 actions={
                     <button
                         className="btn btn-primary"

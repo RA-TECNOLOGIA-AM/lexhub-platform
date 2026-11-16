@@ -1,6 +1,7 @@
 import type { Column } from '../../../components/ui/DataTable.tsx'
 import type { PlatformClient } from '../../../types/index.ts'
-import { usagePct, usageTone } from '../../admin/billing/billingView.ts'
+import { usageText } from '../../admin/billing/billingView.ts'
+import { UsageMeter } from '../../admin/billing/UsageMeter.tsx'
 import { billingOf, dataOf, planOf } from './clientsView.ts'
 
 const badge = (b: { label: string; badge: string }) => <span className={b.badge}>{b.label}</span>
@@ -22,22 +23,8 @@ export function clientColumns(onSupport: (client: PlatformClient) => void): Colu
             header: 'Assentos',
             render: (c) => (
                 <div className="seats">
-                    <span className="small">
-                        {c.seats.used} de {c.seats.total}
-                    </span>
-                    <div
-                        className="usage-track"
-                        role="meter"
-                        aria-label={`Assentos de ${c.name}`}
-                        aria-valuemin={0}
-                        aria-valuemax={c.seats.total}
-                        aria-valuenow={c.seats.used}
-                    >
-                        <div
-                            className={`usage-fill ${usageTone(c.seats.used, c.seats.total)}`}
-                            style={{ width: `${usagePct(c.seats.used, c.seats.total)}%` }}
-                        />
-                    </div>
+                    <span className="small">{usageText(c.seats.used, c.seats.total)}</span>
+                    <UsageMeter label={`Assentos de ${c.name}`} used={c.seats.used} total={c.seats.total} />
                 </div>
             ),
         },
