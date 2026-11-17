@@ -80,6 +80,24 @@ def _lado(resposta: dict, campo: str) -> tuple[dict, str]:
     return resposta, campo
 
 
+async def chamar_v1(
+    ctx: DashboardContext, copia: ModuleType, fn: Callable[..., Any], *args: Any, **kwargs: Any
+) -> Any:
+    """Roda uma função da cópia da v1 (ex.: as linhas de uma exportação) com a fonte do pedido e o recorte de
+    situação do processo dos filtros, como o cálculo do dashboard."""
+    try:
+        situacao = parse_situacoes_processo(ctx.filters.get(FILTRO_SITUACAO, []))
+    except ValueError as exc:
+        raise DashboardInputError(str(exc)) from None
+    token_fonte = copia.usar_fonte(ctx.source)
+    token_situacao = _situacoes_processo_ctx.set(situacao)
+    try:
+        return await fn(*args, **kwargs)
+    finally:
+        _situacoes_processo_ctx.reset(token_situacao)
+        copia._fonte_ctx.reset(token_fonte)
+
+
 def modulo(
     key: str,
     v1_por_unidade: dict[str, str],

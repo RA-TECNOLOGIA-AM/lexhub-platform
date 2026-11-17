@@ -1,5 +1,6 @@
 import { dataClient } from '../../../services/client.ts'
 import type { DashboardModule } from '../types.ts'
+import { execucaoExport } from './exportFields.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
 import { ExecucaoContent } from './ExecucaoContent.tsx'
 import { ehExecucaoNG, lerExecucaoNG } from './execucao.ts'
@@ -10,6 +11,7 @@ import { filtrosPagina, filtrosSetor } from './setorExecucao.ts'
 export const execucao: DashboardModule<V1GenericoResponse> = {
     key: 'execucao',
     fetch: (query) => dataClient.getDashboardData<V1GenericoResponse>('execucao', query),
+    exportReports: execucaoExport,
     Content: ExecucaoContent,
     filters: (data) => {
         if (!ehExecucaoNG(data)) return []

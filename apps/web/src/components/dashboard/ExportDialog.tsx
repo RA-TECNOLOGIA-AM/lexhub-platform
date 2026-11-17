@@ -1,29 +1,48 @@
 import { useState } from 'react'
 import { Icon } from '../ui/Icon.tsx'
 import { Modal } from '../ui/Modal.tsx'
+import { Segmented } from '../ui/Segmented.tsx'
 import { toDataError } from '../../services/errors.ts'
 import {
     allSlugs,
+    defaultOptions,
     orderedSelection,
     selectionLabel,
     toggleSlug,
     type ExportFormat,
-    type ExportGroup,
+    type ExportReport,
 } from '../../lib/exportFields.ts'
 
 type ExportDialogProps = {
     title: string // nome do dashboard ('Protocolo')
-    groups: ExportGroup[] // os campos que o dashboard declarou
+    reports: ExportReport[] // os relatórios do dashboard (o LexPre tem um só, sem opções)
     onClose: () => void
-    onExport: (format: ExportFormat, campos: string[]) => Promise<void> // rejeitou = mostra o erro aqui
+    // rejeitou = mostra o erro aqui. relatorio/opcoes: o relatório escolhido e as escolhas dele (ex.: o recorte).
+    onExport: (
+        format: ExportFormat,
+        campos: string[],
+        relatorio?: string,
+        opcoes?: Record<string, string>,
+    ) => Promise<void>
 }
 
 // Módulo: a janela "Exportar relatório" (a mesma da v1, uma só para todos os dashboards).
 // Usa o Modal da casa (foco preso, Esc fecha, fundo escurecido).
 // Quem usa só a desenha quando está aberta; ao abrir, todos os campos começam marcados (como na v1).
-export function ExportDialog({ title, groups, onClose, onExport }: ExportDialogProps) {
+// Com mais de um relatório (ex.: Processos e Atividades nos Acordos), escolher outro volta a marcar todos os campos
+// dele; as opções (ex.: o recorte Entradas/Saídas/Total) aparecem acima dos campos, como na v1.
+export function ExportDialog({ title, reports, onClose, onExport }: ExportDialogProps) {
+    const [indice, setIndice] = useState(0)
+    const report = reports[indice] ?? reports[0]
+    const groups = report.groups
     const all = allSlugs(groups)
     const [selected, setSelected] = useState<string[]>(all)
+    const [opcoes, setOpcoes] = useState<Record<string, string>>(defaultOptions(report))
+    const trocarRelatorio = (i: number) => {
+        setIndice(i)
+        setSelected(allSlugs(reports[i].groups))
+        setOpcoes(defaultOptions(reports[i]))
+    }
     const [busy, setBusy] = useState<ExportFormat | null>(null)
     const [error, setError] = useState<string | null>(null)
 
@@ -31,7 +50,13 @@ export function ExportDialog({ title, groups, onClose, onExport }: ExportDialogP
         setBusy(format)
         setError(null)
         try {
-            await onExport(format, orderedSelection(groups, selected))
+            const temOpcoes = (report.options ?? []).length > 0
+            await onExport(
+                format,
+                orderedSelection(groups, selected),
+                report.key ?? undefined,
+                temOpcoes ? opcoes : undefined,
+            )
             onClose()
         } catch (err) {
             setError(toDataError(err).message)
@@ -71,6 +96,32 @@ export function ExportDialog({ title, groups, onClose, onExport }: ExportDialogP
                 </>
             }
         >
+            {(reports.length > 1 || (report.options ?? []).length > 0) && (
+                <div className="export-opcoes">
+                    {reports.length > 1 && (
+                        <div className="export-opcao">
+                            <span className="export-group-title">Relatório</span>
+                            <Segmented
+                                label="Relatório"
+                                options={reports.map((r, i) => ({ value: String(i), label: r.title }))}
+                                value={String(indice)}
+                                onChange={(v) => trocarRelatorio(Number(v))}
+                            />
+                        </div>
+                    )}
+                    {(report.options ?? []).map((o) => (
+                        <div key={o.key} className="export-opcao">
+                            <span className="export-group-title">{o.label}</span>
+                            <Segmented
+                                label={o.label}
+                                options={o.choices}
+                                value={opcoes[o.key] ?? o.choices[0]?.value}
+                                onChange={(v) => setOpcoes({ ...opcoes, [o.key]: v })}
+                            />
+                        </div>
+                    ))}
+                </div>
+            )}
             <div className="export-toolbar">
                 <span className="muted small">{selectionLabel(selected.length, all.length)}</span>
                 <span className="small">

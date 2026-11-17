@@ -1,4 +1,5 @@
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from typing import Annotated
 from zoneinfo import ZoneInfo
@@ -190,23 +191,33 @@ async def dashboard_export(
     end: Annotated[date | None, Query(alias="to")] = None,
     format: Annotated[str | None, Query()] = None,
     campos: Annotated[list[str] | None, Query()] = None,
+    relatorio: Annotated[str | None, Query()] = None,
 ) -> Response:
-    """Relatório do dashboard (CSV ou XLSX), como na v1, com o período e os filtros pedidos. Sempre auditado."""
+    """Relatório do dashboard (CSV ou XLSX), como na v1, com o período e os filtros pedidos. Sempre auditado.
+
+    `relatorio` escolhe um dos outros relatórios do dashboard (ex.: as Atividades dos Acordos); as opções dele
+    (ex.: ?criterio=saida) vêm na URL e chegam ao cálculo em ctx.export_options."""
     module, ctx = await _prepare(request, access, refs, sources, audit, today, start, end)
-    if module.export is None:
+    try:
+        spec = export.pick_report(module, relatorio)
+    except export.ExportError as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from None
+    if spec is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Este dashboard não tem exportação")
     if not access.can_export:
         await _deny(request, audit, access, "sem_permissao_exportar", "Sem permissão para exportar")
     try:
         fmt = export.pick_format(format)
-        slugs = export.pick_fields(module.export, campos or [])
+        slugs = export.pick_fields(spec, campos or [])
+        opcoes = export.pick_options(spec, dict(request.query_params))
     except export.ExportError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
+    ctx = replace(ctx, export_options=opcoes)
 
-    rows = await _run(module, module.export.rows(ctx))
-    headers, data = export.table(module.export, slugs, rows)
+    rows = await _run(module, spec.rows(ctx))
+    headers, data = export.table(spec, slugs, rows)
     if fmt == "xlsx":
-        body = export.to_xlsx(headers, data, module.export.sheet_name)
+        body = export.to_xlsx(headers, data, spec.sheet_name)
     else:
         body = export.to_csv(headers, data)
 
@@ -226,11 +237,15 @@ async def dashboard_export(
                 "filters": {k: v for k, v in ctx.filters.items() if v},
                 "campos": slugs,
                 "format": fmt,
+                **({"relatorio": relatorio} if relatorio else {}),
+                **({"opcoes": opcoes} if opcoes else {}),
                 "rows": len(rows),
             },
         )
     )
-    name = export.filename(access.dashboard_key, access.unit_code, fmt)
+    name = export.filename(
+        access.dashboard_key, access.unit_code, fmt, [relatorio or "", *opcoes.values()]
+    )
     return Response(
         content=body,
         media_type=export.FORMATS[fmt],

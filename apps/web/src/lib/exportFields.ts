@@ -3,6 +3,15 @@
 
 export type ExportField = { slug: string; label: string } // slug = o nome que a API espera em ?campos=
 export type ExportGroup = { group: string; fields: ExportField[] }
+// Uma escolha da exportação além dos campos (ex.: o recorte entrada/saida/total da Execução, ?criterio=).
+// A primeira opção é a padrão, como no servidor (ExportOption).
+export type ExportOptionDef = { key: string; label: string; choices: { value: string; label: string }[] }
+// Um relatório do dashboard: key null = o principal; outra = ?relatorio=<key> (ex.: as Atividades dos Acordos).
+export type ExportReport = { key: string | null; title: string; groups: ExportGroup[]; options?: ExportOptionDef[] }
+
+// As escolhas padrão de um relatório (a primeira de cada opção).
+export const defaultOptions = (report: ExportReport): Record<string, string> =>
+    Object.fromEntries((report.options ?? []).map((o) => [o.key, o.choices[0]?.value ?? '']))
 import type { ExportRequest } from '../types/index.ts'
 export type ExportFormat = ExportRequest['format'] // um lugar só para 'csv' | 'xlsx'
 

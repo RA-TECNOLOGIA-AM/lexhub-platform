@@ -169,18 +169,18 @@ export const catalog: DashboardCatalog = {
         // Jurídico
         entry({
             key: 'execucao',
-            title: 'Execução',
+            title: 'Execução Condenação',
             area: 'Jurídico',
-            desc: 'Processos em execução e valores.',
+            desc: 'Processos em execução da condenação: entradas, saídas, valores e alvarás.',
             units: ALL,
             source: 'LexFlow',
             syncedMin: 6,
         }),
         entry({
             key: 'acordos',
-            title: 'Acordos',
+            title: 'Execução Acordos',
             area: 'Jurídico',
-            desc: 'Acordos fechados e valores.',
+            desc: 'Acordos em execução: fechamento, entradas, pagamentos e valores.',
             units: ALL,
             source: 'LexFlow',
             syncedMin: 6,

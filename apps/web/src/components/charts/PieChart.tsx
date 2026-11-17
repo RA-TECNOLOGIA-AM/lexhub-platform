@@ -16,6 +16,7 @@ type PieChartProps = {
     onSelect?: (name: string) => void
     selectLabel?: string
     labels?: boolean // nome, valor e % de cada fatia em volta da rosca (some quando não há largura)
+    labelsTwoLines?: boolean // rótulo em duas linhas (nome; valor e %): cabe em card estreito (meia largura)
     // Com `labels` e sem largura para eles (ex.: celular): a mesma informação numa legenda embaixo, que também
     // destaca a fatia (cursor/foco) e filtra (clique). Sem isto, no estreito só o meio da rosca diz o nome.
     legendWhenNarrow?: boolean
@@ -39,7 +40,7 @@ const CHAR_W = 6.6 // largura média (px) de um caractere do rótulo (12px), par
 export function PieChart({
     items,
     max = Infinity,
-    size = 320,
+    size: tamanho = 320,
     format = fmt.int,
     centerLabel,
     centerFormat,
@@ -47,6 +48,7 @@ export function PieChart({
     onSelect,
     selectLabel = 'Filtrar por',
     labels = false,
+    labelsTwoLines = false,
     legendWhenNarrow = false,
     sort = true,
     innerRatio = 0.62,
@@ -72,21 +74,29 @@ export function PieChart({
     const total = slices.reduce((sum, s) => sum + s.value, 0)
     const isSel = (name: string) => selected.some((s) => s.toUpperCase() === name.toUpperCase())
     const atual = slices.find((s) => s.name === hover)
-    const r = size / 2 - POP - 2
-    const inner = r * innerRatio
     const fixed = new Map(items.map((p) => [p.name, p.color]))
     const fill = (name: string, k: number, others: number) => (others ? REST : (fixed.get(name) ?? color(k)))
     // Cabem os rótulos? O mais comprido de cada lado ('NOME 65 (11,8%)') + a folga até a rosca.
-    const rotulo = (s: (typeof slices)[number]) => `${s.name} ${format(s.value)} (${fmt.dec1(s.share)}%)`.length
+    const valorRotulo = (s: (typeof slices)[number]) => `${format(s.value)} (${fmt.dec1(s.share)}%)`
+    const nomeRotulo = (s: (typeof slices)[number]) => `${s.name}${s.others ? ` (${s.others})` : ''}`
+    const rotulo = (s: (typeof slices)[number]) =>
+        labelsTwoLines
+            ? Math.max(nomeRotulo(s).length, valorRotulo(s).length)
+            : `${nomeRotulo(s)} ${valorRotulo(s)}`.length
+    const gapRotulo = labelsTwoLines ? 2 * LABEL_GAP : LABEL_GAP
     const labelRoom = Math.max(0, ...slices.map(rotulo)) * CHAR_W + 40
+    // Em duas linhas, a rosca encolhe (até 150 px) para os rótulos caberem num card estreito, em vez de sumirem.
+    const size = labels && labelsTwoLines ? Math.max(150, Math.min(tamanho, width - 2 * labelRoom)) : tamanho
     const comRotulos = labels && width >= size + 2 * labelRoom
+    const r = size / 2 - POP - 2
+    const inner = r * innerRatio
     const comLegenda = labels && legendWhenNarrow && !comRotulos
     // Rótulos de cada lado (direita: metade da direita da volta), espalhados para não se encostarem.
     const angle = (f: number) => f * 2 * Math.PI - Math.PI / 2
     const mids = slices.map((s) => angle((s.start + s.end) / 2))
     const right = mids.map((a) => Math.cos(a) >= 0)
     const perSide = Math.max(right.filter(Boolean).length, right.filter((x) => !x).length)
-    const h = comRotulos ? Math.max(size + 48, perSide * LABEL_GAP + 24) : size
+    const h = comRotulos ? Math.max(size + 48, perSide * gapRotulo + 24) : size
     const w = comRotulos ? width : size
     const cx = w / 2
     const cy = h / 2
@@ -97,7 +107,7 @@ export function PieChart({
             const idx = slices.map((_, i) => i).filter((i) => right[i] === lado)
             const ys = spreadColumn(
                 idx.map((i) => cy + rotR * Math.sin(mids[i])),
-                LABEL_GAP,
+                gapRotulo,
                 10,
                 h - 10,
             )
@@ -175,13 +185,20 @@ export function PieChart({
                                             style={{ stroke: fill(s.name, k, s.others) }}
                                         />
                                     )}
-                                    <text x={xt} y={labelY[k]} dy="0.32em" textAnchor={lado > 0 ? 'start' : 'end'}>
-                                        {s.name}
-                                        {s.others ? ` (${s.others})` : ''}{' '}
-                                        <tspan className="pie-label-v">
-                                            {format(s.value)} ({fmt.dec1(s.share)}%)
-                                        </tspan>
-                                    </text>
+                                    {labelsTwoLines ? (
+                                        <text x={xt} y={labelY[k]} textAnchor={lado > 0 ? 'start' : 'end'}>
+                                            <tspan x={xt} dy="-0.25em">
+                                                {nomeRotulo(s)}
+                                            </tspan>
+                                            <tspan x={xt} dy="1.2em" className="pie-label-v">
+                                                {valorRotulo(s)}
+                                            </tspan>
+                                        </text>
+                                    ) : (
+                                        <text x={xt} y={labelY[k]} dy="0.32em" textAnchor={lado > 0 ? 'start' : 'end'}>
+                                            {nomeRotulo(s)} <tspan className="pie-label-v">{valorRotulo(s)}</tspan>
+                                        </text>
+                                    )}
                                 </g>
                             )
                         })}

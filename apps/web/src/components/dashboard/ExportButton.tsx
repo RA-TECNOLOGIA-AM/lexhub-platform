@@ -1,24 +1,29 @@
 import { useRef, useState } from 'react'
 import { Icon } from '../ui/Icon.tsx'
-import type { ExportFormat, ExportGroup } from '../../lib/exportFields.ts'
+import type { ExportFormat, ExportReport } from '../../lib/exportFields.ts'
 import { ExportDialog } from './ExportDialog.tsx'
 
 type ExportButtonProps = {
     canExport: boolean // decidido pelo servidor (regra do setor)
     title: string
-    groups: ExportGroup[] // [] = dashboard ainda sem relatório
-    onExport: (format: ExportFormat, campos: string[]) => Promise<void>
+    reports: ExportReport[] // [] = dashboard ainda sem relatório; o LexPre tem um só, sem opções
+    onExport: (
+        format: ExportFormat,
+        campos: string[],
+        relatorio?: string,
+        opcoes?: Record<string, string>,
+    ) => Promise<void>
 }
 
 // Módulo: o botão "Exportar" e a janela que ele abre.
 // Sem permissão: não aparece. Sem campos (páginas-base): aparece desativado, explicando o porquê.
-export function ExportButton({ canExport, title, groups, onExport }: ExportButtonProps) {
+export function ExportButton({ canExport, title, reports, onExport }: ExportButtonProps) {
     const [open, setOpen] = useState(false)
     const button = useRef<HTMLButtonElement>(null)
 
     if (!canExport) return null
 
-    const empty = groups.length === 0
+    const empty = reports.every((r) => r.groups.length === 0)
     function close() {
         setOpen(false)
         button.current?.focus() // a janela some; o foco volta para quem a abriu
@@ -37,7 +42,7 @@ export function ExportButton({ canExport, title, groups, onExport }: ExportButto
                 <Icon name="download" size={16} />
                 Exportar
             </button>
-            {open && <ExportDialog title={title} groups={groups} onClose={close} onExport={onExport} />}
+            {open && <ExportDialog title={title} reports={reports} onClose={close} onExport={onExport} />}
         </>
     )
 }

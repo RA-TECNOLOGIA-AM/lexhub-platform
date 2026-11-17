@@ -504,6 +504,8 @@ export type ExportRequest = DashboardQuery & {
     dashboard: string // a key ('protocolo-lexpre')
     format: 'csv' | 'xlsx'
     campos: string[] // slugs na ordem das colunas
+    relatorio?: string // outro relatório do dashboard (?relatorio=), ex.: 'atividades' nos Acordos
+    opcoes?: Record<string, string> // escolhas da janela (?criterio=saida, ?view=por_prazo)
 }
 
 export type ExportFile = {

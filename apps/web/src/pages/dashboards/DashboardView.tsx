@@ -98,7 +98,10 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
                         <ExportButton
                             canExport={summary.can_export}
                             title={summary.title}
-                            groups={module.exportFields ?? []}
+                            reports={
+                                module.exportReports ??
+                                (module.exportFields ? [{ key: null, title: '', groups: module.exportFields }] : [])
+                            }
                             onExport={exportReport}
                         />
                         <button
