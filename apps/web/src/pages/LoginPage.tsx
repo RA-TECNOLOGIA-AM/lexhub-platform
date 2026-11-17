@@ -7,6 +7,7 @@ import { PasswordInput } from '../components/ui/PasswordInput.tsx'
 import { DataError } from '../services/errors.ts'
 import { NoAccessCard } from './login/NoAccessCard.tsx'
 import { usePageTransition } from '../components/page_transition/usePageTransition.ts'
+import { LoadingState } from '../components/states/LoadingState.tsx'
 
 function internalPath(value: string | null | undefined): string | null {
     if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return null
@@ -22,7 +23,7 @@ function internalPath(value: string | null | undefined): string | null {
 // ?estado=sessao-expirada = veio de um 401 da API.
 // Logado sem organização (403 no /me): o card vira "sem acesso" (NoAccessCard).
 export function LoginPage() {
-    const { me, noAccess, signIn, signInWithGoogle, signOut } = useAuth()
+    const { me, noAccess, loading, signIn, signInWithGoogle, signOut } = useAuth()
     const location = useLocation()
     const [params] = useSearchParams()
     const { transitionTo } = usePageTransition()
@@ -48,9 +49,14 @@ export function LoginPage() {
         transitionTo(destination)
     }, [destination, isGoogleSignIn, transitionTo])
 
+    // Ainda conferindo a sessão (volta do Google, F5 no /login): a logo da abertura do app continua na tela.
+    // Sem isso o formulário aparecia nesse meio-tempo, a logo saía e voltava depois para levar ao hub.
+    if (loading) return <LoadingState />
+
     // Logado (já estava, ou acabou de entrar): volta para onde queria ir, ou para o hub.
     if (me) {
-        if (isGoogleSignIn) return null
+        // Volta do Google: a logo segue na tela até o transitionTo acima levar ao destino.
+        if (isGoogleSignIn) return <LoadingState />
         return <Navigate to={from ?? `/${me.org.slug}/dashboards`} replace />
     }
     if (noAccess && from?.split('?')[0] === '/ativar') {
