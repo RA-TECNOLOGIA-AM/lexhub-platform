@@ -27,6 +27,10 @@ values ('10000000-0000-4000-8000-0000000000f1', '20000000-0000-4000-8000-0000000
 insert into app.data_sources (id, org_id, key, kind, name, detail, owner_unit_id)
 values ('50000000-0000-4000-8000-0000000000f1', '10000000-0000-4000-8000-0000000000f1', 'db1', 'database', 'Banco 1',
         'Postgres · somente leitura', '20000000-0000-4000-8000-0000000000f1');
+-- Banco interno: só nas unidades liberadas (20261117100000_conectar_fonte.sql)
+insert into app.internal_source_units (source_id, unit_id)
+values ('50000000-0000-4000-8000-0000000000f1', '20000000-0000-4000-8000-0000000000f1'),
+       ('50000000-0000-4000-8000-0000000000f1', '20000000-0000-4000-8000-0000000000f2');
 insert into app.unit_source_refs (unit_id, source, ref)
 values ('20000000-0000-4000-8000-0000000000f1', 'db1', 'U1'),
        ('20000000-0000-4000-8000-0000000000f2', 'db1', 'U2');

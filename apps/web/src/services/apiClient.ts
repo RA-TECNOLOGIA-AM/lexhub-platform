@@ -45,8 +45,8 @@ export function createApiClient({
         ...createMembersClient(auth),
         // Acesso: também direto no Supabase (schema api).
         ...createAccessClient(auth),
-        // Unidades e fontes: também direto no Supabase (schema api).
-        ...createSourcesClient(auth),
+        // Unidades e fontes: direto no Supabase (schema api); a lista de escritórios vem da API.
+        ...createSourcesClient(auth, http),
         // Auditoria: também direto no Supabase (schema api).
         ...createAuditClient(auth),
         // Plano e cobrança e Clientes (plataforma): também direto no Supabase (schema api).

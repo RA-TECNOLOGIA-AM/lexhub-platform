@@ -23,6 +23,7 @@ const ago = (min: number) => new Date(NOW - min * 60_000).toISOString()
 const source = (over: Partial<DataSource>): DataSource => ({
     id: 's1',
     kind: 'database',
+    connector: 'lexpre',
     group: 'product',
     name: 'LexPre',
     detail: '',
@@ -99,6 +100,10 @@ describe('sourcesView', () => {
     it('fonte que ainda não sincronizou: aguardando', () => {
         expect(statusOf('waiting')).toEqual({ label: 'Aguardando sync', badge: 'badge neutral' })
         expect(whenLabel(source({ syncedAt: null, status: 'waiting' }), NOW)).toBe('Nunca sincronizada')
+    })
+
+    it('fonte ligada sem dashboard na unidade: aguardando dashboards', () => {
+        expect(statusOf('no_dashboards')).toEqual({ label: 'Aguardando dashboards', badge: 'badge info' })
     })
 
     it('escolhe a unidade da URL ou a primeira', () => {

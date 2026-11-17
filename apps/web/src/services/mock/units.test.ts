@@ -7,6 +7,7 @@ const fresh = (): SourcesResponse => ({
     syncEveryMin: 10,
     unitLimit: { used: 1, total: 5 },
     canManageUnits: true,
+    canManageSources: true,
     units: [
         {
             unit: { code: 'NG', name: 'Nicolas Gomes' },

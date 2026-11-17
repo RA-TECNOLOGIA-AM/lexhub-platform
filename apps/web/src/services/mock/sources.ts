@@ -26,6 +26,7 @@ const healthy = (
 const lexpre = (escritorio: number) =>
     healthy(7, {
         id: 'lexpre',
+        connector: 'lexpre',
         kind: 'database',
         group: 'product',
         name: 'LexPre',
@@ -35,6 +36,7 @@ const lexpre = (escritorio: number) =>
 const lexflow = (rows: number) =>
     healthy(6, {
         id: 'lexflow',
+        connector: 'lexflow',
         kind: 'flow',
         group: 'product',
         name: 'LexFlow',
@@ -45,6 +47,7 @@ const lexflow = (rows: number) =>
 const ngDatabase = (managedBy: string | null) =>
     healthy(4, {
         id: 'ng',
+        connector: 'internal',
         kind: 'database',
         group: 'connection',
         name: 'Sistema jurídico NG',
@@ -57,6 +60,7 @@ export const sources: SourcesResponse = {
     syncEveryMin: 10,
     unitLimit: { used: 3, total: 5 },
     canManageUnits: true,
+    canManageSources: true, // o mock entra como Desenvolvedor da LexGroup
     units: [
         {
             unit: unit('NG'),
@@ -73,6 +77,7 @@ export const sources: SourcesResponse = {
                 ngDatabase(null),
                 healthy(9, {
                     id: 'sheets_financeiro_ng',
+                    connector: 'sheets',
                     kind: 'sheet',
                     group: 'connection',
                     name: 'Planilha do financeiro',
@@ -80,6 +85,7 @@ export const sources: SourcesResponse = {
                 }),
                 {
                     id: 'sheets_protocolo_passado_ng',
+                    connector: 'sheets',
                     kind: 'sheet',
                     group: 'connection',
                     name: 'Planilha do protocolo passado',
@@ -102,6 +108,7 @@ export const sources: SourcesResponse = {
                 lexpre(2),
                 healthy(5, {
                     id: 'laadv',
+                    connector: 'internal',
                     kind: 'database',
                     group: 'connection',
                     name: 'Sistema jurídico LA',
@@ -110,6 +117,7 @@ export const sources: SourcesResponse = {
                 }),
                 {
                     id: 'sheets_financeiro_la',
+                    connector: 'sheets',
                     kind: 'sheet',
                     group: 'connection',
                     name: 'Planilha do financeiro',

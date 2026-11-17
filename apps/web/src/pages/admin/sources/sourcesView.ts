@@ -13,6 +13,7 @@ const SOURCE_STATUS: Record<SourceStatus, { label: string; badge: string }> = {
     late: { label: 'Atrasada', badge: 'badge warn' },
     pending: { label: 'Autorizar', badge: 'badge info' },
     waiting: { label: 'Aguardando sync', badge: 'badge neutral' },
+    no_dashboards: { label: 'Aguardando dashboards', badge: 'badge info' },
 }
 
 export const statusOf = (status: SourceStatus) => SOURCE_STATUS[status]
