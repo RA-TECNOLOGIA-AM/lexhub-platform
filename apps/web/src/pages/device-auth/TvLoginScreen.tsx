@@ -2,113 +2,48 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { QRCodeSVG } from 'qrcode.react'
 import { useAuth } from '../../contexts/auth-context.ts'
-import { DataError } from '../../services/errors.ts'
-import { dataClient } from '../../services/client.ts'
+import { tvSession } from '../../contexts/tvSession.ts'
+import { dataClient, type DeviceCodeResponse } from '../../services/client.ts'
 import { activationAddress } from './activationAddress.ts'
+import { startDeviceLogin } from './deviceLogin.ts'
 
+// Tela da TV: mostra o QR e espera alguém aprovar pelo celular.
+// O laço (consultas, novas tentativas, QR novo quando vence) fica em deviceLogin.ts.
 export function TvLoginScreen() {
     const navigate = useNavigate()
     const { refreshSession } = useAuth()
-    const [retry, setRetry] = useState(0)
-    const [verificationUri, setVerificationUri] = useState('')
-    const [userCode, setUserCode] = useState('')
-    const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
-    const [error, setError] = useState('')
-    const address = verificationUri ? activationAddress(verificationUri) : null
+    const [code, setCode] = useState<DeviceCodeResponse | null>(null)
+    const [expiresAt, setExpiresAt] = useState(0)
+    const [now, setNow] = useState(() => Date.now())
+    const [problem, setProblem] = useState<string | null>(null)
+    const address = code ? activationAddress(code.verification_uri) : null
 
-    useEffect(() => {
-        let cancelled = false
-        let pollTimer: number | undefined
-        let expiryTimer: number | undefined
-        let countdownTimer: number | undefined
-        let busy = false
-        let intervalMs = 5_000
-        let deviceCode = ''
-
-        const stopPolling = () => {
-            if (pollTimer !== undefined) window.clearInterval(pollTimer)
-            pollTimer = undefined
-        }
-
-        const poll = async () => {
-            if (cancelled || busy) return
-            busy = true
-            try {
-                const result = await dataClient.pollDeviceToken(deviceCode)
-                if (cancelled) return
-                if (result.status === 'expired_token') {
-                    stopPolling()
-                    setError('Este código expirou. Gere um novo para entrar.')
-                    return
-                }
-                setError('')
-                if (result.status === 'slow_down') {
-                    intervalMs += 5_000
-                    stopPolling()
-                    pollTimer = window.setInterval(() => void poll(), intervalMs)
-                    return
-                }
-                if (result.status === 'approved') {
-                    stopPolling()
-                    if (expiryTimer !== undefined) window.clearTimeout(expiryTimer)
-                    if (countdownTimer !== undefined) window.clearInterval(countdownTimer)
-                    await dataClient.setDeviceSession(result)
+    useEffect(
+        () =>
+            startDeviceLogin(dataClient, {
+                onCode(next) {
+                    setCode(next)
+                    setExpiresAt(Date.now() + next.expires_in * 1_000)
+                    setProblem(null)
+                },
+                onProblem: setProblem,
+                async onApproved(session) {
+                    await dataClient.setDeviceSession(session)
+                    tvSession.start() // a sessão da TV vale 24 h (ver tvSession.ts)
                     await refreshSession()
-                    if (!cancelled) navigate('/', { replace: true })
-                }
-            } catch (reason) {
-                if (!cancelled) {
-                    setError(
-                        reason instanceof DataError
-                            ? reason.message
-                            : 'Falha de rede ao consultar a TV. Vamos tentar novamente.',
-                    )
-                }
-            } finally {
-                busy = false
-            }
-        }
+                    navigate('/', { replace: true })
+                },
+            }),
+        [navigate, refreshSession],
+    )
 
-        const start = async () => {
-            setError('')
-            setVerificationUri('')
-            setUserCode('')
-            try {
-                const result = await dataClient.createDeviceCode()
-                if (cancelled) return
-                deviceCode = result.device_code
-                setVerificationUri(result.verification_uri)
-                setUserCode(result.user_code)
-                intervalMs = result.interval * 1_000
-                setSecondsLeft(result.expires_in)
-                pollTimer = window.setInterval(() => void poll(), intervalMs)
-                expiryTimer = window.setTimeout(() => {
-                    stopPolling()
-                    setSecondsLeft(0)
-                    setError('Este código expirou. Gere um novo para entrar.')
-                }, result.expires_in * 1_000)
-                countdownTimer = window.setInterval(() => {
-                    setSecondsLeft((remaining) => (remaining === null ? null : Math.max(remaining - 1, 0)))
-                }, 1_000)
-            } catch (reason) {
-                if (!cancelled) {
-                    setError(
-                        reason instanceof DataError
-                            ? reason.message
-                            : 'Não foi possível iniciar o login. Verifique a conexão e tente novamente.',
-                    )
-                }
-            }
-        }
+    // Relógio da contagem: só para o texto "QR novo em X min".
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(Date.now()), 1_000)
+        return () => window.clearInterval(timer)
+    }, [])
 
-        void start()
-        return () => {
-            cancelled = true
-            stopPolling()
-            if (expiryTimer !== undefined) window.clearTimeout(expiryTimer)
-            if (countdownTimer !== undefined) window.clearInterval(countdownTimer)
-        }
-    }, [navigate, refreshSession, retry])
+    const minutesLeft = Math.max(Math.ceil((expiresAt - now) / 60_000), 0)
 
     return (
         <main className="auth">
@@ -120,9 +55,9 @@ export function TvLoginScreen() {
                     <p className="muted small">Escaneie o QR Code com o celular e confirme o código.</p>
                 </div>
 
-                {verificationUri && (
+                {code ? (
                     <div className="stack" style={{ alignItems: 'center', gap: 14 }}>
-                        <QRCodeSVG value={verificationUri} size={240} level="M" />
+                        <QRCodeSVG value={code.verification_uri} size={240} level="M" />
                         <div className="stack" style={{ alignItems: 'center', gap: 4 }}>
                             <span className="muted small">
                                 {address ? (
@@ -133,26 +68,26 @@ export function TvLoginScreen() {
                                     'Ou abra a página de ativação do LexHub e digite:'
                                 )}
                             </span>
-                            <strong style={{ fontSize: 24, letterSpacing: 4 }}>{userCode}</strong>
+                            <strong style={{ fontSize: 24, letterSpacing: 4 }}>{code.user_code}</strong>
                         </div>
                         <span className="muted small">
-                            {secondsLeft === 0
-                                ? 'Código expirado'
-                                : `Código válido por mais ${Math.ceil((secondsLeft ?? 0) / 60)} min`}
+                            {minutesLeft > 0
+                                ? `Um QR Code novo aparece em ${minutesLeft} min`
+                                : 'Gerando um QR Code novo…'}
                         </span>
                     </div>
+                ) : (
+                    !problem && (
+                        <p className="muted small" role="status" style={{ textAlign: 'center' }}>
+                            Gerando o QR Code…
+                        </p>
+                    )
                 )}
 
-                {error && (
-                    <div className="notice danger" role="alert">
-                        {error}
+                {problem && (
+                    <div className="notice info" role="status">
+                        <div className="small">{problem}</div>
                     </div>
-                )}
-
-                {error && (
-                    <button className="btn btn-primary btn-block" type="button" onClick={() => setRetry((n) => n + 1)}>
-                        Gerar novo QR Code
-                    </button>
                 )}
 
                 <p className="muted small auth-foot">

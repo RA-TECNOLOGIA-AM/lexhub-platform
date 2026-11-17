@@ -175,6 +175,11 @@ export function createMockClient(): DataClient {
             sessionStorage.removeItem(SESSION_KEY)
         },
 
+        // No mock não há outros aparelhos: só confirma.
+        async signOutOthers() {
+            await wait()
+        },
+
         async getSessionEmail() {
             return sessionStorage.getItem(SESSION_KEY)
         },
