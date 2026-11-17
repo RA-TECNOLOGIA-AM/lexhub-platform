@@ -6,7 +6,7 @@ import { timeAgo } from '../../../lib/format.ts'
 // Texto do cabeçalho: o intervalo vem do servidor (o cache de 5 min), nunca fixo na tela.
 export const syncNote = (minutes: number): string =>
     `As fontes são sincronizadas a cada ${minutes} minutos para a base central da organização. ` +
-    'As credenciais ficam no cofre e nunca voltam para a tela.'
+    'Senhas e links das fontes ficam cifrados e nunca voltam para a tela.'
 
 const SOURCE_STATUS: Record<SourceStatus, { label: string; badge: string }> = {
     healthy: { label: 'Saudável', badge: 'badge ok' },

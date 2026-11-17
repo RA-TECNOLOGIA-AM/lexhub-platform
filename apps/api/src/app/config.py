@@ -47,6 +47,17 @@ class Settings(BaseSettings):
     SHEETS_HTTP_READ_TIMEOUT: float = 60.0  # download (s)
     SHEETS_HTTP_MAX_RETRIES: int = 3
 
+    # --- Fontes conectadas pela tela (Conectar fonte: banco próprio e planilha). Ver app/secret_box.py. ---
+    # Chave AES-256 (base64 de 32 bytes) que cifra a senha do banco e o link da planilha no Supabase.
+    # Vazia = conectar banco/planilha pela tela fica desligado (LexPre/LexFlow continuam).
+    SOURCE_SECRET_KEY: str = ""
+    # IP de saída da API, que a tela pede para a operação liberar no firewall do banco ("" = não mostra).
+    SOURCE_EGRESS_IP: str = ""
+    # Tempo limite de cada etapa do teste de conexão (s).
+    SOURCE_TEST_TIMEOUT: float = Field(default=8.0, ge=1.0, le=60.0)
+    # Só desenvolvimento: deixa conectar em banco de rede interna (localhost, 10.x...). Em produção, False.
+    SOURCE_ALLOW_PRIVATE_HOSTS: bool = False
+
     # --- Bancos de origem (iguais à v1). Banco sem variáveis = desligado. ---
     DB_NG_URL: str = ""
     DB_NG_NAME: str = ""

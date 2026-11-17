@@ -9,12 +9,13 @@ O cache de 5 min entra embrulhando o SourceFetcher (mesma interface), sem mudar 
 
 import time
 from collections.abc import Callable
-from typing import Annotated, Any, Protocol
+from typing import TYPE_CHECKING, Annotated, Any, Protocol
 
 import asyncpg
 from fastapi import Depends, Request
 
 from app.access import get_db_pool
+from app.config import SOURCE_DATABASES
 from app.dashboards.base import SourceFetcher
 from app.database import (
     DatabaseManager,
@@ -25,6 +26,9 @@ from app.database import (
 )
 from app.source_cache import CachedSourceFetcher, SourceCache
 from app.source_queries import QUERIES
+
+if TYPE_CHECKING:
+    from app.registered_sources import RegisteredSources
 
 # SourceUnavailable mora em app.database; segue importável daqui porque as cópias da v1 em
 # app/analyses (que não editamos, para comparar linha a linha) importam de app.sources.
@@ -88,18 +92,33 @@ def get_source_cache(request: Request) -> SourceCache:
     return request.app.state.source_cache
 
 
-def source_fetcher(manager: DatabaseManager, db_name: str) -> SourceFetcher:
-    """O leitor de uma fonte, sem cache: um banco (Postgres) ou uma planilha do Google (app/sheets.py)."""
+def source_fetcher(
+    manager: DatabaseManager, db_name: str, registered: "RegisteredSources | None" = None
+) -> SourceFetcher:
+    """O leitor de uma fonte, sem cache: banco do .env (Postgres), planilha do .env (app/sheets.py) ou
+    fonte conectada pela tela (banco próprio ou planilha; app/registered_sources.py)."""
     from app import sheets  # aqui, e não no topo: evita import circular (sheets -> dashboards)
+    from app.registered_sources import RegisteredSourceFetcher
 
     if sheets.is_sheet(db_name):
         return sheets.SheetSourceFetcher(db_name)
+    if db_name not in SOURCE_DATABASES and registered is not None:
+        return RegisteredSourceFetcher(registered, db_name)
     return PgSourceFetcher(manager, db_name)
+
+
+def get_registered_sources(request: Request) -> "RegisteredSources | None":
+    """As fontes conectadas pela tela (None sem o banco da plataforma)."""
+    return getattr(request.app.state, "registered_sources", None)
 
 
 def get_source_factory(
     manager: Annotated[DatabaseManager, Depends(get_databases)],
     cache: Annotated[SourceCache, Depends(get_source_cache)],
+    # Any: o FastAPI lê esta anotação em tempo de execução (RegisteredSources só existe no TYPE_CHECKING).
+    registered: Annotated[Any, Depends(get_registered_sources)],
 ) -> SourceFactory:
     """Dependency: db_name -> SourceFetcher daquela fonte (banco ou planilha), com o cache de 5 min."""
-    return lambda db_name: CachedSourceFetcher(cache, source_fetcher(manager, db_name), db_name)
+    return lambda db_name: CachedSourceFetcher(
+        cache, source_fetcher(manager, db_name, registered), db_name
+    )

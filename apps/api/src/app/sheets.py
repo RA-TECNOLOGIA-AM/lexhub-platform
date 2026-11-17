@@ -15,12 +15,15 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
+import re
 import time
 import warnings
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar, Token
 from datetime import date, datetime, timedelta
 from datetime import time as dtime
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
 
 import httpx
 from openpyxl import load_workbook
@@ -58,14 +61,19 @@ def is_sheet(db_name: str) -> bool:
 
 
 class SheetSourceFetcher:
-    """SourceFetcher de uma planilha: `fetch(aba)` devolve as linhas da aba (dicts cabeçalho -> valor)."""
+    """SourceFetcher de uma planilha: `fetch(aba)` devolve as linhas da aba (dicts cabeçalho -> valor).
 
-    def __init__(self, db_name: str):
+    url_loader: de onde vem o link (planilha conectada pela tela: o link decifrado do banco). Sem ele,
+    o link vem do .env (as planilhas registradas em SHEETS)."""
+
+    def __init__(self, db_name: str, url_loader: Callable[[], Awaitable[str]] | None = None):
         self._db = db_name
+        self._url_loader = url_loader
         self._fetched: list[float] = []
 
     async def fetch(self, query_name: str) -> list[Row]:
-        all_sheets = await _download_and_parse(self._db)
+        url = await self._url_loader() if self._url_loader else None
+        all_sheets = await _download_and_parse(self._db, url)
         if query_name not in all_sheets:
             available = ", ".join(all_sheets) or "(nenhuma)"
             raise KeyError(
@@ -101,6 +109,36 @@ async def fetch_sheet(name: str, sheet: str | None = None) -> list[Row]:
     if not aba:
         raise RuntimeError(f"Planilha '{name}' não tem aba padrão; informe o parâmetro `sheet`.")
     return await fonte.fetch(aba)
+
+
+# --- Conectar planilha pela tela: o link colado vira o link de download em XLSX --------------------------
+
+_PUBLISHED = re.compile(r"^/spreadsheets/d/e/([A-Za-z0-9_-]{20,})/pub(?:html)?$")
+_SHARED = re.compile(r"^/spreadsheets/d/([A-Za-z0-9_-]{20,})(?:/.*)?$")
+
+
+class InvalidSheetLink(ValueError):
+    """Não é um link de planilha do Google que a API sabe baixar."""
+
+
+def sheet_download_url(link: str) -> str:
+    """Link colado -> link de download em XLSX. Aceita o "Publicar na Web" (/d/e/.../pub) e o link de
+    compartilhamento (/d/<id>/edit, que precisa estar aberto a quem tiver o link). Só docs.google.com."""
+    parsed = urlsplit(link.strip())
+    if parsed.scheme != "https" or parsed.hostname != "docs.google.com":
+        raise InvalidSheetLink(link)
+    if m := _PUBLISHED.match(parsed.path):
+        return f"https://docs.google.com/spreadsheets/d/e/{m.group(1)}/pub?output=xlsx"
+    if m := _SHARED.match(parsed.path):
+        return f"https://docs.google.com/spreadsheets/d/{m.group(1)}/export?format=xlsx"
+    raise InvalidSheetLink(link)
+
+
+async def sheet_tabs(link: str) -> dict[str, int]:
+    """Baixa a planilha do link e devolve {aba: linhas}. Link inválido = InvalidSheetLink;
+    planilha que não baixa (não publicada, sem acesso, fora do ar) = SourceUnavailable."""
+    sheets = await _download_and_parse("nova planilha", sheet_download_url(link))
+    return {name: len(rows) for name, rows in sheets.items()}
 
 
 def _indisponivel(msg: str) -> Exception:
@@ -142,9 +180,9 @@ def _resolve_url(db_name: str) -> str:
     return url
 
 
-async def _download_and_parse(db_name: str) -> dict[str, list[Row]]:
-    """Baixa a planilha e devolve `{nome_aba: linhas}`."""
-    url = _resolve_url(db_name)
+async def _download_and_parse(db_name: str, url: str | None = None) -> dict[str, list[Row]]:
+    """Baixa a planilha e devolve `{nome_aba: linhas}` (url None = a do .env)."""
+    url = url or _resolve_url(db_name)
     logger.info("Baixando planilha '%s' do Google Sheets", db_name)
     timeout = _http_timeout()
     max_retries = get_settings().SHEETS_HTTP_MAX_RETRIES
