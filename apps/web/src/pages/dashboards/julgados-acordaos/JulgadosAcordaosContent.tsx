@@ -54,25 +54,6 @@ const ordenados = (itens: PontoJulgados[]) => topN(itens, itens.length)
 type Fatia = PontoJulgados & { color: string }
 const comCor = (itens: PontoJulgados[]): Fatia[] => itens.map((p, i) => ({ ...p, color: `var(--pie-${(i % 10) + 1})` }))
 
-// Nome, quantidade e % de cada fatia (na v1 iam em volta da pizza; aqui, embaixo, quando a pizza não tem largura
-// para os rótulos).
-function LegendaPizza({ itens }: { itens: Fatia[] }) {
-    const total = itens.reduce((s, p) => s + p.value, 0)
-    return (
-        <ul className="jl-legend" role="list">
-            {itens.map((p) => (
-                <li key={p.name}>
-                    <span className="chart-key dot" style={{ background: p.color }} />
-                    {p.name}{' '}
-                    <strong className="num">
-                        {fmt.int(p.value)} ({fmt.dec1(total ? (p.value / total) * 100 : 0)}%)
-                    </strong>
-                </li>
-            ))}
-        </ul>
-    )
-}
-
 const TAXA_TITULO: Record<Categoria, string> = {
     procedente: 'Taxa de procedência mês a mês',
     improcedente: 'Taxa de improcedência mês a mês',
@@ -309,6 +290,7 @@ export function JulgadosAcordaosContent({
                                 items={embargos}
                                 centerLabel="embargos"
                                 labels
+                                legendWhenNarrow
                                 sort={false}
                                 selected={filters.resultado_embargos_julgados}
                                 onSelect={filtrar('resultado_embargos_julgados')}
@@ -350,17 +332,15 @@ export function JulgadosAcordaosContent({
                             subtitle={`${fmt.int(totalMateria)} acórdão(s) no período · clique na fatia para filtrar`}
                         >
                             {materias.length > 0 ? (
-                                <>
-                                    <PieChart
-                                        items={materias}
-                                        size={260}
-                                        labels
-                                        selected={filters.materia_julgados}
-                                        onSelect={filtrar('materia_julgados')}
-                                        selectLabel="Filtrar pela matéria"
-                                    />
-                                    <LegendaPizza itens={materias} />
-                                </>
+                                <PieChart
+                                    items={materias}
+                                    size={260}
+                                    labels
+                                    legendWhenNarrow
+                                    selected={filters.materia_julgados}
+                                    onSelect={filtrar('materia_julgados')}
+                                    selectLabel="Filtrar pela matéria"
+                                />
                             ) : (
                                 <ChartEmpty>Sem dados para o período selecionado.</ChartEmpty>
                             )}

@@ -129,25 +129,13 @@
     color: var(--text);
 }
 .jl-taxa-legenda li,
-.jl-legend li,
 .jl-legend-mini > span {
     display: inline-flex;
     align-items: center;
     gap: 6px;
 }
 
-/* legenda da pizza dos embargos e a do ranking (no cabeçalho do cartão) */
-.jl-legend {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px 14px;
-    margin: 10px 0 0;
-    padding: 0;
-    list-style: none;
-    font-size: var(--fs-xs);
-    color: var(--text-2);
-}
+/* legenda do ranking (no cabeçalho do cartão); a das pizzas é a do PieChart (legendWhenNarrow) */
 .jl-legend-mini {
     display: inline-flex;
     flex-wrap: wrap;
@@ -222,17 +210,35 @@ button.jl-rank-row:focus-visible {
 }
 .jl-rank-top {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     min-width: 0;
 }
+/* O nome quebra em até duas linhas (num cartão de um terço da tela, numa linha só ele era cortado logo no
+   começo); passando disso, reticências. */
 .jl-rank-name {
     flex: 1;
     min-width: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
     font-size: var(--fs-sm);
+}
+/* Cartão estreito: sem o avatar das iniciais, o espaço fica para o nome. */
+.jl-rank {
+    container-type: inline-size;
+}
+@container (max-width: 380px) {
+    .jl-rank .jl-av {
+        display: none;
+    }
+    .jl-rank .jl-rank-row {
+        gap: 8px;
+    }
 }
 .jl-rank-casos {
     flex: none;
