@@ -7,7 +7,7 @@
 # deste workflow. Para subir X ou Y, edite o pyproject (ex.: 0.1.0 -> 0.2.0).
 #
 # Segredo do repositório (Settings → Secrets and variables → Actions):
-#   PORTAINER_WEBHOOK_URL  URL do Service webhook do serviço lexhub-api_lexhub-api.
+#   PORTAINER_WEBHOOK_URL  URL do Service webhook do serviço lexhub_api_lexhub-api (stack lexhub_api).
 #                          Enquanto não existir, a imagem é publicada e o webhook é pulado.
 
 name: API (imagem e deploy)

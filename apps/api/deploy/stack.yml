@@ -1,169 +1,141 @@
+version: '3.8'
 
-version: "3.7"
+# LexHub API V2 — stack do Docker Swarm (Portainer). Mesmo padrão do lex-chat:
+# Traefik v3 na rede network_swarm_public, imagem no GHCR e Redis interno.
+#
+# Variáveis da stack (no Portainer, em "Environment variables"):
+#   obrigatórias  SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY, DATABASE_URL,
+#                 DB_NG_*, DB_LAADV_*, DB_LEXFLOW_* (HOST, NAME, USER, PASSWORD)
+#   opcionais     APP_VERSION (padrão latest), DB_*_PORT (padrão 5432), DB_LEXPRE_*,
+#                 GOOGLE_SHEETS_URL_FINANCEIRO_NG/LA, LOG_LEVEL, WEB_BASE_URL, CORS_ORIGINS
+#
+# Validar antes de subir: docker stack config -c apps/api/deploy/stack.yml (com as variáveis defini das).
 
 services:
-  # Define o serviço lexhub-api
-  lexhub-api:
-    # Usa a imagem da lexhub-api no GHCR (versão na variável APP_VERSION)
-    image: ghcr.io/ra-tecnologia-am/lexhub-api:${APP_VERSION}
-    # Redes: a do Traefik (entrada) e a interna, onde fica o Redis
-    networks:
-      - network_public
-      - lexhub_internal
-    # Define as variaveis de ambiente
-    environment:
-      # Define o fuso horário (usado no "hoje" dos cálculos copiados da v1)
-      - TZ=America/Manaus
-      # Porta em que a aplicação escuta (a mesma do loadbalancer.server.port)
-      - PORT=8000
-      # Nível de log (DEBUG, INFO, WARNING ou ERROR)
-      - LOG_LEVEL=INFO
-      # Endereço do front, usado para montar o link do QR Code do login por TV
-      - WEB_BASE_URL=https://hub.lexgroup.com.br
-      # Origens que podem chamar a API pelo navegador (separadas por vírgula).
-      # Transição: o lexhub-platform.vercel.app continua até o hub.lexgroup.com.br apontar para a Vercel.
-      - CORS_ORIGINS=https://hub.lexgroup.com.br,https://lexhub-platform.vercel.app
-      # Confia no X-Forwarded-For vindo do Traefik (IP real na auditoria e no limite
-      # do login por TV); a porta não é publicada, só a rede network_public alcança o container
-      - FORWARDED_ALLOW_IPS=*
-      # URL do projeto Supabase, vinda das variáveis da stack
-      - SUPABASE_URL=${SUPABASE_URL}
-      # Chave publishable do Supabase, vinda das variáveis da stack
-      - SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY}
-      # Chave secreta do Supabase, vinda das variáveis da stack
-      - SUPABASE_SECRET_KEY=${SUPABASE_SECRET_KEY}
-      # Conexão com o banco da plataforma, vinda das variáveis da stack
-      - DATABASE_URL=${DATABASE_URL}
-      # Banco de origem NG, vindo das variáveis da stack
-      - DB_NG_HOST=${DB_NG_HOST}
-      - DB_NG_PORT=${DB_NG_PORT:-5432}
-      - DB_NG_NAME=${DB_NG_NAME}
-      - DB_NG_USER=${DB_NG_USER}
-      - DB_NG_PASSWORD=${DB_NG_PASSWORD}
-      # Banco de origem LAADV, vindo das variáveis da stack
-      - DB_LAADV_HOST=${DB_LAADV_HOST}
-      - DB_LAADV_PORT=${DB_LAADV_PORT:-5432}
-      - DB_LAADV_NAME=${DB_LAADV_NAME}
-      - DB_LAADV_USER=${DB_LAADV_USER}
-      - DB_LAADV_PASSWORD=${DB_LAADV_PASSWORD}
-      # Banco de origem LexFlow, vindo das variáveis da stack
-      - DB_LEXFLOW_HOST=${DB_LEXFLOW_HOST}
-      - DB_LEXFLOW_PORT=${DB_LEXFLOW_PORT:-5432}
-      - DB_LEXFLOW_NAME=${DB_LEXFLOW_NAME}
-      - DB_LEXFLOW_USER=${DB_LEXFLOW_USER}
-      - DB_LEXFLOW_PASSWORD=${DB_LEXFLOW_PASSWORD}
-      # Banco de origem LexPre, vindo das variáveis da stack
-      - DB_LEXPRE_HOST=${DB_LEXPRE_HOST}
-      - DB_LEXPRE_PORT=${DB_LEXPRE_PORT:-5432}
-      - DB_LEXPRE_NAME=${DB_LEXPRE_NAME}
-      - DB_LEXPRE_USER=${DB_LEXPRE_USER}
-      - DB_LEXPRE_PASSWORD=${DB_LEXPRE_PASSWORD}
-      # Planilhas do Google (URL do XLSX publicado), vindas das variáveis da stack: Meta anual
-      - GOOGLE_SHEETS_URL_FINANCEIRO_NG=${GOOGLE_SHEETS_URL_FINANCEIRO_NG}
-      - GOOGLE_SHEETS_URL_FINANCEIRO_LA=${GOOGLE_SHEETS_URL_FINANCEIRO_LA}
-      # Redis da própria stack (serviço lexhub-redis abaixo): cache compartilhado que
-      # sobrevive a deploy/restart da API. Fora do ar, a API segue só com o cache em memória
-      - CACHE_ENABLED=true
-      - REDIS_URL=redis://lexhub-redis:6379/0
-    # Tempo que o Swarm espera antes de matar o container: a aplicação
-    # termina as requisições em andamento ao receber SIGTERM (até 25 s)
-    stop_grace_period: 30s
-
+  # Nome com prefixo de propósito: a API também está na network_swarm_public, e um "redis"
+  # de outra stack nessa rede poderia responder pelo mesmo nome.
+  lexhub-redis:
+    image: redis:8-alpine
+    # Só cache (nada aqui é a única cópia de um dado): sem disco, teto de 1 GB e, cheio,
+    # descarta a chave usada há mais tempo. Fora do ar, a API segue só com o cache em memória.
+    command:
+      [
+        'redis-server',
+        '--save',
+        '',
+        '--appendonly',
+        'no',
+        '--maxmemory',
+        '1gb',
+        '--maxmemory-policy',
+        'allkeys-lru',
+      ]
+    networks: [backend]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
     deploy:
-      # Define o modo de deploy do container
-      mode: replicated
-      # Uma réplica só: cada réplica tem o próprio aquecedor, que repetiria as consultas
-      # no NG, LAADV, LexFlow e LexPre (o Redis já compartilha o cache entre elas, mas
-      # ainda não há trava para um aquecedor só)
       replicas: 1
-      placement:
-        constraints:
-          # Roda só nos workers
-          - node.role == worker
       resources:
-        limits:
-          # Limite de CPU para evitar travamento do Host (o aquecedor recalcula
-          # 37 consultas a cada 4 min)
-          cpus: "2"
-          # Limite de RAM: com o cache cheio a API usa cerca de 1,8 GB
-          memory: 3G
-        reservations:
-          # CPU e RAM reservadas
-          cpus: "0.5"
-          memory: 2G
+        # maxmemory (1 GB) + folga para o próprio processo
+        limits: { cpus: '0.50', memory: 1280M }
       restart_policy:
-        # Reinicia o container se ele falhar
-        condition: on-failure
+        condition: any
+
+  lexhub-api:
+    # A cada push na main que mexe na API, o GitHub Actions publica a :latest (e a :0.1.N).
+    # Para fixar uma versão, defina APP_VERSION.
+    image: ghcr.io/ra-tecnologia-am/lexhub-api:${APP_VERSION:-latest}
+    environment:
+      TZ: America/Manaus
+      PORT: '8000'
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Front: link do QR Code do login por TV e origens liberadas no CORS
+      WEB_BASE_URL: ${WEB_BASE_URL:-https://hub.lexgroup.com.br}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://hub.lexgroup.com.br,https://lexhub-platform.vercel.app}
+      # Confia no X-Forwarded-For do Traefik (IP real na auditoria e no limite do login por TV);
+      # a porta não é publicada, só o Traefik alcança o container
+      FORWARDED_ALLOW_IPS: '*'
+      SUPABASE_URL: ${SUPABASE_URL:?}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:?}
+      # Banco da plataforma (pooler do Supabase): acesso, catálogo e auditoria
+      DATABASE_URL: ${DATABASE_URL:?}
+      # Bancos de origem. Fora do ar, a API sobe mesmo assim e reconecta sozinha; só os
+      # dashboards daquele banco ficam indisponíveis (ver /health/sources dentro do cluster)
+      DB_NG_HOST: ${DB_NG_HOST:?}
+      DB_NG_PORT: ${DB_NG_PORT:-5432}
+      DB_NG_NAME: ${DB_NG_NAME:?}
+      DB_NG_USER: ${DB_NG_USER:?}
+      DB_NG_PASSWORD: ${DB_NG_PASSWORD:?}
+      DB_LAADV_HOST: ${DB_LAADV_HOST:?}
+      DB_LAADV_PORT: ${DB_LAADV_PORT:-5432}
+      DB_LAADV_NAME: ${DB_LAADV_NAME:?}
+      DB_LAADV_USER: ${DB_LAADV_USER:?}
+      DB_LAADV_PASSWORD: ${DB_LAADV_PASSWORD:?}
+      DB_LEXFLOW_HOST: ${DB_LEXFLOW_HOST:?}
+      DB_LEXFLOW_PORT: ${DB_LEXFLOW_PORT:-5432}
+      DB_LEXFLOW_NAME: ${DB_LEXFLOW_NAME:?}
+      DB_LEXFLOW_USER: ${DB_LEXFLOW_USER:?}
+      DB_LEXFLOW_PASSWORD: ${DB_LEXFLOW_PASSWORD:?}
+      # LexPre é opcional na stack: sem HOST, o banco fica desligado e os dashboards dele respondem 503
+      DB_LEXPRE_HOST: ${DB_LEXPRE_HOST:-}
+      DB_LEXPRE_PORT: ${DB_LEXPRE_PORT:-5432}
+      DB_LEXPRE_NAME: ${DB_LEXPRE_NAME:-}
+      DB_LEXPRE_USER: ${DB_LEXPRE_USER:-}
+      DB_LEXPRE_PASSWORD: ${DB_LEXPRE_PASSWORD:-}
+      # Planilhas do Google (URL do XLSX publicado): Meta anual e Financeiro estratégico.
+      # Vazias, só esses cards ficam sem dados
+      GOOGLE_SHEETS_URL_FINANCEIRO_NG: ${GOOGLE_SHEETS_URL_FINANCEIRO_NG:-}
+      GOOGLE_SHEETS_URL_FINANCEIRO_LA: ${GOOGLE_SHEETS_URL_FINANCEIRO_LA:-}
+      # Redis desta stack (L2 do cache, sobrevive a deploy e restart da API)
+      CACHE_ENABLED: 'true'
+      REDIS_URL: redis://lexhub-redis:6379/0
+    networks: [backend, network_swarm_public]
+    # Healthcheck vem da imagem (/health). No SIGTERM o uvicorn espera até 25 s pelas
+    # requisições em andamento; o default de 10 s do Swarm cortaria no meio.
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+    deploy:
+      # Uma réplica só: cada réplica tem o próprio aquecedor, que repetiria as 37 consultas
+      # nos bancos de origem
+      replicas: 1
+      labels:
+        - 'traefik.enable=true'
+        # Só as rotas usadas pelo front saem para a internet; /health, /health/sources e
+        # /docs ficam só dentro do cluster
+        - 'traefik.http.routers.lexhub-api.rule=Host(`api.hub.lexgroup.com.br`) && (PathPrefix(`/me`) || PathPrefix(`/orgs`) || PathPrefix(`/auth`) || PathPrefix(`/sources`))'
+        - 'traefik.http.routers.lexhub-api.entrypoints=websecure'
+        - 'traefik.http.routers.lexhub-api.tls.certresolver=letsencryptresolver'
+        - 'traefik.http.services.lexhub-api.loadbalancer.server.port=8000'
+        - 'traefik.http.services.lexhub-api.loadbalancer.healthcheck.path=/health'
+        - 'traefik.http.services.lexhub-api.loadbalancer.healthcheck.interval=15s'
+        - 'traefik.swarm.network=network_swarm_public'
+      resources:
+        # Com o cache cheio a API usa cerca de 1,8 GB; o aquecedor recalcula as consultas a
+        # cada 4 min, daí o teto de CPU para não estrangular o resto do nó
+        limits: { cpus: '3', memory: 6144M }
       update_config:
-        # Atualiza uma réplica por vez
-        parallelism: 1
-        # Sobe a réplica nova antes de derrubar a antiga (sem indisponibilidade);
-        # por alguns segundos as duas rodam juntas, então o nó precisa de RAM para as duas
+        # Sobe a réplica nova antes de derrubar a antiga; por alguns segundos as duas rodam
+        # juntas, então o nó precisa de RAM para as duas. Se a nova não ficar saudável em
+        # 60 s, volta para a versão anterior.
         order: start-first
-        # Se a réplica nova não ficar saudável em 60 s, volta para a versão anterior
         monitor: 60s
         failure_action: rollback
       rollback_config:
-        parallelism: 1
         order: start-first
-      labels:
-        # Habilita o traefik para o serviço
-        - traefik.enable=true
-        # Define o dominio da lexhub-api (api.hub.lexgroup.com.br); só as rotas usadas pelo front
-        # saem para a internet (/health, /health/sources e /docs ficam só dentro do cluster).
-        # Transição: o hub.lexgroup.com.br continua aceito até o DNS dele apontar para o front na
-        # Vercel; depois, deixe só o Host(`api.hub.lexgroup.com.br`).
-        - traefik.http.routers.lexhubapi.rule=(Host(`api.hub.lexgroup.com.br`) || Host(`hub.lexgroup.com.br`)) && (PathPrefix(`/me`) || PathPrefix(`/orgs`) || PathPrefix(`/auth`))
-        # Define o tipo de entrada da lexhub-api para HTTPS
-        - traefik.http.routers.lexhubapi.entrypoints=websecure
-        # Define o certificado da lexhub-api
-        - traefik.http.routers.lexhubapi.tls.certresolver=letsencryptresolver
-        # Define o nome do serviço no traefik
-        - traefik.http.routers.lexhubapi.service=lexhubapi
-        # Define a porta da lexhub-api
-        - traefik.http.services.lexhubapi.loadbalancer.server.port=8000
-        # O traefik só manda requisições para réplicas que respondem no /health
-        - traefik.http.services.lexhubapi.loadbalancer.healthcheck.path=/health
-        - traefik.http.services.lexhubapi.loadbalancer.healthcheck.interval=15s
-
-  # Define o serviço lexhub-redis (cache da lexhub-api; nada aqui é a única cópia de um dado)
-  lexhub-redis:
-    image: redis:8-alpine
-    # Sem disco (é só cache), teto de memória e, cheio, sai a chave usada há mais tempo
-    command:
-      - redis-server
-      - --save
-      - ""
-      - --appendonly
-      - "no"
-      - --maxmemory
-      - 1gb
-      - --maxmemory-policy
-      - allkeys-lru
-    # Só na rede interna: o Redis não fica acessível pelo Traefik nem por outras stacks
-    networks:
-      - lexhub_internal
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == worker
-      resources:
-        limits:
-          cpus: "0.5"
-          # maxmemory (1 GB) + folga para o próprio processo
-          memory: 1280M
-        reservations:
-          memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
 
 networks:
-  network_public:
-    external: true
-    name: network_public
-  # Rede só desta stack (API <-> Redis)
-  lexhub_internal:
+  backend:
     driver: overlay
-    internal: true
+  network_swarm_public:
+    external: true

@@ -4,7 +4,7 @@ import pytest
 
 from app.dashboards import DASHBOARDS
 from app.dashboards.base import DashboardInputError, DashboardModule, parse_filters, resolve_period
-from app.sources import SourceUnavailable
+from app.database import SourceUnavailable
 from conftest import USER_ID
 
 URL = "/orgs/lexgroup/units/NG/dashboards/protocolo-lexpre"

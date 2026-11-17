@@ -26,6 +26,7 @@ import httpx
 from openpyxl import load_workbook
 
 from app.config import get_settings
+from app.database import SourceUnavailable
 
 if TYPE_CHECKING:
     from app.dashboards.base import SourceFetcher
@@ -103,10 +104,7 @@ async def fetch_sheet(name: str, sheet: str | None = None) -> list[Row]:
 
 
 def _indisponivel(msg: str) -> Exception:
-    """Planilha sem URL ou que não baixou: SourceUnavailable (503 na casca, como banco fora do ar).
-    Importado aqui (não no topo): app.sources -> app.dashboards -> meta_anual -> app.sheets."""
-    from app.sources import SourceUnavailable
-
+    """Planilha sem URL ou que não baixou: SourceUnavailable (503 na casca, como banco fora do ar)."""
     return SourceUnavailable(msg)
 
 
