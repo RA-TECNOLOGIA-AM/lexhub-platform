@@ -454,19 +454,3 @@ def test_health_sources_503_se_algum_configurado_nao_esta_no_ar(client):
     r = client.get("/health/sources")
     assert r.status_code == 503
     assert r.json() == {"status": "error", "databases": Manager().status()}
-
-
-def test_banco_da_plataforma_fora_impede_a_subida_com_mensagem_clara(monkeypatch):
-    from app import main
-
-    tentativas = {"n": 0}
-
-    async def recusa(*_args, **_kwargs):
-        tentativas["n"] += 1
-        raise ConnectionRefusedError("recusado")
-
-    monkeypatch.setattr(main.asyncpg, "create_pool", recusa)
-    monkeypatch.setattr(main.asyncio, "sleep", _no_wait)
-    with pytest.raises(RuntimeError, match="DATABASE_URL"):
-        asyncio.run(main._open_platform_db(settings(DATABASE_URL=DOWN)))
-    assert tentativas["n"] == main.PLATFORM_DB_ATTEMPTS

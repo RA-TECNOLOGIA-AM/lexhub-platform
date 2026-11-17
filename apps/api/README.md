@@ -23,7 +23,7 @@ Preencha o `.env` com valores de desenvolvimento/staging fornecidos pela equipe.
 | `SUPABASE_JWT_SECRET` | Opcional; somente para projetos que ainda assinam JWT legado com HS256. |
 | `CORS_ORIGINS` | Origens web permitidas, separadas por vírgula. Vazio significa nenhuma origem. |
 | `DB_<FONTE>_URL` ou `DB_<FONTE>_NAME/USER/PASSWORD/HOST/PORT` | Conexões das fontes `NG`, `LAADV`, `LEXFLOW` e `LEXPRE`. URL tem prioridade; fonte sem configuração fica desligada. |
-| `SOURCE_CACHE_*`, `DB_POOL_*`, `DB_CONNECT_TIMEOUT`, `DB_QUERY_CONCURRENCY_*` | Ajustes opcionais do cache, pools, tempo limite de conexão e concorrência; padrões definidos em `app/config.py`. |
+| `SOURCE_CACHE_*`, `DB_POOL_*`, `DB_CONNECT_TIMEOUT`, `DB_QUERY_CONCURRENCY_*`, `PLATFORM_DB_*` | Ajustes opcionais do cache, pools, tempo limite de conexão e concorrência; padrões definidos em `app/config.py`. |
 
 As conexões dos bancos de origem são somente leitura. O `.env.example` documenta as variáveis e seus valores padrão. Para desenvolvimento local do front, libere `http://localhost:5173` em `CORS_ORIGINS`.
 
@@ -48,7 +48,10 @@ docker run --rm --env-file .env -p 8001:8000 lexhub-api:dev
 
 - **Uma réplica e um worker do uvicorn:** o cache das fontes e o aquecedor ficam em memória. Mais processos multiplicam as consultas nos bancos de origem.
 - **Bancos de origem fora do ar:** a API não espera NG, LAADV, LexFlow nem LexPre para subir. Cada banco conecta numa tarefa de fundo e, sem resposta, fica `down` e é tentado de novo sozinho (1 s, 2 s, 4 s... até 1 min entre as tentativas). Banco que cai durante o uso também é marcado `down` e conferido até voltar. Enquanto isso, só os dashboards daquele banco respondem 503, ou o último dado bom do cache por até 1 h. Cada conexão nova tem tempo limite de `DB_CONNECT_TIMEOUT` (10 s), então o motivo aparece no log em segundos.
-- **Banco da plataforma (`DATABASE_URL`):** este sim impede a subida. São 3 tentativas com o mesmo tempo limite; se todas falharem, a API sai com erro, e num deploy o Swarm volta à versão anterior.
+- **Banco da plataforma (`DATABASE_URL`):** este sim impede a subida. São 3 tentativas; se todas falharem, a API sai com erro, e num deploy o Swarm volta à versão anterior. O pooler do Supabase fica em São Paulo e abrir conexão leva de 1 a 10 s, então:
+  - o tempo limite para abrir conexão é próprio, `PLATFORM_DB_CONNECT_TIMEOUT` (30 s);
+  - as conexões mínimas (`PLATFORM_DB_POOL_MIN_SIZE`, 2) ficam abertas, com um `select 1` a cada `PLATFORM_DB_KEEPALIVE_INTERVAL` (1 min). Assim nem o pool (5 min parada) nem o balanceador da AWS na frente do pooler (350 s ociosa) as fecham, e a requisição do usuário não paga a abertura;
+  - sem conexão com o banco, qualquer rota responde 503 ("Banco de dados indisponível no momento"), não 500. Ver `app/platform_db.py`.
 - **Atrás do proxy:** defina `FORWARDED_ALLOW_IPS` com o IP ou a rede do proxy reverso. Assim, o IP real do cliente chega à auditoria e ao limite do login por TV.
 - **Fuso:** `TZ=America/Manaus` já vem na imagem. `PORT` (padrão 8000) muda a porta interna.
 - **Desligamento:** o `tini` é o PID 1. No SIGTERM, o uvicorn espera até 25 s pelas requisições em andamento.

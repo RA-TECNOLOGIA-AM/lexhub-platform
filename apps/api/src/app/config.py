@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Bancos de origem, com os mesmos nomes de variáveis da v1 (api_dashboards):
@@ -26,6 +26,16 @@ class Settings(BaseSettings):
     # Conexão direta ao Postgres (pooler do Supabase). Usada para a checagem de
     # acesso (app_private) e a auditoria. Vazio = rotas protegidas respondem 503.
     DATABASE_URL: str = ""
+    # Pool do banco da plataforma (ver app/platform_db.py). Abrir conexão com o pooler do Supabase
+    # (TLS + autenticação, em outra região) leva de 1 a 10 s: o tempo limite é maior que o dos
+    # bancos de origem, e as conexões mínimas ficam abertas e testadas a cada
+    # PLATFORM_DB_KEEPALIVE_INTERVAL s, para a requisição do usuário não pagar esse tempo.
+    PLATFORM_DB_CONNECT_TIMEOUT: float = Field(default=30.0, ge=1.0, le=120.0)
+    PLATFORM_DB_POOL_MIN_SIZE: int = Field(default=2, ge=1, le=20)
+    PLATFORM_DB_POOL_MAX_SIZE: int = Field(default=10, ge=1, le=50)
+    # Menor que os 5 min em que o pool fecha conexão parada e que os 350 s em que o balanceador
+    # da AWS na frente do pooler corta conexão TCP ociosa.
+    PLATFORM_DB_KEEPALIVE_INTERVAL: float = Field(default=60.0, ge=5.0, le=280.0)
     CORS_ORIGINS: str = Field(default="", description="Origens separadas por vírgula")
     # Logs do terminal: DEBUG mostra também health checks, preflight e o motivo de token recusado.
     LOG_LEVEL: str = Field(default="INFO", pattern=r"(?i)^(DEBUG|INFO|WARNING|ERROR)$")
@@ -75,8 +85,9 @@ class Settings(BaseSettings):
     # Espera máxima por uma conexão livre do pool (s), incluindo abrir uma nova.
     DB_POOL_ACQUIRE_TIMEOUT: float = Field(default=120.0, ge=1.0)
     DB_POOL_MAX_QUERIES: int = Field(default=10_000, ge=100)
-    # Tempo limite para abrir cada conexão (s), nos bancos de origem e no da plataforma. Curto de
-    # propósito: banco que não responde aparece no log em segundos, não depois de minutos.
+    # Tempo limite para abrir cada conexão com um banco de origem (s). Curto de propósito: banco
+    # que não responde aparece no log em segundos, e a reconexão segue em segundo plano. O banco
+    # da plataforma tem o próprio (PLATFORM_DB_CONNECT_TIMEOUT).
     DB_CONNECT_TIMEOUT: float = Field(default=10.0, ge=1.0, le=120.0)
 
     # Consultas simultâneas por banco (mesmos padrões da v1): protege a origem.
@@ -105,6 +116,14 @@ class Settings(BaseSettings):
     # Timeout de conexão/comando (v1: 2 s) e espera antes de tentar de novo após uma falha.
     REDIS_SOCKET_TIMEOUT: float = Field(default=2.0, gt=0, le=30)
     REDIS_RETRY_AFTER: float = Field(default=30.0, ge=1)
+
+    @model_validator(mode="after")
+    def _pool_da_plataforma(self) -> "Settings":
+        if self.PLATFORM_DB_POOL_MIN_SIZE > self.PLATFORM_DB_POOL_MAX_SIZE:
+            raise ValueError(
+                "PLATFORM_DB_POOL_MIN_SIZE não pode ser maior que PLATFORM_DB_POOL_MAX_SIZE"
+            )
+        return self
 
     @property
     def cors_origins(self) -> list[str]:
