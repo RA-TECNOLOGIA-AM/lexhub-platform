@@ -48,14 +48,22 @@ async def wait_for(condition, timeout: float = 5.0) -> None:
 
 
 class FakeConn:
-    """Conexão de mentira: registra a ordem das chamadas (transação, consulta, fim)."""
+    """Conexão de mentira: registra a ordem das chamadas (transação, consulta, fim).
+
+    Imita o proxy do pool do asyncpg: depois de devolvida (`released`), recusa chamadas.
+    """
 
     def __init__(self, rows=None, closed: bool = False):
         self.calls: list[str] = []
         self._rows = rows or []
         self.closed = closed
+        self.released = False
 
     def is_closed(self) -> bool:
+        if self.released:
+            raise asyncpg.InterfaceError(
+                "cannot call Connection.is_closed(): connection has been released back to the pool"
+            )
         return self.closed
 
     def transaction(self, **kwargs):
@@ -258,9 +266,13 @@ class FakeManager:
 
         class _Ctx:
             async def __aenter__(self):
+                if conn is not None:
+                    conn.released = False
                 return conn
 
             async def __aexit__(self, *exc):
+                if conn is not None:
+                    conn.released = True  # como o pool: devolvida, a conexão recusa chamadas
                 return False
 
         return _Ctx()
@@ -350,9 +362,11 @@ def test_conexao_fechada_ate_o_limite_marca_o_banco_fora(sem_espera):
     async def operation(_conn):
         raise asyncpg.InterfaceError(CLOSED)
 
-    with pytest.raises(SourceUnavailable):
+    with pytest.raises(SourceUnavailable) as caught:
         asyncio.run(run_with_connection_retry(manager, "lexflow", operation, max_retries=2))
-    assert manager.failures == [("lexflow", "InterfaceError")]
+    assert manager.failures == [("lexflow", "ConnectionLost")]
+    # A cadeia guarda o erro original do asyncpg para o log.
+    assert isinstance(caught.value.__cause__.__cause__, asyncpg.InterfaceError)
 
 
 def test_retry_cache_de_statement_velho_esgota_sem_marcar_o_banco_fora(sem_espera):
