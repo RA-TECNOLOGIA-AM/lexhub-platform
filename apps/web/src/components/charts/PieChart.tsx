@@ -11,6 +11,7 @@ type PieChartProps = {
     size?: number
     format?: (v: number) => string
     centerLabel?: string // embaixo do total, no meio da rosca
+    centerFormat?: (v: number) => string // o total do meio, se diferente das fatias (ex.: sem o 'R$', que cabe)
     selected?: string[]
     onSelect?: (name: string) => void
     selectLabel?: string
@@ -38,6 +39,7 @@ export function PieChart({
     size = 320,
     format = fmt.int,
     centerLabel,
+    centerFormat,
     selected = [],
     onSelect,
     selectLabel = 'Filtrar por',
@@ -179,7 +181,11 @@ export function PieChart({
                             )
                         })}
                 </svg>
-                <span className="pie-center" aria-live="polite" style={{ width: inner * 1.6 }}>
+                <span
+                    className={(centerFormat ?? format)(total).length > 6 ? 'pie-center longo' : 'pie-center'}
+                    aria-live="polite"
+                    style={{ width: inner * 1.6 }}
+                >
                     {atual ? (
                         <>
                             <span className="pie-center-name" title={atual.name}>
@@ -192,7 +198,7 @@ export function PieChart({
                     ) : (
                         <>
                             <strong className="num">
-                                <CountUp value={total} format={format} />
+                                <CountUp value={total} format={centerFormat ?? format} />
                             </strong>
                             {centerLabel && <span>{centerLabel}</span>}
                         </>

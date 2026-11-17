@@ -55,11 +55,13 @@ export function LineChart({
     }
 
     const { max, ticks } = niceScale(Math.max(...all, reference?.value ?? 0))
-    const plotW = Math.max(width - PAD.left - PAD.right, 40)
+    // Margem do eixo do tamanho do maior rótulo (ex.: '800 mil'), para não cortar.
+    const padLeft = Math.max(PAD.left, Math.max(...ticks.map((t) => fmt.eixo(t).length)) * 7 + 16)
+    const plotW = Math.max(width - padLeft - PAD.right, 40)
     const plotH = height - PAD.top - PAD.bottom
     const base = PAD.top + plotH
     const step = labels.length > 1 ? plotW / (labels.length - 1) : 0
-    const x = (i: number) => PAD.left + (labels.length > 1 ? step * i : plotW / 2)
+    const x = (i: number) => padLeft + (labels.length > 1 ? step * i : plotW / 2)
     const y = (v: number) => base - (v / max) * plotH
     // Rótulos do eixo x sem encavalar: o espaço de um rótulo depende do maior texto ('jan' cabe mais junto
     // que 'setembro'); onde não há rótulo, o ponto também fica sem o número.
@@ -75,7 +77,7 @@ export function LineChart({
 
     const indexAt = (clientX: number, el: Element) => {
         const left = el.getBoundingClientRect().left
-        const i = Math.round((clientX - left - PAD.left) / (step || 1))
+        const i = Math.round((clientX - left - padLeft) / (step || 1))
         return Math.min(labels.length - 1, Math.max(0, i))
     }
     const onMove = (e: MouseEvent<SVGSVGElement>) => setHover(indexAt(e.clientX, e.currentTarget))
@@ -110,13 +112,13 @@ export function LineChart({
                 </defs>
                 {ticks.map((t) => (
                     <g key={t}>
-                        <line className="chart-grid" x1={PAD.left} x2={PAD.left + plotW} y1={y(t)} y2={y(t)} />
-                        <text className="chart-axis" x={PAD.left - 10} y={y(t)} dy="0.32em" textAnchor="end">
-                            {fmt.int(t)}
+                        <line className="chart-grid" x1={padLeft} x2={padLeft + plotW} y1={y(t)} y2={y(t)} />
+                        <text className="chart-axis" x={padLeft - 10} y={y(t)} dy="0.32em" textAnchor="end">
+                            {fmt.eixo(t)}
                         </text>
                     </g>
                 ))}
-                <line className="chart-baseline" x1={PAD.left} x2={PAD.left + plotW} y1={base} y2={base} />
+                <line className="chart-baseline" x1={padLeft} x2={padLeft + plotW} y1={base} y2={base} />
                 {labels.map((l, i) =>
                     comRotulo(i) ? (
                         <g key={l}>
@@ -134,8 +136,8 @@ export function LineChart({
                 )}
                 {reference && (
                     <g className="chart-ref">
-                        <line x1={PAD.left} x2={PAD.left + plotW} y1={y(reference.value)} y2={y(reference.value)} />
-                        <text x={PAD.left + plotW} y={y(reference.value) - 7} textAnchor="end">
+                        <line x1={padLeft} x2={padLeft + plotW} y1={y(reference.value)} y2={y(reference.value)} />
+                        <text x={padLeft + plotW} y={y(reference.value) - 7} textAnchor="end">
                             {reference.label}
                         </text>
                     </g>

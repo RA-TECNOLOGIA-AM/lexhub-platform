@@ -64,6 +64,14 @@ export type DashboardFilters = {
     rubrica?: string[]
     // Protocolo (banco legado): sistema de protocolo (a v1 usa um só).
     sistema?: string[]
+    // Financeiro Estratégico: os filtros da página (origem, ano de ajuizamento) e os seletores próprios da seção
+    // Conversão (conv_*) e do modal de Clientes Pendentes (pend_*: ano e mês do TED).
+    origem?: string[]
+    ano_ajuizamento?: string[]
+    conv_ano_ajuizamento?: string[]
+    conv_ano_financeiro?: string[]
+    pend_ano?: string[]
+    pend_mes?: string[]
 }
 
 export type DashboardQuery = { org: string; unit: string; from?: string; to?: string; filters?: DashboardFilters }

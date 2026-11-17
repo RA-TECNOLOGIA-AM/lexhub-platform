@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { countFilters, filterChips, toggleFilter, type FilterField } from '../../lib/filters.ts'
+import { countFilters, filterChips, semInline, soInline, toggleFilter, type FilterField } from '../../lib/filters.ts'
 import type { DashboardFilters } from '../../types/index.ts'
 import { TopbarPortal } from '../layout/TopbarSlot.tsx'
 import { Icon } from '../ui/Icon.tsx'
@@ -20,7 +20,10 @@ export function DashboardToolbar({ filterFields, filters, onFiltersChange, perio
     const [filtersOpen, setFiltersOpen] = useState(false)
     const filterButton = useRef<HTMLButtonElement>(null)
     const chips = filterChips(filterFields, filters)
-    const count = countFilters(filters)
+    // Seletores de seção (`inline`) ficam fora do contador, da janela e do "Limpar todos".
+    const count = countFilters(semInline(filters, filterFields))
+    const dialogFields = filterFields.filter((f) => !f.inline)
+    const limparTodos = () => onFiltersChange(soInline(filters, filterFields))
 
     function closeFilters() {
         setFiltersOpen(false)
@@ -71,7 +74,7 @@ export function DashboardToolbar({ filterFields, filters, onFiltersChange, perio
                         ))}
                     </div>
                     <div className="dash-bar-actions">
-                        <button type="button" className="linkbtn muted" onClick={() => onFiltersChange({})}>
+                        <button type="button" className="linkbtn muted" onClick={limparTodos}>
                             Limpar todos
                         </button>
                     </div>
@@ -79,7 +82,14 @@ export function DashboardToolbar({ filterFields, filters, onFiltersChange, perio
             )}
 
             {filtersOpen && (
-                <FilterDialog fields={filterFields} value={filters} onApply={onFiltersChange} onClose={closeFilters} />
+                <FilterDialog
+                    fields={dialogFields}
+                    value={filters}
+                    onApply={(next) =>
+                        onFiltersChange({ ...soInline(filters, filterFields), ...semInline(next, filterFields) })
+                    }
+                    onClose={closeFilters}
+                />
             )}
         </>
     )

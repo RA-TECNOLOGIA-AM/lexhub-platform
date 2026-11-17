@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     # Logs do terminal: DEBUG mostra também health checks, preflight e o motivo de token recusado.
     LOG_LEVEL: str = Field(default="INFO", pattern=r"(?i)^(DEBUG|INFO|WARNING|ERROR)$")
 
+    # --- Planilhas do Google publicadas como XLSX (iguais à v1; app/sheets.py). URL vazia = desligada. ---
+    GOOGLE_SHEETS_URL_FINANCEIRO_NG: str = ""
+    GOOGLE_SHEETS_URL_FINANCEIRO_LA: str = ""
+    SHEETS_HTTP_TIMEOUT: float = 15.0  # conexão (s)
+    SHEETS_HTTP_READ_TIMEOUT: float = 60.0  # download (s)
+    SHEETS_HTTP_MAX_RETRIES: int = 3
+
     # --- Bancos de origem (iguais à v1). Banco sem variáveis = desligado. ---
     DB_NG_URL: str = ""
     DB_NG_NAME: str = ""

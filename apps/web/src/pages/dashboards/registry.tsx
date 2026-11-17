@@ -111,4 +111,8 @@ export const DASHBOARD_PAGES: Record<string, ComponentType> = {
         () => import('./meta-anual/index.ts'),
         (m) => m.metaAnual,
     ),
+    'financeiro-estrategico': lazyDashboard(
+        () => import('./financeiro-estrategico/index.ts'),
+        (m) => m.financeiroEstrategico,
+    ),
 }
