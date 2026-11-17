@@ -36,6 +36,7 @@ import { metaFor } from './mock/helpers.ts'
 import { orgDocumentosLegadoFor } from './mock/orgDocumentosLegado.ts'
 import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
 import { financeiroEstrategicoFor } from './mock/financeiroEstrategico.ts'
+import { acordosFor, execucaoFor } from './mock/execucao.ts'
 import { metaAnualFor } from './mock/metaAnual.ts'
 import { preProtocoloFor } from './mock/preProtocolo.ts'
 import { peticionamentoLegadoFor } from './mock/peticionamentoLegado.ts'
@@ -139,6 +140,8 @@ const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unk
     'pre-protocolo': preProtocoloFor,
     'meta-anual': metaAnualFor,
     'financeiro-estrategico': financeiroEstrategicoFor,
+    execucao: execucaoFor,
+    acordos: acordosFor,
 }
 
 export function createMockClient(): DataClient {

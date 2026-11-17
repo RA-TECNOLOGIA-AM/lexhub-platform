@@ -1,10 +1,10 @@
 """Dashboards "genéricos" da v1 (ramos de _get_dashboard_response) usados pela V2 — cópia SEM mudança.
 
-Origem: api_dashboards/src/app/dashboard_routes.py (cópia de 11/11/2026; linha na v1 ao lado de cada bloco).
-Gerado por script a partir da v1: handlers das rotas (sem os decoradores), ramos
-`if dashboard_name == ...` e tudo que eles usam. Únicas trocas, marcadas com "V2:":
+Origem: api_dashboards/src/app/dashboard_routes.py (linha na v1 ao lado de cada bloco).
+Gerado por scripts/copiar_v1/gerar_generico.py (banco lexflow). Únicas trocas, marcadas com "V2:":
   * fetch_*: buscam pela fonte da V2 (`usar_fonte`), com o recorte de situação do processo da v1;
-  * _get_dashboard_response: mesmo início da v1 (fontes, datas, _f/_a), só com os ramos abaixo.
+  * _get_dashboard_response: mesmo início da v1 (fontes, datas, _f/_a), só com os ramos abaixo;
+  * fontes de outro banco saem de FETCHES_BY_DASHBOARD (chegam vazias, como na v1 com a fonte fora do ar).
 Dashboards: execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA.
 """
 
@@ -15,6 +15,7 @@ from contextvars import ContextVar
 from app.analyses.LA.execucao_LA import (
     ExecucaoAtividadesFiltros,
     SITUACOES_VALIDAS_EXECUCAO,
+    _extrair_duracoes_dias as _duracoes_execucao_la,
     _get_ag_processo_id,
     filter_execucao_LA_por_ano_ajuizamento,
     filter_execucao_LA_por_comarca,
@@ -39,6 +40,7 @@ from app.analyses.LA.execucao_LA import (
     get_opcoes_materia_execucao_LA,
     get_opcoes_subfase_execucao_LA,
     get_opcoes_uf_execucao_LA,
+    get_taxa_atualizacao_execucao_LA,
     get_taxa_recuperacao_execucao_LA,
     get_total_execucao_LA,
     get_total_incontroverso_saida_periodo_LA,
@@ -88,6 +90,7 @@ from app.analyses.LA.execucao_LA import (
     list_processos_alvara_expedido_LA,
 )
 from app.analyses.LA.execucao_acordos_LA import (
+    _extrair_duracoes_dias as _duracoes_execucao_acordos_la,
     filter_execucao_acordos_LA_por_ano_ajuizamento,
     filter_execucao_acordos_LA_por_comarca,
     filter_execucao_acordos_LA_por_materia,
@@ -227,7 +230,11 @@ from app.analyses.LA.recurso_LA import (
     processo_ids_recursal_de_agendamentos_recursos_LA,
     set_atividades_recursos_LA_catalogo,
 )
+from app.analyses.NG.comercial_geral import (
+    filter_comercial_geral_por_area_atuacao,
+)
 from app.analyses.NG.execucao import (
+    _extrair_duracoes_dias as _duracoes_execucao_ng,
     _filtrar_entrada_execucao_no_periodo as _filtrar_entrada_execucao_no_periodo_ng,
     _get_ag_processo_id_ng,
     filter_execucao_por_ano_ajuizamento,
@@ -258,6 +265,7 @@ from app.analyses.NG.execucao import (
     get_opcoes_materia_execucao,
     get_opcoes_subfase_execucao,
     get_opcoes_uf_execucao,
+    get_taxa_atualizacao_execucao_NG,
     get_taxa_recuperacao_execucao,
     get_total_diligencias_execucao_NG,
     get_total_execucao,
@@ -310,6 +318,7 @@ from app.analyses.NG.execucao import (
     list_processos_diligencia_expedicao_alvara_cumprida_execucao_NG,
 )
 from app.analyses.NG.execucao_acordos import (
+    _extrair_duracoes_dias as _duracoes_execucao_acordos_ng,
     filter_execucao_acordos_por_ano_ajuizamento,
     filter_execucao_acordos_por_comarca,
     filter_execucao_acordos_por_materia,
@@ -443,6 +452,7 @@ from app.analyses.NG.recurso_NG import (
     set_atividades_recursos_NG_catalogo,
 )
 from app.analyses.RJ.execucao_RJ import (
+    _extrair_duracoes_dias_rj as _duracoes_execucao_rj,
     _filtrar_entrada_execucao_RJ_no_periodo as _filtrar_entrada_execucao_no_periodo_rj,
     _get_ag_processo_id_rj,
     filter_execucao_RJ_por_ano_ajuizamento,
@@ -473,6 +483,7 @@ from app.analyses.RJ.execucao_RJ import (
     get_opcoes_materia_execucao_RJ,
     get_opcoes_subfase_execucao_RJ,
     get_opcoes_uf_execucao_RJ,
+    get_taxa_atualizacao_execucao_RJ,
     get_taxa_recuperacao_execucao_RJ,
     get_total_diligencias_execucao_RJ,
     get_total_execucao_RJ,
@@ -525,6 +536,7 @@ from app.analyses.RJ.execucao_RJ import (
     list_processos_diligencia_expedicao_alvara_cumprida_execucao_RJ,
 )
 from app.analyses.RJ.execucao_acordos_RJ import (
+    _extrair_duracoes_dias as _duracoes_execucao_acordos_rj,
     filter_execucao_acordos_RJ_por_ano_ajuizamento,
     filter_execucao_acordos_RJ_por_comarca,
     filter_execucao_acordos_RJ_por_materia,
@@ -632,7 +644,7 @@ from app.sources import SourceUnavailable  # V2: fonte fora do ar vira 503 na ca
 # V2: fonte do banco de origem (no lugar de fetch_data_with_cache da v1). A casca passa a fonte do
 # dashboard (SourceFetcher, já com o cache de 5 min) por `usar_fonte`; o recorte de situação do processo
 # é o mesmo que a v1 aplica em fetch_data_with_cache.
-_fonte_ctx: ContextVar[Any] = ContextVar("fonte_v1_generico")
+_fonte_ctx: ContextVar[Any] = ContextVar("fonte_v1_generico_lexflow")
 
 def usar_fonte(fonte):
     """Define a fonte das buscas deste contexto; devolve o token para `_fonte_ctx.reset`."""
@@ -643,119 +655,116 @@ async def _fetch_v2(query_name: str) -> List[Dict[str, Any]]:
     return aplicar_filtro_situacao_processo(query_name, await _fonte_ctx.get().fetch(query_name))
 
 
-# V2: v1 dashboard_routes.py:2708 -> fetch_data_with_cache('execucao_LA', ...)
-async def fetch_execucao_LA() -> List[Dict[str, Any]]:
-    return await _fetch_v2('execucao_LA')
-
-
-# V2: v1 dashboard_routes.py:2711 -> fetch_data_with_cache('setor_recurso', ...)
-async def fetch_recursal_LA() -> List[Dict[str, Any]]:
-    return await _fetch_v2('setor_recurso')
-
-
-# V2: v1 dashboard_routes.py:2714 -> fetch_data_with_cache('agendamentos_setor_recursos_LA', ...)
-async def fetch_agendamentos_setor_recursos_LA() -> List[Dict[str, Any]]:
-    return await _fetch_v2('agendamentos_setor_recursos_LA')
-
-
-# V2: v1 dashboard_routes.py:2720 -> fetch_data_with_cache('setor_recurso_NG', ...)
-async def fetch_recursal_NG() -> List[Dict[str, Any]]:
-    return await _fetch_v2('setor_recurso_NG')
-
-
-# V2: v1 dashboard_routes.py:2723 -> fetch_data_with_cache('agendamentos_setor_recursos_NG', ...)
-async def fetch_agendamentos_setor_recursos_NG() -> List[Dict[str, Any]]:
-    return await _fetch_v2('agendamentos_setor_recursos_NG')
-
-
-# V2: v1 dashboard_routes.py:2729 -> fetch_data_with_cache('atividades_setor_recursos_NG', ...)
-async def fetch_atividades_setor_recursos_NG() -> List[Dict[str, Any]]:
-    return await _fetch_v2('atividades_setor_recursos_NG')
-
-
-# V2: v1 dashboard_routes.py:2735 -> fetch_data_with_cache('atividades_setor_recursos_LA', ...)
-async def fetch_atividades_setor_recursos_LA() -> List[Dict[str, Any]]:
-    return await _fetch_v2('atividades_setor_recursos_LA')
-
-
-# V2: v1 dashboard_routes.py:2748 -> fetch_data_with_cache('agendamentos_setor_execucao_LA', ...)
-async def fetch_agendamentos_setor_execucao_LA() -> List[Dict[str, Any]]:
-    return await _fetch_v2('agendamentos_setor_execucao_LA')
-
-
-# V2: v1 dashboard_routes.py:2844 -> fetch_data_with_cache('execucao_LA', ...)
+# V2: v1 dashboard_routes.py:3021 -> fetch_data_with_cache('execucao_LA', ...)
 async def fetch_execucao() -> List[Dict[str, Any]]:
     return await _fetch_v2('execucao_LA')
 
 
-# V2: v1 dashboard_routes.py:2847 -> fetch_data_with_cache('execucao_RJ', ...)
-async def fetch_execucao_RJ() -> List[Dict[str, Any]]:
-    return await _fetch_v2('execucao_RJ')
-
-
-# V2: v1 dashboard_routes.py:2850 -> fetch_data_with_cache('execucao_acordos_NG', ...)
-async def fetch_execucao_acordos_NG() -> List[Dict[str, Any]]:
-    return await _fetch_v2('execucao_acordos_NG')
-
-
-# V2: v1 dashboard_routes.py:2853 -> fetch_data_with_cache('execucao_acordos_LA', ...)
-async def fetch_execucao_acordos_LA() -> List[Dict[str, Any]]:
-    return await _fetch_v2('execucao_acordos_LA')
-
-
-# V2: v1 dashboard_routes.py:2856 -> fetch_data_with_cache('execucao_acordos_RJ', ...)
-async def fetch_execucao_acordos_RJ() -> List[Dict[str, Any]]:
-    return await _fetch_v2('execucao_acordos_RJ')
-
-
-# V2: v1 dashboard_routes.py:2859 -> fetch_data_with_cache('agendamentos_fechamento_acordos_NG', ...)
-async def fetch_agendamentos_fechamento_acordos_NG() -> List[Dict[str, Any]]:
-    return await _fetch_v2('agendamentos_fechamento_acordos_NG')
-
-
-# V2: v1 dashboard_routes.py:2877 -> fetch_data_with_cache('agendamentos_fechamento_acordos_LA', ...)
-async def fetch_agendamentos_fechamento_acordos_LA() -> List[Dict[str, Any]]:
-    return await _fetch_v2('agendamentos_fechamento_acordos_LA')
-
-
-# V2: v1 dashboard_routes.py:2883 -> fetch_data_with_cache('agendamentos_fechamento_acordos_RJ', ...)
-async def fetch_agendamentos_fechamento_acordos_RJ() -> List[Dict[str, Any]]:
-    return await _fetch_v2('agendamentos_fechamento_acordos_RJ')
-
-
-# V2: v1 dashboard_routes.py:2889 -> fetch_data_with_cache('agendamentos_setor_execucao_NG', ...)
+# V2: v1 dashboard_routes.py:3066 -> fetch_data_with_cache('agendamentos_setor_execucao_NG', ...)
 async def fetch_agendamentos_setor_execucao_NG() -> List[Dict[str, Any]]:
     return await _fetch_v2('agendamentos_setor_execucao_NG')
 
 
-# V2: v1 dashboard_routes.py:2895 -> fetch_data_with_cache('agendamentos_setor_execucao_acordos_NG', ...)
-async def fetch_agendamentos_setor_execucao_acordos_NG() -> List[Dict[str, Any]]:
-    return await _fetch_v2('agendamentos_setor_execucao_acordos_NG')
+# V2: v1 dashboard_routes.py:2870 -> fetch_data_with_cache('execucao_LA', ...)
+async def fetch_execucao_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('execucao_LA')
 
 
-# V2: v1 dashboard_routes.py:2901 -> fetch_data_with_cache('agendamentos_setor_execucao_acordos_LA', ...)
-async def fetch_agendamentos_setor_execucao_acordos_LA() -> List[Dict[str, Any]]:
-    return await _fetch_v2('agendamentos_setor_execucao_acordos_LA')
+# V2: v1 dashboard_routes.py:2925 -> fetch_data_with_cache('agendamentos_setor_execucao_LA', ...)
+async def fetch_agendamentos_setor_execucao_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_setor_execucao_LA')
 
 
-# V2: v1 dashboard_routes.py:2907 -> fetch_data_with_cache('agendamentos_setor_execucao_acordos_RJ', ...)
-async def fetch_agendamentos_setor_execucao_acordos_RJ() -> List[Dict[str, Any]]:
-    return await _fetch_v2('agendamentos_setor_execucao_acordos_RJ')
+# V2: v1 dashboard_routes.py:3024 -> fetch_data_with_cache('execucao_RJ', ...)
+async def fetch_execucao_RJ() -> List[Dict[str, Any]]:
+    return await _fetch_v2('execucao_RJ')
 
 
-# V2: v1 dashboard_routes.py:2913 -> fetch_data_with_cache('agendamentos_setor_execucao_LA_RJ', ...)
+# V2: v1 dashboard_routes.py:3090 -> fetch_data_with_cache('agendamentos_setor_execucao_LA_RJ', ...)
 async def fetch_agendamentos_setor_execucao_RJ() -> List[Dict[str, Any]]:
     return await _fetch_v2('agendamentos_setor_execucao_LA_RJ')
 
 
+# V2: v1 dashboard_routes.py:3027 -> fetch_data_with_cache('execucao_acordos_NG', ...)
+async def fetch_execucao_acordos_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('execucao_acordos_NG')
 
-# v1: dashboard_routes.py:2121
-# ─── Configurações ───────────────────────────────────────────────────────────
+
+# V2: v1 dashboard_routes.py:3036 -> fetch_data_with_cache('agendamentos_fechamento_acordos_NG', ...)
+async def fetch_agendamentos_fechamento_acordos_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_fechamento_acordos_NG')
+
+
+# V2: v1 dashboard_routes.py:3072 -> fetch_data_with_cache('agendamentos_setor_execucao_acordos_NG', ...)
+async def fetch_agendamentos_setor_execucao_acordos_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_setor_execucao_acordos_NG')
+
+
+# V2: v1 dashboard_routes.py:3030 -> fetch_data_with_cache('execucao_acordos_LA', ...)
+async def fetch_execucao_acordos_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('execucao_acordos_LA')
+
+
+# V2: v1 dashboard_routes.py:3054 -> fetch_data_with_cache('agendamentos_fechamento_acordos_LA', ...)
+async def fetch_agendamentos_fechamento_acordos_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_fechamento_acordos_LA')
+
+
+# V2: v1 dashboard_routes.py:3078 -> fetch_data_with_cache('agendamentos_setor_execucao_acordos_LA', ...)
+async def fetch_agendamentos_setor_execucao_acordos_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_setor_execucao_acordos_LA')
+
+
+# V2: v1 dashboard_routes.py:3033 -> fetch_data_with_cache('execucao_acordos_RJ', ...)
+async def fetch_execucao_acordos_RJ() -> List[Dict[str, Any]]:
+    return await _fetch_v2('execucao_acordos_RJ')
+
+
+# V2: v1 dashboard_routes.py:3060 -> fetch_data_with_cache('agendamentos_fechamento_acordos_RJ', ...)
+async def fetch_agendamentos_fechamento_acordos_RJ() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_fechamento_acordos_RJ')
+
+
+# V2: v1 dashboard_routes.py:3084 -> fetch_data_with_cache('agendamentos_setor_execucao_acordos_RJ', ...)
+async def fetch_agendamentos_setor_execucao_acordos_RJ() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_setor_execucao_acordos_RJ')
+
+
+# V2: v1 dashboard_routes.py:2882 -> fetch_data_with_cache('setor_recurso_NG', ...)
+async def fetch_recursal_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('setor_recurso_NG')
+
+
+# V2: v1 dashboard_routes.py:2885 -> fetch_data_with_cache('agendamentos_setor_recursos_NG', ...)
+async def fetch_agendamentos_setor_recursos_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_setor_recursos_NG')
+
+
+# V2: v1 dashboard_routes.py:2891 -> fetch_data_with_cache('atividades_setor_recursos_NG', ...)
+async def fetch_atividades_setor_recursos_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('atividades_setor_recursos_NG')
+
+
+# V2: v1 dashboard_routes.py:2873 -> fetch_data_with_cache('setor_recurso', ...)
+async def fetch_recursal_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('setor_recurso')
+
+
+# V2: v1 dashboard_routes.py:2876 -> fetch_data_with_cache('agendamentos_setor_recursos_LA', ...)
+async def fetch_agendamentos_setor_recursos_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_setor_recursos_LA')
+
+
+# V2: v1 dashboard_routes.py:2912 -> fetch_data_with_cache('atividades_setor_recursos_LA', ...)
+async def fetch_atividades_setor_recursos_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('atividades_setor_recursos_LA')
+
+
+# v1: dashboard_routes.py:2280
 logger = logging.getLogger(__name__)
 
 
-# v1: dashboard_routes.py:2974
-# ─── Utilitários de data ─────────────────────────────────────────────────────
+# v1: dashboard_routes.py:3151
 def _resolve_date_range(
     from_date: Optional[date],
     to_date: Optional[date],
@@ -766,7 +775,7 @@ def _resolve_date_range(
     return from_date, to_date
 
 
-# v1: dashboard_routes.py:2984
+# v1: dashboard_routes.py:3161
 def _to_date(value: Any) -> Optional[date]:
     """Converte valor do banco para date, descartando None e tipos inválidos."""
     if value is None:
@@ -779,7 +788,7 @@ def _to_date(value: Any) -> Optional[date]:
     return None
 
 
-# v1: dashboard_routes.py:2996
+# v1: dashboard_routes.py:3173
 def _in_range(d: date, from_date: Optional[date], to_date: Optional[date]) -> bool:
     if from_date and to_date:
         return from_date <= d <= to_date
@@ -790,7 +799,7 @@ def _in_range(d: date, from_date: Optional[date], to_date: Optional[date]) -> bo
     return True
 
 
-# v1: dashboard_routes.py:3006
+# v1: dashboard_routes.py:3183
 def _filter_by_columns(
     data: List[Dict[str, Any]],
     columns: List[str],
@@ -820,8 +829,7 @@ def _filter_by_columns(
     return filtered
 
 
-# v1: dashboard_routes.py:3036
-# ─── Configuração centralizada de filtros por fonte ──────────────────────────
+# v1: dashboard_routes.py:3213
 _FILTER_COLUMNS: Dict[str, List[str]] = {
     "tickets":              ["data_criacao"],
     "andamento_processual": ["ENTRADA"],
@@ -866,7 +874,7 @@ _FILTER_COLUMNS: Dict[str, List[str]] = {
 }
 
 
-# v1: dashboard_routes.py:3080
+# v1: dashboard_routes.py:3257
 def filter_data(
     key: str,
     data: List[Dict[str, Any]],
@@ -880,7 +888,7 @@ def filter_data(
     return _filter_by_columns(data, columns, from_date, to_date)
 
 
-# v1: dashboard_routes.py:3106
+# v1: dashboard_routes.py:3283
 def _per_func_to_chart(
     raw: Dict[str, Any],
 ) -> Tuple[List[str], Dict[str, List[Dict[str, Any]]]]:
@@ -896,8 +904,7 @@ def _per_func_to_chart(
     return funcionarios, por_funcionario
 
 
-# v1: dashboard_routes.py:3743
-# ─── Modelos Pydantic ────────────────────────────────────────────────────────
+# v1: dashboard_routes.py:3930
 class ChartDataPoint(BaseModel):
     name: str
     value: float
@@ -914,7 +921,7 @@ class ChartDataPoint(BaseModel):
     abertas: Optional[float] = None
 
 
-# v1: dashboard_routes.py:3759
+# v1: dashboard_routes.py:3946
 class ProcessoDadoFaltando(BaseModel):
     """Um processo com um campo faltando (alimenta o alerta clicável "Atenção" dos
     dashboards de Execução/Execução Acordos/Julgados — número do processo + qual
@@ -924,7 +931,7 @@ class ProcessoDadoFaltando(BaseModel):
     campo: str
 
 
-# v1: dashboard_routes.py:3768
+# v1: dashboard_routes.py:3955
 class InvestimentoCliquesLeadsPoint(BaseModel):
     name: str
     investimento: float
@@ -932,14 +939,14 @@ class InvestimentoCliquesLeadsPoint(BaseModel):
     leads: int
 
 
-# v1: dashboard_routes.py:3775
+# v1: dashboard_routes.py:3962
 class RubricaCampanhaPoint(BaseModel):
     name: str
     ra: int
     ng: int
 
 
-# v1: dashboard_routes.py:3781
+# v1: dashboard_routes.py:3968
 class NpsRespostaRow(BaseModel):
     id: int
     cliente: str
@@ -956,7 +963,7 @@ class NpsRespostaRow(BaseModel):
     comentario: str
 
 
-# v1: dashboard_routes.py:3797
+# v1: dashboard_routes.py:3984
 class NpsFeedbackMelhoriaRow(BaseModel):
     id: int
     cliente: str
@@ -967,7 +974,7 @@ class NpsFeedbackMelhoriaRow(BaseModel):
     feedback_melhoria: str
 
 
-# v1: dashboard_routes.py:3807
+# v1: dashboard_routes.py:3994
 class NpsFeedbackPositivoRow(BaseModel):
     id: int
     cliente: str
@@ -978,7 +985,7 @@ class NpsFeedbackPositivoRow(BaseModel):
     feedback_positivo: str
 
 
-# v1: dashboard_routes.py:3817
+# v1: dashboard_routes.py:4004
 class NpsComentarioRow(BaseModel):
     id: int
     cliente: str
@@ -989,7 +996,7 @@ class NpsComentarioRow(BaseModel):
     comentario: str
 
 
-# v1: dashboard_routes.py:3827
+# v1: dashboard_routes.py:4014
 class RecursalRankingMagistradoRow(BaseModel):
     name: str
     initials: str
@@ -1003,7 +1010,7 @@ class RecursalRankingMagistradoRow(BaseModel):
     percent_outros: float
 
 
-# v1: dashboard_routes.py:3840
+# v1: dashboard_routes.py:4027
 class JulgadosSentencaListaRow(BaseModel):
     id: Optional[int] = None
     numero_processo: str
@@ -1017,7 +1024,7 @@ class JulgadosSentencaListaRow(BaseModel):
     data_sentenca_embargos: Optional[str] = None
 
 
-# v1: dashboard_routes.py:3853
+# v1: dashboard_routes.py:4040
 class JulgadosAcordaoListaRow(BaseModel):
     id: Optional[int] = None
     numero_processo: str
@@ -1031,7 +1038,7 @@ class JulgadosAcordaoListaRow(BaseModel):
     data_acordao_embargos: Optional[str] = None
 
 
-# v1: dashboard_routes.py:3866
+# v1: dashboard_routes.py:4053
 class ExecucaoAcordosListaRow(BaseModel):
     id: Optional[int] = None
     numero_processo: str
@@ -1041,7 +1048,7 @@ class ExecucaoAcordosListaRow(BaseModel):
     subfase: str
 
 
-# v1: dashboard_routes.py:3875
+# v1: dashboard_routes.py:4062
 class RecursalAtividadeTarefaRow(BaseModel):
     id: int
     status: str
@@ -1066,7 +1073,7 @@ class RecursalAtividadeTarefaRow(BaseModel):
     valor_acordao: Optional[float] = None
 
 
-# v1: dashboard_routes.py:3899
+# v1: dashboard_routes.py:4086
 class DilacaoPorFuncionarioRow(BaseModel):
     funcionario: str
     qtd_dilacoes: int
@@ -1075,7 +1082,7 @@ class DilacaoPorFuncionarioRow(BaseModel):
     taxa_dilacao: float
 
 
-# v1: dashboard_routes.py:3907
+# v1: dashboard_routes.py:4094
 class EmendasManifestacoesResolvidosPorUfRow(BaseModel):
     uf: str
     qtd_manifestacao: int
@@ -1083,7 +1090,7 @@ class EmendasManifestacoesResolvidosPorUfRow(BaseModel):
     qtd_total: int
 
 
-# v1: dashboard_routes.py:3914
+# v1: dashboard_routes.py:4101
 class EmendasManifestacoesComissaoRow(BaseModel):
     funcionario: str
     agenda_finalizada: int
@@ -1101,7 +1108,7 @@ class EmendasManifestacoesComissaoRow(BaseModel):
     resolvidos_por_uf: Optional[List[EmendasManifestacoesResolvidosPorUfRow]] = None
 
 
-# v1: dashboard_routes.py:3931
+# v1: dashboard_routes.py:4118
 class RecursalAtividadesListaFiltrosOpcoes(BaseModel):
     funcionarios: List[str]
     atividades: List[str]
@@ -1109,7 +1116,7 @@ class RecursalAtividadesListaFiltrosOpcoes(BaseModel):
     situacoes: List[Dict[str, str]]
 
 
-# v1: dashboard_routes.py:3938
+# v1: dashboard_routes.py:4125
 class ExecucaoAtrasoBucket(BaseModel):
     dias: int
     label: str
@@ -1118,13 +1125,13 @@ class ExecucaoAtrasoBucket(BaseModel):
     pct: float
 
 
-# v1: dashboard_routes.py:3946
+# v1: dashboard_routes.py:4133
 class ExecucaoAtrasosDetalhamento(BaseModel):
     total: int
     buckets: List[ExecucaoAtrasoBucket]
 
 
-# v1: dashboard_routes.py:3951
+# v1: dashboard_routes.py:4138
 class RubricaTotalRow(BaseModel):
     rubrica: str
     acoes: int
@@ -1132,7 +1139,7 @@ class RubricaTotalRow(BaseModel):
     total: float
 
 
-# v1: dashboard_routes.py:3958
+# v1: dashboard_routes.py:4145
 class ComissionamentoOrgDocRow(BaseModel):
     funcionario: str
     qtd_resolvidos: int
@@ -1140,7 +1147,7 @@ class ComissionamentoOrgDocRow(BaseModel):
     valor_comissao: float
 
 
-# v1: dashboard_routes.py:3965
+# v1: dashboard_routes.py:4152
 class ComissionamentoProtocoloRow(BaseModel):
     funcionario: str
     qtd_protocolados: int
@@ -1148,7 +1155,7 @@ class ComissionamentoProtocoloRow(BaseModel):
     valor_comissao: float
 
 
-# v1: dashboard_routes.py:3972
+# v1: dashboard_routes.py:4159
 class ComissionamentoPeticionamentoRow(BaseModel):
     funcionario: str
     qtd_acoes_massa: int
@@ -1161,7 +1168,7 @@ class ComissionamentoPeticionamentoRow(BaseModel):
     valor_comissao: float
 
 
-# v1: dashboard_routes.py:3984
+# v1: dashboard_routes.py:4171
 class ComissionamentoPendenciaRow(BaseModel):
     funcionario: str
     taxa_resolvido: Optional[float] = None
@@ -1172,7 +1179,7 @@ class ComissionamentoPendenciaRow(BaseModel):
     comissao: float
 
 
-# v1: dashboard_routes.py:3994
+# v1: dashboard_routes.py:4181
 class ComissionamentoPublicacaoRow(BaseModel):
     funcionario: str
     qtd_lidas: int
@@ -1183,7 +1190,7 @@ class ComissionamentoPublicacaoRow(BaseModel):
     comissao: float
 
 
-# v1: dashboard_routes.py:4004
+# v1: dashboard_routes.py:4191
 class ComissionamentoAndamentoRow(BaseModel):
     funcionario: str
     media_avaliacao: Optional[float] = None
@@ -1192,7 +1199,7 @@ class ComissionamentoAndamentoRow(BaseModel):
     valor_comissao: float
 
 
-# v1: dashboard_routes.py:4012
+# v1: dashboard_routes.py:4199
 class ComissionamentoComercialRow(BaseModel):
     atendente: str
     acoes: int
@@ -1203,7 +1210,7 @@ class ComissionamentoComercialRow(BaseModel):
     comissao_com_fm: float
 
 
-# v1: dashboard_routes.py:4022
+# v1: dashboard_routes.py:4209
 class ComissionamentoComercialLARow(BaseModel):
     atendente: str
     acoes: int
@@ -1212,151 +1219,151 @@ class ComissionamentoComercialLARow(BaseModel):
     comissao_com_fm: float
 
 
-# v1: dashboard_routes.py:4030
+# v1: dashboard_routes.py:4217
 class TotalLeadsPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4035
+# v1: dashboard_routes.py:4222
 class TotalClientesFechadosPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4040
+# v1: dashboard_routes.py:4227
 class TaxaFechamentoGeralPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4045
+# v1: dashboard_routes.py:4232
 class TotalLeadsCampanhaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4050
+# v1: dashboard_routes.py:4237
 class TotalClientesFechadosCampanhaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4055
+# v1: dashboard_routes.py:4242
 class TaxaFechamentoCampanhaPorCliente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4060
+# v1: dashboard_routes.py:4247
 class TotalLeadsIndicacaoAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4065
+# v1: dashboard_routes.py:4252
 class TaxaFechamentoIndicacaoAtivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4070
+# v1: dashboard_routes.py:4257
 class TotalClientesFechadosIndicacaoAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4075
+# v1: dashboard_routes.py:4262
 class TotalLeadsIndicacaoPassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4080
+# v1: dashboard_routes.py:4267
 class TotalClientesFechadosIndicacaoPassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4085
+# v1: dashboard_routes.py:4272
 class TaxaFechamentoIndicacaoPassivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4090
+# v1: dashboard_routes.py:4277
 class TotalLeadsRetornoAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4095
+# v1: dashboard_routes.py:4282
 class TotalClientesFechadosRetornoAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4100
+# v1: dashboard_routes.py:4287
 class TaxaFechamentoRetornoAtivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4105
+# v1: dashboard_routes.py:4292
 class TotalLeadsRetornoPassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4110
+# v1: dashboard_routes.py:4297
 class TotalClientesFechadosRetornoPassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4115
+# v1: dashboard_routes.py:4302
 class TaxaFechamentoRetornoPassivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4120
+# v1: dashboard_routes.py:4307
 class TotalLeadsResgateAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4125
+# v1: dashboard_routes.py:4312
 class TotalClientesFechadosResgateAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4130
+# v1: dashboard_routes.py:4317
 class TaxaFechamentoResgateAtivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4135
+# v1: dashboard_routes.py:4322
 class TotalLeadsResgatePassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4140
+# v1: dashboard_routes.py:4327
 class TotalClientesFechadosResgatePassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4145
+# v1: dashboard_routes.py:4332
 class TaxaFechamentoResgatePassivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4184
+# v1: dashboard_routes.py:4371
 class DashboardStats(BaseModel):
     # Tickets
     total_tickets: Optional[int] = None
@@ -1367,6 +1374,7 @@ class DashboardStats(BaseModel):
     tickets_reprovados: Optional[int] = None
     duracao_atendimento: Optional[float] = None
     taxa_resolucao: Optional[float] = None
+    total_tickets_periodo_anterior: Optional[int] = None
     tickets_abertos: Optional[int] = None
     tickets_resolvidos: Optional[int] = None
     tickets_hoje: Optional[int] = None
@@ -1585,6 +1593,8 @@ class DashboardStats(BaseModel):
     valor_ted_saida_execucao_periodo: Optional[float] = None
     taxa_recuperacao_execucao: Optional[float] = None
     media_tempo_execucao: Optional[float] = None
+    taxa_atualizacao_execucao_NG: Optional[Dict[str, Any]] = None
+    duracoes_tempo_execucao_NG: Optional[List[float]] = None
     mediana_tempo_execucao: Optional[float] = None
     execucao_materia_filtro: Optional[Union[str, List[str]]] = None
     execucao_subfase_filtro: Optional[Union[str, List[str]]] = None
@@ -1603,6 +1613,7 @@ class DashboardStats(BaseModel):
     valor_saida_execucao_acordos_periodo_NG: Optional[float] = None
     valor_ted_saida_execucao_acordos_periodo_NG: Optional[float] = None
     media_tempo_execucao_acordos_NG: Optional[float] = None
+    duracoes_tempo_execucao_acordos_NG: Optional[List[float]] = None
     mediana_tempo_execucao_acordos_NG: Optional[float] = None
     total_atividades_execucao_acordos_NG: Optional[int] = None
     atividades_execucao_em_andamento_acordos_NG: Optional[int] = None
@@ -1646,6 +1657,7 @@ class DashboardStats(BaseModel):
     valor_saida_execucao_acordos_periodo_LA: Optional[float] = None
     valor_ted_saida_execucao_acordos_periodo_LA: Optional[float] = None
     media_tempo_execucao_acordos_LA: Optional[float] = None
+    duracoes_tempo_execucao_acordos_LA: Optional[List[float]] = None
     mediana_tempo_execucao_acordos_LA: Optional[float] = None
     total_atividades_execucao_acordos_LA: Optional[int] = None
     atividades_execucao_em_andamento_acordos_LA: Optional[int] = None
@@ -1689,6 +1701,7 @@ class DashboardStats(BaseModel):
     valor_saida_execucao_acordos_periodo_RJ: Optional[float] = None
     valor_ted_saida_execucao_acordos_periodo_RJ: Optional[float] = None
     media_tempo_execucao_acordos_RJ: Optional[float] = None
+    duracoes_tempo_execucao_acordos_RJ: Optional[List[float]] = None
     mediana_tempo_execucao_acordos_RJ: Optional[float] = None
     total_atividades_execucao_acordos_RJ: Optional[int] = None
     atividades_execucao_em_andamento_acordos_RJ: Optional[int] = None
@@ -1765,6 +1778,8 @@ class DashboardStats(BaseModel):
     valor_ted_saida_execucao_periodo_RJ: Optional[float] = None
     taxa_recuperacao_execucao_RJ: Optional[float] = None
     media_tempo_execucao_RJ: Optional[float] = None
+    taxa_atualizacao_execucao_RJ: Optional[Dict[str, Any]] = None
+    duracoes_tempo_execucao_RJ: Optional[List[float]] = None
     mediana_tempo_execucao_RJ: Optional[float] = None
     execucao_materia_filtro_RJ: Optional[Union[str, List[str]]] = None
     execucao_subfase_filtro_RJ: Optional[Union[str, List[str]]] = None
@@ -1911,6 +1926,8 @@ class DashboardStats(BaseModel):
     valor_ted_saida_execucao_periodo_LA: Optional[float] = None
     taxa_recuperacao_execucao_LA: Optional[float] = None
     media_tempo_execucao_LA: Optional[float] = None
+    taxa_atualizacao_execucao_LA: Optional[Dict[str, Any]] = None
+    duracoes_tempo_execucao_LA: Optional[List[float]] = None
     mediana_tempo_execucao_LA: Optional[float] = None
     execucao_materia_filtro_LA: Optional[Union[str, List[str]]] = None
     execucao_subfase_filtro_LA: Optional[Union[str, List[str]]] = None
@@ -2070,6 +2087,83 @@ class DashboardStats(BaseModel):
     # Meta de Provimento Mensal — processos providos (ID_2G) no período.
     provimento_mensal_qtd_NG: Optional[int] = None
     provimento_mensal_meta_NG: Optional[int] = None
+    # Recursal RJ
+    total_recursal_RJ: Optional[int] = None
+    entrada_recursal_RJ: Optional[int] = None
+    valor_causa_acordo_recursal_RJ: Optional[float] = None
+    total_sentenca_favoravel_recurso_RJ: Optional[int] = None
+    total_sentenca_desfavoravel_recurso_RJ: Optional[int] = None
+    total_procedente_1g_recurso_RJ: Optional[int] = None
+    total_parcialmente_procedente_recurso_RJ: Optional[int] = None
+    total_sentenca_extincao_recurso_RJ: Optional[int] = None
+    total_sentenca_parcialmente_favoravel_recurso_RJ: Optional[int] = None
+    valor_causa_sentenca_favoravel_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_desfavoravel_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_procedente_1g_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_parcialmente_procedente_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_extincao_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_parcialmente_favoravel_recurso_RJ: Optional[float] = None
+    total_acordao_desfavoravel_recurso_RJ: Optional[int] = None
+    total_acordao_favoravel_recurso_RJ: Optional[int] = None
+    total_acordao_parcialmente_favoravel_recurso_RJ: Optional[int] = None
+    total_acordao_parcial_retomada_recurso_RJ: Optional[int] = None
+    total_acordao_extincao_recurso_RJ: Optional[int] = None
+    valor_causa_acordao_desfavoravel_recurso_RJ: Optional[float] = None
+    valor_causa_acordao_favoravel_recurso_RJ: Optional[float] = None
+    valor_causa_acordao_parcialmente_favoravel_recurso_RJ: Optional[float] = None
+    valor_causa_acordao_parcial_retomada_recurso_RJ: Optional[float] = None
+    valor_causa_acordao_extincao_recurso_RJ: Optional[float] = None
+    total_decisoes_recursal_RJ: Optional[int] = None
+    # Decisões recursais — Matriz de Julgamento (mérito 1G × 2G), 8 buckets
+    total_mantido_ganho_recurso_RJ: Optional[int] = None
+    total_ganho_ampliado_recurso_RJ: Optional[int] = None
+    total_revertido_ganho_recurso_RJ: Optional[int] = None
+    total_ganho_reduzido_recurso_RJ: Optional[int] = None
+    total_mantido_perda_recurso_RJ: Optional[int] = None
+    total_revertido_perda_recurso_RJ: Optional[int] = None
+    total_extincao_reajuizar_recurso_RJ: Optional[int] = None
+    total_instrucao_retomada_recurso_RJ: Optional[int] = None
+    percent_mantido_ganho_recursal_RJ: Optional[float] = None
+    percent_ganho_ampliado_recursal_RJ: Optional[float] = None
+    percent_revertido_ganho_recursal_RJ: Optional[float] = None
+    percent_ganho_reduzido_recursal_RJ: Optional[float] = None
+    percent_mantido_perda_recursal_RJ: Optional[float] = None
+    percent_revertido_perda_recursal_RJ: Optional[float] = None
+    percent_extincao_reajuizar_recursal_RJ: Optional[float] = None
+    percent_instrucao_retomada_recursal_RJ: Optional[float] = None
+    valor_causa_mantido_ganho_recurso_RJ: Optional[float] = None
+    valor_causa_ganho_ampliado_recurso_RJ: Optional[float] = None
+    valor_causa_revertido_ganho_recurso_RJ: Optional[float] = None
+    valor_causa_ganho_reduzido_recurso_RJ: Optional[float] = None
+    valor_causa_mantido_perda_recurso_RJ: Optional[float] = None
+    valor_causa_revertido_perda_recurso_RJ: Optional[float] = None
+    valor_causa_extincao_reajuizar_recurso_RJ: Optional[float] = None
+    valor_causa_instrucao_retomada_recurso_RJ: Optional[float] = None
+    total_atividades_recursos_RJ: Optional[int] = None
+    atividades_recursos_em_andamento_RJ: Optional[int] = None
+    atividades_recursos_vencidas_RJ: Optional[int] = None
+    atividades_recursos_vencem_hoje_RJ: Optional[int] = None
+    atividades_recursos_concluidas_RJ: Optional[int] = None
+    # Mesmos KPIs de atividades, usando PRAZO como eixo temporal (toggle "Por prazo").
+    total_por_prazo_atividades_recursos_RJ: Optional[int] = None
+    por_prazo_em_andamento_atividades_recursos_RJ: Optional[int] = None
+    por_prazo_vencidas_atividades_recursos_RJ: Optional[int] = None
+    por_prazo_vencem_hoje_atividades_recursos_RJ: Optional[int] = None
+    por_prazo_concluidas_atividades_recursos_RJ: Optional[int] = None
+    # Cumprido e encaminhado como "RECURSO CANCELADO" — análise de viabilidade equivocada.
+    avr_retorno_recurso_cancelado_RJ: Optional[int] = None
+    # Cumprido e encaminhado como "RECURSO CANCELADO" — perda de prazo.
+    retorno_cr_recurso_cancelado_RJ: Optional[int] = None
+    # Meta de Provimento Mensal — processos providos (ID_2G) no período.
+    provimento_mensal_qtd_RJ: Optional[int] = None
+    provimento_mensal_meta_RJ: Optional[int] = None
+    # Extintos · 2º Grau (painel do Recursal RJ) — no NG vêm do controle_processo_NG.
+    controle_processo_extintos_com_merito_2g_qtd_recursal_RJ: Optional[int] = None
+    controle_processo_extintos_com_merito_2g_valor_causa_acordao_recursal_RJ: Optional[float] = None
+    controle_processo_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_recursal_RJ: Optional[List[Dict[str, Any]]] = None
+    controle_processo_extintos_sem_merito_2g_qtd_recursal_RJ: Optional[int] = None
+    controle_processo_extintos_sem_merito_2g_valor_causa_acordao_recursal_RJ: Optional[float] = None
+    controle_processo_taxa_provimento_2g_recursal_RJ: Optional[float] = None
 
     # Pendências Intermediárias LA (LexFlow)
     total_atividades_intermediarias_LA: Optional[int] = None
@@ -2491,6 +2585,8 @@ class DashboardStats(BaseModel):
     julgados_sentenca_sem_competencia_NG: Optional[int] = None
     julgados_sentenca_sem_uf_NG: Optional[int] = None
     julgados_sentenca_sem_valor_pe_NG: Optional[int] = None
+    julgados_sentenca_merito_sem_data_NG: Optional[int] = None
+    julgados_sentenca_data_sem_merito_NG: Optional[int] = None
     julgados_sentenca_dados_faltando_NG: Optional[List[ProcessoDadoFaltando]] = None
     # Julgados Sentenças NG — Estudos de Extinção
     julgados_extincao_valor_NG: Optional[float] = None
@@ -2500,6 +2596,12 @@ class DashboardStats(BaseModel):
     julgados_sentenca_total_estoque_NG: Optional[int] = None
     julgados_extincao_revertida_2g_NG: Optional[int] = None
     julgados_extincao_revertida_2g_estoque_NG: Optional[int] = None
+    # Julgados Sentenças NG — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_valor_NG: Optional[float] = None
+    julgados_improcedencia_total_estoque_NG: Optional[int] = None
+    julgados_improcedencia_valor_estoque_NG: Optional[float] = None
+    julgados_improcedencia_revertida_2g_NG: Optional[int] = None
+    julgados_improcedencia_revertida_2g_estoque_NG: Optional[int] = None
     # Julgados Acórdãos NG
     julgados_acordao_total_NG: Optional[int] = None
     julgados_acordao_procedentes_NG: Optional[int] = None
@@ -2529,7 +2631,18 @@ class DashboardStats(BaseModel):
     julgados_acordao_sem_competencia_NG: Optional[int] = None
     julgados_acordao_sem_uf_NG: Optional[int] = None
     julgados_acordao_sem_valor_pe_NG: Optional[int] = None
+    julgados_acordao_merito_sem_data_NG: Optional[int] = None
+    julgados_acordao_data_sem_merito_NG: Optional[int] = None
     julgados_acordao_dados_faltando_NG: Optional[List[ProcessoDadoFaltando]] = None
+    # Julgados Acórdãos NG — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_valor_NG: Optional[float] = None
+    julgados_acordao_improcedencia_total_estoque_NG: Optional[int] = None
+    julgados_acordao_improcedencia_valor_estoque_NG: Optional[float] = None
+    julgados_acordao_improcedencia_stj_NG: Optional[int] = None
+    julgados_acordao_improcedencia_stf_NG: Optional[int] = None
+    julgados_acordao_improcedencia_stj_estoque_NG: Optional[int] = None
+    julgados_acordao_improcedencia_stf_estoque_NG: Optional[int] = None
+    julgados_acordao_total_estoque_NG: Optional[int] = None
     # Julgados Sentenças LA
     julgados_sentenca_total_LA: Optional[int] = None
     julgados_sentenca_procedentes_LA: Optional[int] = None
@@ -2555,6 +2668,8 @@ class DashboardStats(BaseModel):
     julgados_sentenca_sem_competencia_LA: Optional[int] = None
     julgados_sentenca_sem_uf_LA: Optional[int] = None
     julgados_sentenca_sem_valor_pe_LA: Optional[int] = None
+    julgados_sentenca_merito_sem_data_LA: Optional[int] = None
+    julgados_sentenca_data_sem_merito_LA: Optional[int] = None
     julgados_sentenca_dados_faltando_LA: Optional[List[ProcessoDadoFaltando]] = None
     # Julgados Sentenças LA — Estudos de Extinção
     julgados_extincao_valor_LA: Optional[float] = None
@@ -2564,6 +2679,54 @@ class DashboardStats(BaseModel):
     julgados_sentenca_total_estoque_LA: Optional[int] = None
     julgados_extincao_revertida_2g_LA: Optional[int] = None
     julgados_extincao_revertida_2g_estoque_LA: Optional[int] = None
+    # Julgados Sentenças LA — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_valor_LA: Optional[float] = None
+    julgados_improcedencia_total_estoque_LA: Optional[int] = None
+    julgados_improcedencia_valor_estoque_LA: Optional[float] = None
+    julgados_improcedencia_revertida_2g_LA: Optional[int] = None
+    julgados_improcedencia_revertida_2g_estoque_LA: Optional[int] = None
+    # Julgados Sentenças RJ
+    julgados_sentenca_total_RJ: Optional[int] = None
+    julgados_sentenca_procedentes_RJ: Optional[int] = None
+    julgados_sentenca_improcedentes_RJ: Optional[int] = None
+    julgados_sentenca_extintos_RJ: Optional[int] = None
+    julgados_sentenca_tempo_medio_dias_RJ: Optional[float] = None
+    julgados_sentenca_embargos_tempo_medio_dias_RJ: Optional[float] = None
+    julgados_sentenca_valor_procedentes_RJ: Optional[float] = None
+    julgados_sentenca_embargados_RJ: Optional[int] = None
+    julgados_sentenca_revertidos_RJ: Optional[int] = None
+    comparativo_julgados_sentenca_total_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_improcedentes_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_extintos_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_tempo_medio_dias_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_valor_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_embargados_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_revertidos_RJ: Optional[float] = None
+    julgados_uf_opcoes_RJ: Optional[List[str]] = None
+    julgados_sentenca_sem_juiz_RJ: Optional[int] = None
+    julgados_sentenca_sem_materia_RJ: Optional[int] = None
+    julgados_sentenca_sem_comarca_RJ: Optional[int] = None
+    julgados_sentenca_sem_competencia_RJ: Optional[int] = None
+    julgados_sentenca_sem_uf_RJ: Optional[int] = None
+    julgados_sentenca_sem_valor_pe_RJ: Optional[int] = None
+    julgados_sentenca_merito_sem_data_RJ: Optional[int] = None
+    julgados_sentenca_data_sem_merito_RJ: Optional[int] = None
+    julgados_sentenca_dados_faltando_RJ: Optional[List[ProcessoDadoFaltando]] = None
+    # Julgados Sentenças RJ — Estudos de Extinção
+    julgados_extincao_valor_RJ: Optional[float] = None
+    julgados_extincao_total_estoque_RJ: Optional[int] = None
+    julgados_extincao_valor_estoque_RJ: Optional[float] = None
+    julgados_comarca_opcoes_RJ: Optional[List[str]] = None
+    julgados_sentenca_total_estoque_RJ: Optional[int] = None
+    julgados_extincao_revertida_2g_RJ: Optional[int] = None
+    julgados_extincao_revertida_2g_estoque_RJ: Optional[int] = None
+    # Julgados Sentenças RJ — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_valor_RJ: Optional[float] = None
+    julgados_improcedencia_total_estoque_RJ: Optional[int] = None
+    julgados_improcedencia_valor_estoque_RJ: Optional[float] = None
+    julgados_improcedencia_revertida_2g_RJ: Optional[int] = None
+    julgados_improcedencia_revertida_2g_estoque_RJ: Optional[int] = None
     # Julgados Acórdãos LA
     julgados_acordao_total_LA: Optional[int] = None
     julgados_acordao_procedentes_LA: Optional[int] = None
@@ -2593,10 +2756,54 @@ class DashboardStats(BaseModel):
     julgados_acordao_sem_competencia_LA: Optional[int] = None
     julgados_acordao_sem_uf_LA: Optional[int] = None
     julgados_acordao_sem_valor_pe_LA: Optional[int] = None
+    julgados_acordao_merito_sem_data_LA: Optional[int] = None
+    julgados_acordao_data_sem_merito_LA: Optional[int] = None
     julgados_acordao_dados_faltando_LA: Optional[List[ProcessoDadoFaltando]] = None
+    # Julgados Acórdãos LA — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_valor_LA: Optional[float] = None
+    julgados_acordao_improcedencia_total_estoque_LA: Optional[int] = None
+    julgados_acordao_improcedencia_valor_estoque_LA: Optional[float] = None
+    julgados_acordao_total_estoque_LA: Optional[int] = None
+    # Julgados Acórdãos RJ
+    julgados_acordao_total_RJ: Optional[int] = None
+    julgados_acordao_procedentes_RJ: Optional[int] = None
+    julgados_acordao_improcedentes_RJ: Optional[int] = None
+    julgados_acordao_extintos_RJ: Optional[int] = None
+    julgados_acordao_nao_classificados_RJ: Optional[int] = None
+    julgados_acordao_tempo_medio_dias_RJ: Optional[float] = None
+    julgados_acordao_embargos_tempo_medio_dias_RJ: Optional[float] = None
+    julgados_acordao_valor_procedentes_RJ: Optional[float] = None
+    julgados_acordao_valor_fixado_procedentes_RJ: Optional[float] = None
+    julgados_acordao_embargados_RJ: Optional[int] = None
+    julgados_acordao_revertidos_RJ: Optional[int] = None
+    comparativo_julgados_acordao_total_RJ: Optional[float] = None
+    comparativo_julgados_acordao_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_acordao_improcedentes_RJ: Optional[float] = None
+    comparativo_julgados_acordao_extintos_RJ: Optional[float] = None
+    comparativo_julgados_acordao_nao_classificados_RJ: Optional[float] = None
+    comparativo_julgados_acordao_tempo_medio_dias_RJ: Optional[float] = None
+    comparativo_julgados_acordao_valor_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_acordao_valor_fixado_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_acordao_embargados_RJ: Optional[float] = None
+    comparativo_julgados_acordao_revertidos_RJ: Optional[float] = None
+    julgados_acordao_uf_opcoes_RJ: Optional[List[str]] = None
+    julgados_acordao_sem_relator_RJ: Optional[int] = None
+    julgados_acordao_sem_materia_RJ: Optional[int] = None
+    julgados_acordao_sem_comarca_RJ: Optional[int] = None
+    julgados_acordao_sem_competencia_RJ: Optional[int] = None
+    julgados_acordao_sem_uf_RJ: Optional[int] = None
+    julgados_acordao_sem_valor_pe_RJ: Optional[int] = None
+    julgados_acordao_merito_sem_data_RJ: Optional[int] = None
+    julgados_acordao_data_sem_merito_RJ: Optional[int] = None
+    julgados_acordao_dados_faltando_RJ: Optional[List[ProcessoDadoFaltando]] = None
+    # Julgados Acórdãos RJ — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_valor_RJ: Optional[float] = None
+    julgados_acordao_improcedencia_total_estoque_RJ: Optional[int] = None
+    julgados_acordao_improcedencia_valor_estoque_RJ: Optional[float] = None
+    julgados_acordao_total_estoque_RJ: Optional[int] = None
 
 
-# v1: dashboard_routes.py:5423
+# v1: dashboard_routes.py:5810
 class Activity(BaseModel):
     id: str
     type: str
@@ -2604,9 +2811,17 @@ class Activity(BaseModel):
     description: str
     time: str
     user: str
+    # Tickets: campos extraídos do log do Discord (opcionais para os demais usos)
+    categoria: Optional[str] = None
+    status: Optional[str] = None
+    servidor: Optional[str] = None
+    ticket_numero: Optional[str] = None
+    anydesk: Optional[str] = None
+    url: Optional[str] = None
+    minutos_atras: Optional[int] = None
 
 
-# v1: dashboard_routes.py:5432
+# v1: dashboard_routes.py:5827
 class DashboardResponse(BaseModel):
     dashboard: str
     stats: DashboardStats
@@ -3179,6 +3394,25 @@ class DashboardResponse(BaseModel):
     recursal_atividades_lista_filtros_opcoes_NG: Optional[RecursalAtividadesListaFiltrosOpcoes] = None
     ranking_juizes_recursal_NG: Optional[List[RecursalRankingMagistradoRow]] = None
     ranking_relatores_recursal_NG: Optional[List[RecursalRankingMagistradoRow]] = None
+    # Recursal RJ
+    recursal_por_status_1g_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_status_2g_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_subfase_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_materia_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_competencia_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_vara_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_decisoes_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_processos_por_atividade_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_demandas_por_funcionario_RJ: Optional[List[Dict[str, Any]]] = None
+    recursal_resolvidos_por_dia_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_resolvidos_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    funcionarios_recursal_RJ: Optional[List[str]] = None
+    recursal_resolvidos_por_dia_por_funcionario_RJ: Optional[Dict[str, List[ChartDataPoint]]] = None
+    recursal_media_resolvidos_por_funcionario_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_atividades_lista_RJ: Optional[List[RecursalAtividadeTarefaRow]] = None
+    recursal_atividades_lista_filtros_opcoes_RJ: Optional[RecursalAtividadesListaFiltrosOpcoes] = None
+    ranking_juizes_recursal_RJ: Optional[List[RecursalRankingMagistradoRow]] = None
+    ranking_relatores_recursal_RJ: Optional[List[RecursalRankingMagistradoRow]] = None
     # Julgados NG
     ranking_juizes_sentenca_julgados_NG: Optional[List[RecursalRankingMagistradoRow]] = None
     julgados_por_materia_NG: Optional[List[ChartDataPoint]] = None
@@ -3190,6 +3424,13 @@ class DashboardResponse(BaseModel):
     julgados_extincao_por_motivo_estoque_NG: Optional[List[ChartDataPoint]] = None
     julgados_extincao_por_juiz_NG: Optional[List[ChartDataPoint]] = None
     julgados_extincao_por_juiz_estoque_NG: Optional[List[ChartDataPoint]] = None
+    # Julgados Sentenças NG — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_por_comarca_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_comarca_estoque_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_estoque_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_estoque_NG: Optional[List[ChartDataPoint]] = None
     julgados_por_ano_ajuizamento_NG: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_embargos_resultado_NG: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_procedentes_por_mes_NG: Optional[List[ChartDataPoint]] = None
@@ -3208,6 +3449,13 @@ class DashboardResponse(BaseModel):
     julgados_acordao_improcedentes_por_mes_NG: Optional[List[ChartDataPoint]] = None
     julgados_acordao_extintos_por_mes_NG: Optional[List[ChartDataPoint]] = None
     julgados_acordao_lista_NG: Optional[List[JulgadosAcordaoListaRow]] = None
+    # Julgados Acórdãos NG — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_por_comarca_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_comarca_estoque_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_estoque_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_estoque_NG: Optional[List[ChartDataPoint]] = None
     # Julgados Sentenças LA
     ranking_juizes_sentenca_julgados_LA: Optional[List[RecursalRankingMagistradoRow]] = None
     julgados_por_materia_LA: Optional[List[ChartDataPoint]] = None
@@ -3219,12 +3467,43 @@ class DashboardResponse(BaseModel):
     julgados_extincao_por_motivo_estoque_LA: Optional[List[ChartDataPoint]] = None
     julgados_extincao_por_juiz_LA: Optional[List[ChartDataPoint]] = None
     julgados_extincao_por_juiz_estoque_LA: Optional[List[ChartDataPoint]] = None
+    # Julgados Sentenças LA — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_por_comarca_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_comarca_estoque_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_estoque_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_estoque_LA: Optional[List[ChartDataPoint]] = None
     julgados_por_ano_ajuizamento_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_embargos_resultado_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_procedentes_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_improcedentes_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_extintos_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_lista_LA: Optional[List[JulgadosSentencaListaRow]] = None
+    # Julgados Sentenças RJ
+    ranking_juizes_sentenca_julgados_RJ: Optional[List[RecursalRankingMagistradoRow]] = None
+    julgados_por_materia_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_por_competencia_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_por_motivo_extincao_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_comarca_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_motivo_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_juiz_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_juiz_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    # Julgados Sentenças RJ — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_comarca_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_por_ano_ajuizamento_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_embargos_resultado_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_procedentes_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_improcedentes_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_extintos_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_lista_RJ: Optional[List[JulgadosSentencaListaRow]] = None
     # Julgados Acórdãos LA
     ranking_relatores_acordao_julgados_LA: Optional[List[RecursalRankingMagistradoRow]] = None
     julgados_acordao_por_materia_LA: Optional[List[ChartDataPoint]] = None
@@ -3237,6 +3516,32 @@ class DashboardResponse(BaseModel):
     julgados_acordao_improcedentes_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_acordao_extintos_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_acordao_lista_LA: Optional[List[JulgadosAcordaoListaRow]] = None
+    # Julgados Acórdãos LA — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_por_comarca_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_comarca_estoque_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_estoque_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_estoque_LA: Optional[List[ChartDataPoint]] = None
+    # Julgados Acórdãos RJ
+    ranking_relatores_acordao_julgados_RJ: Optional[List[RecursalRankingMagistradoRow]] = None
+    julgados_acordao_por_materia_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_por_competencia_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_por_motivo_extincao_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_por_ano_ajuizamento_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_embargos_resultado_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_procedentes_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedentes_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_extintos_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_lista_RJ: Optional[List[JulgadosAcordaoListaRow]] = None
+    # Julgados Acórdãos RJ — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_comarca_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_estoque_RJ: Optional[List[ChartDataPoint]] = None
     # Pendências Intermediárias LA
     intermediarias_processos_por_atividade_LA: Optional[List[ChartDataPoint]] = None
     intermediarias_demandas_por_funcionario_LA: Optional[List[Dict[str, Any]]] = None
@@ -3519,7 +3824,7 @@ class DashboardResponse(BaseModel):
     marketing_lexpre_ng_org_rubricas_google: Optional[List[ChartDataPoint]] = None
 
 
-# v1: dashboard_routes.py:6967
+# v1: dashboard_routes.py:7457
 def _estoque_mensal_charts(
     quantidade_valor: Tuple[List[Dict[str, Any]], List[Dict[str, Any]]],
     chave_quantidade: str,
@@ -3532,7 +3837,7 @@ def _estoque_mensal_charts(
     }
 
 
-# v1: dashboard_routes.py:6979
+# v1: dashboard_routes.py:7469
 def _build_execucao_stats(
     execucao: List[Dict],
     all_execucao: List[Dict],
@@ -3559,6 +3864,12 @@ def _build_execucao_stats(
     # encolher quando a Confecção CS está filtrada.
     entrada_fluxo_cs_por_mes = (
         group_entrada_execucao_por_fluxo_cs_por_mes_NG(all_execucao, agendamentos)
+        if agendamentos is not None
+        else None
+    )
+    # Antes do recorte por filtro de atividade (mesmo motivo do gráfico de fluxo).
+    taxa_atualizacao = (
+        get_taxa_atualizacao_execucao_NG(all_execucao, agendamentos, from_date, to_date)
         if agendamentos is not None
         else None
     )
@@ -3635,9 +3946,13 @@ def _build_execucao_stats(
         "taxa_recuperacao_execucao": get_taxa_recuperacao_execucao(
             all_execucao, from_date=from_date, to_date=to_date
         ),
+        "taxa_atualizacao_execucao_NG": taxa_atualizacao,
         "media_tempo_execucao": get_media_tempo_execucao(
             all_execucao, from_date=from_date, to_date=to_date
         ),
+        # Durações (dias) das saídas do período — o Estratégico Geral junta Condenação + Acordos
+        # para calcular média/mediana do conjunto (somar as duas médias/medianas não vale).
+        "duracoes_tempo_execucao_NG": _duracoes_execucao_ng(all_execucao, from_date, to_date),
         "mediana_tempo_execucao": get_mediana_tempo_execucao(
             all_execucao, from_date=from_date, to_date=to_date
         ),
@@ -3887,7 +4202,7 @@ def _build_execucao_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:7333
+# v1: dashboard_routes.py:7833
 def _build_execucao_RJ_stats(
     execucao: List[Dict],
     all_execucao: List[Dict],
@@ -3904,6 +4219,12 @@ def _build_execucao_RJ_stats(
     # Antes do recorte por filtro de atividade abaixo (mesmo motivo do NG).
     entrada_fluxo_cs_por_mes = (
         group_entrada_execucao_por_fluxo_cs_por_mes_RJ(all_execucao, agendamentos)
+        if agendamentos is not None
+        else None
+    )
+    # Antes do recorte por filtro de atividade (mesmo motivo do gráfico de fluxo).
+    taxa_atualizacao = (
+        get_taxa_atualizacao_execucao_RJ(all_execucao, agendamentos, from_date, to_date)
         if agendamentos is not None
         else None
     )
@@ -3974,9 +4295,13 @@ def _build_execucao_RJ_stats(
         "taxa_recuperacao_execucao_RJ": get_taxa_recuperacao_execucao_RJ(
             all_execucao, from_date=from_date, to_date=to_date
         ),
+        "taxa_atualizacao_execucao_RJ": taxa_atualizacao,
         "media_tempo_execucao_RJ": get_media_tempo_execucao_RJ(
             all_execucao, from_date=from_date, to_date=to_date
         ),
+        # Durações (dias) das saídas do período — o Estratégico Geral junta Condenação + Acordos
+        # para calcular média/mediana do conjunto (somar as duas médias/medianas não vale).
+        "duracoes_tempo_execucao_RJ": _duracoes_execucao_rj(all_execucao, from_date, to_date),
         "mediana_tempo_execucao_RJ": get_mediana_tempo_execucao_RJ(
             all_execucao, from_date=from_date, to_date=to_date
         ),
@@ -4224,7 +4549,7 @@ def _build_execucao_RJ_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:7669
+# v1: dashboard_routes.py:8179
 def _build_execucao_acordos_stats(
     execucao: List[Dict],
     all_execucao: List[Dict],
@@ -4321,6 +4646,9 @@ def _build_execucao_acordos_stats(
         "media_tempo_execucao_acordos_NG": get_media_tempo_execucao_acordos(
             all_execucao, from_date, to_date
         ),
+        # Durações (dias) das saídas do período — o Estratégico Geral junta Condenação + Acordos
+        # para calcular média/mediana do conjunto (somar as duas médias/medianas não vale).
+        "duracoes_tempo_execucao_acordos_NG": _duracoes_execucao_acordos_ng(all_execucao, from_date, to_date),
         "mediana_tempo_execucao_acordos_NG": get_mediana_tempo_execucao_acordos(
             all_execucao, from_date, to_date
         ),
@@ -4568,7 +4896,7 @@ def _build_execucao_acordos_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:8012
+# v1: dashboard_routes.py:8525
 def _build_execucao_acordos_LA_stats(
     execucao: List[Dict],
     all_execucao: List[Dict],
@@ -4665,6 +4993,9 @@ def _build_execucao_acordos_LA_stats(
         "media_tempo_execucao_acordos_LA": get_media_tempo_execucao_acordos_LA(
             all_execucao, from_date, to_date
         ),
+        # Durações (dias) das saídas do período — o Estratégico Geral junta Condenação + Acordos
+        # para calcular média/mediana do conjunto (somar as duas médias/medianas não vale).
+        "duracoes_tempo_execucao_acordos_LA": _duracoes_execucao_acordos_la(all_execucao, from_date, to_date),
         "mediana_tempo_execucao_acordos_LA": get_mediana_tempo_execucao_acordos_LA(
             all_execucao, from_date, to_date
         ),
@@ -4912,7 +5243,7 @@ def _build_execucao_acordos_LA_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:8356
+# v1: dashboard_routes.py:8872
 def _build_execucao_acordos_RJ_stats(
     execucao: List[Dict],
     all_execucao: List[Dict],
@@ -5009,6 +5340,9 @@ def _build_execucao_acordos_RJ_stats(
         "media_tempo_execucao_acordos_RJ": get_media_tempo_execucao_acordos_RJ(
             all_execucao, from_date, to_date
         ),
+        # Durações (dias) das saídas do período — o Estratégico Geral junta Condenação + Acordos
+        # para calcular média/mediana do conjunto (somar as duas médias/medianas não vale).
+        "duracoes_tempo_execucao_acordos_RJ": _duracoes_execucao_acordos_rj(all_execucao, from_date, to_date),
         "mediana_tempo_execucao_acordos_RJ": get_mediana_tempo_execucao_acordos_RJ(
             all_execucao, from_date, to_date
         ),
@@ -5256,7 +5590,7 @@ def _build_execucao_acordos_RJ_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:8697
+# v1: dashboard_routes.py:9216
 def _build_execucao_LA_stats(
     execucao: List[Dict],
     all_execucao: List[Dict],
@@ -5281,6 +5615,12 @@ def _build_execucao_LA_stats(
     # Antes do recorte por filtro de atividade abaixo (mesmo motivo do NG).
     entrada_fluxo_cs_por_mes = (
         group_entrada_execucao_por_fluxo_cs_por_mes_LA(all_execucao, agendamentos)
+        if agendamentos is not None
+        else None
+    )
+    # Antes do recorte por filtro de atividade (mesmo motivo do gráfico de fluxo).
+    taxa_atualizacao = (
+        get_taxa_atualizacao_execucao_LA(all_execucao, agendamentos, from_date, to_date)
         if agendamentos is not None
         else None
     )
@@ -5347,9 +5687,13 @@ def _build_execucao_LA_stats(
         "taxa_recuperacao_execucao_LA": get_taxa_recuperacao_execucao_LA(
             all_execucao, from_date=from_date, to_date=to_date
         ),
+        "taxa_atualizacao_execucao_LA": taxa_atualizacao,
         "media_tempo_execucao_LA": get_media_tempo_execucao_LA(
             all_execucao, from_date=from_date, to_date=to_date
         ),
+        # Durações (dias) das saídas do período — o Estratégico Geral junta Condenação + Acordos
+        # para calcular média/mediana do conjunto (somar as duas médias/medianas não vale).
+        "duracoes_tempo_execucao_LA": _duracoes_execucao_la(all_execucao, from_date, to_date),
         "mediana_tempo_execucao_LA": get_mediana_tempo_execucao_LA(
             all_execucao, from_date=from_date, to_date=to_date
         ),
@@ -5547,7 +5891,7 @@ def _build_execucao_LA_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:8987
+# v1: dashboard_routes.py:9516
 _DECISOES_RECURSAL_VALIDAS = frozenset({
     DECISAO_MANTIDO_GANHO,
     DECISAO_GANHO_AMPLIADO,
@@ -5560,11 +5904,11 @@ _DECISOES_RECURSAL_VALIDAS = frozenset({
 })
 
 
-# v1: dashboard_routes.py:8998
+# v1: dashboard_routes.py:9527
 _EXTINTOS_2G_RECURSAL_VALIDOS = frozenset({"com_merito", "sem_merito"})
 
 
-# v1: dashboard_routes.py:9001
+# v1: dashboard_routes.py:9530
 def _parse_recursal_atividades_recursos_filtros(
     funcionario_recursos: Optional[List[str]] = None,
     atividade_recursos: Optional[List[str]] = None,
@@ -5618,7 +5962,7 @@ def _parse_recursal_atividades_recursos_filtros(
     return filtros if filtros.ativo() else None
 
 
-# v1: dashboard_routes.py:9054
+# v1: dashboard_routes.py:9583
 def _parse_recursal_la_filtros_completos(
     id_1g: Optional[List[int]] = None,
     id_2g: Optional[List[int]] = None,
@@ -5664,7 +6008,7 @@ def _parse_recursal_la_filtros_completos(
     )
 
 
-# v1: dashboard_routes.py:9099
+# v1: dashboard_routes.py:9628
 def _parse_recursal_la_filtros(
     id_1g: Optional[List[int]] = None,
     id_2g: Optional[List[int]] = None,
@@ -5812,7 +6156,7 @@ def _parse_recursal_la_filtros(
     return filtros if filtros.ativo() else None
 
 
-# v1: dashboard_routes.py:9346
+# v1: dashboard_routes.py:9875
 def _aplicar_filtros_recursal_la_rows(
     rows: List[Dict],
     filtros: Optional[RecursalLAFiltros],
@@ -5820,7 +6164,7 @@ def _aplicar_filtros_recursal_la_rows(
     return filtrar_recursal_LA(rows, filtros)
 
 
-# v1: dashboard_routes.py:9353
+# v1: dashboard_routes.py:9882
 async def _rows_recursal_la_filtradas(
     rows: List[Dict],
     filtros: Optional[RecursalLAFiltros],
@@ -5857,7 +6201,7 @@ async def _rows_recursal_la_filtradas(
     return _aplicar_filtros_recursal_la_rows(rows, filtros)
 
 
-# v1: dashboard_routes.py:9436
+# v1: dashboard_routes.py:9965
 def _aplicar_filtros_recursal_ng_rows(
     rows: List[Dict],
     filtros: Optional[RecursalLAFiltros],
@@ -5865,7 +6209,7 @@ def _aplicar_filtros_recursal_ng_rows(
     return filtrar_recursal_NG(rows, filtros)
 
 
-# v1: dashboard_routes.py:9443
+# v1: dashboard_routes.py:9972
 async def _rows_recursal_ng_filtradas(
     rows: List[Dict],
     filtros: Optional[RecursalLAFiltros],
@@ -5902,7 +6246,7 @@ async def _rows_recursal_ng_filtradas(
     return _aplicar_filtros_recursal_ng_rows(rows, filtros)
 
 
-# v1: dashboard_routes.py:9489
+# v1: dashboard_routes.py:10108
 def _build_recursal_LA_stats(
     all_recursal: List[Dict],
     from_date: Optional[date],
@@ -6110,7 +6454,7 @@ def _build_recursal_LA_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:9696
+# v1: dashboard_routes.py:10315
 def _build_decisoes_recursal_LA_stats(
     all_recursal: List[Dict],
     from_date: Optional[date],
@@ -6144,7 +6488,7 @@ def _build_decisoes_recursal_LA_stats(
     return stats
 
 
-# v1: dashboard_routes.py:9729
+# v1: dashboard_routes.py:10348
 def _build_recursal_NG_stats(
     all_recursal: List[Dict],
     from_date: Optional[date],
@@ -6362,7 +6706,7 @@ def _build_recursal_NG_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:9946
+# v1: dashboard_routes.py:10565
 def _build_decisoes_recursal_NG_stats(
     all_recursal: List[Dict],
     from_date: Optional[date],
@@ -6396,7 +6740,7 @@ def _build_decisoes_recursal_NG_stats(
     return stats
 
 
-# v1: dashboard_routes.py:13842
+# v1: dashboard_routes.py:15223
 def _filtro_multi(valor: Any) -> Optional[Union[str, List[str]]]:
     """Filtro de matéria/subfase da Execução: aceita texto único ou lista (``?materia=A&materia=B``).
     Um valor → texto (comportamento antigo); dois ou mais → lista; vazio → ``None``."""
@@ -6411,7 +6755,7 @@ def _filtro_multi(valor: Any) -> Optional[Union[str, List[str]]]:
     return texto or None
 
 
-# v1: dashboard_routes.py:20707
+# v1: dashboard_routes.py:22088
 def _mapa_agendamento_para_processo_id_acordos_ng(
     agendamentos: List[Dict[str, Any]],
 ) -> Dict[int, Any]:
@@ -6427,7 +6771,7 @@ def _mapa_agendamento_para_processo_id_acordos_ng(
     return mapa
 
 
-# v1: dashboard_routes.py:20722
+# v1: dashboard_routes.py:22103
 def _mapa_numero_e_valor_por_processo_id_acordos_ng(
     processos: List[Dict[str, Any]],
     processo_ids: set,
@@ -6450,7 +6794,7 @@ def _mapa_numero_e_valor_por_processo_id_acordos_ng(
     return numero_por_id, valor_por_id
 
 
-# v1: dashboard_routes.py:20744
+# v1: dashboard_routes.py:22125
 def _enriquecer_atividades_acordos_ng_com_dados_processo(
     itens: List[Dict[str, Any]],
     ag_filtrados: List[Dict[str, Any]],
@@ -6475,7 +6819,7 @@ def _enriquecer_atividades_acordos_ng_com_dados_processo(
     return itens
 
 
-# v1: dashboard_routes.py:20768
+# v1: dashboard_routes.py:22149
 def _mapa_agendamento_para_processo_id_acordos_la(
     agendamentos: List[Dict[str, Any]],
 ) -> Dict[int, Any]:
@@ -6491,7 +6835,7 @@ def _mapa_agendamento_para_processo_id_acordos_la(
     return mapa
 
 
-# v1: dashboard_routes.py:20783
+# v1: dashboard_routes.py:22164
 def _mapa_numero_e_valor_por_processo_id_acordos_la(
     processos: List[Dict[str, Any]],
     processo_ids: set,
@@ -6514,7 +6858,7 @@ def _mapa_numero_e_valor_por_processo_id_acordos_la(
     return numero_por_id, valor_por_id
 
 
-# v1: dashboard_routes.py:20805
+# v1: dashboard_routes.py:22186
 def _enriquecer_atividades_acordos_la_com_dados_processo(
     itens: List[Dict[str, Any]],
     ag_filtrados: List[Dict[str, Any]],
@@ -6539,7 +6883,7 @@ def _enriquecer_atividades_acordos_la_com_dados_processo(
     return itens
 
 
-# v1: dashboard_routes.py:20829
+# v1: dashboard_routes.py:22210
 def _mapa_agendamento_para_processo_id_acordos_rj(
     agendamentos: List[Dict[str, Any]],
 ) -> Dict[int, Any]:
@@ -6555,7 +6899,7 @@ def _mapa_agendamento_para_processo_id_acordos_rj(
     return mapa
 
 
-# v1: dashboard_routes.py:20844
+# v1: dashboard_routes.py:22225
 def _mapa_numero_e_valor_por_processo_id_acordos_rj(
     processos: List[Dict[str, Any]],
     processo_ids: set,
@@ -6578,7 +6922,7 @@ def _mapa_numero_e_valor_por_processo_id_acordos_rj(
     return numero_por_id, valor_por_id
 
 
-# v1: dashboard_routes.py:20866
+# v1: dashboard_routes.py:22247
 def _enriquecer_atividades_acordos_rj_com_dados_processo(
     itens: List[Dict[str, Any]],
     ag_filtrados: List[Dict[str, Any]],
@@ -6603,610 +6947,7 @@ def _enriquecer_atividades_acordos_rj_com_dados_processo(
     return itens
 
 
-# v1: dashboard_routes.py:21884 (handler da rota, sem os decoradores)
-async def get_execucao_dashboard(
-    from_date: Optional[date] = Query(None, alias="from"),
-    to_date: Optional[date] = Query(None, alias="to"),
-    materia: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
-    ),
-    subfase: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase).",
-    ),
-    ano_ajuizamento_execucao: Optional[str] = Query(
-        None,
-        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
-    ),
-    uf: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
-            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
-        ),
-    ),
-    comarca: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por comarca do processo — aceita múltiplos valores "
-            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
-        ),
-    ),
-    funcionario_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por funcionário (seção Atividades NG)",
-    ),
-    atividade_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por atividade (seção Atividades NG)",
-    ),
-    status_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por status (seção Atividades NG)",
-    ),
-    situacao_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
-    ),
-    diligencia_tipo_execucao: Optional[str] = Query(
-        None,
-        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
-    ),
-    diligencia_colaborador_execucao: Optional[str] = Query(
-        None,
-        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
-    ),
-):
-    """Dashboard de Execução NG."""
-    filtros = _parse_execucao_atividades_filtros(
-        funcionario_execucao,
-        atividade_execucao,
-        status_execucao,
-        situacao_execucao,
-    )
-    return await _get_dashboard_response(
-        "execucao",
-        from_date,
-        to_date,
-        materia=materia,
-        subfase=subfase,
-        ano_ajuizamento_execucao=ano_ajuizamento_execucao,
-        uf_execucao_ng=uf,
-        comarca_execucao_ng=comarca,
-        execucao_atividades_filtros=filtros,
-        diligencia_tipo_execucao=diligencia_tipo_execucao,
-        diligencia_colaborador_execucao=diligencia_colaborador_execucao,
-    )
-
-
-# v1: dashboard_routes.py:21962 (handler da rota, sem os decoradores)
-async def get_execucao_rj_dashboard(
-    from_date: Optional[date] = Query(None, alias="from"),
-    to_date: Optional[date] = Query(None, alias="to"),
-    materia: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
-    ),
-    subfase: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase).",
-    ),
-    ano_ajuizamento_execucao: Optional[str] = Query(
-        None,
-        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
-    ),
-    uf: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por UF do processo — aceita múltiplos valores (`?uf=RJ&uf=SP`). "
-            "Omitido/vazio = todas as UFs."
-        ),
-    ),
-    comarca: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por comarca do processo — aceita múltiplos valores "
-            "(`?comarca=Rio de Janeiro`). Omitido/vazio = todas as comarcas."
-        ),
-    ),
-    funcionario_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por funcionário (seção Atividades RJ)",
-    ),
-    atividade_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por atividade (seção Atividades RJ)",
-    ),
-    status_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por status (seção Atividades RJ)",
-    ),
-    situacao_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
-    ),
-    diligencia_tipo_execucao: Optional[str] = Query(
-        None,
-        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
-    ),
-    diligencia_colaborador_execucao: Optional[str] = Query(
-        None,
-        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
-    ),
-):
-    """Dashboard de Execução (Condenação) RJ."""
-    filtros = _parse_execucao_atividades_filtros(
-        funcionario_execucao,
-        atividade_execucao,
-        status_execucao,
-        situacao_execucao,
-    )
-    return await _get_dashboard_response(
-        "execucao_RJ",
-        from_date,
-        to_date,
-        materia=materia,
-        subfase=subfase,
-        ano_ajuizamento_execucao=ano_ajuizamento_execucao,
-        uf_execucao_rj=uf,
-        comarca_execucao_rj=comarca,
-        execucao_atividades_filtros=filtros,
-        diligencia_tipo_execucao=diligencia_tipo_execucao,
-        diligencia_colaborador_execucao=diligencia_colaborador_execucao,
-    )
-
-
-# v1: dashboard_routes.py:22040 (handler da rota, sem os decoradores)
-async def get_execucao_acordos_ng_dashboard(
-    from_date: Optional[date] = Query(None, alias="from"),
-    to_date: Optional[date] = Query(None, alias="to"),
-    materia: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
-    ),
-    subfase: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra pela subfase (igual ao `name` dos gráficos por subfase) — "
-            "aceita múltiplos valores (`?subfase=A&subfase=B`)."
-        ),
-    ),
-    tipo_acao_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra por classificação Judicial/Extrajudicial (igual ao `name` do gráfico correspondente).",
-    ),
-    tipo_sentenca_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra por classificação Pré-Sentença/Pós-Sentença (igual ao `name` do gráfico correspondente).",
-    ),
-    ano_ajuizamento_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
-    ),
-    uf: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
-            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
-        ),
-    ),
-    funcionario_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por funcionário (seção Atividades NG)",
-    ),
-    atividade_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por atividade (seção Atividades NG)",
-    ),
-    status_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por status (seção Atividades NG)",
-    ),
-    situacao_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
-    ),
-    numero_processo_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra por um único número de processo (igual ao `name` dos gráficos por processo).",
-    ),
-    diligencia_tipo_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
-    ),
-    diligencia_colaborador_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
-    ),
-    comarca: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por comarca do processo — aceita múltiplos valores "
-            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
-        ),
-    ),
-):
-    """Dashboard de Execução Acordos NG."""
-    filtros = _parse_execucao_atividades_filtros(
-        funcionario_execucao_acordos,
-        atividade_execucao_acordos,
-        status_execucao_acordos,
-        situacao_execucao_acordos,
-    )
-    return await _get_dashboard_response(
-        "execucao_acordos_NG",
-        from_date,
-        to_date,
-        materia=materia,
-        subfase=subfase,
-        tipo_acao_execucao_acordos=tipo_acao_execucao_acordos,
-        tipo_sentenca_execucao_acordos=tipo_sentenca_execucao_acordos,
-        ano_ajuizamento_execucao_acordos=ano_ajuizamento_execucao_acordos,
-        uf_execucao_acordos_ng=uf,
-        execucao_acordos_atividades_filtros=filtros,
-        numero_processo_execucao_acordos=numero_processo_execucao_acordos,
-        diligencia_tipo_execucao_acordos=diligencia_tipo_execucao_acordos,
-        diligencia_colaborador_execucao_acordos=diligencia_colaborador_execucao_acordos,
-        comarca_execucao_acordos_ng=comarca,
-    )
-
-
-# v1: dashboard_routes.py:22136 (handler da rota, sem os decoradores)
-async def get_execucao_acordos_la_dashboard(
-    from_date: Optional[date] = Query(None, alias="from"),
-    to_date: Optional[date] = Query(None, alias="to"),
-    materia: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
-    ),
-    subfase: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase).",
-    ),
-    tipo_acao_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra por classificação Judicial/Extrajudicial (igual ao `name` do gráfico correspondente).",
-    ),
-    tipo_sentenca_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra por classificação Pré-Sentença/Pós-Sentença (igual ao `name` do gráfico correspondente).",
-    ),
-    ano_ajuizamento_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
-    ),
-    uf: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
-            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
-        ),
-    ),
-    funcionario_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por funcionário (seção Atividades LA)",
-    ),
-    atividade_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por atividade (seção Atividades LA)",
-    ),
-    status_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por status (seção Atividades LA)",
-    ),
-    situacao_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
-    ),
-    numero_processo_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra por um único número de processo (igual ao `name` dos gráficos por processo).",
-    ),
-    diligencia_tipo_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
-    ),
-    diligencia_colaborador_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
-    ),
-    comarca: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por comarca do processo — aceita múltiplos valores "
-            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
-        ),
-    ),
-):
-    """Dashboard de Execução Acordos LA."""
-    filtros = _parse_execucao_atividades_filtros(
-        funcionario_execucao_acordos,
-        atividade_execucao_acordos,
-        status_execucao_acordos,
-        situacao_execucao_acordos,
-    )
-    return await _get_dashboard_response(
-        "execucao_acordos_LA",
-        from_date,
-        to_date,
-        materia=materia,
-        subfase=subfase,
-        tipo_acao_execucao_acordos=tipo_acao_execucao_acordos,
-        tipo_sentenca_execucao_acordos=tipo_sentenca_execucao_acordos,
-        ano_ajuizamento_execucao_acordos=ano_ajuizamento_execucao_acordos,
-        uf_execucao_acordos_la=uf,
-        execucao_acordos_atividades_filtros=filtros,
-        numero_processo_execucao_acordos=numero_processo_execucao_acordos,
-        diligencia_tipo_execucao_acordos=diligencia_tipo_execucao_acordos,
-        diligencia_colaborador_execucao_acordos=diligencia_colaborador_execucao_acordos,
-        comarca_execucao_acordos_la=comarca,
-    )
-
-
-# v1: dashboard_routes.py:22229 (handler da rota, sem os decoradores)
-async def get_execucao_acordos_rj_dashboard(
-    from_date: Optional[date] = Query(None, alias="from"),
-    to_date: Optional[date] = Query(None, alias="to"),
-    materia: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
-    ),
-    subfase: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase).",
-    ),
-    tipo_acao_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra por classificação Judicial/Extrajudicial (igual ao `name` do gráfico correspondente).",
-    ),
-    tipo_sentenca_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra por classificação Pré-Sentença/Pós-Sentença (igual ao `name` do gráfico correspondente).",
-    ),
-    ano_ajuizamento_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
-    ),
-    uf: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
-            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
-        ),
-    ),
-    funcionario_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por funcionário (seção Atividades RJ)",
-    ),
-    atividade_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por atividade (seção Atividades RJ)",
-    ),
-    status_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por status (seção Atividades RJ)",
-    ),
-    situacao_execucao_acordos: Optional[List[str]] = Query(
-        None,
-        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
-    ),
-    numero_processo_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra por um único número de processo (igual ao `name` dos gráficos por processo).",
-    ),
-    diligencia_tipo_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
-    ),
-    diligencia_colaborador_execucao_acordos: Optional[str] = Query(
-        None,
-        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
-    ),
-    comarca: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por comarca do processo — aceita múltiplos valores "
-            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
-        ),
-    ),
-):
-    """Dashboard de Execução Acordos LA."""
-    filtros = _parse_execucao_atividades_filtros(
-        funcionario_execucao_acordos,
-        atividade_execucao_acordos,
-        status_execucao_acordos,
-        situacao_execucao_acordos,
-    )
-    return await _get_dashboard_response(
-        "execucao_acordos_RJ",
-        from_date,
-        to_date,
-        materia=materia,
-        subfase=subfase,
-        tipo_acao_execucao_acordos=tipo_acao_execucao_acordos,
-        tipo_sentenca_execucao_acordos=tipo_sentenca_execucao_acordos,
-        ano_ajuizamento_execucao_acordos=ano_ajuizamento_execucao_acordos,
-        uf_execucao_acordos_rj=uf,
-        execucao_acordos_atividades_filtros=filtros,
-        numero_processo_execucao_acordos=numero_processo_execucao_acordos,
-        diligencia_tipo_execucao_acordos=diligencia_tipo_execucao_acordos,
-        diligencia_colaborador_execucao_acordos=diligencia_colaborador_execucao_acordos,
-        comarca_execucao_acordos_rj=comarca,
-    )
-
-
-# v1: dashboard_routes.py:22510 (handler da rota, sem os decoradores)
-async def get_recursal_LA_dashboard(
-    from_date: Optional[date] = Query(None, alias="from"),
-    to_date: Optional[date] = Query(None, alias="to"),
-    id_1g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 1º grau"),
-    id_2g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 2º grau"),
-    juiz: Optional[List[str]] = Query(None, description="Filtra por nome(s) de juiz (1G)"),
-    relator: Optional[List[str]] = Query(None, description="Filtra por nome(s) de relator (2G)"),
-    decisao: Optional[List[str]] = Query(
-        None,
-        description="Filtra por tipo(s) de decisão recursal (ex.: mantido_ganho)",
-    ),
-    materia: Optional[List[str]] = Query(
-        None,
-        description="Filtra por matéria(s) (rótulo normalizado do gráfico)",
-    ),
-    competencia: Optional[List[str]] = Query(
-        None,
-        description="Filtra por competência(s) (rótulo do gráfico)",
-    ),
-    vara: Optional[List[str]] = Query(
-        None,
-        description="Filtra por vara(s) (rótulo do gráfico, ex.: 1º vara)",
-    ),
-    subfase: Optional[List[str]] = Query(
-        None,
-        description="Filtra por subfase(s) (rótulo do gráfico)",
-    ),
-    extinto_2g: Optional[List[str]] = Query(
-        None,
-        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
-    ),
-    funcionario_recursos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos RECURSOS por funcionário (seção Atividades)",
-    ),
-    atividade_recursos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos RECURSOS por atividade do catálogo",
-    ),
-    status_recursos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos RECURSOS por status do agendamento",
-    ),
-    situacao_recursos: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas"
-        ),
-    ),
-):
-    """
-    Dashboard da fase Recursal (LA).
-
-    Retorna ``total_recursal_LA`` (estoque, fase 8) e ``entrada_recursal_LA`` (fase 8 + entrada no período).
-    Filtros cumulativos opcionais: ``id_1g``, ``id_2g``, ``juiz``, ``relator``, ``decisao``,
-    ``materia``, ``competencia``, ``vara``, ``subfase``, ``extinto_2g``.
-    Filtros da seção Atividades: ``funcionario_recursos``, ``atividade_recursos``,
-    ``status_recursos``, ``situacao_recursos``.
-    """
-    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
-        id_1g=id_1g,
-        id_2g=id_2g,
-        juiz=juiz,
-        relator=relator,
-        decisao=decisao,
-        materia=materia,
-        competencia=competencia,
-        vara=vara,
-        subfase=subfase,
-        extinto_2g=extinto_2g,
-        funcionario_recursos=funcionario_recursos,
-        atividade_recursos=atividade_recursos,
-        status_recursos=status_recursos,
-        situacao_recursos=situacao_recursos,
-    )
-    return await _get_dashboard_response(
-        "recursal_LA",
-        from_date,
-        to_date,
-        recursal_la_filtros=filtros,
-        recursal_atividades_recursos_filtros=filtros_atividades,
-    )
-
-
-# v1: dashboard_routes.py:23503 (handler da rota, sem os decoradores)
-async def get_recursal_NG_dashboard(
-    from_date: Optional[date] = Query(None, alias="from"),
-    to_date: Optional[date] = Query(None, alias="to"),
-    id_1g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 1º grau"),
-    id_2g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 2º grau"),
-    juiz: Optional[List[str]] = Query(None, description="Filtra por nome(s) de juiz (1G)"),
-    relator: Optional[List[str]] = Query(None, description="Filtra por nome(s) de relator (2G)"),
-    decisao: Optional[List[str]] = Query(
-        None,
-        description="Filtra por tipo(s) de decisão recursal (ex.: mantido_ganho)",
-    ),
-    materia: Optional[List[str]] = Query(
-        None,
-        description="Filtra por matéria(s) (rótulo normalizado do gráfico)",
-    ),
-    competencia: Optional[List[str]] = Query(
-        None,
-        description="Filtra por competência(s) (rótulo do gráfico)",
-    ),
-    vara: Optional[List[str]] = Query(
-        None,
-        description="Filtra por vara(s) (rótulo do gráfico, ex.: 1º vara)",
-    ),
-    subfase: Optional[List[str]] = Query(
-        None,
-        description="Filtra por subfase(s) (rótulo do gráfico)",
-    ),
-    extinto_2g: Optional[List[str]] = Query(
-        None,
-        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
-    ),
-    funcionario_recursos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos RECURSOS por funcionário (seção Atividades)",
-    ),
-    atividade_recursos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos RECURSOS por atividade do catálogo",
-    ),
-    status_recursos: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos RECURSOS por status do agendamento",
-    ),
-    situacao_recursos: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas"
-        ),
-    ),
-):
-    """
-    Dashboard da fase Recursal (LA).
-
-    Retorna ``total_recursal_NG`` (estoque, fase 8) e ``entrada_recursal_NG`` (fase 8 + entrada no período).
-    Filtros cumulativos opcionais: ``id_1g``, ``id_2g``, ``juiz``, ``relator``, ``decisao``,
-    ``materia``, ``competencia``, ``vara``, ``subfase``, ``extinto_2g``.
-    Filtros da seção Atividades: ``funcionario_recursos``, ``atividade_recursos``,
-    ``status_recursos``, ``situacao_recursos``.
-    """
-    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
-        id_1g=id_1g,
-        id_2g=id_2g,
-        juiz=juiz,
-        relator=relator,
-        decisao=decisao,
-        materia=materia,
-        competencia=competencia,
-        vara=vara,
-        subfase=subfase,
-        extinto_2g=extinto_2g,
-        funcionario_recursos=funcionario_recursos,
-        atividade_recursos=atividade_recursos,
-        status_recursos=status_recursos,
-        situacao_recursos=situacao_recursos,
-    )
-    return await _get_dashboard_response(
-        "recursal_NG",
-        from_date,
-        to_date,
-        recursal_la_filtros=filtros,
-        recursal_atividades_recursos_filtros=filtros_atividades,
-    )
-
-
-# v1: dashboard_routes.py:25316
+# v1: dashboard_routes.py:27915
 def _parse_execucao_atividades_filtros(
     funcionario: Optional[List[str]] = None,
     atividade: Optional[List[str]] = None,
@@ -7260,73 +7001,6 @@ def _parse_execucao_atividades_filtros(
     return filtros if filtros.ativo() else None
 
 
-# v1: dashboard_routes.py:25371 (handler da rota, sem os decoradores)
-async def get_execucao_LA_dashboard(
-    from_date: Optional[date] = Query(None, alias="from"),
-    to_date: Optional[date] = Query(None, alias="to"),
-    materia: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria LA).",
-    ),
-    subfase: Optional[List[str]] = Query(
-        None,
-        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase LA).",
-    ),
-    ano_ajuizamento_execucao: Optional[str] = Query(
-        None,
-        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
-    ),
-    comarca: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por comarca do processo — aceita múltiplos valores "
-            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
-        ),
-    ),
-    uf: Optional[List[str]] = Query(
-        None,
-        description=(
-            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
-            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
-        ),
-    ),
-    funcionario_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por funcionário (seção Atividades)",
-    ),
-    atividade_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por atividade",
-    ),
-    status_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra agendamentos por status",
-    ),
-    situacao_execucao: Optional[List[str]] = Query(
-        None,
-        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
-    ),
-):
-    """Dashboard de Execução LA."""
-    filtros = _parse_execucao_atividades_filtros(
-        funcionario_execucao,
-        atividade_execucao,
-        status_execucao,
-        situacao_execucao,
-    )
-    return await _get_dashboard_response(
-        "execucao_LA",
-        from_date,
-        to_date,
-        materia=materia,
-        subfase=subfase,
-        ano_ajuizamento_execucao=ano_ajuizamento_execucao,
-        comarca_execucao_la=comarca,
-        uf_execucao_la=uf,
-        execucao_atividades_filtros=filtros,
-    )
-
-
 # V2: só os dashboards desta cópia (v1: FETCHES_BY_DASHBOARD, mesmas fontes e chaves).
 FETCHES_BY_DASHBOARD: Dict[str, List[Tuple[str, Any]]] = {
     "execucao": [("execucao", fetch_execucao), ("agendamentos_setor_execucao_NG", fetch_agendamentos_setor_execucao_NG)],
@@ -7339,12 +7013,9 @@ FETCHES_BY_DASHBOARD: Dict[str, List[Tuple[str, Any]]] = {
     "recursal_LA": [("recursal_LA", fetch_recursal_LA), ("agendamentos_setor_recursos_LA", fetch_agendamentos_setor_recursos_LA), ("atividades_setor_recursos_LA", fetch_atividades_setor_recursos_LA)],
 }
 DASHBOARD_NAMES = set(FETCHES_BY_DASHBOARD)
-# V2: dashboard da v1 -> handler da rota e queries que ele busca (para a casca e o aquecedor do cache).
-HANDLERS = {"execucao": get_execucao_dashboard, "execucao_LA": get_execucao_LA_dashboard, "execucao_RJ": get_execucao_rj_dashboard, "execucao_acordos_NG": get_execucao_acordos_ng_dashboard, "execucao_acordos_LA": get_execucao_acordos_la_dashboard, "execucao_acordos_RJ": get_execucao_acordos_rj_dashboard, "recursal_NG": get_recursal_NG_dashboard, "recursal_LA": get_recursal_LA_dashboard}
-QUERIES_POR_DASHBOARD = {'execucao': ('execucao_LA', 'agendamentos_setor_execucao_NG'), 'execucao_LA': ('execucao_LA', 'agendamentos_setor_execucao_LA'), 'execucao_RJ': ('execucao_RJ', 'agendamentos_setor_execucao_LA_RJ'), 'execucao_acordos_NG': ('execucao_acordos_NG', 'agendamentos_fechamento_acordos_NG', 'agendamentos_setor_execucao_acordos_NG'), 'execucao_acordos_LA': ('execucao_acordos_LA', 'agendamentos_fechamento_acordos_LA', 'agendamentos_setor_execucao_acordos_LA'), 'execucao_acordos_RJ': ('execucao_acordos_RJ', 'agendamentos_fechamento_acordos_RJ', 'agendamentos_setor_execucao_acordos_RJ'), 'recursal_NG': ('setor_recurso_NG', 'agendamentos_setor_recursos_NG', 'atividades_setor_recursos_NG'), 'recursal_LA': ('setor_recurso', 'agendamentos_setor_recursos_LA', 'atividades_setor_recursos_LA')}
 
 
-# v1: dashboard_routes.py:10386 — V2: início igual, só os ramos de execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA
+# v1: dashboard_routes.py:11255 — V2: início igual, só os ramos de execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA
 async def _get_dashboard_response(  # V2: só os parâmetros usados por estes dashboards
     dashboard_name: str,
     from_date: Optional[date],
@@ -7376,12 +7047,13 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
     recursal_atividades_recursos_filtros: Optional[RecursalAtividadesRecursosFiltros] = None,
     execucao_atividades_filtros: Optional[ExecucaoAtividadesFiltros] = None,
     execucao_acordos_atividades_filtros: Optional[ExecucaoAtividadesFiltros] = None,
+    area_atuacao_id: Optional[Union[int, List[int]]] = None,
 ) -> DashboardResponse:
-    # V2: (bloco de outros dashboards da v1 omitido)
+    if dashboard_name not in DASHBOARD_NAMES:
+        raise HTTPException(status_code=404, detail=f"Dashboard '{dashboard_name}' não encontrado.")
     t0 = time.time()
     logger.info("Dashboard '%s' (from=%s, to=%s)", dashboard_name, from_date, to_date)
     from_date, to_date = _resolve_date_range(from_date, to_date)
-    # 1. Buscar apenas as fontes necessárias para este dashboard
     fetches_config = FETCHES_BY_DASHBOARD[dashboard_name]
     # V2: mesma busca da v1 (_gather_dashboard_fetches = gather com return_exceptions)
     results = await asyncio.gather(*[fn() for _, fn in fetches_config], return_exceptions=True)
@@ -7397,10 +7069,17 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
             all_data[key] = []
         else:
             all_data[key] = res
-    # V2: (bloco de outros dashboards da v1 omitido)
+    if source_errors:
+        if len(fetches_config) == 1:
+            failed_key, failed_exc = source_errors[0]
+            logger.exception("Falha ao buscar fonte '%s' no dashboard '%s'", failed_key, dashboard_name, exc_info=failed_exc)
+            if isinstance(failed_exc, HTTPException):
+                raise failed_exc
+            raise HTTPException(status_code=500, detail=f"Falha ao buscar dados de '{failed_key}'")
+        for failed_key, failed_exc in source_errors:
+            logger.warning("Fonte '%s' indisponível no dashboard '%s': %s", failed_key, dashboard_name, failed_exc)
     # V2: (variável só de outros dashboards da v1 omitida)
     # V2: (bloco de outros dashboards da v1 omitido)
-    # 2. Aplicar filtros de data
     filtered_data: Dict[str, List] = {
         key: filter_data(key, data, from_date, to_date)
         for key, data in all_data.items()
@@ -7416,12 +7095,36 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (variável só de outros dashboards da v1 omitida)
     # V2: (bloco de outros dashboards da v1 omitido)
-    # V2: (variável só de outros dashboards da v1 omitida)
-    # V2: (bloco de outros dashboards da v1 omitido)
+    _PREPROTOCOLO_AREA_KEY = {
+        "pendencia_LA":      "pendencia_LA",
+        "org_doc_LA":        "org_doc_LA",
+        "peticionamento_LA": "peticionamento_LA",
+        "protocolo_LA":      "protocolo_LA",
+        "pendencias":        "pendencias",
+        "pendencias_RJ":     "pendencias",
+        "org-documentos":    "org_doc",
+        "org_doc_RJ":        "org_doc",
+        "peticionamento":    "peticionamento",
+        "peticionamento_RJ": "peticionamento",
+        "protocolo":         "protocolos",
+        "protocolo_RJ":      "protocolos",
+    }
+    if dashboard_name in _PREPROTOCOLO_AREA_KEY and area_atuacao_id is not None:
+        _key = _PREPROTOCOLO_AREA_KEY[dashboard_name]
+        area_atuacao_id_aplicado = area_atuacao_id
+        filtered_data[_key] = filter_comercial_geral_por_area_atuacao(filtered_data.get(_key, []), area_atuacao_id)
+        all_data[_key] = filter_comercial_geral_por_area_atuacao(all_data.get(_key, []), area_atuacao_id)
     def _f(key: str) -> List:
         return filtered_data.get(key, [])
     def _a(key: str) -> List:
         return all_data.get(key, [])
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
     if dashboard_name == "execucao":
         materia_filtro = _filtro_multi(materia)
         subfase_filtro = _filtro_multi(subfase)
@@ -8071,7 +7774,6 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
         ]
         logger.info("Dashboard 'execucao_acordos_RJ' processado em %.2fs", time.time() - t0)
         return DashboardResponse(dashboard="execucao_acordos_RJ", stats=DashboardStats(**stats), **charts)
-    # CORRIGIDO: usa o builder dedicado em vez de bloco inline
     if dashboard_name == "execucao_LA":
         materia_filtro = _filtro_multi(materia)
         subfase_filtro = _filtro_multi(subfase)
@@ -8183,3 +7885,708 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
         )
         logger.info("Dashboard 'recursal_NG' processado em %.2fs", time.time() - t0)
         return DashboardResponse(dashboard="recursal_NG", stats=DashboardStats(**stats), **charts)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    raise HTTPException(status_code=404, detail=f"Dashboard '{dashboard_name}' não encontrado.")
+
+
+# v1: dashboard_routes.py:23265 (rota sem os decoradores)
+async def get_execucao_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
+    ),
+    subfase: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase).",
+    ),
+    ano_ajuizamento_execucao: Optional[str] = Query(
+        None,
+        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
+    ),
+    uf: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
+            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
+        ),
+    ),
+    comarca: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por comarca do processo — aceita múltiplos valores "
+            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
+        ),
+    ),
+    funcionario_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por funcionário (seção Atividades NG)",
+    ),
+    atividade_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por atividade (seção Atividades NG)",
+    ),
+    status_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por status (seção Atividades NG)",
+    ),
+    situacao_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
+    ),
+    diligencia_tipo_execucao: Optional[str] = Query(
+        None,
+        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
+    ),
+    diligencia_colaborador_execucao: Optional[str] = Query(
+        None,
+        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
+    ),
+):
+    """Dashboard de Execução NG."""
+    filtros = _parse_execucao_atividades_filtros(
+        funcionario_execucao,
+        atividade_execucao,
+        status_execucao,
+        situacao_execucao,
+    )
+    return await _get_dashboard_response(
+        "execucao",
+        from_date,
+        to_date,
+        materia=materia,
+        subfase=subfase,
+        ano_ajuizamento_execucao=ano_ajuizamento_execucao,
+        uf_execucao_ng=uf,
+        comarca_execucao_ng=comarca,
+        execucao_atividades_filtros=filtros,
+        diligencia_tipo_execucao=diligencia_tipo_execucao,
+        diligencia_colaborador_execucao=diligencia_colaborador_execucao,
+    )
+
+
+# v1: dashboard_routes.py:27970 (rota sem os decoradores)
+async def get_execucao_LA_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria LA).",
+    ),
+    subfase: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase LA).",
+    ),
+    ano_ajuizamento_execucao: Optional[str] = Query(
+        None,
+        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
+    ),
+    comarca: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por comarca do processo — aceita múltiplos valores "
+            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
+        ),
+    ),
+    uf: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
+            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
+        ),
+    ),
+    funcionario_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por funcionário (seção Atividades)",
+    ),
+    atividade_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por atividade",
+    ),
+    status_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por status",
+    ),
+    situacao_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
+    ),
+):
+    """Dashboard de Execução LA."""
+    filtros = _parse_execucao_atividades_filtros(
+        funcionario_execucao,
+        atividade_execucao,
+        status_execucao,
+        situacao_execucao,
+    )
+    return await _get_dashboard_response(
+        "execucao_LA",
+        from_date,
+        to_date,
+        materia=materia,
+        subfase=subfase,
+        ano_ajuizamento_execucao=ano_ajuizamento_execucao,
+        comarca_execucao_la=comarca,
+        uf_execucao_la=uf,
+        execucao_atividades_filtros=filtros,
+    )
+
+
+# v1: dashboard_routes.py:23343 (rota sem os decoradores)
+async def get_execucao_rj_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
+    ),
+    subfase: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase).",
+    ),
+    ano_ajuizamento_execucao: Optional[str] = Query(
+        None,
+        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
+    ),
+    uf: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por UF do processo — aceita múltiplos valores (`?uf=RJ&uf=SP`). "
+            "Omitido/vazio = todas as UFs."
+        ),
+    ),
+    comarca: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por comarca do processo — aceita múltiplos valores "
+            "(`?comarca=Rio de Janeiro`). Omitido/vazio = todas as comarcas."
+        ),
+    ),
+    funcionario_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por funcionário (seção Atividades RJ)",
+    ),
+    atividade_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por atividade (seção Atividades RJ)",
+    ),
+    status_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por status (seção Atividades RJ)",
+    ),
+    situacao_execucao: Optional[List[str]] = Query(
+        None,
+        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
+    ),
+    diligencia_tipo_execucao: Optional[str] = Query(
+        None,
+        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
+    ),
+    diligencia_colaborador_execucao: Optional[str] = Query(
+        None,
+        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
+    ),
+):
+    """Dashboard de Execução (Condenação) RJ."""
+    filtros = _parse_execucao_atividades_filtros(
+        funcionario_execucao,
+        atividade_execucao,
+        status_execucao,
+        situacao_execucao,
+    )
+    return await _get_dashboard_response(
+        "execucao_RJ",
+        from_date,
+        to_date,
+        materia=materia,
+        subfase=subfase,
+        ano_ajuizamento_execucao=ano_ajuizamento_execucao,
+        uf_execucao_rj=uf,
+        comarca_execucao_rj=comarca,
+        execucao_atividades_filtros=filtros,
+        diligencia_tipo_execucao=diligencia_tipo_execucao,
+        diligencia_colaborador_execucao=diligencia_colaborador_execucao,
+    )
+
+
+# v1: dashboard_routes.py:23421 (rota sem os decoradores)
+async def get_execucao_acordos_ng_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
+    ),
+    subfase: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra pela subfase (igual ao `name` dos gráficos por subfase) — "
+            "aceita múltiplos valores (`?subfase=A&subfase=B`)."
+        ),
+    ),
+    tipo_acao_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra por classificação Judicial/Extrajudicial (igual ao `name` do gráfico correspondente).",
+    ),
+    tipo_sentenca_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra por classificação Pré-Sentença/Pós-Sentença (igual ao `name` do gráfico correspondente).",
+    ),
+    ano_ajuizamento_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
+    ),
+    uf: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
+            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
+        ),
+    ),
+    funcionario_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por funcionário (seção Atividades NG)",
+    ),
+    atividade_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por atividade (seção Atividades NG)",
+    ),
+    status_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por status (seção Atividades NG)",
+    ),
+    situacao_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
+    ),
+    numero_processo_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra por um único número de processo (igual ao `name` dos gráficos por processo).",
+    ),
+    diligencia_tipo_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
+    ),
+    diligencia_colaborador_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
+    ),
+    comarca: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por comarca do processo — aceita múltiplos valores "
+            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
+        ),
+    ),
+):
+    """Dashboard de Execução Acordos NG."""
+    filtros = _parse_execucao_atividades_filtros(
+        funcionario_execucao_acordos,
+        atividade_execucao_acordos,
+        status_execucao_acordos,
+        situacao_execucao_acordos,
+    )
+    return await _get_dashboard_response(
+        "execucao_acordos_NG",
+        from_date,
+        to_date,
+        materia=materia,
+        subfase=subfase,
+        tipo_acao_execucao_acordos=tipo_acao_execucao_acordos,
+        tipo_sentenca_execucao_acordos=tipo_sentenca_execucao_acordos,
+        ano_ajuizamento_execucao_acordos=ano_ajuizamento_execucao_acordos,
+        uf_execucao_acordos_ng=uf,
+        execucao_acordos_atividades_filtros=filtros,
+        numero_processo_execucao_acordos=numero_processo_execucao_acordos,
+        diligencia_tipo_execucao_acordos=diligencia_tipo_execucao_acordos,
+        diligencia_colaborador_execucao_acordos=diligencia_colaborador_execucao_acordos,
+        comarca_execucao_acordos_ng=comarca,
+    )
+
+
+# v1: dashboard_routes.py:23517 (rota sem os decoradores)
+async def get_execucao_acordos_la_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
+    ),
+    subfase: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase).",
+    ),
+    tipo_acao_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra por classificação Judicial/Extrajudicial (igual ao `name` do gráfico correspondente).",
+    ),
+    tipo_sentenca_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra por classificação Pré-Sentença/Pós-Sentença (igual ao `name` do gráfico correspondente).",
+    ),
+    ano_ajuizamento_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
+    ),
+    uf: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
+            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
+        ),
+    ),
+    funcionario_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por funcionário (seção Atividades LA)",
+    ),
+    atividade_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por atividade (seção Atividades LA)",
+    ),
+    status_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por status (seção Atividades LA)",
+    ),
+    situacao_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
+    ),
+    numero_processo_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra por um único número de processo (igual ao `name` dos gráficos por processo).",
+    ),
+    diligencia_tipo_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
+    ),
+    diligencia_colaborador_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
+    ),
+    comarca: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por comarca do processo — aceita múltiplos valores "
+            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
+        ),
+    ),
+):
+    """Dashboard de Execução Acordos LA."""
+    filtros = _parse_execucao_atividades_filtros(
+        funcionario_execucao_acordos,
+        atividade_execucao_acordos,
+        status_execucao_acordos,
+        situacao_execucao_acordos,
+    )
+    return await _get_dashboard_response(
+        "execucao_acordos_LA",
+        from_date,
+        to_date,
+        materia=materia,
+        subfase=subfase,
+        tipo_acao_execucao_acordos=tipo_acao_execucao_acordos,
+        tipo_sentenca_execucao_acordos=tipo_sentenca_execucao_acordos,
+        ano_ajuizamento_execucao_acordos=ano_ajuizamento_execucao_acordos,
+        uf_execucao_acordos_la=uf,
+        execucao_acordos_atividades_filtros=filtros,
+        numero_processo_execucao_acordos=numero_processo_execucao_acordos,
+        diligencia_tipo_execucao_acordos=diligencia_tipo_execucao_acordos,
+        diligencia_colaborador_execucao_acordos=diligencia_colaborador_execucao_acordos,
+        comarca_execucao_acordos_la=comarca,
+    )
+
+
+# v1: dashboard_routes.py:23610 (rota sem os decoradores)
+async def get_execucao_acordos_rj_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela matéria normalizada (igual ao `name` dos gráficos por matéria).",
+    ),
+    subfase: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela subfase (igual ao `name` dos gráficos por subfase).",
+    ),
+    tipo_acao_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra por classificação Judicial/Extrajudicial (igual ao `name` do gráfico correspondente).",
+    ),
+    tipo_sentenca_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra por classificação Pré-Sentença/Pós-Sentença (igual ao `name` do gráfico correspondente).",
+    ),
+    ano_ajuizamento_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra pelo ano de ajuizamento (igual ao `name` do gráfico correspondente, ex.: `2024` ou 'Sem data de ajuizamento').",
+    ),
+    uf: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
+            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
+        ),
+    ),
+    funcionario_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por funcionário (seção Atividades RJ)",
+    ),
+    atividade_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por atividade (seção Atividades RJ)",
+    ),
+    status_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos por status (seção Atividades RJ)",
+    ),
+    situacao_execucao_acordos: Optional[List[str]] = Query(
+        None,
+        description="Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas",
+    ),
+    numero_processo_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra por um único número de processo (igual ao `name` dos gráficos por processo).",
+    ),
+    diligencia_tipo_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra os gráficos de diligências: expedicao_alvara ou expedicao_alvara_cumprida.",
+    ),
+    diligencia_colaborador_execucao_acordos: Optional[str] = Query(
+        None,
+        description="Filtra o gráfico 'Processos com mais Diligências' pelo colaborador clicado no ranking.",
+    ),
+    comarca: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por comarca do processo — aceita múltiplos valores "
+            "(`?comarca=Manaus&comarca=Manacapuru`). Omitido/vazio = todas as comarcas."
+        ),
+    ),
+):
+    """Dashboard de Execução Acordos LA."""
+    filtros = _parse_execucao_atividades_filtros(
+        funcionario_execucao_acordos,
+        atividade_execucao_acordos,
+        status_execucao_acordos,
+        situacao_execucao_acordos,
+    )
+    return await _get_dashboard_response(
+        "execucao_acordos_RJ",
+        from_date,
+        to_date,
+        materia=materia,
+        subfase=subfase,
+        tipo_acao_execucao_acordos=tipo_acao_execucao_acordos,
+        tipo_sentenca_execucao_acordos=tipo_sentenca_execucao_acordos,
+        ano_ajuizamento_execucao_acordos=ano_ajuizamento_execucao_acordos,
+        uf_execucao_acordos_rj=uf,
+        execucao_acordos_atividades_filtros=filtros,
+        numero_processo_execucao_acordos=numero_processo_execucao_acordos,
+        diligencia_tipo_execucao_acordos=diligencia_tipo_execucao_acordos,
+        diligencia_colaborador_execucao_acordos=diligencia_colaborador_execucao_acordos,
+        comarca_execucao_acordos_rj=comarca,
+    )
+
+
+# v1: dashboard_routes.py:24884 (rota sem os decoradores)
+async def get_recursal_NG_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 1º grau"),
+    id_2g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 2º grau"),
+    juiz: Optional[List[str]] = Query(None, description="Filtra por nome(s) de juiz (1G)"),
+    relator: Optional[List[str]] = Query(None, description="Filtra por nome(s) de relator (2G)"),
+    decisao: Optional[List[str]] = Query(
+        None,
+        description="Filtra por tipo(s) de decisão recursal (ex.: mantido_ganho)",
+    ),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra por matéria(s) (rótulo normalizado do gráfico)",
+    ),
+    competencia: Optional[List[str]] = Query(
+        None,
+        description="Filtra por competência(s) (rótulo do gráfico)",
+    ),
+    vara: Optional[List[str]] = Query(
+        None,
+        description="Filtra por vara(s) (rótulo do gráfico, ex.: 1º vara)",
+    ),
+    subfase: Optional[List[str]] = Query(
+        None,
+        description="Filtra por subfase(s) (rótulo do gráfico)",
+    ),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos RECURSOS por funcionário (seção Atividades)",
+    ),
+    atividade_recursos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos RECURSOS por atividade do catálogo",
+    ),
+    status_recursos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos RECURSOS por status do agendamento",
+    ),
+    situacao_recursos: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas"
+        ),
+    ),
+):
+    """
+    Dashboard da fase Recursal (LA).
+
+    Retorna ``total_recursal_NG`` (estoque, fase 8) e ``entrada_recursal_NG`` (fase 8 + entrada no período).
+    Filtros cumulativos opcionais: ``id_1g``, ``id_2g``, ``juiz``, ``relator``, ``decisao``,
+    ``materia``, ``competencia``, ``vara``, ``subfase``, ``extinto_2g``.
+    Filtros da seção Atividades: ``funcionario_recursos``, ``atividade_recursos``,
+    ``status_recursos``, ``situacao_recursos``.
+    """
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _get_dashboard_response(
+        "recursal_NG",
+        from_date,
+        to_date,
+        recursal_la_filtros=filtros,
+        recursal_atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:23891 (rota sem os decoradores)
+async def get_recursal_LA_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 1º grau"),
+    id_2g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 2º grau"),
+    juiz: Optional[List[str]] = Query(None, description="Filtra por nome(s) de juiz (1G)"),
+    relator: Optional[List[str]] = Query(None, description="Filtra por nome(s) de relator (2G)"),
+    decisao: Optional[List[str]] = Query(
+        None,
+        description="Filtra por tipo(s) de decisão recursal (ex.: mantido_ganho)",
+    ),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra por matéria(s) (rótulo normalizado do gráfico)",
+    ),
+    competencia: Optional[List[str]] = Query(
+        None,
+        description="Filtra por competência(s) (rótulo do gráfico)",
+    ),
+    vara: Optional[List[str]] = Query(
+        None,
+        description="Filtra por vara(s) (rótulo do gráfico, ex.: 1º vara)",
+    ),
+    subfase: Optional[List[str]] = Query(
+        None,
+        description="Filtra por subfase(s) (rótulo do gráfico)",
+    ),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos RECURSOS por funcionário (seção Atividades)",
+    ),
+    atividade_recursos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos RECURSOS por atividade do catálogo",
+    ),
+    status_recursos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos RECURSOS por status do agendamento",
+    ),
+    situacao_recursos: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas"
+        ),
+    ),
+):
+    """
+    Dashboard da fase Recursal (LA).
+
+    Retorna ``total_recursal_LA`` (estoque, fase 8) e ``entrada_recursal_LA`` (fase 8 + entrada no período).
+    Filtros cumulativos opcionais: ``id_1g``, ``id_2g``, ``juiz``, ``relator``, ``decisao``,
+    ``materia``, ``competencia``, ``vara``, ``subfase``, ``extinto_2g``.
+    Filtros da seção Atividades: ``funcionario_recursos``, ``atividade_recursos``,
+    ``status_recursos``, ``situacao_recursos``.
+    """
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _get_dashboard_response(
+        "recursal_LA",
+        from_date,
+        to_date,
+        recursal_la_filtros=filtros,
+        recursal_atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# V2: dashboard da v1 -> handler da rota e queries que ele busca (para a casca e o aquecedor do cache).
+HANDLERS = {"execucao": get_execucao_dashboard, "execucao_LA": get_execucao_LA_dashboard, "execucao_RJ": get_execucao_rj_dashboard, "execucao_acordos_NG": get_execucao_acordos_ng_dashboard, "execucao_acordos_LA": get_execucao_acordos_la_dashboard, "execucao_acordos_RJ": get_execucao_acordos_rj_dashboard, "recursal_NG": get_recursal_NG_dashboard, "recursal_LA": get_recursal_LA_dashboard}
+QUERIES_POR_DASHBOARD = {'execucao': ('execucao_LA', 'agendamentos_setor_execucao_NG'), 'execucao_LA': ('execucao_LA', 'agendamentos_setor_execucao_LA'), 'execucao_RJ': ('execucao_RJ', 'agendamentos_setor_execucao_LA_RJ'), 'execucao_acordos_NG': ('execucao_acordos_NG', 'agendamentos_fechamento_acordos_NG', 'agendamentos_setor_execucao_acordos_NG'), 'execucao_acordos_LA': ('execucao_acordos_LA', 'agendamentos_fechamento_acordos_LA', 'agendamentos_setor_execucao_acordos_LA'), 'execucao_acordos_RJ': ('execucao_acordos_RJ', 'agendamentos_fechamento_acordos_RJ', 'agendamentos_setor_execucao_acordos_RJ'), 'recursal_NG': ('setor_recurso_NG', 'agendamentos_setor_recursos_NG', 'atividades_setor_recursos_NG'), 'recursal_LA': ('setor_recurso', 'agendamentos_setor_recursos_LA', 'atividades_setor_recursos_LA')}

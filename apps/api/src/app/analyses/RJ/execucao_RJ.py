@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import unicodedata
 from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal
@@ -74,6 +75,74 @@ def _get_data_compensacao_alvara_incontroverso_RJ(item: dict[str, Any]) -> Optio
         item.get("DATA_COMPENSACAO_ALVARA_INCONTROVERSO")
         or item.get("data_compensacao_alvara_incontroverso")
     )
+
+
+def _normalizar_titulo_extra(titulo: Any) -> str:
+    sem_acento = unicodedata.normalize("NFKD", str(titulo or "")).encode("ascii", "ignore").decode()
+    return " ".join(sem_acento.casefold().split())
+
+
+def _campos_extras(item: dict[str, Any], coluna: str) -> dict[str, Any]:
+    """Campos "Adicionar campo" do LexFlow (lista JSON ``{titulo, valor}``) → ``{titulo normalizado: valor}``."""
+    raw = item.get(coluna)
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except ValueError:
+            return {}
+    if not isinstance(raw, list):
+        return {}
+    campos: dict[str, Any] = {}
+    for entrada in raw:
+        if isinstance(entrada, dict) and entrada.get("valor") not in (None, ""):
+            campos[_normalizar_titulo_extra(entrada.get("titulo"))] = entrada.get("valor")
+    return campos
+
+
+def _eventos_incontroverso(item: dict[str, Any]) -> list[dict[str, Any]]:
+    """
+    Incontroversos do processo, em ordem: o 1º pelos campos fixos e o 2º/3º pelos campos
+    extras do LexFlow ("Data da Expedição/Compensação do Alvará Incontroverso N" e
+    "Valor do Alvará Incontroverso N") — mesma regra do NG. Cada evento: ``expedicao``,
+    ``compensacao``, ``valor_saida`` (o que sai da Execução ao compensar) e ``valor_alvara``.
+
+    ``VALOR_INCONTROVERSO`` é o total do incontroverso, então quando há 2º/3º o 1º sai com
+    ``VALOR_INCONTROVERSO`` menos os seguintes — a soma não duplica e processos com um
+    incontroverso só ficam exatamente como antes.
+    """
+    datas = _campos_extras(item, "DATAS_EXECUCAO_EXTRAS")
+    valores = _campos_extras(item, "VALORES_FINANCEIROS_EXTRAS")
+    extras: list[dict[str, Any]] = []
+    for n in (2, 3):
+        expedicao = _to_date(datas.get(f"data da expedicao do alvara incontroverso {n}"))
+        compensacao = _to_date(datas.get(f"data da compensacao do alvara incontroverso {n}"))
+        valor_raw = valores.get(f"valor do alvara incontroverso {n}")
+        valor = _converter_valor(valor_raw) if valor_raw is not None else 0.0
+        if expedicao is None and compensacao is None and not valor:
+            continue
+        extras.append({
+            "expedicao": expedicao,
+            "compensacao": compensacao,
+            "valor_saida": valor,
+            "valor_alvara": valor or None,
+        })
+
+    expedicao_1 = _to_date(item.get("DATA_EXPEDICAO_ALVARA_INCONTROVERSO"))
+    compensacao_1 = _get_data_compensacao_alvara_incontroverso_RJ(item)
+    total_raw = _get_valor_incontroverso_RJ(item)
+    total = _converter_valor(total_raw) if total_raw is not None else 0.0
+    valor_1 = max(total - sum(e["valor_saida"] for e in extras), 0.0) if extras else total
+    alvara_1_raw = item.get("VALOR_ALVARA_INCONTROVERSO")
+    alvara_1 = _converter_valor(alvara_1_raw) if alvara_1_raw not in (None, "") else 0.0
+    eventos: list[dict[str, Any]] = []
+    if expedicao_1 is not None or compensacao_1 is not None or extras:
+        eventos.append({
+            "expedicao": expedicao_1,
+            "compensacao": compensacao_1,
+            "valor_saida": valor_1,
+            "valor_alvara": alvara_1 or valor_1 or None,
+        })
+    return eventos + extras
 
 
 def _get_data_encerramento_RJ(item: dict[str, Any]) -> Optional[date]:
@@ -211,7 +280,14 @@ def _get_valor_execucao_em_aberto_RJ(item: dict[str, Any]) -> Optional[Any]:
     parcial ainda).
     """
     if _get_data_compensacao_alvara_incontroverso_RJ(item) is not None:
-        return _get_valor_remanescente_RJ(item)
+        # Incontroverso 2/3 já expedido/cadastrado mas ainda não compensado segue em aberto.
+        pendente = sum(
+            e["valor_saida"] for e in _eventos_incontroverso(item)[1:] if e["compensacao"] is None
+        )
+        if not pendente:
+            return _get_valor_remanescente_RJ(item)
+        remanescente = _get_valor_remanescente_RJ(item)
+        return (_converter_valor(remanescente) if remanescente is not None else 0.0) + pendente
     return _get_valor_execucao_RJ(item)
 
 
@@ -344,10 +420,11 @@ def _filtrar_saida_incontroverso_no_periodo_RJ(
     filtrados: list[dict[str, Any]] = []
 
     for item in _base_execucao_RJ(execucao):
-        data_incontroverso = _get_data_compensacao_alvara_incontroverso_RJ(item)
-        if data_incontroverso is None:
-            continue
-        if not _data_no_periodo(data_incontroverso, from_date, to_date):
+        # Qualquer incontroverso (1º, 2º ou 3º) compensado no período.
+        if not any(
+            e["compensacao"] is not None and _data_no_periodo(e["compensacao"], from_date, to_date)
+            for e in _eventos_incontroverso(item)
+        ):
             continue
 
         chave = item.get("NUMERO_PROCESSO") or item.get("id") or item.get("ID")
@@ -402,17 +479,14 @@ def group_alvaras_expedidos_por_dia_RJ(execucao: list[dict[str, Any]]) -> list[d
         item["valor"] += valor
 
     for p in _base_execucao_RJ(execucao):
-        exp_incontroverso = _to_date(p.get("DATA_EXPEDICAO_ALVARA_INCONTROVERSO"))
+        incontroversos = _eventos_incontroverso(p)
         exp_total = _to_date(p.get("DATA_EXPEDICAO_ALVARA"))
-        if exp_incontroverso is not None:
-            _somar(
-                exp_incontroverso,
-                _primeiro_valor_preenchido_rj(p, "VALOR_ALVARA_INCONTROVERSO", "VALOR_INCONTROVERSO"),
-            )
+        # Cada alvará de incontroverso (1º/2º/3º) conta na sua data de expedição.
+        for e in incontroversos:
+            if e["expedicao"] is not None:
+                _somar(e["expedicao"], e["valor_alvara"] or 0.0)
         if exp_total is not None:
-            teve_incontroverso = (
-                exp_incontroverso is not None or _get_data_compensacao_alvara_incontroverso_RJ(p) is not None
-            )
+            teve_incontroverso = bool(incontroversos)
             campos = ("VALOR_ALVARA", "VALOR_REMANESCENTE") if teve_incontroverso else ("VALOR_ALVARA",)
             _somar(exp_total, _primeiro_valor_preenchido_rj(p, *campos))
 
@@ -422,13 +496,16 @@ def group_alvaras_expedidos_por_dia_RJ(execucao: list[dict[str, Any]]) -> list[d
     ]
 
 
-_SUBFASE_ALVARA_EXPEDIDO = "ALVARÁ EXPEDIDO"
+_SUBFASES_ALVARA_EXPEDIDO = frozenset(
+    x.casefold() for x in ("ALVARÁ EXPEDIDO", "ALVARÁ DO INCONTROVERSO EXPEDIDO")
+)
 
 
 def list_processos_alvara_expedido_RJ(execucao: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Processos atualmente na Execução (mesma base do card "Total em Execução") com subfase
-    "ALVARÁ EXPEDIDO" — alvará já expedido, valor ainda por compensar.
+    "ALVARÁ EXPEDIDO" ou "ALVARÁ DO INCONTROVERSO EXPEDIDO" — alvará já expedido, valor
+    ainda por compensar.
 
     Data e valor com a lógica de incontroverso dos cards da Seção 01: havendo
     ``DATA_EXPEDICAO_ALVARA`` ela vale, como ``"Remanescente"`` se o processo já teve
@@ -450,15 +527,16 @@ def list_processos_alvara_expedido_RJ(execucao: list[dict[str, Any]]) -> list[di
 
     itens: list[dict[str, Any]] = []
     for p in _filtrar_em_execucao_RJ(execucao):
-        if _normalizar_subfase(p.get("SUBFASE")).casefold() != _SUBFASE_ALVARA_EXPEDIDO.casefold():
+        if _normalizar_subfase(p.get("SUBFASE")).casefold() not in _SUBFASES_ALVARA_EXPEDIDO:
             continue
         exp_total = _to_date(p.get("DATA_EXPEDICAO_ALVARA"))
-        exp_incontroverso = _to_date(p.get("DATA_EXPEDICAO_ALVARA_INCONTROVERSO"))
-        teve_incontroverso = (
-            exp_incontroverso is not None
-            or _get_data_compensacao_alvara_incontroverso_RJ(p) is not None
-        )
-        valor_incontroverso = _valor(p, "VALOR_ALVARA_INCONTROVERSO", "VALOR_INCONTROVERSO")
+        incontroversos = _eventos_incontroverso(p)
+        teve_incontroverso = bool(incontroversos)
+        # Havendo 2º/3º incontroverso, vale o expedido mais recente (data e valor dele).
+        expedidos = [e for e in incontroversos if e["expedicao"] is not None]
+        mais_recente = max(expedidos, key=lambda e: e["expedicao"]) if expedidos else None
+        exp_incontroverso = mais_recente["expedicao"] if mais_recente else None
+        valor_incontroverso = (mais_recente["valor_alvara"] if mais_recente else None) or None
         if exp_total is not None:
             data_expedicao = exp_total
             if teve_incontroverso:
@@ -801,9 +879,10 @@ def get_valor_incontroverso_saida_periodo_RJ(
     """
     total = 0.0
     for p in _filtrar_saida_incontroverso_no_periodo_RJ(execucao, from_date, to_date):
-        valor = _get_valor_incontroverso_RJ(p)
-        if valor is not None:
-            total += _converter_valor(valor)
+        # Cada incontroverso entra no período da sua própria compensação (ver _eventos_incontroverso).
+        for e in _eventos_incontroverso(p):
+            if e["compensacao"] is not None and _data_no_periodo(e["compensacao"], from_date, to_date):
+                total += e["valor_saida"]
     return total
 
 
@@ -856,7 +935,9 @@ def get_valor_ted_saida_execucao_RJ_periodo(
         else:
             total += _somar_campos_ted_rj(p, ("VALOR_TED", "VALOR_TED_2", "VALOR_TED_3"))
     for p in _filtrar_saida_incontroverso_no_periodo_RJ(execucao, from_date, to_date):
-        total += _somar_campos_ted_rj(p, ("VALOR_TED",))
+        # O VALOR_TED é do 1º incontroverso: só entra no período da 1ª compensação.
+        if _data_no_periodo(_get_data_compensacao_alvara_incontroverso_RJ(p), from_date, to_date):
+            total += _somar_campos_ted_rj(p, ("VALOR_TED",))
     return total
 
 
@@ -945,23 +1026,16 @@ def group_valor_execucao_saida_periodo_RJ_por_mes(
             continue
 
     for p in _filtrar_saida_incontroverso_no_periodo_RJ(execucao):
-        try:
-            data_incontroverso = _get_data_compensacao_alvara_incontroverso_RJ(p)
-            if not data_incontroverso:
+        # Cada incontroverso (1º/2º/3º) no mês da sua própria compensação.
+        for e in _eventos_incontroverso(p):
+            data_incontroverso = e["compensacao"]
+            if data_incontroverso is None:
                 continue
-
-            valor = _get_valor_incontroverso_RJ(p)
-            if valor is None:
-                continue
-
             month_key = f"{data_incontroverso.year}-{data_incontroverso.month:02d}"
             if month_key not in grouped:
                 month_name = f"{_MONTH_NAMES[data_incontroverso.month - 1]} {data_incontroverso.year}"
                 grouped[month_key] = {"name": month_name, "value": 0.0}
-            grouped[month_key]["value"] += _converter_valor(valor)
-
-        except (ValueError, AttributeError, TypeError):
-            continue
+            grouped[month_key]["value"] += e["valor_saida"]
 
     return [
         {**item, "value": round(item["value"], 2)}
@@ -1993,16 +2067,17 @@ _FLUXO_CS_SEM_GRAU_LABEL_RJ = "CS (sem grau)"
 _JANELA_FLUXO_CS_DIAS_RJ = 30
 
 
-def group_entrada_execucao_por_fluxo_cs_por_mes_RJ(
+def _entradas_por_fluxo_cs_RJ(
     execucao: list[dict[str, Any]],
     agendamentos: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+) -> list[tuple[dict[str, Any], date, str]]:
     """
-    Espelho de :func:`group_entrada_execucao_por_fluxo_cs_por_mes_NG` — entradas da
-    Execução Condenação por mês que vieram da Confecção CS, em ``"1G"``, ``"2G"`` e
-    ``"CS (sem grau)"`` (atividade antiga "Elaborar Cumprimento de Sentença").
-    Conta CS "Encerrado Cumprido" ou "Cancelado" com encerramento a até 30 dias da
-    entrada; vale a mais próxima, e no empate a Cumprida.
+    ``(processo, DATA_EXECUCAO, fluxo)`` de cada entrada na Execução Condenação no período
+    (sem período = histórico completo), com o fluxo da Confecção CS pela regra de
+    :func:`group_entrada_execucao_por_fluxo_cs_por_mes_RJ` — ou ``"Outros"`` quando a
+    entrada não veio da CS. Base do gráfico de fluxo e da taxa de atualização.
     """
     cs_por_processo: dict[int, list[tuple[date, int, str]]] = defaultdict(list)
     for row in agendamentos:
@@ -2028,8 +2103,8 @@ def group_entrada_execucao_por_fluxo_cs_por_mes_RJ(
             continue
         cs_por_processo[pid].append((conclusao, prioridade, grau))
 
-    grouped: dict[str, dict[str, Any]] = {}
-    for p in _filtrar_entrada_execucao_RJ_no_periodo(execucao):
+    resultado: list[tuple[dict[str, Any], date, str]] = []
+    for p in _filtrar_entrada_execucao_RJ_no_periodo(execucao, from_date, to_date):
         data_exe = _get_data_execucao_RJ(p)
         pid = _to_int(p.get("id") or p.get("ID"))
         if data_exe is None:
@@ -2039,6 +2114,132 @@ def group_entrada_execucao_por_fluxo_cs_por_mes_RJ(
             for conclusao, prioridade, grau in cs_por_processo.get(pid, ())
             if abs((conclusao - data_exe).days) <= _JANELA_FLUXO_CS_DIAS_RJ
         ]
+        resultado.append((p, data_exe, min(candidatos)[2] if candidatos else "Outros"))
+    return resultado
+
+
+def get_taxa_atualizacao_execucao_RJ(
+    execucao: list[dict[str, Any]],
+    agendamentos: list[dict[str, Any]],
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    *,
+    ano: Optional[int] = None,
+) -> dict[str, Any]:
+    """
+    Taxa de atualização: quanto o valor cresceu da decisão até a Execução, nas entradas da
+    Condenação que vieram da Confecção CS (fluxo de :func:`_entradas_por_fluxo_cs_RJ`).
+    1G compara ``VALOR_SENTENCA`` com ``VALOR_EXECUCAO``; 2G compara ``VALOR_ACORDAO`` com
+    ``VALOR_EXECUCAO``. Taxa = (Σ execução − Σ decisão) ÷ Σ decisão × 100, agregada por fluxo.
+
+    - ``linhas``/``total``: entradas no período; sem um dos dois valores, a entrada fica fora
+      da conta e vai para ``sem_valor_processos`` (número do processo e o que falta).
+    - ``por_mes``: a mesma taxa mês a mês (mês da ``DATA_EXECUCAO``) do ano ``ano``
+      (padrão: ano atual), independente do período.
+    """
+    campos = {"1G": ("VALOR_SENTENCA", "Sentença"), "2G": ("VALOR_ACORDAO", "Acórdão")}
+
+    def _novo() -> dict[str, Any]:
+        return {"quantidade": 0, "sem_valor": 0, "valor_decisao": 0.0, "valor_execucao": 0.0}
+
+    def _valores(p: dict[str, Any], fluxo: str) -> tuple[float, float]:
+        decisao_raw = p.get(campos[fluxo][0])
+        execucao_raw = p.get("VALOR_EXECUCAO")
+        decisao = _converter_valor(decisao_raw) if decisao_raw not in (None, "") else 0.0
+        valor_execucao = _converter_valor(execucao_raw) if execucao_raw not in (None, "") else 0.0
+        return decisao, valor_execucao
+
+    def _linha(fluxo: str, r: dict[str, Any]) -> dict[str, Any]:
+        aumento = r["valor_execucao"] - r["valor_decisao"]
+        return {
+            "fluxo": fluxo,
+            "quantidade": r["quantidade"],
+            "sem_valor": r["sem_valor"],
+            "valor_decisao": round(r["valor_decisao"], 2),
+            "valor_execucao": round(r["valor_execucao"], 2),
+            "aumento": round(aumento, 2),
+            "taxa": round(100.0 * aumento / r["valor_decisao"], 2) if r["valor_decisao"] else None,
+        }
+
+    def _taxa(r: dict[str, Any]) -> Optional[float]:
+        if not r["valor_decisao"]:
+            return None
+        return round(100.0 * (r["valor_execucao"] - r["valor_decisao"]) / r["valor_decisao"], 2)
+
+    resumo = {fluxo: _novo() for fluxo in campos}
+    sem_valor_processos: list[dict[str, Any]] = []
+    for p, data_exe, fluxo in _entradas_por_fluxo_cs_RJ(execucao, agendamentos, from_date, to_date):
+        if fluxo not in campos:
+            continue
+        decisao, valor_execucao = _valores(p, fluxo)
+        if not decisao or not valor_execucao:
+            resumo[fluxo]["sem_valor"] += 1
+            faltando = [nome for nome, ok in ((campos[fluxo][1], decisao), ("Execução", valor_execucao)) if not ok]
+            sem_valor_processos.append({
+                "numero_processo": str(p.get("NUMERO_PROCESSO") or "").strip() or None,
+                "fluxo": fluxo,
+                "data_entrada": data_exe.isoformat(),
+                "faltando": faltando,
+            })
+            continue
+        resumo[fluxo]["quantidade"] += 1
+        resumo[fluxo]["valor_decisao"] += decisao
+        resumo[fluxo]["valor_execucao"] += valor_execucao
+
+    ano_ref = ano or date.today().year
+    meses: dict[int, dict[str, dict[str, Any]]] = {}
+    for p, data_exe, fluxo in _entradas_por_fluxo_cs_RJ(execucao, agendamentos):
+        if fluxo not in campos or data_exe.year != ano_ref:
+            continue
+        decisao, valor_execucao = _valores(p, fluxo)
+        if not decisao or not valor_execucao:
+            continue
+        mes = meses.setdefault(data_exe.month, {"1G": _novo(), "2G": _novo(), "Total": _novo()})
+        for chave in (fluxo, "Total"):
+            mes[chave]["quantidade"] += 1
+            mes[chave]["valor_decisao"] += decisao
+            mes[chave]["valor_execucao"] += valor_execucao
+    por_mes = [
+        {
+            "mes": m,
+            "name": f"{_MONTH_NAMES[m - 1]} {ano_ref}",
+            "1G": _taxa(meses[m]["1G"]),
+            "2G": _taxa(meses[m]["2G"]),
+            "Total": _taxa(meses[m]["Total"]),
+            "quantidade": meses[m]["Total"]["quantidade"],
+            # Valor da decisão do mês: sentença (1G) e acórdão (2G) — linhas do gráfico do modal.
+            "valor_sentenca": round(meses[m]["1G"]["valor_decisao"], 2),
+            "valor_acordao": round(meses[m]["2G"]["valor_decisao"], 2),
+        }
+        for m in sorted(meses)
+    ]
+
+    total = {
+        k: sum(r[k] for r in resumo.values())
+        for k in ("quantidade", "sem_valor", "valor_decisao", "valor_execucao")
+    }
+    return {
+        "linhas": [_linha(fluxo, r) for fluxo, r in resumo.items()],
+        "total": _linha("Total", total),
+        "sem_valor_processos": sorted(sem_valor_processos, key=lambda x: x["data_entrada"], reverse=True),
+        "ano": ano_ref,
+        "por_mes": por_mes,
+    }
+
+
+def group_entrada_execucao_por_fluxo_cs_por_mes_RJ(
+    execucao: list[dict[str, Any]],
+    agendamentos: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """
+    Espelho de :func:`group_entrada_execucao_por_fluxo_cs_por_mes_NG` — entradas da
+    Execução Condenação por mês que vieram da Confecção CS, em ``"1G"``, ``"2G"`` e
+    ``"CS (sem grau)"`` (atividade antiga "Elaborar Cumprimento de Sentença").
+    Conta CS "Encerrado Cumprido" ou "Cancelado" com encerramento a até 30 dias da
+    entrada; vale a mais próxima, e no empate a Cumprida.
+    """
+    grouped: dict[str, dict[str, Any]] = {}
+    for p, data_exe, grau in _entradas_por_fluxo_cs_RJ(execucao, agendamentos):
         month_key = f"{data_exe.year}-{data_exe.month:02d}"
         if month_key not in grouped:
             grouped[month_key] = {
@@ -2050,7 +2251,6 @@ def group_entrada_execucao_por_fluxo_cs_por_mes_RJ(
             }
         # Sem CS por perto: a entrada veio por outro caminho — "Outros" faz a soma das
         # linhas bater com o total de entradas da Condenação (card "Quantidade de entrada").
-        grau = min(candidatos)[2] if candidatos else "Outros"
         grouped[month_key][grau] += 1
 
     return [grouped[k] for k in sorted(grouped)]
@@ -3074,7 +3274,28 @@ def group_estoque_execucao_RJ_por_mes(
         corte = indice_mes(incontroverso)
         fim_cheio = corte if fim is None else min(corte, fim)
         intervalos.append((ini, fim_cheio, True, valor_cheio))
-        intervalos.append((max(ini, corte), fim, True, _converter_valor(_get_valor_remanescente_RJ(p))))
+        # Depois do 1º incontroverso: remanescente + incontroversos seguintes (2º/3º) ainda não
+        # compensados — cada um sai do estoque no mês da sua própria compensação.
+        remanescente = _converter_valor(_get_valor_remanescente_RJ(p))
+        extras = _eventos_incontroverso(p)[1:]
+        pontos = sorted(
+            {corte}
+            | {
+                indice_mes(e["compensacao"])
+                for e in extras
+                if e["compensacao"] is not None and indice_mes(e["compensacao"]) > corte
+            }
+        )
+        for k, inicio_seg in enumerate(pontos):
+            fim_seg = pontos[k + 1] if k + 1 < len(pontos) else fim
+            if fim is not None and fim_seg is not None:
+                fim_seg = min(fim_seg, fim)
+            pendente = sum(
+                e["valor_saida"]
+                for e in extras
+                if e["compensacao"] is None or indice_mes(e["compensacao"]) > inicio_seg
+            )
+            intervalos.append((max(ini, inicio_seg), fim_seg, True, remanescente + pendente))
     return estoque_por_mes(intervalos, _MONTH_NAMES)
 
 
@@ -3127,9 +3348,11 @@ def anotar_saida_execucao_export_RJ(
     anotadas: list[dict[str, Any]] = []
     for item in rows:
         saiu_alvara = _data_no_periodo(_get_data_compensacao_alvara_RJ(item), from_date, to_date)
-        saiu_incontroverso = _data_no_periodo(
-            _get_data_compensacao_alvara_incontroverso_RJ(item), from_date, to_date
-        )
+        incontroversos_no_periodo = [
+            e for e in _eventos_incontroverso(item)
+            if e["compensacao"] is not None and _data_no_periodo(e["compensacao"], from_date, to_date)
+        ]
+        saiu_incontroverso = bool(incontroversos_no_periodo)
 
         valor_saida: Optional[float] = None
         if saiu_alvara or saiu_incontroverso:
@@ -3139,9 +3362,7 @@ def anotar_saida_execucao_export_RJ(
                 if valor is not None:
                     valor_saida += _converter_valor(valor)
             if saiu_incontroverso:
-                valor = _get_valor_incontroverso_RJ(item)
-                if valor is not None:
-                    valor_saida += _converter_valor(valor)
+                valor_saida += sum(e["valor_saida"] for e in incontroversos_no_periodo)
             valor_saida = round(valor_saida, 2)
 
         if saiu_alvara and saiu_incontroverso:
