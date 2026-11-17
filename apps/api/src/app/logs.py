@@ -15,6 +15,7 @@ import sys
 _SCOPES: tuple[tuple[str, str], ...] = (
     ("app.requests", "http"),
     ("app.startup", "api"),
+    ("app.platform_db", "supabase"),
     ("app.auth", "login"),
     ("app.database", "bancos"),
     ("app.source_cache", "cache"),

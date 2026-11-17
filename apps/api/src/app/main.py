@@ -4,7 +4,6 @@ import time
 from contextlib import asynccontextmanager
 from urllib.parse import urlsplit
 
-import asyncpg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,8 +12,9 @@ from app.cache import CacheService, build_cache, safe_redis_target
 from app.cache_warmer import warm_loop, warm_targets
 from app.config import Settings, get_settings
 from app.dashboards import DASHBOARDS
-from app.database import DatabaseManager, connect_hint
+from app.database import DatabaseManager
 from app.logs import configure_logging, seconds
+from app.platform_db import install_error_handlers, keep_warm, open_platform_pool
 from app.registered_sources import PgRegisteredRepo, RegisteredSources
 from app.request_log import RequestLogMiddleware
 from app.routes import (
@@ -32,9 +32,6 @@ from app.sources import source_fetcher
 from app.supabase_client import create_supabase
 
 VERSION = "0.1.0"
-
-# Tentativas de conectar no banco da plataforma na subida (cada uma limitada por DB_CONNECT_TIMEOUT).
-PLATFORM_DB_ATTEMPTS = 3
 
 logger = logging.getLogger("app.startup")
 
@@ -75,52 +72,6 @@ def _log_auth(settings: Settings) -> None:
     logger.info("Login: tokens do Supabase Auth conferidos localmente (JWKS%s)", legacy)
 
 
-async def _open_platform_db(settings: Settings) -> asyncpg.Pool | None:
-    """Banco da plataforma (login, acesso, catálogo, auditoria). Sem DATABASE_URL, as rotas dão 503.
-
-    Diferente dos bancos de origem, este impede a subida: sem ele nenhuma rota de usuário funciona,
-    e falhar na subida faz o Swarm voltar à versão anterior num deploy com DATABASE_URL errada.
-    As tentativas têm tempo limite, então a falha aparece no log em segundos.
-    """
-    if not settings.DATABASE_URL:
-        logger.warning(
-            "Banco da plataforma: DATABASE_URL vazio; rotas protegidas vão responder 503"
-        )
-        return None
-    logger.info("Banco da plataforma: conectando...")
-    started = time.perf_counter()
-    for attempt in range(1, PLATFORM_DB_ATTEMPTS + 1):
-        try:
-            pool = await asyncpg.create_pool(
-                settings.DATABASE_URL,
-                min_size=1,
-                max_size=10,
-                command_timeout=60,
-                timeout=settings.DB_CONNECT_TIMEOUT,
-                # O pooler do Supabase (modo transaction) não suporta prepared statements.
-                statement_cache_size=0,
-            )
-        except (OSError, asyncpg.PostgresError, asyncpg.InterfaceError) as exc:
-            # Só o tipo e a dica: a mensagem pode trazer host ou usuário da DATABASE_URL.
-            logger.error(
-                "Banco da plataforma: falha ao conectar (tentativa %d/%d): %s",
-                attempt,
-                PLATFORM_DB_ATTEMPTS,
-                connect_hint(exc),
-            )
-            if attempt == PLATFORM_DB_ATTEMPTS:
-                raise RuntimeError(
-                    "Banco da plataforma (DATABASE_URL) indisponível: a API não sobe sem ele"
-                ) from None
-            await asyncio.sleep(2 * attempt)
-        else:
-            logger.info(
-                "Banco da plataforma conectado em %s", seconds(time.perf_counter() - started)
-            )
-            return pool
-    raise AssertionError("inalcançável")  # o laço sempre retorna ou levanta
-
-
 def create_app() -> FastAPI:
     settings = get_settings()
     configure_logging(settings.LOG_LEVEL)
@@ -132,7 +83,8 @@ def create_app() -> FastAPI:
         _log_auth(settings)
         app.state.supabase = await create_supabase(settings)
         app.state.token_verifier = build_verifier(settings)
-        app.state.db_pool = await _open_platform_db(settings)
+        # Banco da plataforma: impede a subida e fica com conexões quentes (app/platform_db.py).
+        app.state.db_pool = await open_platform_pool(settings)
         # Bancos de origem da v1 (NG, LAADV, LEXFLOW, LEXPRE): conectam em segundo plano e se
         # reconectam sozinhos; fora do ar, só os dashboards daquele banco ficam indisponíveis.
         # Sem variáveis no .env, o banco fica desligado.
@@ -154,7 +106,17 @@ def create_app() -> FastAPI:
             shared_ttl=ttl_by_query(settings.CACHE_TTL_HEAVY, settings.CACHE_TTL_DEFAULT),
         )
         warmer = None
+        keeper = None
         try:
+            if app.state.db_pool is not None:
+                keeper = asyncio.create_task(
+                    keep_warm(
+                        app.state.db_pool,
+                        settings.PLATFORM_DB_POOL_MIN_SIZE,
+                        settings.PLATFORM_DB_KEEPALIVE_INTERVAL,
+                        settings.PLATFORM_DB_CONNECT_TIMEOUT,
+                    )
+                )
             await _log_cache(app.state.cache, settings)
             app.state.databases.start()  # não espera: cada banco conecta numa tarefa de fundo
             logger.info(
@@ -174,9 +136,10 @@ def create_app() -> FastAPI:
             yield
         finally:
             logger.info("Desligando a API...")
-            if warmer is not None:
-                warmer.cancel()
-                await asyncio.gather(warmer, return_exceptions=True)
+            tasks = [t for t in (warmer, keeper) if t is not None]
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
             await app.state.databases.close()
             if app.state.registered_sources is not None:
                 await app.state.registered_sources.close()
@@ -186,6 +149,8 @@ def create_app() -> FastAPI:
             logger.info("API desligada")
 
     app = FastAPI(title="API Dashboard V2", version=VERSION, lifespan=lifespan)
+    # Sem conexão com o banco: 503 com mensagem clara, não 500 (app/platform_db.py).
+    install_error_handlers(app)
 
     if settings.cors_origins:
         app.add_middleware(
