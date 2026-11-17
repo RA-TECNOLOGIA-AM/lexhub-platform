@@ -68,3 +68,30 @@ def test_historico_ignora_campo_que_nao_veio():
     body = _rodar(("stats.nao_existe", "nao_existe"))
     assert "nao_existe" not in body["stats"]
     assert "nao_existe" not in body
+
+
+def test_nome_na_unidade_segue_as_rotas_da_v1():
+    from app.dashboards.generico_v1 import nome_na_unidade as n
+
+    assert n("execucao_resolvidos_por_dia_NG", "LA") == "execucao_resolvidos_por_dia_LA"
+    assert n("tre", "RJ") == "tre_RJ"
+    assert n("total_valor_execucao_vazio_detalhe", "LA") == "total_valor_execucao_vazio_LA_detalhe"
+    assert n("total_valor_alcada_final_vazio_acordos_NG_detalhe", "RJ") == (
+        "total_valor_alcada_final_vazio_acordos_RJ_detalhe"
+    )
+    assert n("tre", "NG") == "tre"
+
+
+def test_historico_por_unidade():
+    from app.dashboards.generico_v1 import historico_por_unidade
+
+    h = historico_por_unidade(("stats.total_historico=stats.total", "por_dia_NG"), ("NG", "LA"))
+    assert h["NG"] == ("stats.total_historico=stats.total", "por_dia_NG")
+    assert h["LA"] == ("stats.total_historico=stats.total_LA", "por_dia_LA")
+
+
+def test_historico_dict_vale_por_unidade():
+    """Com um dict, cada unidade usa a sua lista; unidade fora do dict não traz nada do histórico."""
+    body = _rodar({"NG": ("stats.fila",)})
+    assert body["stats"]["fila"] == 9
+    assert _rodar({"LA": ("stats.fila",)})["stats"]["fila"] == 1

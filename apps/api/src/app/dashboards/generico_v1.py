@@ -98,6 +98,37 @@ async def chamar_v1(
         copia._fonte_ctx.reset(token_fonte)
 
 
+def nome_na_unidade(nome: str, unidade: str) -> str:
+    """Nome de um campo da rota NG da v1 na rota da unidade (_LA, _RJ): a regra das rotas da Execução.
+
+    "x_NG" -> "x_LA"; "x_NG_detalhe" / "x_detalhe" -> "x_LA_detalhe"; sem sufixo ("tre") -> "tre_LA".
+    """
+    if unidade == "NG":
+        return nome
+    if nome.endswith("_NG"):
+        return f"{nome[:-3]}_{unidade}"
+    if nome.endswith("_NG_detalhe"):
+        return f"{nome[: -len('_NG_detalhe')]}_{unidade}_detalhe"
+    if nome.endswith("_detalhe"):
+        return f"{nome[: -len('_detalhe')]}_{unidade}_detalhe"
+    return f"{nome}_{unidade}"
+
+
+def historico_por_unidade(
+    campos_ng: tuple[str, ...], unidades: tuple[str, ...]
+) -> dict[str, tuple[str, ...]]:
+    """O `historico` de cada unidade a partir do da NG ("stats.x" e "destino=origem": só a origem muda de nome)."""
+
+    def traduz(campo: str, u: str) -> str:
+        para, _, de = campo.partition("=")
+        if de:
+            return f"{para}={traduz(de, u)}"
+        prefixo = "stats." if campo.startswith("stats.") else ""
+        return prefixo + nome_na_unidade(campo.removeprefix("stats."), u)
+
+    return {u: tuple(traduz(c, u) for c in campos_ng) for u in unidades}
+
+
 def modulo(
     key: str,
     v1_por_unidade: dict[str, str],
@@ -107,7 +138,7 @@ def modulo(
     source_label: str = "LexFlow",
     alternativas: dict[str, tuple[ModuleType, str]] | None = None,
     commission_fields: tuple[str, ...] = (),
-    historico: tuple[str, ...] = (),
+    historico: tuple[str, ...] | dict[str, tuple[str, ...]] = (),
 ) -> DashboardModule:
     """DashboardModule de um dashboard genérico da v1.
 
@@ -119,7 +150,8 @@ def modulo(
     handler sem período), como os gráficos "mês a mês", que na v1 a página buscava numa chamada sem data;
     "stats.<campo>" para um número de dentro de `stats`; "<destino>=<origem>" grava com outro nome, quando o
     mesmo campo tem sentido diferente nas duas chamadas (ex.: na Execução, `total_em_execucao` com período é
-    a entrada do período e sem período é o total em execução).
+    a entrada do período e sem período é o total em execução). Um dict ({ref da unidade: campos}) quando os
+    nomes mudam por unidade (ver `historico_por_unidade`).
     """
     alternativas = alternativas or {}
     copias = {source_db: copia, **{db: c for db, (c, _) in alternativas.items()}}
@@ -150,10 +182,12 @@ def modulo(
             return response.model_dump()
 
         body = await rodar(ctx.period.start, ctx.period.end)
-        if historico:
+        # Um tuple vale para todas as unidades; um dict, por ref da unidade (os nomes da v1 mudam: _NG, _LA, _RJ).
+        campos_hist = historico.get(ctx.unit_ref, ()) if isinstance(historico, dict) else historico
+        if campos_hist:
             # Os mesmos filtros, sem período (na v1, a segunda chamada da página sem data).
             todo = await rodar(None, None)
-            for campo in historico:
+            for campo in campos_hist:
                 # "destino=origem": grava com outro nome; "stats.x" = um campo de dentro de stats
                 para, _, de = campo.partition("=")
                 origem, nome_origem = _lado(todo, de or para)

@@ -5377,6 +5377,37 @@ body {
 .ex-ind-topo {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
+/* Execução Estratégico Geral: total, valor e a taxa de atualização (clicável) na primeira linha */
+.ex-est-topo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@media (max-width: 900px) {
+    .ex-est-topo {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+.ex-dim {
+    opacity: 0.45;
+}
+.ex-acoes {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.ex-corta.ex-corta-curta {
+    max-width: 200px;
+}
+.ex-below {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.ex-modal-corpo {
+    display: grid;
+    gap: var(--gap);
+}
 .ex-ind {
     margin-top: var(--gap);
     grid-template-columns: repeat(5, minmax(0, 1fr));

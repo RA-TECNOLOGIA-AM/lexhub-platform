@@ -217,7 +217,8 @@ async def dashboard_export(
     rows = await _run(module, spec.rows(ctx))
     headers, data = export.table(spec, slugs, rows)
     if fmt == "xlsx":
-        body = export.to_xlsx(headers, data, spec.sheet_name)
+        aba = spec.sheet_name_por_unidade.get(ctx.unit_ref, spec.sheet_name)
+        body = export.to_xlsx(headers, data, aba)
     else:
         body = export.to_csv(headers, data)
 

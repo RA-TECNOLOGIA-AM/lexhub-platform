@@ -1,9 +1,11 @@
 import type { V1GenericoResponse } from '../../pages/dashboards/v1Stats.ts'
 import type { Point } from '../../types/index.ts'
+import { nomeNaUnidade, type Unidade } from '../../pages/dashboards/execucao/unidade.ts'
 import { funcionarios, metaFor } from './helpers.ts'
 
 // Execução Condenação e Execução Acordos (LexFlow) fictícias, no formato das rotas da v1 da NG (/execucao e
-// /execucao_acordos_NG) e na ordem de grandeza das telas da v1. LA e RJ seguem com `stats: {}` (tela de KPIs).
+// /execucao_acordos_NG) e na ordem de grandeza das telas da v1. LA e RJ: os mesmos números com os nomes das
+// rotas deles (naUnidade).
 // Números de processo inventados (20 dígitos, como o LexFlow) e determinísticos, sem Math.random.
 
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
@@ -350,11 +352,38 @@ function acordosNG(): V1GenericoResponse {
     } as V1GenericoResponse
 }
 
-// Execução Condenação: a NG com a página toda; as demais unidades, só o `meta` (tela de KPIs, '—').
+// A unidade do mock -> o escritório da rota da v1 (NG, LA_AM -> LA, LA_RJ -> RJ). Outra unidade: sem dados.
+const ESCRITORIO: Record<string, Unidade> = { NG: 'NG', LA: 'LA', LA_AM: 'LA', RJ: 'RJ', LA_RJ: 'RJ' }
+
+// LA e RJ com os números da NG (fictícios) e os nomes da rota de cada escritório, pela regra da v1 (nomeNaUnidade).
+// A Execução da LA não tem Diligências, como a rota /execucao_LA.
+function naUnidade(base: V1GenericoResponse, u: Unidade, dashboard: string, unit: string): V1GenericoResponse {
+    const renomeia = (o: Record<string, unknown>) =>
+        Object.fromEntries(
+            Object.entries(o)
+                .filter(([k]) => !(dashboard === 'execucao_LA' && k.includes('diligencias')))
+                .map(([k, v]) => [nomeNaUnidade(k, u), v]),
+        )
+    const { meta, dashboard: _rota, stats, ...resto } = base as V1GenericoResponse & Record<string, unknown>
+    void _rota
+    void meta
+    return {
+        ...renomeia(resto),
+        meta: metaFor(unit, 'LexFlow'),
+        dashboard,
+        stats: renomeia((stats ?? {}) as Record<string, unknown>),
+    } as V1GenericoResponse
+}
+
+// Execução Condenação: NG, LA e RJ com a página toda; outra unidade, só o `meta` ('—').
 export function execucaoFor(unit: string): V1GenericoResponse {
-    return unit === 'NG' ? execucaoNG() : { meta: metaFor(unit, 'LexFlow'), stats: {} }
+    const u = ESCRITORIO[unit]
+    if (!u) return { meta: metaFor(unit, 'LexFlow'), stats: {} }
+    return u === 'NG' ? execucaoNG() : naUnidade(execucaoNG(), u, `execucao_${u}`, unit)
 }
 
 export function acordosFor(unit: string): V1GenericoResponse {
-    return unit === 'NG' ? acordosNG() : { meta: metaFor(unit, 'LexFlow'), stats: {} }
+    const u = ESCRITORIO[unit]
+    if (!u) return { meta: metaFor(unit, 'LexFlow'), stats: {} }
+    return u === 'NG' ? acordosNG() : naUnidade(acordosNG(), u, `execucao_acordos_${u}`, unit)
 }

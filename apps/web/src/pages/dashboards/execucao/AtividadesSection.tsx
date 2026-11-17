@@ -250,6 +250,7 @@ export function AtividadesSection({ index, setor, dados, filters, setFilters }: 
                     funcionarios={funcionarios}
                 />
                 <ChartCard
+                    className="ex-rolagem"
                     title="Média resolvidos por funcionário"
                     subtitle="Cumpridas por dia com conclusão, no período"
                     action={
@@ -258,7 +259,7 @@ export function AtividadesSection({ index, setor, dados, filters, setFilters }: 
                         </Pill>
                     }
                 >
-                    <BarList items={a.mediaPorFuncionario} format={fmt.dec1} valueOutside />
+                    <BarList items={a.mediaPorFuncionario} format={fmt.dec1} valueOutside wrapNames />
                 </ChartCard>
             </div>
 

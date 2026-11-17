@@ -15,7 +15,7 @@ import type { V1GenericoResponse } from '../v1Stats.ts'
 import { mesNome } from '../setor/datas.ts'
 import { AtividadesSection } from './AtividadesSection.tsx'
 import { DiligenciasSection } from './DiligenciasSection.tsx'
-import { lerExecucaoNG } from './execucao.ts'
+import { lerExecucao } from './execucao.ts'
 import { ComarcaCard, MesAMes, SemValorAviso, TreCard } from './partes.tsx'
 
 // Número que pode faltar na resposta ('—'), com a contagem animada quando vem.
@@ -26,11 +26,12 @@ const razao = (a: number | null, b: number | null) => (a === null || !b ? null :
 
 const MES_CURTO = Array.from({ length: 12 }, (_, i) => mesNome(i).slice(0, 3))
 
-// A Execução Condenação NG, com as seções da página da v1 (NG/Execucao.tsx) no layout da V2. Carregar, erros,
+// A Execução Condenação (NG, LA e RJ), com as seções das páginas da v1 (NG/Execucao.tsx, LA/Execucao_LA.tsx,
+// RJ/ExecucaoRJ.tsx) no layout da V2. A LA não tem a seção Diligências (a rota da v1 não manda). Carregar, erros,
 // cabeçalho, período e a janela de filtros (UF, comarca, matéria, subfase) ficam no DashboardView; clicar
 // numa subfase, matéria ou comarca liga o filtro da página.
-export function ExecucaoNGContent({ data, filters = {}, onFiltersChange }: ContentProps<V1GenericoResponse>) {
-    const e = lerExecucaoNG(data)
+export function ExecucaoPagina({ data, filters = {}, onFiltersChange }: ContentProps<V1GenericoResponse>) {
+    const e = lerExecucao(data)
     const alternar =
         onFiltersChange && ((key: keyof DashboardFilters, v: string) => onFiltersChange(toggleFilter(filters, key, v)))
 
@@ -312,13 +313,15 @@ export function ExecucaoNGContent({ data, filters = {}, onFiltersChange }: Conte
                 filters={filters}
                 setFilters={onFiltersChange}
             />
-            <DiligenciasSection
-                index={6}
-                setor="condenacao"
-                dados={e.setor}
-                filters={filters}
-                setFilters={onFiltersChange}
-            />
+            {e.unidade !== 'LA' && (
+                <DiligenciasSection
+                    index={6}
+                    setor="condenacao"
+                    dados={e.setor}
+                    filters={filters}
+                    setFilters={onFiltersChange}
+                />
+            )}
         </div>
     )
 }

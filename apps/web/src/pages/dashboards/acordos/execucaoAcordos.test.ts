@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { acordosFilters } from './filters.ts'
-import { ehAcordosNG, lerAcordosNG } from './execucaoAcordos.ts'
+import { lerAcordos } from './execucaoAcordos.ts'
 
 const meta = { unit: 'NG', from: '2026-11-01', to: '2026-11-17', source: 'LexFlow', synced_at: null, timezone: 'x' }
 
@@ -34,7 +34,7 @@ const resposta = {
 
 describe('lerAcordosNG', () => {
     it('lê as seções da página da v1', () => {
-        const a = lerAcordosNG(resposta as never)
+        const a = lerAcordos(resposta as never)
         expect(a.totalEmExecucao).toBe(520)
         expect(a.entradas).toBe(14)
         expect(a.pagos).toBe(9)
@@ -52,9 +52,22 @@ describe('lerAcordosNG', () => {
         expect(a.setor.diligencias.porProcesso).toEqual([{ processo: '333', valor: 5000, quantidade: 2 }])
     })
 
-    it('só a rota /execucao_acordos_NG é a da NG', () => {
-        expect(ehAcordosNG(resposta as never)).toBe(true)
-        expect(ehAcordosNG({ meta, dashboard: 'execucao_acordos_LA' })).toBe(false)
+    it('LA e RJ: os mesmos campos com o sufixo da rota', () => {
+        const rj = lerAcordos({
+            meta,
+            dashboard: 'execucao_acordos_RJ',
+            stats: { total_em_execucao_acordos_RJ: 30, tre_execucao_acordos_RJ: 2 },
+            fechamento_acordo_por_subfase_RJ: [{ name: 'ACORDO FECHADO', value: 4 }],
+            execucao_acordos_por_comarca_total_RJ: [{ name: 'RIO DE JANEIRO', value: 9, uf: 'RJ' }],
+            execucao_acordos_lista_saida_RJ: [{ numero_processo: '1', uf: 'RJ', valor_execucao: 10, subfase: 'PAGO' }],
+        } as never)
+        expect(rj.unidade).toBe('RJ')
+        expect(rj.totalEmExecucao).toBe(30)
+        expect(rj.tre).toBe(2)
+        expect(rj.fechamentoPorSubfase).toEqual([{ name: 'ACORDO FECHADO', value: 4 }])
+        expect(rj.comarca.total.quantidade[0]).toMatchObject({ name: 'RIO DE JANEIRO', uf: 'RJ' })
+        expect(rj.listas.saida).toHaveLength(1)
+        expect(lerAcordos({ meta, dashboard: 'execucao_acordos_LA' }).unidade).toBe('LA')
     })
 })
 
@@ -78,7 +91,10 @@ describe('filtros dos Acordos', () => {
         expect(campos.some((c) => c.key === 'funcionario_execucao_acordos' && c.inline)).toBe(true)
     })
 
-    it('LA e RJ (tela de KPIs) não têm filtros', () => {
-        expect(acordosFilters({ meta, dashboard: 'execucao_acordos_LA' })).toEqual([])
+    it('LA e RJ têm os mesmos filtros; sem a rota da v1 na resposta, nenhum', () => {
+        expect(acordosFilters({ meta, dashboard: 'execucao_acordos_LA' }).length).toBe(
+            acordosFilters(resposta as never).length,
+        )
+        expect(acordosFilters({ meta })).toEqual([])
     })
 })

@@ -14,7 +14,7 @@ import type { V1GenericoResponse } from '../v1Stats.ts'
 import { AtividadesSection } from '../execucao/AtividadesSection.tsx'
 import { DiligenciasSection } from '../execucao/DiligenciasSection.tsx'
 import { ComarcaCard, MesAMes, ProcessosTabela, SemValorAviso, TreCard } from '../execucao/partes.tsx'
-import { lerAcordosNG } from './execucaoAcordos.ts'
+import { lerAcordos } from './execucaoAcordos.ts'
 
 const valor = (v: number | null, format: (n: number) => string) =>
     v === null ? '—' : <CountUp value={v} format={format} />
@@ -28,11 +28,12 @@ const LISTAS: { value: Lista; label: string }[] = [
     { value: 'total', label: 'Total' },
 ]
 
-// A Execução Acordos NG, com as seções da página da v1 (NG/ExecucaoAcordos.tsx) no layout da V2. Carregar,
+// A Execução Acordos (NG, LA e RJ), com as seções das páginas da v1 (NG/ExecucaoAcordos.tsx,
+// LA/ExecucaoAcordosLA.tsx, RJ/ExecucaoAcordosRJ.tsx) no layout da V2. Carregar,
 // erros, cabeçalho, período e a janela de filtros ficam no DashboardView; clicar numa subfase, matéria,
 // comarca, classificação (Pré/Pós-Sentença, Judicial/Extrajudicial) ou processo liga o filtro da página.
-export function AcordosNGContent({ data, filters = {}, onFiltersChange }: ContentProps<V1GenericoResponse>) {
-    const a = lerAcordosNG(data)
+export function AcordosPagina({ data, filters = {}, onFiltersChange }: ContentProps<V1GenericoResponse>) {
+    const a = lerAcordos(data)
     const [lista, setLista] = useState<Lista>('entrada')
     const alternar =
         onFiltersChange && ((key: keyof DashboardFilters, v: string) => onFiltersChange(toggleFilter(filters, key, v)))

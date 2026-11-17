@@ -38,6 +38,7 @@ export const FILTER_KEYS = [
     'status_execucao_acordos',
     'diligencia_tipo_execucao_acordos',
     'diligencia_colaborador_execucao_acordos',
+    'escopo',
     'materia_julgados',
     'relator_julgados',
     'comarca_julgados',

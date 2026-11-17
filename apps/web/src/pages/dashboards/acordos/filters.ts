@@ -1,17 +1,18 @@
 import type { FilterField } from '../../../lib/filters.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
 import { filtrosPagina, filtrosSetor } from '../execucao/setorExecucao.ts'
-import { ehAcordosNG, lerAcordosNG } from './execucaoAcordos.ts'
+import { lerAcordos } from './execucaoAcordos.ts'
+import { unidadeAcordos } from '../execucao/unidade.ts'
 
 const opcoes = (xs: string[]) => [...new Set(xs.filter(Boolean))].map((v) => ({ value: v, label: v }))
 
-// Os filtros dos Acordos na NG: os da página da v1 (UF, comarca, matéria, subfase, Pré/Pós-Sentença e
+// Os filtros da Execução Acordos (NG, LA e RJ): os da página da v1 (UF, comarca, matéria, subfase, Pré/Pós-Sentença e
 // Judicial/Extrajudicial), o processo clicado nas diligências (filtra a página toda) e os seletores das seções
-// Atividades e Diligências. LA e RJ (tela de KPIs) não têm filtros. Só lógica pura (testada em
+// Atividades e Diligências. Sem a rota da v1 na resposta (mock sem dados): nenhum. Só lógica pura (testada em
 // execucaoAcordos.test.ts).
 export function acordosFilters(data: V1GenericoResponse): FilterField[] {
-    if (!ehAcordosNG(data)) return []
-    const a = lerAcordosNG(data)
+    if (!unidadeAcordos(data)) return []
+    const a = lerAcordos(data)
     return [
         ...filtrosPagina(a.opcoes),
         {

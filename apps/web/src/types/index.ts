@@ -91,6 +91,8 @@ export type DashboardFilters = {
     status_execucao_acordos?: string[]
     diligencia_tipo_execucao_acordos?: string[]
     diligencia_colaborador_execucao_acordos?: string[]
+    // Execução Estratégico Geral: Ambos (sem o filtro) / condenacao / acordos. Só o front usa (como na v1).
+    escopo?: string[]
     // Julgados Acórdãos (LexFlow): os filtros cumulativos da v1 (sufixo _julgados) e a situação do processo.
     materia_julgados?: string[]
     relator_julgados?: string[]
