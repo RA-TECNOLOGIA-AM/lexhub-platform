@@ -227,6 +227,7 @@ export function ExecucaoNGContent({ data, filters = {}, onFiltersChange }: Conte
                         items={e.porMateria}
                         centerLabel="processos"
                         labels
+                        legendWhenNarrow
                         selected={filters.materia}
                         onSelect={alternar && ((v) => alternar('materia', v))}
                         selectLabel="Filtrar pela matéria"

@@ -1,0 +1,419 @@
+/* Julgados Acórdãos: as grades e as peças próprias da página (o resto vem de app.css). Fica com o dashboard e só
+   carrega quando ele abre. As grades seguem as da página da v1 (Tailwind lg:grid-cols-*). */
+
+/* 01 · os seis cards (3 × 2); a pizza "Resultado dos embargos" vem embaixo, na largura toda (como no Comercial) */
+/* Valor dos acórdãos procedentes (1 coluna) e a Taxa de procedência (3 colunas) */
+.jl-linha2 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.jl-linha2 .jl-span3 {
+    grid-column: span 3;
+}
+.jl-tres {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.jl-dois {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+    .jl-tres,
+    .jl-dois,
+    .jl-linha2 {
+        grid-template-columns: 1fr;
+    }
+    .jl-linha2 .jl-span3 {
+        grid-column: auto;
+    }
+}
+
+/* listas longas (relatores, comarcas, motivos): rolam dentro do cartão, como na v1 (cartões de 400px) */
+.jl-scroll {
+    max-height: 400px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+}
+
+/* o "i" do cartão ao lado de outra ação do cabeçalho */
+.jl-acoes {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-muted);
+}
+
+/* cards de categoria que filtram a página ao clicar (o card inteiro, como na v1) */
+.jl-click {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--r-lg);
+    cursor: pointer;
+}
+.jl-click > .hero {
+    flex: 1;
+}
+.jl-click:hover > .hero {
+    border-color: var(--border-hover);
+}
+.jl-click:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.jl-click.on > .hero {
+    box-shadow: 0 0 0 2px var(--tone);
+}
+
+/* barra de partes (procedentes / improcedentes / extintos; capital / interior; STJ/STF) */
+.jl-bar {
+    display: flex;
+    gap: 2px;
+    width: 100%;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--divider);
+}
+.jl-bar > span {
+    height: 100%;
+}
+.jl-bar-lg {
+    height: 8px;
+}
+
+/* card "Taxa de procedência (2G)" */
+.jl-taxa {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 22px;
+}
+.jl-taxa-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+.jl-taxa-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+.jl-taxa-linha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+}
+.jl-taxa-v {
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--text);
+}
+.jl-taxa-badge-2g {
+    padding: 6px 16px;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+.jl-taxa-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 20px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    color: var(--text);
+}
+.jl-taxa-legenda li,
+.jl-legend-mini > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* legenda do ranking (no cabeçalho do cartão); a das pizzas é a do PieChart (legendWhenNarrow) */
+.jl-legend-mini {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 10px;
+    color: var(--text-muted);
+}
+.jl-legend-mini .chart-key {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+}
+
+/* Ranking de Relatores */
+.jl-rank-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.jl-rank-list li.dim {
+    opacity: 0.5;
+}
+.jl-rank-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 8px;
+    border: 1px solid transparent;
+    border-radius: var(--r-md);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: left;
+}
+button.jl-rank-row {
+    cursor: pointer;
+}
+button.jl-rank-row:hover {
+    background: var(--surface-2);
+}
+button.jl-rank-row:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+}
+.jl-rank-row.on {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+    background: var(--accent-soft);
+}
+.jl-av {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: color-mix(in srgb, #8b5cf6 15%, transparent);
+    color: #8b5cf6;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+}
+.jl-rank-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.jl-rank-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+/* O nome quebra em até duas linhas (num cartão de um terço da tela, numa linha só ele era cortado logo no
+   começo); passando disso, reticências. */
+.jl-rank-name {
+    flex: 1;
+    min-width: 0;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+    font-size: var(--fs-sm);
+}
+/* Cartão estreito: sem o avatar das iniciais, o espaço fica para o nome. */
+.jl-rank {
+    container-type: inline-size;
+}
+@container (max-width: 380px) {
+    .jl-rank .jl-av {
+        display: none;
+    }
+    .jl-rank .jl-rank-row {
+        gap: 8px;
+    }
+}
+.jl-rank-casos {
+    flex: none;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+.jl-taxa-badge {
+    flex: none;
+    padding: 1px 7px;
+    border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
+    border-radius: var(--r-sm);
+    color: var(--tone-text);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+}
+
+/* tabelinha do Ano de Ajuizamento, embaixo da pizza */
+.jl-mini-tbl {
+    margin-top: 12px;
+    font-size: var(--fs-sm);
+}
+.jl-mini-tbl th,
+.jl-mini-tbl td {
+    padding: 6px 10px;
+}
+.jl-ano {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* faixa "Atenção" (dados faltando): letreiro clicável, como na v1 */
+.jl-atencao {
+    width: 100%;
+    overflow: hidden;
+    padding: 9px 0;
+    border: 1px solid var(--warn-line);
+    border-radius: var(--r-lg);
+    background: var(--warn-bg);
+    color: var(--warn);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.jl-atencao:hover {
+    background: color-mix(in srgb, var(--warn-dot) 18%, var(--warn-bg));
+}
+.jl-atencao:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.jl-letreiro {
+    display: inline-flex;
+    width: max-content;
+    padding-left: 100%;
+    white-space: nowrap;
+    animation: jl-letreiro var(--dur, 14s) linear infinite;
+}
+.jl-letreiro > span {
+    padding: 0 32px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.jl-atencao:hover .jl-letreiro,
+.jl-atencao:focus-visible .jl-letreiro {
+    animation-play-state: paused;
+}
+@keyframes jl-letreiro {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-100%);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .jl-letreiro {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: auto;
+        padding: 0 16px;
+        white-space: normal;
+        animation: none;
+    }
+    .jl-letreiro > span {
+        padding: 0;
+    }
+}
+.jl-modal {
+    width: min(720px, calc(100vw - 32px));
+}
+.jl-modal-tbl {
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+
+/* Lista "Acórdãos no período" */
+.jl-lista {
+    overflow: hidden;
+}
+.jl-lista-head {
+    padding: 16px 18px 12px;
+}
+.jl-lista-titulo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: var(--fs-lg);
+    font-weight: 600;
+}
+.jl-lista-titulo svg {
+    color: var(--accent);
+}
+.jl-lista-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 18px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border);
+}
+.jl-ordenar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.jl-tbl {
+    min-width: 1120px;
+    font-size: var(--fs-sm);
+}
+.jl-tbl th {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+.jl-tbl td {
+    padding: 9px 14px;
+    color: var(--text-muted);
+}
+.jl-processo {
+    font-family: var(--num);
+    color: var(--text);
+}
+td.jl-processo {
+    color: var(--text);
+}
+.jl-vazio {
+    padding: 40px 16px;
+    text-align: center;
+}
+.jl-pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--divider);
+}
+.jl-pager-btns {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.jl-pager .btn.on {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-accent);
+}

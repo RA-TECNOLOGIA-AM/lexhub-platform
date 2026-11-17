@@ -91,6 +91,17 @@ export type DashboardFilters = {
     status_execucao_acordos?: string[]
     diligencia_tipo_execucao_acordos?: string[]
     diligencia_colaborador_execucao_acordos?: string[]
+    // Julgados Acórdãos (LexFlow): os filtros cumulativos da v1 (sufixo _julgados) e a situação do processo.
+    materia_julgados?: string[]
+    relator_julgados?: string[]
+    comarca_julgados?: string[]
+    competencia_julgados?: string[]
+    categoria_julgados?: string[] // procedente | improcedente | extinto
+    uf_julgados?: string[]
+    motivo_extincao_julgados?: string[]
+    ano_ajuizamento_julgados?: string[]
+    resultado_embargos_julgados?: string[] // Status Resultante dos embargos ('Revertido Ganho', 'Status Mantido'...)
+    situacao_processo?: string[] // ATIVO | SUSPENSO/SOBRESTADO | ARQUIVADO (sem nenhum = recorte padrão da query)
 }
 
 export type DashboardQuery = { org: string; unit: string; from?: string; to?: string; filters?: DashboardFilters }

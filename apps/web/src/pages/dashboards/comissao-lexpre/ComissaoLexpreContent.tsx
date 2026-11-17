@@ -227,6 +227,7 @@ export function ComissaoLexpreContent({
                             size={260}
                             centerLabel="ações fechadas"
                             labels
+                            legendWhenNarrow
                             selected={filters.rubrica}
                             onSelect={porRubrica}
                             selectLabel="Filtrar pela rubrica"

@@ -10,7 +10,9 @@ export type DashboardModule<T extends { meta: Meta }> = {
     key: string // o mesmo do catálogo e da API (ex.: 'protocolo-lexpre')
     fetch: (query: DashboardQuery) => Promise<T> // busca os dados de uma unidade
     Content: ComponentType<ContentProps<T>> // o miolo da página (KPIs, gráficos...)
-    filters?: (data: T) => FilterField[] // os filtros deste dashboard (opções vêm da resposta); sem = não tem filtros
+    // Os filtros deste dashboard (opções vêm da resposta; `current` = os em uso, para manter na lista o que já foi
+    // escolhido); sem = não tem filtros.
+    filters?: (data: T, current: DashboardFilters) => FilterField[]
     exportFields?: ExportGroup[] // campos do relatório (cópia da lista do servidor); sem = não exporta ainda
     // Mais de um relatório e/ou escolhas além dos campos (recorte, visão), como na v1. Tem preferência sobre exportFields.
     exportReports?: ExportReport[]

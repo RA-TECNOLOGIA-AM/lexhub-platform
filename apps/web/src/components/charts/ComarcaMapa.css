@@ -1,0 +1,179 @@
+/* Mapa de comarcas (ComarcaMapa.tsx): só carrega com o dashboard que usa o mapa. Cores da v1: laranja pela
+   quantidade, cinza para "zero no filtro", hachurado para "sem comarca na base". */
+.cmapa {
+    --cmapa-zero: var(--surface-3);
+}
+.cmapa-info {
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    border: 0;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+.cmapa-info:hover {
+    color: var(--text);
+}
+.cmapa-info::after {
+    white-space: pre-line;
+}
+.cmapa-area {
+    position: relative;
+}
+.cmapa-svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+.cmapa-mun {
+    transition: opacity 0.15s;
+}
+.cmapa-mun.clicavel {
+    cursor: pointer;
+}
+.cmapa-mun.clicavel:hover {
+    opacity: 0.8;
+}
+.cmapa-mun.clicavel:focus-visible {
+    outline: none;
+    stroke: var(--focus) !important;
+    stroke-width: 2.5px !important;
+}
+.cmapa-msg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    text-align: center;
+}
+.cmapa-dica {
+    position: absolute;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 180px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-pop);
+    font-size: var(--fs-xs);
+    pointer-events: none;
+}
+.cmapa-legenda {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.cmapa-colunas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+.cmapa-coluna {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.cmapa-coluna p {
+    margin: 0;
+}
+.cmapa-bloco {
+    gap: 8px;
+    padding-left: 16px;
+    border-left: 1px solid var(--border);
+    text-align: center;
+}
+.cmapa-chaves {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+.cmapa-chaves > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.cmapa-chave {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+.cmapa-chave.hachura {
+    border: 1px solid var(--border-strong);
+    background: repeating-linear-gradient(
+        45deg,
+        var(--border-strong) 0,
+        var(--border-strong) 1px,
+        transparent 1px,
+        transparent 4px
+    );
+}
+.cmapa-titulo {
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.cmapa-par {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+.cmapa-par > span {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.cmapa-par strong {
+    font-size: 20px;
+    line-height: 1;
+    color: var(--text);
+}
+.cmapa-par strong.cmapa-verde {
+    color: #10b981;
+}
+.cmapa-barra {
+    display: flex;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--surface-3);
+}
+.cmapa-barra > span {
+    height: 100%;
+}
+.cmapa-coluna strong {
+    color: var(--text);
+}
+.cmapa-aviso {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin: 12px 0 0;
+    padding: 6px 8px;
+    border: 1px solid var(--warn-line);
+    border-radius: var(--r-md);
+    background: var(--warn-bg);
+    color: var(--warn);
+}
+.cmapa-aviso strong {
+    color: var(--warn);
+}
+.cmapa-detalhes {
+    margin: 0;
+    white-space: pre-line;
+    line-height: 1.6;
+}
+@media (max-width: 640px) {
+    .cmapa-bloco {
+        padding-left: 0;
+        border-left: 0;
+    }
+}

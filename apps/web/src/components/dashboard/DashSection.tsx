@@ -6,12 +6,13 @@ type DashSectionProps = {
     eyebrow: string // "Visão geral"
     title: string // "Indicadores do período"
     subtitle?: string
+    action?: ReactNode // controle da seção ao lado do "Ocultar" (ex.: Total | Entrada); some com a seção oculta
     children: ReactNode
 }
 
 // Módulo: uma seção numerada de dashboard, como na v1 (01 · Visão geral · título · Ocultar).
 // Ocultar só esconde nesta visita: recarregar a página mostra tudo de novo.
-export function DashSection({ index, eyebrow, title, subtitle, children }: DashSectionProps) {
+export function DashSection({ index, eyebrow, title, subtitle, action, children }: DashSectionProps) {
     const [open, setOpen] = useState(true)
     const id = useId()
     return (
@@ -27,6 +28,7 @@ export function DashSection({ index, eyebrow, title, subtitle, children }: DashS
                     </h2>
                     {subtitle && <p className="dsec-sub">{subtitle}</p>}
                 </div>
+                {action && open && <div className="dsec-action">{action}</div>}
                 <button
                     type="button"
                     className="btn dsec-toggle"

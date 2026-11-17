@@ -93,6 +93,14 @@ export const DOC_ENTRIES: DocEntry[] = [
         units: ['LA', 'LA_AM'],
         offices: ['LA'],
     },
+    {
+        slug: 'julgados-acordaos',
+        title: 'Julgados — Acórdãos',
+        description:
+            'Classificação de mérito do 2º grau, não classificados, motivo das extinções, embargos e reversão, ranking de relatores e o Estudo das Improcedências.',
+        dashboards: ['julgados-acordaos'],
+        offices: ['NG', 'LA', 'LARJ'],
+    },
 ]
 
 // As documentações que a pessoa vê: só as dos dashboards que ela pode abrir (mesma regra da v1).
