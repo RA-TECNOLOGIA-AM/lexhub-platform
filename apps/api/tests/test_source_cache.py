@@ -1,9 +1,12 @@
 import asyncio
+import logging
 
+import asyncpg
 import pytest
 
 from app.cache_warmer import warm_once, warm_targets
 from app.dashboards.base import AltSource, DashboardModule
+from app.database import SourceUnavailable
 from app.source_cache import CachedSourceFetcher, Entry, MemoryStore, SourceCache
 
 
@@ -218,3 +221,23 @@ def test_aquecedor_pula_banco_fora_e_segue_apos_falha():
     assert ok == 1  # lexpre falhou, ng está fora, lexflow renovou
     assert origin.calls == 1
     assert cache._store.get("lexflow:q3") is not None
+
+
+def test_aquecedor_registra_fonte_indisponivel_numa_linha_sem_traceback(caplog):
+    cache, _clock, _origin = make()
+
+    class Cancelada:
+        async def fetch(self, query_name):
+            try:
+                raise asyncpg.QueryCanceledError("canceling statement due to statement timeout")
+            except asyncpg.QueryCanceledError as exc:
+                raise SourceUnavailable("lexflow") from exc
+
+    with caplog.at_level(logging.WARNING, logger="app.cache_warmer"):
+        ok = run(warm_once(cache, lambda _db: Cancelada(), [("lexflow", "q1")], lambda _db: True))
+
+    assert ok == 0
+    linhas = [r for r in caplog.records if r.name == "app.cache_warmer"]
+    falha = next(r for r in linhas if "q1" in r.getMessage())
+    assert falha.getMessage() == "'lexflow:q1' não renovou: SourceUnavailable (QueryCanceledError)"
+    assert falha.exc_info is None  # sem traceback: o motivo já está no log de app.database
