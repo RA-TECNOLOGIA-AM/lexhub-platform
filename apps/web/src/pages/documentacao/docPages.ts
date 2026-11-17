@@ -16,4 +16,5 @@ export const DOC_PAGES: Record<string, ComponentType> = {
     acordos: lazyNamed(() => import('./conteudo/Acordos.tsx'), 'AcordosDoc'),
     'recursal-ng': lazyNamed(() => import('./conteudo/RecursalNG.tsx'), 'RecursalNGDoc'),
     'recursal-la': lazyNamed(() => import('./conteudo/RecursalLA.tsx'), 'RecursalLADoc'),
+    'julgados-acordaos': lazyNamed(() => import('./conteudo/JulgadosAcordaos.tsx'), 'JulgadosAcordaosDoc'),
 }

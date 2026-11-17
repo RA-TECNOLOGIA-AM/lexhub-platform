@@ -193,6 +193,32 @@ export function WatchBox({ title, children }: { title?: string; children: ReactN
     )
 }
 
+// Tabela simples de texto (v1: DataTable). `code`: índices das colunas mostradas como nome técnico (ex.: [1]).
+export function DocTable({ head, rows, code = [] }: { head: string[]; rows: string[][]; code?: number[] }) {
+    return (
+        <div className="card tblwrap">
+            <table className="tbl">
+                <thead>
+                    <tr>
+                        {head.map((h) => (
+                            <th key={h}>{h}</th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows.map((row, i) => (
+                        <tr key={i}>
+                            {row.map((cell, j) => (
+                                <td key={j}>{cell && code.includes(j) ? <Code>{cell}</Code> : cell}</td>
+                            ))}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    )
+}
+
 // Nome técnico no meio do texto (tabela, campo, setor_id...).
 export function Code({ children }: { children: ReactNode }) {
     return <code className="doc-code">{children}</code>
