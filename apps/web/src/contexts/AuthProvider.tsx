@@ -4,6 +4,7 @@ import { DataError } from '../services/errors.ts'
 import type { Me } from '../types/index.ts'
 import { AuthContext, type AuthValue } from './auth-context.ts'
 import { loadSession, type SessionState } from './session.ts'
+import { tvSession, watchTvSession } from './tvSession.ts'
 
 // Guarda quem está logado e entrega isso para o app inteiro via contexto.
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -18,8 +19,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setNoAccess(state.status === 'no-access' ? { email: state.email } : null)
     }, [])
 
+    // Sessão aberta pelo QR venceu (24 h): sai e volta para a tela do QR, pronta para o próximo login.
+    // Recarrega a página de propósito: a TV fica dias ligada e assim começa limpa.
+    const expireTvSession = useCallback(async () => {
+        await dataClient.signOut().catch(() => {})
+        tvSession.clear()
+        window.location.replace('/tv-login')
+    }, [])
+
+    useEffect(() => watchTvSession(tvSession, () => void expireTvSession()), [expireTvSession])
+
     // Ao abrir o app (ou dar F5, ou voltar do Google): já existe sessão? Com organização?
     useEffect(() => {
+        if (tvSession.expired()) {
+            void expireTvSession()
+            return
+        }
         let ignore = false
         loadSession(dataClient)
             .then((state) => {
@@ -31,10 +46,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => {
             ignore = true
         }
-    }, [apply])
+    }, [apply, expireTvSession])
 
     // Depois de entrar: confere a sessão. Entrou, mas a API não respondeu = erro para a tela mostrar.
     async function afterSignIn() {
+        tvSession.clear() // login normal no mesmo navegador não herda o prazo da TV
         setRememberLocation(true)
         const state = await loadSession(dataClient)
         if (state.status === 'signed-out') {
@@ -67,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // returnHere: true = sessão caiu (401); o próximo login volta para a mesma página.
     async function signOut({ returnHere = false }: { returnHere?: boolean } = {}) {
         await dataClient.signOut()
+        tvSession.clear()
         setRememberLocation(returnHere)
         apply({ status: 'signed-out' })
     }
