@@ -1,11 +1,24 @@
 -- =============================================================================
 -- Teste de 20261117100000_conectar_fonte.sql. Roda numa transação e desfaz no fim (ROLLBACK).
 -- Passou = nenhum ERROR (só o aviso 'OK: ...').
--- Usa a organização real 'lexgroup' (a casa) só dentro da transação.
+-- Roda num banco vazio (CI) ou no staging: garante a organização 'lexgroup' (a casa), as fontes lexflow e
+-- ng dela e uma unidade com o LexFlow 'RJ', criando só o que faltar (tudo desfeito no fim).
 -- Cenário: cliente 'org-teste-fonte' com C1 e C2; t1 Dev da LexGroup; t2 Owner do cliente.
 -- =============================================================================
 
 begin;
+
+insert into app.organizations (slug, name) values ('lexgroup', 'LexGroup') on conflict (slug) do nothing;
+insert into app.data_sources (org_id, key, kind, name, connector)
+values (app_private.home_org_id(), 'lexflow', 'flow', 'LexFlow', 'lexflow'),
+       (app_private.home_org_id(), 'ng', 'database', 'Sistema jurídico NG', 'internal')
+on conflict (org_id, key) do nothing;
+-- O escritório 27 do LexFlow é guardado como 'RJ'; no staging ele já é da unidade RJ (o índice barra o repetido).
+insert into app.units (id, org_id, code, name, timezone)
+values ('20000000-0000-4000-8000-0000000fe004', app_private.home_org_id(), 'TSTRJ', 'Teste RJ', 'America/Manaus');
+insert into app.unit_source_refs (unit_id, source, ref)
+values ('20000000-0000-4000-8000-0000000fe004', 'lexflow', 'RJ')
+on conflict do nothing;
 
 insert into auth.users (id, email)
 values ('00000000-0000-4000-8000-0000000fe001', 'ti.fonte@exemplo.com'),
@@ -35,12 +48,9 @@ begin
     end if;
 end $$;
 
--- Dados atuais intactos: as 12 ligações da LexGroup passaram pela trava (fonte da mesma org)
+-- Os produtos têm o connector deles (a migration preencheu as fontes que já existiam)
 do $$
 begin
-    if (select count(*) from app.internal_source_units) < 3 then
-        raise exception 'FALHOU: NG/RJ no banco ng e LA no laadv deveriam estar liberadas';
-    end if;
     if exists (select 1 from app.data_sources where key in ('lexpre', 'lexflow') and connector <> key) then
         raise exception 'FALHOU: connector dos produtos';
     end if;
@@ -112,7 +122,7 @@ begin
         perform api.link_product_office('org-teste-fonte', 'C2', 'lexflow', '27');
         raise exception 'FALHOU: LexFlow 27 já é do RJ';
     exception when raise_exception then
-        if sqlerrm not like 'Este escritório já está ligado à unidade %· RJ%' then raise; end if;
+        if sqlerrm not like 'Este escritório já está ligado à unidade %RJ%' then raise; end if;
     end;
     r := api.link_product_office('org-teste-fonte', 'C2', 'lexflow', '9003');
     if r -> 'sources' -> 0 ->> 'id' <> 'lexflow' then
