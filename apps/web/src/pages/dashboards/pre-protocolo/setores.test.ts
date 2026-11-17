@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Meta } from '../../../types/index.ts'
-import { lerSetor, type PreProtocoloResponse } from './setores.ts'
+import { funcionariosDoSetor, lerSetor, serieDiaria, type PreProtocoloResponse } from './setores.ts'
 
 const meta = { unit: 'NG' } as Meta
 
@@ -22,5 +22,27 @@ describe('lerSetor', () => {
         expect(lerSetor(data, 'protocolo', 'nao_existe.total')).toBeNull()
         expect(lerSetor(data, 'org_documentos', 'represados')).toBeNull()
         expect(lerSetor({ meta }, 'peticionamento', 'represados')).toBeNull()
+    })
+})
+
+describe('produção diária', () => {
+    const data: PreProtocoloResponse = {
+        meta,
+        protocolo: {
+            por_dia: [{ name: '2026-11-03', value: 3 }],
+            por_dia_por_funcionario: { 'Mateus Neves': [{ name: '2026-11-03', value: 2 }], Ana: [] },
+        },
+    }
+
+    it('a série do setor ou a de um funcionário', () => {
+        expect(serieDiaria(data, 'protocolo')).toEqual([{ name: '2026-11-03', value: 3 }])
+        expect(serieDiaria(data, 'protocolo', 'Mateus Neves')).toEqual([{ name: '2026-11-03', value: 2 }])
+        expect(serieDiaria(data, 'protocolo', 'Ninguém')).toEqual([])
+        expect(serieDiaria(data, 'pendencias')).toEqual([])
+    })
+
+    it('os funcionários do setor em ordem alfabética', () => {
+        expect(funcionariosDoSetor(data, 'protocolo')).toEqual(['Ana', 'Mateus Neves'])
+        expect(funcionariosDoSetor(data, 'peticionamento')).toEqual([])
     })
 })

@@ -42,6 +42,12 @@ class DashboardContext:
     # Quem a pessoa é na fonte (app.member_source_refs). Só vem preenchido nos módulos com
     # own_rows_only e para quem não gere a unidade; None = sem vínculo (a página zera).
     own_ref: str | None = None
+    # Outros bancos que o módulo lê além do seu (DashboardModule.extra_queries), só os que a unidade tem
+    # ligados (app.unit_source_refs): banco -> busca e banco -> ref da unidade nele.
+    extra_sources: dict[str, SourceFetcher] = field(default_factory=dict)
+    extra_refs: dict[str, str] = field(default_factory=dict)
+    # De que banco `source` lê: o do módulo ou, numa unidade sem ele, um dos alt_sources.
+    source_db: str = ""
 
 
 @dataclass(frozen=True)
@@ -52,6 +58,14 @@ class ExportSpec:
     labels: dict[str, str]  # slug -> cabeçalho do arquivo (= _LABELS_EXPORT_* da v1)
     sheet_name: str  # nome da aba no XLSX (igual à v1)
     rows: Callable[[DashboardContext], Awaitable[list[dict[str, Any]]]]  # = _rows_*_export da v1
+
+
+@dataclass(frozen=True)
+class AltSource:
+    """Outro banco de onde o dashboard sai numa unidade que não tem o banco principal."""
+
+    label: str  # o que aparece no `meta.source` ("LA")
+    queries: tuple[str, ...] = ()  # o aquecedor do cache as mantém quentes
 
 
 @dataclass(frozen=True)
@@ -71,6 +85,24 @@ class DashboardModule:
     # A página inteira só com os dados da própria pessoa para quem não gere a unidade
     # (v1: escopo_proprio da Comissão Comercial). A casca preenche ctx.own_ref.
     own_rows_only: bool = False
+    # Queries de outros bancos que o módulo também lê (banco -> queries), ex.: o Comercial (LexPre) soma o
+    # protocolado no banco legado. A casca entrega ctx.extra_sources dos bancos ligados à unidade.
+    extra_queries: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    # Bancos alternativos (banco -> AltSource): a unidade sem `source_db` lê o primeiro destes que tiver
+    # ligado, ex.: o Protocolo legado sai do banco ng no NG e no RJ e do laadv na LA (rotas _LA da v1).
+    alt_sources: dict[str, AltSource] = field(default_factory=dict)
+
+    def pick_source(self, refs: dict[str, str]) -> tuple[str, str] | None:
+        """(banco, ref da unidade nele) de onde o dashboard sai nesta unidade; None = nenhum ligado."""
+        for db in (self.source_db, *self.alt_sources):
+            if (ref := refs.get(db)) is not None:
+                return db, ref
+        return None
+
+    def label_of(self, db: str) -> str:
+        """O nome da fonte (`meta.source`) quando o dashboard sai do banco `db`."""
+        alt = self.alt_sources.get(db)
+        return alt.label if alt is not None else self.source_label
 
 
 class NotReady(Exception):

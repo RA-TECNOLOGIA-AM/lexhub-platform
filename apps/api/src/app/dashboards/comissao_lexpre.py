@@ -11,11 +11,16 @@ quem gere a unidade (ctx.can_see_commission) e o atendente vinculado = app.membe
 """
 
 from app.dashboards import comercial_lexpre
-from app.dashboards.base import DashboardContext, DashboardModule
+from app.dashboards.base import DashboardContext, DashboardModule, ExportSpec
 
 
 async def build(ctx: DashboardContext) -> dict:
     return await comercial_lexpre.build(ctx, escopo_proprio=True)
+
+
+async def export_rows(ctx: DashboardContext) -> list[dict]:
+    """O export do Comercial (v1: /comercial-lexpre/export com escopo_proprio=true na página Comissão)."""
+    return await comercial_lexpre.export_rows(ctx, escopo_proprio=True)
 
 
 MODULE = DashboardModule(
@@ -26,4 +31,10 @@ MODULE = DashboardModule(
     queries=comercial_lexpre.QUERIES,
     filters=comercial_lexpre.MODULE.filters,
     own_rows_only=True,
+    export=ExportSpec(
+        fields=comercial_lexpre.CAMPOS_EXPORT,
+        labels=comercial_lexpre.LABELS_EXPORT,
+        sheet_name="Comissão Comercial (LexPre)",
+        rows=export_rows,
+    ),
 )

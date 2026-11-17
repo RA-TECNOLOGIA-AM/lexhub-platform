@@ -17,11 +17,12 @@ type HeroStatProps = {
     footer?: ReactNode // depois do divisor
     hint?: string // "i" com a explicação (opcional)
     outline?: boolean // borda inteira na cor do tom (cards de devolução)
+    className?: string // posição numa grade própria (ex.: card alto do Comercial)
 }
 
-export function HeroStat({ label, icon, tone, value, aside, below, footer, hint, outline }: HeroStatProps) {
+export function HeroStat({ label, icon, tone, value, aside, below, footer, hint, outline, className }: HeroStatProps) {
     return (
-        <div className={`card hero tone-${tone}${outline ? ' outline' : ''}`}>
+        <div className={`card hero tone-${tone}${outline ? ' outline' : ''}${className ? ` ${className}` : ''}`}>
             <div className="hero-top">
                 <span className="hero-l">{label}</span>
                 <span className="hero-tools">
@@ -48,20 +49,34 @@ type MiniStatProps = {
     extra?: ReactNode // ao lado do valor ("no período")
     below?: ReactNode // linha centralizada embaixo (o comparativo vs mês anterior)
     hint?: string
+    className?: string // posição numa grade própria
 }
 
-export function MiniStat({ label, icon, tone, value, extra, below, hint }: MiniStatProps) {
+export function MiniStat({ label, icon, tone, value, extra, below, hint, className }: MiniStatProps) {
     return (
-        <div className="card mini">
+        <div className={className ? `card mini ${className}` : 'card mini'}>
             <div className="mini-text">
-                <span className="hero-l">{label}</span>
+                <span className="hero-l">
+                    {label}
+                    {/* No compacto empilhado (.grid-mini-stack), o "i" vem logo após o rótulo e só o ícone fica no
+                        canto: sobra espaço para rótulos longos. Fora dele, o "i" fica ao lado do ícone. */}
+                    {hint && (
+                        <span className="mini-l-tip">
+                            <InfoTip text={hint} />
+                        </span>
+                    )}
+                </span>
                 <span className="mini-line">
                     <span className="mini-v num">{value}</span>
                     {extra}
                 </span>
             </div>
             <span className="hero-tools">
-                {hint && <InfoTip text={hint} />}
+                {hint && (
+                    <span className="mini-side-tip">
+                        <InfoTip text={hint} />
+                    </span>
+                )}
                 <ToneIcon icon={icon} tone={tone} />
             </span>
             {below && <div className="mini-below">{below}</div>}

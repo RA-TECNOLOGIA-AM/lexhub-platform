@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { clearFilter, countFilters, filterChips, pickerLabel, toggleFilter, type FilterField } from './filters.ts'
+import {
+    clearFilter,
+    countFilters,
+    filterChips,
+    pickSingle,
+    pickerLabel,
+    toggleFilter,
+    type FilterField,
+} from './filters.ts'
 
 describe('filters', () => {
     it('conta todos os valores escolhidos', () => {
@@ -70,5 +78,13 @@ describe('pickerLabel e clearFilter', () => {
 
     it('tira o filtro inteiro', () => {
         expect(clearFilter({ uf: ['AM'], materia: ['ANP'] }, 'uf')).toEqual({ materia: ['ANP'] })
+    })
+})
+
+describe('pickSingle', () => {
+    it('escolher outro troca; o mesmo desmarca', () => {
+        expect(pickSingle({}, 'rubrica', 'ANP')).toEqual({ rubrica: ['ANP'] })
+        expect(pickSingle({ rubrica: ['ANP'] }, 'rubrica', 'MORA')).toEqual({ rubrica: ['MORA'] })
+        expect(pickSingle({ rubrica: ['ANP'], uf: ['AM'] }, 'rubrica', 'ANP')).toEqual({ uf: ['AM'] })
     })
 })

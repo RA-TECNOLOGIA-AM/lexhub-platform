@@ -27,11 +27,17 @@ import {
     protocoloFor,
     peticionamentoFor,
     orgDocumentosFor,
+    comercialFor,
     sources,
     testUsers,
 } from './mock/index.ts'
 import type { DashboardQuery, Meta } from '../types/index.ts'
 import { metaFor } from './mock/helpers.ts'
+import { orgDocumentosLegadoFor } from './mock/orgDocumentosLegado.ts'
+import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
+import { preProtocoloFor } from './mock/preProtocolo.ts'
+import { peticionamentoLegadoFor } from './mock/peticionamentoLegado.ts'
+import { protocoloLegadoFor } from './mock/protocoloLegado.ts'
 import { sourceDetailFor } from './mock/sourceDetail.ts'
 import { createUnitIn, updateUnitIn } from './mock/units.ts'
 import { toCsv } from '../lib/csv.ts'
@@ -121,6 +127,13 @@ async function dashboardResponse<T extends { meta: Meta }>(
 const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unknown> = {
     'peticionamento-lexpre': peticionamentoFor,
     'org-documentos-lexpre': orgDocumentosFor,
+    'comercial-lexpre': comercialFor,
+    'comissao-lexpre': comercialFor, // a v1 usava o mesmo endpoint do Comercial
+    protocolo: protocoloLegadoFor,
+    peticionamento: peticionamentoLegadoFor,
+    'org-documentos': orgDocumentosLegadoFor,
+    pendencias: pendenciasLegadoFor,
+    'pre-protocolo': preProtocoloFor,
 }
 
 export function createMockClient(): DataClient {

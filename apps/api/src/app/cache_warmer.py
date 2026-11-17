@@ -20,7 +20,11 @@ Target = tuple[str, str]  # (banco, query)
 
 def warm_targets(modules: Iterable[DashboardModule]) -> list[Target]:
     """As queries que os dashboards declaram, sem repetir (Protocolo e Pendências usam a mesma)."""
-    return list(dict.fromkeys((m.source_db, q) for m in modules for q in m.queries))
+    modules = list(modules)
+    proprias = ((m.source_db, q) for m in modules for q in m.queries)
+    extras = ((db, q) for m in modules for db, qs in m.extra_queries.items() for q in qs)
+    alternativas = ((db, q) for m in modules for db, a in m.alt_sources.items() for q in a.queries)
+    return list(dict.fromkeys([*proprias, *extras, *alternativas]))
 
 
 async def warm_once(

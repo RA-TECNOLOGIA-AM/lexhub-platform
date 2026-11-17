@@ -122,6 +122,7 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
                 data={data}
                 filters={query.filters}
                 onToggleFilter={(key, value) => setFilters(toggleFilter(query.filters, key, value))}
+                onFiltersChange={setFilters}
             />
         </>
     )

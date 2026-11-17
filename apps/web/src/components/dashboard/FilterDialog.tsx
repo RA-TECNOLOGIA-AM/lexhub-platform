@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { Modal } from '../ui/Modal.tsx'
 import { Icon, type IconName } from '../ui/Icon.tsx'
-import { clearFilter, pickerLabel, toggleFilter, type FilterField } from '../../lib/filters.ts'
+import { clearFilter, pickSingle, pickerLabel, toggleFilter, type FilterField } from '../../lib/filters.ts'
 import type { DashboardFilters } from '../../types/index.ts'
 
 type FilterDialogProps = {
@@ -17,6 +17,10 @@ const ICONS: Partial<Record<keyof DashboardFilters, IconName>> = {
     area_atuacao_id: 'briefcase',
     uf: 'pin',
     materia: 'book',
+    atendente_comercial: 'sliders',
+    segmento_comercial: 'flow',
+    rubrica: 'layers',
+    sistema: 'db',
 }
 
 // Módulo: a janela "Filtros", como na v1: um botão por filtro (mostra o que está escolhido) que abre um menu
@@ -68,7 +72,7 @@ export function FilterDialog({ fields, value, onApply, onClose }: FilterDialogPr
                             chosen={filters[field.key] ?? []}
                             open={open === field.key}
                             onOpenChange={(isOpen) => setOpen(isOpen ? field.key : null)}
-                            onToggle={(v) => change(toggleFilter(filters, field.key, v))}
+                            onToggle={(v) => change((field.single ? pickSingle : toggleFilter)(filters, field.key, v))}
                             onClear={() => change(clearFilter(filters, field.key))}
                         />
                     ))}

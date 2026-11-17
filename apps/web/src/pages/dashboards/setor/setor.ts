@@ -103,3 +103,16 @@ export const filaTone = (pct: number) => (pct < 5 ? 'ok' : pct < 15 ? 'warn' : '
 export function mesParcial(year: number, today: Date = new Date()): number | null {
     return year === today.getFullYear() ? today.getMonth() : null
 }
+
+// Opções do filtro de funcionário nos dashboards do banco legado: os nomes dos gráficos (curtos, como a v1
+// mostra: "Millena de") e, da lista completa do setor, só quem não aparece neles ("Millena de Souza Sá Graça"
+// seria a mesma pessoa). Sem repetir, em ordem alfabética. A API aceita as duas formas no filtro.
+export function nomesFuncionarios(curtos: string[], completos: string[]): string[] {
+    const limpa = (xs: string[]) => xs.map((x) => x.trim()).filter(Boolean)
+    const base = [...new Set(limpa(curtos))]
+    const chave = (x: string) => x.toLocaleLowerCase('pt-BR')
+    const extras = limpa(completos).filter(
+        (c) => !base.some((b) => chave(c) === chave(b) || chave(c).startsWith(`${chave(b)} `)),
+    )
+    return [...new Set([...base, ...extras])].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+}

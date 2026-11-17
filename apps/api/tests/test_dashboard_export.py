@@ -188,3 +188,70 @@ def test_mapas_de_exportacao_iguais_ao_front():
     assert list(protocolo.fields) == list(protocolo.labels)
     assert list(pendencias.fields) == list(pendencias.labels)
     assert set(pendencias.fields) - set(protocolo.fields) == {"origem"}
+
+
+def _linha_comercial(id_action, assinatura, **extra):
+    return {
+        "ESCRITORIO_ID": 1,
+        "ID_ACTION": id_action,
+        "ID_DEMANDA": id_action,
+        "CLIENTE": f"Cliente {id_action}",
+        "ATENDENTE": "Ana Souza",
+        "STATUS_ID": 6,  # assinado
+        "DATA_ASSINATURA": assinatura,
+        "RUBRICA": "MORA",
+        "VALOR_AM": 120.0,
+        **extra,
+    }
+
+
+def test_comercial_lexpre_exporta_as_colunas_da_query_como_a_v1(client, signer, repo, sources):
+    """Assinadas no período, rubrica reunida vira uma linha por componente (com o valor dele)."""
+    repo.grant(USER_ID, "NG", "comercial-lexpre", "all")
+    repo.exporters.add(USER_ID)
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    sources.data["comercial_lexpre_NG"] = [
+        _linha_comercial(1, date(2026, 10, 5)),
+        _linha_comercial(2, date(2026, 10, 6), RUBRICA="RUBRICAS_BRADESCO", RUBRICA_REUNIDA=True),
+        _linha_comercial(3, date(2026, 9, 30)),  # fora do período
+        _linha_comercial(4, date(2026, 10, 7), STATUS_ID=1),  # não assinou
+        _linha_comercial(5, date(2026, 10, 8), ESCRITORIO_ID=2),  # outro escritório
+    ]
+    sources.data["demanda_rubrica_reunida_lexpre_NG"] = [
+        {"DEMANDA_ID": 2, "RUBRICA_ASSOCIADA_NOME": "SEGURO", "RUBRICA_ASSOCIADA_VALOR_AM": 50.0},
+        {"DEMANDA_ID": 2, "RUBRICA_ASSOCIADA_NOME": "CESTA", "RUBRICA_ASSOCIADA_VALOR_AM": 30.0},
+    ]
+    url = "/orgs/lexgroup/units/NG/dashboards/comercial-lexpre/export"
+    r = client.get(
+        f"{url}?from=2026-10-01&to=2026-10-31&campos=id_action&campos=rubrica&campos=valor_am",
+        headers=auth(signer),
+    )
+    assert r.status_code == 200
+    linhas = read_csv(r)
+    assert linhas[0] == ["ID do Atendimento", "Rubrica", "Valor (R$)"]
+    assert sorted(linhas[1:]) == sorted(
+        [["1", "MORA", "120.0"], ["2", "SEGURO", "50.0"], ["2", "CESTA", "30.0"]]
+    ), linhas
+
+
+def test_comissao_lexpre_exporta_so_as_proprias_linhas_para_quem_nao_gere(
+    client, signer, repo, sources
+):
+    """Como a v1 (export com escopo_proprio): o colaborador só exporta os próprios contratos."""
+    repo.grant(USER_ID, "NG", "comissao-lexpre", "all")
+    repo.exporters.add(USER_ID)
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexpre")] = "1"
+    sources.members[(USER_ID, repo.org_id, "lexpre")] = "Ana Souza"
+    sources.data["comercial_lexpre_NG"] = [
+        _linha_comercial(1, date(2026, 10, 5)),
+        _linha_comercial(2, date(2026, 10, 6), ATENDENTE="Bruno Lima"),
+    ]
+    url = "/orgs/lexgroup/units/NG/dashboards/comissao-lexpre/export"
+    r = client.get(f"{url}?from=2026-10-01&to=2026-10-31&campos=id_action", headers=auth(signer))
+    assert r.status_code == 200
+    assert read_csv(r) == [["ID do Atendimento"], ["1"]]
+
+    # Quem gere a unidade exporta todo mundo.
+    repo.commission.add(USER_ID)
+    r = client.get(f"{url}?from=2026-10-01&to=2026-10-31&campos=id_action", headers=auth(signer))
+    assert sorted(read_csv(r)[1:]) == [["1"], ["2"]]

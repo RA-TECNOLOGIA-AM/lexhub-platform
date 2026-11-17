@@ -16,6 +16,22 @@ from typing import Any  # Optional: anotação do corpo da v1 (_canal_stat)
 
 from fastapi import HTTPException
 
+from app.analyses.LA.protocolo_LA import (
+    get_valor_causa_protocolado_LA_2026,
+    get_valor_causa_protocolado_por_atendente_LA,
+)
+from app.analyses.NG.comercial_lexpre import (
+    _expandir_ids_para_contagem as _expandir_ids_para_contagem_comercial_lexpre,
+)
+from app.analyses.NG.comercial_lexpre import (
+    _is_assinado as _is_assinado_comercial_lexpre,
+)
+from app.analyses.NG.comercial_lexpre import (
+    _to_date as _to_date_comercial_lexpre,
+)
+from app.analyses.NG.comercial_lexpre import (
+    _valor_am_por_componente as _valor_am_por_componente_comercial_lexpre,
+)
 from app.analyses.NG.comercial_lexpre import (
     build_mapa_rubricas_reunidas as build_mapa_rubricas_reunidas_comercial_lexpre,
 )
@@ -154,6 +170,11 @@ from app.analyses.NG.comissao_lexpre import (
 from app.analyses.NG.comissao_lexpre import (
     get_rubricas_total_tabela as get_rubricas_total_tabela_lexpre,
 )
+from app.analyses.NG.ml.meta_inteligente import calcular_meta_inteligente_por_atendente
+from app.analyses.NG.protocolo import (
+    get_valor_causa_protocolo_2026,
+    get_valor_causa_protocolo_novo_por_atendente,
+)
 from app.analyses.NG.protocolo_lexpre import (
     get_comparativo_protocolados as get_comparativo_protocolados_lexpre,
 )
@@ -170,6 +191,9 @@ from app.analyses.NG.protocolo_lexpre import (
     get_protocolados as get_protocolados_lexpre,
 )
 from app.analyses.NG.protocolo_lexpre import (
+    get_registros_para_meta_inteligente as get_registros_para_meta_inteligente_lexpre,
+)
+from app.analyses.NG.protocolo_lexpre import (
     get_tempo_medio_ate_protocolo_horas as get_tempo_medio_ate_protocolo_horas_lexpre,
 )
 from app.analyses.NG.protocolo_lexpre import (
@@ -184,6 +208,7 @@ from app.analyses.NG.protocolo_lexpre import (
 from app.analyses.NG.protocolo_lexpre import (
     get_valor_causa_protocolado_por_atendente as get_valor_causa_protocolado_por_atendente_lexpre,
 )
+from app.analyses.v1_dashboard_generico_ng import _filtrar_dados_ng_por_uf, filter_data
 from app.analyses.v1_routes import (
     ChartDataPoint,
     ComercialLexpreCanalStat,
@@ -194,8 +219,9 @@ from app.analyses.v1_routes import (
     ComercialLexpreRatioStat,
     ComercialLexpreValorCausaPorAtendenteItem,
 )
-from app.dashboards.base import DashboardContext, DashboardModule
+from app.dashboards.base import DashboardContext, DashboardModule, ExportSpec
 from app.dashboards.identidade_v1 import get_atendente_vinculado, is_gestor_ou_desenvolvedor
+from app.sources import SourceUnavailable
 
 QUERIES = (
     "comercial_lexpre_NG",
@@ -250,6 +276,9 @@ async def build(ctx: DashboardContext, escopo_proprio: bool = False) -> dict:
         await ctx.source.fetch("comercial_lexpre_NG"), escritorio_id=escritorio_id
     )
     opcoes = opcoes_filtro(rows)  # V2: antes dos filtros
+    rows_escritorio = (
+        rows  # V2: a Meta Inteligente usa o escritório inteiro, sem os filtros (como a v1)
+    )
     rows = filter_comercial_lexpre_por_atendentes_ng(rows, atendente_comercial)
     rows = filter_comercial_lexpre_por_area_atuacao_ng(rows, area_atuacao_id)
     rows = filter_comercial_lexpre_por_uf_ng(rows, uf)
@@ -503,7 +532,187 @@ async def build(ctx: DashboardContext, escopo_proprio: bool = False) -> dict:
         )
     )
     # --- saída (V2): o JSON da v1 + opcoes_filtro ---
-    return {**response.model_dump(), "opcoes_filtro": opcoes}
+    result = {**response.model_dump(), "opcoes_filtro": opcoes}
+    if not escopo_proprio:
+        # V2: o card "Meta Inteligente por Atendente" da v1 (antes GET /comercial-lexpre/ml/meta_inteligente),
+        # já com as três janelas do seletor (últimos 3, 6 e 12 meses). Ignora período e filtros, como na v1.
+        result["meta_inteligente"] = meta_inteligente_por_janela(rows_escritorio)
+        # V2: a soma com o banco legado que o front da v1 fazia com duas rotas a mais
+        # (GET /comercial-lexpre[-la]/valor_causa_protocolado_legado e .../por_atendente_legado).
+        result.update(await protocolado_legado(ctx, from_date, to_date))
+    return result
+
+
+# Banco legado de cada unidade (o protocolado antes da migração para o LexPre), como na v1:
+# NG -> banco `ng` (setor_protocolo); LA -> banco `laadv` (setor_protocolo_LA). O RJ não somava na v1.
+LEGADO = {
+    "ng": ("NG", "setor_protocolo", "protocolos"),
+    "laadv": ("LA", "setor_protocolo_LA", "protocolo_LA"),
+}
+
+
+async def protocolado_legado(ctx: DashboardContext, from_date: Any, to_date: Any) -> dict[str, Any]:
+    """Valor de causa protocolado no banco legado da unidade: no ano (meta anual; 2026 fixo e sem filtros,
+    como na v1) e por atendente no período (Meta por Atendente; chave = primeiro nome, a mesma do LexPre).
+
+    `valor_causa_protocolado_legado` = None quando a unidade não tem legado ligado ou ele está fora do ar
+    (a página segue só com o LexPre e avisa)."""
+    for db, (unidade, query, chave_periodo) in LEGADO.items():
+        fonte = ctx.extra_sources.get(db)
+        if fonte is None or ctx.extra_refs.get(db) != unidade:
+            continue
+        try:
+            protocolos = await fonte.fetch(query)
+        except SourceUnavailable:
+            break
+        periodo = filter_data(chave_periodo, protocolos, from_date, to_date)
+        if db == "ng":
+            ano = get_valor_causa_protocolo_2026(protocolos)
+            # V2: o banco ng tem NG e RJ juntos; a Meta por Atendente do NG não mostra quem é do RJ
+            # (mesmo corte do Protocolo NG da v1: sem os protocolos de UF RJ).
+            periodo_ng = _filtrar_dados_ng_por_uf({"protocolos": periodo}, "RJ", excluir=True)
+            por_atendente = get_valor_causa_protocolo_novo_por_atendente(periodo_ng["protocolos"])
+        else:
+            ano = get_valor_causa_protocolado_LA_2026(protocolos)
+            por_atendente = get_valor_causa_protocolado_por_atendente_LA(periodo)
+        return {
+            "valor_causa_protocolado_legado": ano,
+            "valor_causa_protocolado_por_atendente_legado": por_atendente,
+        }
+    return {
+        "valor_causa_protocolado_legado": None,
+        "valor_causa_protocolado_por_atendente_legado": {},
+    }
+
+
+# Meta do trimestre usada pela v1 no card (metaGlobal={12_000_000}): distribuída entre os atendentes
+# pela participação de cada um (meta_proporcional).
+META_TRIMESTRAL_COMERCIAL = 12_000_000.0
+JANELAS_META_INTELIGENTE = (3, 6, 12)
+
+
+def meta_inteligente_por_janela(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """{"3": ..., "6": ..., "12": ...}: a resposta da v1 para cada janela de meses de histórico."""
+    registros = get_registros_para_meta_inteligente_lexpre(rows)
+    return {
+        str(meses): calcular_meta_inteligente_por_atendente(
+            comercial_geral=registros,
+            meses_historico=meses,
+            stretch_goal_pct=0.10,
+            meta_global_periodo=META_TRIMESTRAL_COMERCIAL,
+        )
+        for meses in JANELAS_META_INTELIGENTE
+    }
+
+
+# v1: dashboard_routes.py:17057 / 17075 (_CAMPOS_EXPORT_COMERCIAL_LEXPRE_NG e _LABELS_...), sem mudança:
+# as colunas da query comercial_lexpre_NG.
+CAMPOS_EXPORT = {
+    "id_action": "ID_ACTION",
+    "cliente": "CLIENTE",
+    "atendente": "ATENDENTE",
+    "uf": "UF",
+    "canal_aquisicao": "CANAL_AQUISICAO",
+    "motivo_encerramento": "MOTIVO_ENCERRAMENTO",
+    "assinatura": "DATA_ASSINATURA",
+    "rubrica": "RUBRICA",
+    "area_atuacao": "AREA_ATUACAO_NOME",
+    "valor_am": "VALOR_AM",
+    "status_demanda": "STATUS_DEMANDA",
+    "valor_causa": "VALOR_CAUSA",
+    "numero_processo": "NUMERO_PROCESSO",
+    "data_protocolo": "DATA_PROTOCOLO",
+    "setor": "SETOR_NOME",
+}
+LABELS_EXPORT = {
+    "id_action": "ID do Atendimento",
+    "cliente": "Nome do Cliente",
+    "atendente": "Atendente",
+    "uf": "UF",
+    "canal_aquisicao": "Canal de Aquisição",
+    "motivo_encerramento": "Motivo de Encerramento",
+    "assinatura": "Data de Assinatura",
+    "rubrica": "Rubrica",
+    "area_atuacao": "Área de Atuação",
+    "valor_am": "Valor (R$)",
+    "status_demanda": "Status da Demanda",
+    "valor_causa": "Valor de Causa (R$)",
+    "numero_processo": "Número do Processo",
+    "data_protocolo": "Data de Protocolo",
+    "setor": "Setor",
+}
+
+
+# v1: dashboard_routes.py:17188 (_build_comercial_lexpre_export, aba principal)
+async def export_rows(ctx: DashboardContext, escopo_proprio: bool = False) -> list[dict[str, Any]]:
+    """As demandas assinadas no período (DATA_ASSINATURA), com os filtros da página, como a aba principal do
+    export da v1. Rubrica reunida (pacote) vira uma linha por componente, com o nome e o VALOR_AM dele.
+    A v1 tinha uma segunda aba ("Valor Protocolado (FM)"); a casca da V2 exporta uma aba só."""
+    # --- entrada (V2) ---
+    escritorio_id = int(ctx.unit_ref)
+    from_date, to_date = ctx.period.start, ctx.period.end
+    segmento_comercial = next(iter(ctx.filters["segmento_comercial"]), None)
+    rubrica = next(iter(ctx.filters["rubrica"]), None)
+
+    # --- v1: _rows_filtradas_comercial_lexpre (sem mudança) ---
+    rows = filter_comercial_lexpre_por_escritorio_ng(
+        await ctx.source.fetch("comercial_lexpre_NG"), escritorio_id=escritorio_id
+    )
+    rows = filter_comercial_lexpre_por_atendentes_ng(rows, ctx.filters["atendente_comercial"])
+    rows = filter_comercial_lexpre_por_area_atuacao_ng(rows, ctx.filters["area_atuacao_id"])
+    rows = filter_comercial_lexpre_por_uf_ng(rows, ctx.filters["uf"])
+    try:
+        rows = filter_comercial_lexpre_por_segmento_ng(rows, segmento_comercial)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    demanda_rubrica_reunida_raw = await ctx.source.fetch("demanda_rubrica_reunida_lexpre_NG")
+    mapa_rubricas_reunidas = build_mapa_rubricas_reunidas_comercial_lexpre(
+        demanda_rubrica_reunida_raw
+    )
+    mapa_valor_rubrica_associada = build_mapa_valor_rubrica_associada_comercial_lexpre(
+        demanda_rubrica_reunida_raw
+    )
+    rows = filter_comercial_lexpre_por_rubrica_ng(rows, rubrica, mapa_rubricas_reunidas)
+
+    # Comissão Comercial: quem não é Gestor/Desenvolvedor exporta só as próprias linhas (como a v1).
+    usuario_logado = ctx  # V2: identidade vem da casca (ver identidade_v1.py)
+    if escopo_proprio and not is_gestor_ou_desenvolvedor(usuario_logado):
+        atendente_vinculado = await get_atendente_vinculado(usuario_logado)
+        rows = (
+            filter_comercial_lexpre_por_atendentes_ng(rows, [atendente_vinculado])
+            if atendente_vinculado
+            else []
+        )
+
+    # --- v1: _filtrar_rows_por_assinatura_comercial_lexpre (sem mudança) ---
+    def _no_periodo(row: dict[str, Any]) -> bool:
+        if not _is_assinado_comercial_lexpre(row):
+            return False
+        data_assinatura = _to_date_comercial_lexpre(row.get("DATA_ASSINATURA"))
+        if not data_assinatura:
+            return False
+        if from_date and data_assinatura < from_date:
+            return False
+        if to_date and data_assinatura > to_date:  # noqa: SIM103 (igual à v1)
+            return False
+        return True
+
+    # --- v1: _registros_export_comercial_lexpre (a expansão das rubricas reunidas) ---
+    # V2: devolve a linha da query com RUBRICA/VALOR_AM do componente (a casca escolhe as colunas).
+    registros: list[dict[str, Any]] = []
+    for row in (r for r in rows if _no_periodo(r)):
+        componentes = _expandir_ids_para_contagem_comercial_lexpre(row, mapa_rubricas_reunidas)
+        for _sub_id, nome_componente in componentes:
+            registros.append(
+                {
+                    **row,
+                    "RUBRICA": nome_componente,
+                    "VALOR_AM": _valor_am_por_componente_comercial_lexpre(
+                        row, nome_componente, mapa_valor_rubrica_associada
+                    ),
+                }
+            )
+    return registros
 
 
 MODULE = DashboardModule(
@@ -512,6 +721,7 @@ MODULE = DashboardModule(
     source_label="LexPre",
     build=build,
     queries=QUERIES,
+    extra_queries={db: (query,) for db, (_, query, _) in LEGADO.items()},
     # Mesmos parâmetros da v1 (GET /comercial-lexpre).
     filters={
         "atendente_comercial": str,
@@ -520,4 +730,10 @@ MODULE = DashboardModule(
         "uf": str,
         "rubrica": str,
     },
+    export=ExportSpec(
+        fields=CAMPOS_EXPORT,
+        labels=LABELS_EXPORT,
+        sheet_name="Comercial (LexPre)",
+        rows=export_rows,
+    ),
 )

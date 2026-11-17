@@ -22,9 +22,14 @@ const META_TAXA_RESOLVIDOS = 85
 const MAX_TAXA_CANCELADAS = 5
 
 // Pendências (LexPre): as métricas da v1 no layout novo (o mesmo do Protocolo, Peticionamento e Org. Documentos).
+// As Pendências do banco legado (NG, RJ e LA) usam esta mesma página (pendencias/PendenciasLegadoContent.tsx).
 // Carregar, erros, cabeçalho, período e filtros ficam no DashboardView.
 export function PendenciasContent({ data, filters = {}, onToggleFilter }: ContentProps<PendenciasResponse>) {
     const s = data.stats
+    // Reajuizamento: o LexPre ainda não registra (0, como na v1); o banco legado da NG/RJ tem; o da LA não
+    // separa (os campos não vêm e os dois cards somem).
+    const lexpre = data.meta.source === 'LexPre'
+    const comReaj = lexpre || s.pendencias_nao_resolvidas_reajuizamento !== undefined
     const porFuncionario =
         onToggleFilter && ((name: string) => void (!isPlaceholder(name) && onToggleFilter('funcionario', name)))
 
@@ -133,11 +138,19 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                         }
                         hint="Tempo médio entre a entrada da pendência e a resolução, nas resolvidas no período."
                         footer={
-                            <FootRow left={<Velocidade value={s.comparativo_tempo_medio_resolvidos_pendencia} />} />
+                            <FootRow
+                                left={
+                                    s.comparativo_tempo_medio_resolvidos_pendencia === null && !lexpre ? (
+                                        'Da entrada à resolução'
+                                    ) : (
+                                        <Velocidade value={s.comparativo_tempo_medio_resolvidos_pendencia} />
+                                    )
+                                }
+                            />
                         }
                     />
                 </div>
-                <div className="grid grid-stat-3 grid-mini grid-mini-stack">
+                <div className={`grid ${comReaj ? 'grid-stat-3' : 'grid-stat'} grid-mini grid-mini-stack`}>
                     <MiniStat
                         label="Não resolvidas há mais de 5 dias"
                         icon="clock"
@@ -189,22 +202,36 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                         }
                         hint="Metade das pendências resolvidas no período levou até este tempo."
                     />
-                    <MiniStat
-                        label="Não resolvidas · reajuizamento"
-                        icon="undo"
-                        tone="neutral"
-                        value={<CountUp value={s.pendencias_nao_resolvidas_reajuizamento ?? 0} format={fmt.int} />}
-                        below={<StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
-                        hint="O LexPre ainda não registra reajuizamento: fica 0, como na v1."
-                    />
-                    <MiniStat
-                        label="Resolvidas · reajuizamento"
-                        icon="undo"
-                        tone="neutral"
-                        value={<CountUp value={s.pendencias_resolvidas_reajuizamento ?? 0} format={fmt.int} />}
-                        below={<StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
-                        hint="O LexPre ainda não registra reajuizamento: fica 0, como na v1."
-                    />
+                    {comReaj && (
+                        <>
+                            <MiniStat
+                                label="Não resolvidas · reajuizamento"
+                                icon="undo"
+                                tone="neutral"
+                                value={
+                                    <CountUp value={s.pendencias_nao_resolvidas_reajuizamento ?? 0} format={fmt.int} />
+                                }
+                                below={lexpre && <StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
+                                hint={
+                                    lexpre
+                                        ? 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
+                                        : 'Pendências de reajuizamento abertas no período e ainda não resolvidas.'
+                                }
+                            />
+                            <MiniStat
+                                label="Resolvidas · reajuizamento"
+                                icon="undo"
+                                tone="neutral"
+                                value={<CountUp value={s.pendencias_resolvidas_reajuizamento ?? 0} format={fmt.int} />}
+                                below={lexpre && <StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
+                                hint={
+                                    lexpre
+                                        ? 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
+                                        : 'Pendências de reajuizamento abertas no período e já resolvidas.'
+                                }
+                            />
+                        </>
+                    )}
                 </div>
             </DashSection>
 
@@ -327,7 +354,6 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                         <LineChart
                             height={320}
                             legend
-                            area={anos.length === 1}
                             emphasizeData
                             labels={mesesCurtos}
                             partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
@@ -336,6 +362,9 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                                 label: String(a.year),
                                 color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
                                 values: a.values,
+                                // anos anteriores tracejados; o ano atual cheio, com o degradê
+                                dashed: i < ultimo,
+                                area: i === ultimo,
                             }))}
                         />
                     </ChartCard>

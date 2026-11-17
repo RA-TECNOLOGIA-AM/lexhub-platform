@@ -3,7 +3,7 @@ import asyncio
 import pytest
 
 from app.cache_warmer import warm_once, warm_targets
-from app.dashboards.base import DashboardModule
+from app.dashboards.base import AltSource, DashboardModule
 from app.source_cache import CachedSourceFetcher, Entry, MemoryStore, SourceCache
 
 
@@ -162,6 +162,31 @@ def test_alvos_do_aquecedor_sem_repetir():
     b = DashboardModule("b", "lexpre", "LexPre", build, queries=("log", "outra"))
     c = DashboardModule("c", "lexflow", "LexFlow", build, queries=("log",))
     assert warm_targets([a, b, c]) == [("lexpre", "log"), ("lexpre", "outra"), ("lexflow", "log")]
+
+
+def test_alvos_do_aquecedor_incluem_os_bancos_extras():
+    async def build(ctx):
+        return {}
+
+    m = DashboardModule(
+        "m", "lexpre", "LexPre", build, queries=("log",), extra_queries={"ng": ("setor_protocolo",)}
+    )
+    assert warm_targets([m]) == [("lexpre", "log"), ("ng", "setor_protocolo")]
+
+
+def test_alvos_do_aquecedor_incluem_os_bancos_alternativos():
+    async def build(ctx):
+        return {}
+
+    m = DashboardModule(
+        "m",
+        "ng",
+        "NG",
+        build,
+        queries=("setor_protocolo",),
+        alt_sources={"laadv": AltSource("LA", ("setor_protocolo_LA",))},
+    )
+    assert warm_targets([m]) == [("ng", "setor_protocolo"), ("laadv", "setor_protocolo_LA")]
 
 
 def test_aquecedor_pula_banco_fora_e_segue_apos_falha():
