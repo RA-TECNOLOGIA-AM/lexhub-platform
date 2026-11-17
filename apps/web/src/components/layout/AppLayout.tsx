@@ -81,31 +81,38 @@ export function AppLayout() {
                     onOpen={() => setCollapsed(false)}
                 />
 
-                {NAV_SECTIONS.map((section) => ({ section, items: visibleItems(section, perms, user.platform_staff) }))
-                    .filter(({ items }) => items.length > 0)
-                    .map(({ section, items }) => (
-                        <div key={section.title} className="stack" style={{ gap: 2 }}>
-                            <span className="side-label">{section.title}</span>
-                            {items.map((item) => (
-                                <PageTransitionLink
-                                    key={item.key}
-                                    className="nav"
-                                    to={pathOf(item, org.slug)}
-                                    aria-current={current?.item.key === item.key ? 'page' : undefined}
-                                    title={collapsed ? item.label : undefined}
-                                    onClick={closeMenu}
-                                >
-                                    <Icon name={item.icon} />
-                                    <span className="nav-label">{item.label}</span>
-                                    {item.badge === 'access-requests' && pending > 0 && (
-                                        <span className="count" aria-label={`${pending} pendentes`}>
-                                            {pending}
-                                        </span>
-                                    )}
-                                </PageTransitionLink>
-                            ))}
-                        </div>
-                    ))}
+                {/* Só a lista de páginas rola quando não cabe (janela baixa, zoom alto): logo, organização e
+                    usuário ficam parados. Antes a barra inteira rolava e parecia subir e descer. */}
+                <div className="side-nav">
+                    {NAV_SECTIONS.map((section) => ({
+                        section,
+                        items: visibleItems(section, perms, user.platform_staff),
+                    }))
+                        .filter(({ items }) => items.length > 0)
+                        .map(({ section, items }) => (
+                            <div key={section.title} className="stack" style={{ gap: 2 }}>
+                                <span className="side-label">{section.title}</span>
+                                {items.map((item) => (
+                                    <PageTransitionLink
+                                        key={item.key}
+                                        className="nav"
+                                        to={pathOf(item, org.slug)}
+                                        aria-current={current?.item.key === item.key ? 'page' : undefined}
+                                        title={collapsed ? item.label : undefined}
+                                        onClick={closeMenu}
+                                    >
+                                        <Icon name={item.icon} />
+                                        <span className="nav-label">{item.label}</span>
+                                        {item.badge === 'access-requests' && pending > 0 && (
+                                            <span className="count" aria-label={`${pending} pendentes`}>
+                                                {pending}
+                                            </span>
+                                        )}
+                                    </PageTransitionLink>
+                                ))}
+                            </div>
+                        ))}
+                </div>
 
                 <div className="side-user">
                     <span className="av">{user.initials}</span>
