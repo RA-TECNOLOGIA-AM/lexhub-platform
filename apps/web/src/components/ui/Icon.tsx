@@ -107,6 +107,7 @@ const PATHS = {
     'chevron-up': <path d="M6 15l6-6 6 6" />,
     'chevron-down': <path d="M6 9l6 6 6-6" />,
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+    list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />,
     lock: (
         <>
             <rect x="4" y="11" width="16" height="10" rx="2" />

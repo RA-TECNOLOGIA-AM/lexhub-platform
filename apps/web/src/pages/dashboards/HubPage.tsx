@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { DashboardCard } from '../../components/dashboard/DashboardCard.tsx'
 import { HubDnd, type HubDrop } from '../../components/dashboard/HubDnd.tsx'
 import { SortableCard } from '../../components/dashboard/SortableCard.tsx'
 import { SortableSection } from '../../components/dashboard/SortableSection.tsx'
+import { BoardColumn } from '../../components/dashboard/BoardColumn.tsx'
+import { Segmented } from '../../components/ui/Segmented.tsx'
+import { storedHubView, storeHubView, type HubView } from '../../lib/hubView.ts'
 import type { DashboardSummary } from '../../types/index.ts'
 import { hubUnit, rememberedUnit } from '../../lib/activeUnit.ts'
 import { dataClient } from '../../services/client.ts'
@@ -13,12 +17,18 @@ import { LoadingState } from '../../components/states/LoadingState.tsx'
 import { StateMessage } from '../../components/states/StateMessage.tsx'
 import { useFavorites } from '../../hooks/useFavorites.ts'
 import { useHubOrder } from '../../hooks/useHubOrder.ts'
-import { sortAreas, sortByOrder } from '../../lib/hubOrder.ts'
+import { HUB_AREAS, sortAreas, sortByOrder } from '../../lib/hubOrder.ts'
 import { searchDashboards, SEARCH_PARAM } from '../../lib/dashboardSearch.ts'
 import { unitName } from '../../lib/units.ts'
 import { PageTransitionLink } from '../../components/page_transition/PageTransitionLink.tsx'
 
 const FAVORITES = 'Favoritos'
+const VIEW_OPTIONS: { value: HubView; label: string; icon: 'grid' | 'list' }[] = [
+    { value: 'quadro', label: 'Quadro', icon: 'grid' },
+    { value: 'lista', label: 'Lista', icon: 'list' },
+]
+const MIGRATING = 'Os dashboards desta área estão sendo migrados da v1.'
+const FAV_HINT = 'Arraste um card para cá ou toque na estrela para favoritar.'
 
 export function HubPage() {
     const { org = '' } = useParams()
@@ -30,6 +40,12 @@ export function HubPage() {
     const query = searchParams.get(SEARCH_PARAM) ?? '' // texto da busca do topo ('' = sem busca)
     const favorites = useFavorites(org)
     const hubOrder = useHubOrder(org)
+    // Lista (seções) ou Quadro (colunas): escolha da pessoa, lembrada neste navegador.
+    const [view, setView] = useState<HubView>(() => storedHubView())
+    function changeView(next: HubView) {
+        setView(next)
+        storeHubView(next)
+    }
 
     if (error) return <ErrorState error={error} />
     if (!catalog || !favorites.ready || !hubOrder.ready) return <LoadingState />
@@ -44,9 +60,11 @@ export function HubPage() {
     // Favoritos sobem para a seção do topo; o resto fica na sua área.
     const favs = dashboards.filter((d) => favorites.isFavorite(d.key))
     const others = dashboards.filter((d) => !favorites.isFavorite(d.key))
-    // Áreas na ordem do catálogo, com as prioritárias (Gestão) logo abaixo de Favoritos.
-    const areas = sortAreas([...new Set(catalog.available.map((d) => d.area))]).filter((area) =>
-        others.some((d) => d.area === area),
+    // As abas fixas (HUB_AREAS) aparecem sempre, mesmo vazias, em qualquer unidade (só a busca esconde as vazias);
+    // as outras áreas só quando têm card.
+    const showEmpty = !searching
+    const areas = sortAreas([...new Set([...HUB_AREAS, ...catalog.available.map((d) => d.area)])]).filter(
+        (area) => others.some((d) => d.area === area) || (showEmpty && HUB_AREAS.includes(area)),
     )
     const count =
         dashboards.length === 0
@@ -86,8 +104,17 @@ export function HubPage() {
     return (
         <>
             <section className="stack">
-                <div className="stack" style={{ gap: 6 }}>
+                <div className="hub-head">
                     <h1 className="h1">Dashboards</h1>
+                    <Segmented
+                        label="Visualização"
+                        className="view-toggle"
+                        options={VIEW_OPTIONS}
+                        value={view}
+                        onChange={changeView}
+                    />
+                </div>
+                <div className="stack" style={{ gap: 6 }}>
                     <p className="muted">
                         {count} para você em {me?.org.name}
                         {unit ? ` · ${unitName(unit, me?.units ?? [])}` : ''}. Troque a unidade no seletor da barra
@@ -119,29 +146,58 @@ export function HubPage() {
                                 </PageTransitionLink>
                             }
                         >
-                            Confira a grafia ou busque pelo nome da área (ex.: Gestão).
+                            Confira a grafia ou busque pelo nome da área (ex.: Pré-protocolo).
                         </StateMessage>
                     )}
-                    {/* Favoritos aparece mesmo vazio: é onde se solta um card para favoritar. */}
-                    {all.length > 0 && !notFound && (favs.length > 0 || !searching) && (
-                        <SortableSection title={FAVORITES} ids={favs.map((d) => d.key)} acceptsOthers>
-                            {favs.length > 0 ? (
-                                favs.map(card(FAVORITES))
-                            ) : (
-                                <p className="card drop-hint muted small">
-                                    Arraste um card para cá ou toque na estrela para favoritar.
-                                </p>
+                    {all.length > 0 && !notFound && view === 'lista' && (
+                        <>
+                            {/* Favoritos aparece mesmo vazio: é onde se solta um card para favoritar. */}
+                            {(favs.length > 0 || !searching) && (
+                                <SortableSection title={FAVORITES} ids={favs.map((d) => d.key)} acceptsOthers>
+                                    {favs.length > 0 ? (
+                                        favs.map(card(FAVORITES))
+                                    ) : (
+                                        <p className="card drop-hint muted small">{FAV_HINT}</p>
+                                    )}
+                                </SortableSection>
                             )}
-                        </SortableSection>
+                            {areas.map((area) => {
+                                const items = others.filter((d) => d.area === area)
+                                return (
+                                    <SortableSection key={area} title={area} ids={items.map((d) => d.key)}>
+                                        {items.length > 0 ? (
+                                            items.map(card(area))
+                                        ) : (
+                                            <p className="card drop-hint muted small">{MIGRATING}</p>
+                                        )}
+                                    </SortableSection>
+                                )
+                            })}
+                        </>
                     )}
-                    {areas.map((area) => {
-                        const items = others.filter((d) => d.area === area)
-                        return (
-                            <SortableSection key={area} title={area} ids={items.map((d) => d.key)}>
-                                {items.map(card(area))}
-                            </SortableSection>
-                        )
-                    })}
+                    {/* Quadro: uma coluna por área, lado a lado (rola na horizontal). Coluna vazia vira faixa estreita. */}
+                    {all.length > 0 && !notFound && view === 'quadro' && (
+                        <div className="board">
+                            {(favs.length > 0 || !searching) && (
+                                <BoardColumn
+                                    title={FAVORITES}
+                                    ids={favs.map((d) => d.key)}
+                                    acceptsOthers
+                                    empty={<p className="board-hint muted small">{FAV_HINT}</p>}
+                                >
+                                    {favs.map(card(FAVORITES))}
+                                </BoardColumn>
+                            )}
+                            {areas.map((area) => {
+                                const items = others.filter((d) => d.area === area)
+                                return (
+                                    <BoardColumn key={area} title={area} ids={items.map((d) => d.key)}>
+                                        {items.map(card(area))}
+                                    </BoardColumn>
+                                )
+                            })}
+                        </div>
+                    )}
                 </div>
             </HubDnd>
 
