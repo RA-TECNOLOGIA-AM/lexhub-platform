@@ -18,7 +18,7 @@ from app.logs import configure_logging, seconds
 from app.request_log import RequestLogMiddleware
 from app.routes import catalog, dashboards, device_auth, health, hub, me, sources
 from app.source_cache import MemoryStore, SourceCache, ttl_by_query
-from app.sources import PgSourceFetcher
+from app.sources import source_fetcher, source_is_up
 from app.supabase_client import create_supabase
 
 VERSION = "0.1.0"
@@ -31,9 +31,9 @@ async def _start_warmer(app: FastAPI, settings) -> None:
     databases = app.state.databases
     await warm_loop(
         app.state.source_cache,
-        lambda db: PgSourceFetcher(databases, db),
+        lambda db: source_fetcher(databases, db),
         warm_targets(DASHBOARDS.values()),
-        lambda db: databases.status().get(db) == "up",
+        lambda db: source_is_up(databases, db),
         interval=settings.SOURCE_CACHE_WARM_INTERVAL,
     )
 

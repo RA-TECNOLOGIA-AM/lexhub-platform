@@ -58,6 +58,9 @@ services:
       - DB_LEXPRE_NAME=${DB_LEXPRE_NAME}
       - DB_LEXPRE_USER=${DB_LEXPRE_USER}
       - DB_LEXPRE_PASSWORD=${DB_LEXPRE_PASSWORD}
+      # Planilhas do Google (URL do XLSX publicado), vindas das variáveis da stack: Meta anual
+      - GOOGLE_SHEETS_URL_FINANCEIRO_NG=${GOOGLE_SHEETS_URL_FINANCEIRO_NG}
+      - GOOGLE_SHEETS_URL_FINANCEIRO_LA=${GOOGLE_SHEETS_URL_FINANCEIRO_LA}
       # Redis da própria stack (serviço lexhub-redis abaixo): cache compartilhado que
       # sobrevive a deploy/restart da API. Fora do ar, a API segue só com o cache em memória
       - CACHE_ENABLED=true

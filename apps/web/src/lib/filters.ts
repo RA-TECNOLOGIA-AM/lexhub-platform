@@ -8,6 +8,21 @@ export type FilterField = {
     label: string
     options: { value: string; label: string }[]
     single?: boolean // um valor só (a API só usa o primeiro): escolher outro troca, não soma
+    // Seletor que fica dentro de uma seção ou modal (ex.: os anos da Conversão no Financeiro Estratégico): vai
+    // na URL e na API como os outros, mas não aparece na janela Filtros, nas etiquetas nem no "Limpar todos".
+    inline?: boolean
+}
+
+// Só os filtros da página (sem os seletores de seção, `inline`): os da janela, das etiquetas e do contador.
+export function semInline(filters: DashboardFilters, fields: FilterField[]): DashboardFilters {
+    const inline = new Set(fields.filter((f) => f.inline).map((f) => f.key))
+    return Object.fromEntries(Object.entries(filters).filter(([k]) => !inline.has(k as keyof DashboardFilters)))
+}
+
+// Só os seletores de seção (`inline`): o que "Limpar todos" mantém.
+export function soInline(filters: DashboardFilters, fields: FilterField[]): DashboardFilters {
+    const inline = new Set(fields.filter((f) => f.inline).map((f) => f.key))
+    return Object.fromEntries(Object.entries(filters).filter(([k]) => inline.has(k as keyof DashboardFilters)))
 }
 
 // Quantos valores estão escolhidos no total: o "(2)" do botão Filtros.
@@ -23,6 +38,7 @@ export function filterChips(fields: FilterField[], filters: DashboardFilters): F
     const known = new Set(fields.map((f) => f.key))
     const chips: FilterChip[] = []
     for (const field of fields) {
+        if (field.inline) continue // seletor de seção: aparece na própria seção
         for (const value of filters[field.key] ?? []) {
             const option = field.options.find((o) => o.value === value)
             const text = option?.label ?? value

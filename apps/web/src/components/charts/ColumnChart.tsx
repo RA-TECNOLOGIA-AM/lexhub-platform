@@ -53,7 +53,9 @@ export function ColumnChart({
     }
 
     const { max, ticks } = niceScale(Math.max(...totals))
-    const plotW = Math.max(width - PAD.left - PAD.right, 40)
+    // Margem do eixo do tamanho do maior rótulo (ex.: '800 mil'), para não cortar.
+    const padLeft = Math.max(PAD.left, Math.max(...ticks.map((t) => fmt.eixo(t).length)) * 7 + 16)
+    const plotW = Math.max(width - padLeft - PAD.right, 40)
     const plotH = height - PAD.top - PAD.bottom
     const band = plotW / categories.length
     const barW = Math.min(band * 0.55, 110)
@@ -71,14 +73,14 @@ export function ColumnChart({
             <svg width={width} height={height} role="img" aria-label={describe(categories, series, format)}>
                 {ticks.map((t) => (
                     <g key={t}>
-                        <line className="chart-grid" x1={PAD.left} x2={PAD.left + plotW} y1={y(t)} y2={y(t)} />
-                        <text className="chart-axis" x={PAD.left - 8} y={y(t)} dy="0.32em" textAnchor="end">
-                            {fmt.int(t)}
+                        <line className="chart-grid" x1={padLeft} x2={padLeft + plotW} y1={y(t)} y2={y(t)} />
+                        <text className="chart-axis" x={padLeft - 8} y={y(t)} dy="0.32em" textAnchor="end">
+                            {fmt.eixo(t)}
                         </text>
                     </g>
                 ))}
                 {categories.map((cat, i) => {
-                    const x = PAD.left + band * i + (band - barW) / 2
+                    const x = padLeft + band * i + (band - barW) / 2
                     const dim = selected.length > 0 && !selected.includes(cat)
                     let base = 0
                     const parts = series.map((s) => {
@@ -140,7 +142,7 @@ export function ColumnChart({
                             {(onSelect || tooltip) && (
                                 <rect
                                     className={onSelect ? 'chart-hit' : 'chart-hit passive'}
-                                    x={PAD.left + band * i}
+                                    x={padLeft + band * i}
                                     y={PAD.top}
                                     width={band}
                                     height={plotH + 24}
@@ -174,7 +176,7 @@ export function ColumnChart({
                     format={format}
                     // Ao lado da coluna (à direita; à esquerda quando não cabe), na altura do topo do gráfico.
                     left={(() => {
-                        const x = PAD.left + band * hover + (band - barW) / 2
+                        const x = padLeft + band * hover + (band - barW) / 2
                         return x + barW + 10 + TIP_W <= width ? x + barW + 10 : Math.max(0, x - 10 - TIP_W)
                     })()}
                     top={PAD.top}

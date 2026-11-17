@@ -89,9 +89,23 @@ def get_source_cache(request: Request) -> SourceCache:
     return request.app.state.source_cache
 
 
+def source_fetcher(manager: DatabaseManager, db_name: str) -> SourceFetcher:
+    """O leitor de uma fonte, sem cache: um banco (Postgres) ou uma planilha do Google (app/sheets.py)."""
+    from app import sheets  # aqui: app.sheets usa SourceUnavailable deste módulo
+
+    if sheets.is_sheet(db_name):
+        return sheets.SheetSourceFetcher(db_name)
+    return PgSourceFetcher(manager, db_name)
+
+
+def source_is_up(manager: DatabaseManager, db_name: str) -> bool:
+    """O banco está no ar: o aquecedor só lê esses (planilhas ficam fora dele: cache_warmer.warm_targets)."""
+    return manager.status().get(db_name) == "up"
+
+
 def get_source_factory(
     manager: Annotated[DatabaseManager, Depends(get_databases)],
     cache: Annotated[SourceCache, Depends(get_source_cache)],
 ) -> SourceFactory:
-    """Dependency: db_name -> SourceFetcher daquele banco de origem, com o cache de 5 min."""
-    return lambda db_name: CachedSourceFetcher(cache, PgSourceFetcher(manager, db_name), db_name)
+    """Dependency: db_name -> SourceFetcher daquela fonte (banco ou planilha), com o cache de 5 min."""
+    return lambda db_name: CachedSourceFetcher(cache, source_fetcher(manager, db_name), db_name)

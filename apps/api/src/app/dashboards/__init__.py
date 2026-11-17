@@ -7,7 +7,9 @@ from app.dashboards import (
     comissao,
     comissao_lexpre,
     execucao,
+    financeiro_estrategico,
     marketing,
+    meta_anual,
     nps,
     org_documentos,
     org_documentos_lexpre,
@@ -43,5 +45,7 @@ DASHBOARDS: dict[str, DashboardModule] = {
         marketing.MODULE,
         nps.MODULE,
         pre_protocolo.MODULE,
+        meta_anual.MODULE,
+        financeiro_estrategico.MODULE,
     )
 }

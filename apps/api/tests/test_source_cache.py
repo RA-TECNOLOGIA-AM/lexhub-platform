@@ -189,6 +189,23 @@ def test_alvos_do_aquecedor_incluem_os_bancos_alternativos():
     assert warm_targets([m]) == [("ng", "setor_protocolo"), ("laadv", "setor_protocolo_LA")]
 
 
+def test_planilhas_ficam_fora_do_aquecedor():
+    """A planilha do Google só é baixada quando alguém abre o dashboard (não a cada ciclo)."""
+
+    async def build(ctx):
+        return {}
+
+    m = DashboardModule(
+        "m",
+        "sheets_financeiro_ng",
+        "Planilha",
+        build,
+        queries=("REPASSES CLIENTES",),
+        extra_queries={"ng": ("setor_protocolo",)},
+    )
+    assert warm_targets([m]) == [("ng", "setor_protocolo")]
+
+
 def test_aquecedor_pula_banco_fora_e_segue_apos_falha():
     cache, _clock, origin = make()
     broken = Origin()

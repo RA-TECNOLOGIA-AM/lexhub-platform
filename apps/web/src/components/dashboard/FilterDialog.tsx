@@ -21,6 +21,8 @@ const ICONS: Partial<Record<keyof DashboardFilters, IconName>> = {
     segmento_comercial: 'flow',
     rubrica: 'layers',
     sistema: 'db',
+    origem: 'scale',
+    ano_ajuizamento: 'calendar',
 }
 
 // Módulo: a janela "Filtros", como na v1: um botão por filtro (mostra o que está escolhido) que abre um menu

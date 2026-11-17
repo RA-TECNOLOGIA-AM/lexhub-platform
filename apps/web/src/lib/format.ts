@@ -38,6 +38,16 @@ export const fmt = {
     dias: (v: number) => nf1.format(v) + (Math.abs(v - 1) < 0.05 ? ' dia' : ' dias'), // 2,4 dias
     pct2: (v: number) => nf2.format(v) + '%', // 46,53% (comparativo "vs mês anterior" da v1)
     duracao, // 0,34 dia -> 8h 10min (tempos no setor, como na v1)
+    eixo, // valores do eixo dos gráficos: 1.284 · 500 mil · 1,2 mi (curto, para não cortar)
+}
+
+// Valor no eixo vertical dos gráficos: inteiro até 9.999; acima, em mil ou mi (o eixo tem pouco espaço).
+const nfEixo = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 })
+function eixo(v: number): string {
+    const abs = Math.abs(v)
+    if (abs >= 1_000_000) return `${nfEixo.format(v / 1_000_000)} mi`
+    if (abs >= 10_000) return `${nfEixo.format(v / 1000)} mil`
+    return nf0.format(v)
 }
 
 // Tempo em dias (como a API manda) no formato da v1: '58min', '8h 10min', '2d 3h'.

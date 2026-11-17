@@ -112,7 +112,7 @@ QUERIES: dict[str, dict] = {
         # ver comentário em "log_setor_demanda_lexpre_NG" e
         # pendencia_setor_lexpre.build_funcionarios_do_setor.
         "description": "Vínculos funcionário-setor (banco lexpre) — quem está alocado em qual setor.",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:613, "comercial_lexpre_NG" (copiada em 11/11/2026). Comercial e Comissão Comercial (LexPre).
     "comercial_lexpre_NG": {
@@ -199,7 +199,7 @@ QUERIES: dict[str, dict] = {
         # de "área de atuação" deve usar AREA_ATUACAO_ID/NOME — ver
         # comercial_lexpre.list_areas_atuacao_comerciais/filter_comercial_lexpre_por_area_atuacao.
         "description": "Dados comerciais a partir do banco lexpre (atendimento + demandas), base da nova página Comercial (LexPre).",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:809, "demanda_rubrica_reunida_lexpre_NG" (copiada em 11/11/2026). Comercial e Comissão Comercial (LexPre).
     "demanda_rubrica_reunida_lexpre_NG": {
@@ -229,7 +229,7 @@ QUERIES: dict[str, dict] = {
         # (ex.: RUBRICAS_BRADESCO), quem carrega a comissão são os componentes (ver
         # comercial_lexpre.build_mapa_valor_rubrica_associada).
         "description": "Componentes reais de cada demanda de rubrica 'reunida' (pacote), por demanda específica (banco lexpre).",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:839, "audit_log_demandas_canceladas_lexpre_NG" (copiada em 11/11/2026). Comercial e Comissão Comercial (LexPre).
     "audit_log_demandas_canceladas_lexpre_NG": {
@@ -252,7 +252,7 @@ QUERIES: dict[str, dict] = {
         # ser descontado da comissão de setembro, não retroagir sobre agosto, que já
         # foi pago). entidade_id é o id de public.demandas (entidade = 'demanda').
         "description": "Eventos de cancelamento de demanda (banco lexpre), usados para desconto de comissão por cancelamento tardio.",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1326, "execucao_LA" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "execucao_LA": {
@@ -379,7 +379,7 @@ QUERIES: dict[str, dict] = {
             "DATA_COMPENSACAO_ALVARA é a data usada para definir a saída da "
             "Execução (quantidade e valor)."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1452, "execucao_RJ" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "execucao_RJ": {
@@ -510,7 +510,7 @@ QUERIES: dict[str, dict] = {
             "nome. id_situacao IN (1, 2) = ATIVO + ARQUIVADO, mesmo motivo de "
             "execucao_LA."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1582, "execucao_acordos_NG" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "execucao_acordos_NG": {
@@ -600,7 +600,7 @@ QUERIES: dict[str, dict] = {
             "Acordo/acordo_fechado que já foram arquivados (ex.: arquivado por "
             "procedência) precisam continuar aparecendo no histórico de entradas/saídas."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1671, "execucao_acordos_LA" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "execucao_acordos_LA": {
@@ -699,7 +699,7 @@ QUERIES: dict[str, dict] = {
             "Acordo/acordo_fechado que já foram arquivados (ex.: arquivado por "
             "procedência) precisam continuar aparecendo no histórico de entradas/saídas."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1769, "execucao_acordos_RJ" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "execucao_acordos_RJ": {
@@ -804,7 +804,7 @@ QUERIES: dict[str, dict] = {
             "Acordo/acordo_fechado que já foram arquivados (ex.: arquivado por "
             "procedência) precisam continuar aparecendo no histórico de entradas/saídas."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:3123, "agendamentos_setor_execucao_NG" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_setor_execucao_NG": {
@@ -848,7 +848,7 @@ QUERIES: dict[str, dict] = {
             "de atividades encerradas como 'Encerrado Não Cumprido'. VALOR_CAUSA_SENTENCA/"
             "VALOR_CAUSA_ACORDO (processo.valor_causa_vs/va) para a Confecção CS."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:3033, "agendamentos_setor_execucao_LA" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_setor_execucao_LA": {
@@ -892,7 +892,7 @@ QUERIES: dict[str, dict] = {
             "de atividades encerradas como 'Encerrado Não Cumprido'. VALOR_CAUSA_SENTENCA/"
             "VALOR_CAUSA_ACORDO (processo.valor_causa_vs/va) para a Confecção CS."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:3077, "agendamentos_setor_execucao_LA_RJ" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_setor_execucao_LA_RJ": {
@@ -938,7 +938,7 @@ QUERIES: dict[str, dict] = {
             "Execução Condenação RJ. VALOR_CAUSA_SENTENCA/VALOR_CAUSA_ACORDO "
             "(processo.valor_causa_vs/va) para a Confecção CS."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1873, "agendamentos_fechamento_acordos_NG" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_fechamento_acordos_NG": {
@@ -968,7 +968,7 @@ QUERIES: dict[str, dict] = {
             "Quando o status é 'Encerrado Cumprido', DATA_HORA_CONCLUSAO marca o início "
             "da negociação de acordo do processo (vinculação cumprida)."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1934, "agendamentos_fechamento_acordos_LA" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_fechamento_acordos_LA": {
@@ -1000,7 +1000,7 @@ QUERIES: dict[str, dict] = {
             "(vinculação cumprida). LA ainda não usa esses nomes de setor exatos hoje "
             "(consulta retorna 0 linhas), mas fica pronta para quando o fluxo for adotado."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1965, "agendamentos_fechamento_acordos_RJ" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_fechamento_acordos_RJ": {
@@ -1031,7 +1031,7 @@ QUERIES: dict[str, dict] = {
             "DATA_HORA_CONCLUSAO marca o início da negociação de acordo do processo "
             "(vinculação cumprida)."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:3167, "agendamentos_setor_execucao_acordos_NG" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_setor_execucao_acordos_NG": {
@@ -1072,7 +1072,7 @@ QUERIES: dict[str, dict] = {
             "de atividades encerradas como 'Encerrado Não Cumprido'. Usado pela seção "
             "Atividades do dashboard Execução Acordos NG."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:3208, "agendamentos_setor_execucao_acordos_LA" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_setor_execucao_acordos_LA": {
@@ -1114,7 +1114,7 @@ QUERIES: dict[str, dict] = {
             "'Encerrado Não Cumprido'. Usado pela seção Atividades do dashboard "
             "Execução Acordos LA."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:3249, "agendamentos_setor_execucao_acordos_RJ" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_setor_execucao_acordos_RJ": {
@@ -1156,7 +1156,7 @@ QUERIES: dict[str, dict] = {
             "'Encerrado Não Cumprido'. Usado pela seção Atividades do dashboard "
             "Execução Acordos RJ."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:2468, "setor_recurso" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "setor_recurso": {
@@ -1293,7 +1293,7 @@ QUERIES: dict[str, dict] = {
             "Processos ATIVO + ARQUIVADO + SUSPENSO (padrão sem filtro: só ATIVO, ver app/situacao_processo.py) com agendamento aberto do setor RECURSOS (LA); "
             "filtros de fase, data e atividades em recurso_LA."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:2810, "setor_recurso_NG" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "setor_recurso_NG": {
@@ -1435,7 +1435,7 @@ QUERIES: dict[str, dict] = {
             "Processos ATIVO + ARQUIVADO + SUSPENSO (padrão sem filtro: só ATIVO, ver app/situacao_processo.py) com agendamento aberto do setor RECURSOS (NG); "
             "filtros de fase, data e atividades em recurso_NG."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:2750, "agendamentos_setor_recursos_LA" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_setor_recursos_LA": {
@@ -1465,7 +1465,7 @@ QUERIES: dict[str, dict] = {
           AND v.setor_atividade_nome LIKE 'RECURSOS - %'
         """,
         "description": "Agendamentos do setor RECURSOS (LA) via vw_dashboard_agendamentos_detalhados.",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:2952, "agendamentos_setor_recursos_NG" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "agendamentos_setor_recursos_NG": {
@@ -1505,7 +1505,7 @@ QUERIES: dict[str, dict] = {
             "com motivo_encaminhamento (join direto em agendamento) para identificar "
             "encaminhamentos como 'RECURSO CANCELADO' (AVR - RETORNO / RETORNO - CR)."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:3011, "atividades_setor_recursos_LA" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "atividades_setor_recursos_LA": {
@@ -1527,7 +1527,7 @@ QUERIES: dict[str, dict] = {
             "e fazia tarefas de atividades novas sumirem silenciosamente dos KPIs "
             "(ex.: ELABORAR CONTRARRAZÕES APELAÇÃO / ELABORAR CONTRARRAZOES INOMINADO)."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:2992, "atividades_setor_recursos_NG" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "atividades_setor_recursos_NG": {
@@ -1546,7 +1546,7 @@ QUERIES: dict[str, dict] = {
             "Catálogo dinâmico de atividades ativas do setor RECURSOS (NG); "
             "usado como whitelist e como opções do filtro de atividade."
         ),
-        "params": []
+        "params": [],
     },
     # v1: queries.py:235, "setor_protocolo_LA" (copiada em 16/11/2026). comercial-lexpre (meta anual e meta por atendente: protocolado no legado LA).
     "setor_protocolo_LA": {
@@ -1585,7 +1585,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN peticionamento.peticionamento pet ON pro."PROCESSO_ID" = pet."PROCESSO_ID"
         """,
         "description": "Protocolo do banco LAADV",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1047, "setor_protocolo" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "setor_protocolo": {
@@ -1623,7 +1623,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN peticionamento."Peticionamento" pet ON pro."ID_PROCESSO" = pet."ID_PROCESSO"
         """,
         "description": "Protocolo do banco NG",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:521, "comercial_geral_NG" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "comercial_geral_NG": {
@@ -1715,7 +1715,7 @@ QUERIES: dict[str, dict] = {
             ON pr."AREA_ATUACAO_ID" = aa.id
         """,
         "description": "Dados comerciais gerais do banco NG",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1008, "setor_confeccao" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "setor_confeccao": {
@@ -1754,7 +1754,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN juridico.rubricas r ON pr."ID_RUBRICA" = r.id
         """,
         "description": "Confecção de petições do banco NG",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:976, "setor_org_doc" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "setor_org_doc": {
@@ -1786,7 +1786,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN juridico.rubricas r ON jp."ID_RUBRICA" = r.id
         """,
         "description": "Organização de documentos do banco NG",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:946, "setor_pendencias" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "setor_pendencias": {
@@ -1816,7 +1816,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN juridico.rubricas r ON p."ID_RUBRICA" = r.id
         """,
         "description": "Pendências de processos do banco NG",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1132, "actions_NG_2" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "actions_NG_2": {
@@ -1861,7 +1861,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN "Setores".funcionarios f ON a.atendente_comercial = f.id
         """,
         "description": "Actions do banco NG",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1085, "rubrica_count_por_processo" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "rubrica_count_por_processo": {
@@ -1876,7 +1876,7 @@ QUERIES: dict[str, dict] = {
         GROUP BY jp.id
         """,
         "description": "Contagem de sub-rubricas por processo (rubricas reunidas NG)",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1177, "perfil_clientes_NG" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "perfil_clientes_NG": {
@@ -1919,7 +1919,7 @@ QUERIES: dict[str, dict] = {
         WHERE ac.motivo_encerramento = 11
         """,
         "description": "Perfil de clientes do banco NG (motivo encerramento = 11)",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1100, "facebook_ads" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "facebook_ads": {
@@ -1929,7 +1929,7 @@ QUERIES: dict[str, dict] = {
         FROM metrics_ads.facebook_ads
         """,
         "description": "Métricas do Facebook Ads do banco NG",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:1279, "Analise_thiago" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "Analise_thiago": {
@@ -1975,7 +1975,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN protocolo.protocolo jpp ON jp.id = jpp."ID_PROCESSO"
         """,
         "description": "Análise Thiago do banco NG",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:485, "trackeamento_NG_2" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG.
     "trackeamento_NG_2": {
@@ -2001,7 +2001,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN "public".type_uf tu ON a.id_uf = tu.id_uf
         """,
         "description": "Trackeamento do banco NG",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:4049, "nps_NG" (copiada em 12/11/2026). protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG, nps_NG.
     "nps_NG": {
@@ -2024,7 +2024,7 @@ QUERIES: dict[str, dict] = {
         ORDER BY r.data DESC NULLS LAST
         """,
         "description": "Respostas de NPS (Net Promoter Score) do banco NG — tabela relatorios.nps_escritorio.",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:20, "comercial_geral_LA" (copiada em 16/11/2026). protocolo_LA.
     "comercial_geral_LA": {
@@ -2088,7 +2088,7 @@ QUERIES: dict[str, dict] = {
         ORDER BY a.id_action DESC
         """,
         "description": "Dados comerciais gerais do banco LAADV",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:177, "setor_confeccao_LA" (copiada em 16/11/2026). protocolo_LA, peticionamento_LA.
     "setor_confeccao_LA": {
@@ -2146,7 +2146,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN juridico.area_atuacao aa ON r.area_atuacao_id = aa.id
         """,
         "description": "Confecção de petições do banco LAADV",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:142, "setor_org_documentos_LA" (copiada em 16/11/2026). protocolo_LA, peticionamento_LA, org_doc_LA.
     "setor_org_documentos_LA": {
@@ -2181,7 +2181,7 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN juridico.area_atuacao aa ON r.area_atuacao_id = aa.id
         """,
         "description": "Organização de documentos do banco LAADV",
-        "params": []
+        "params": [],
     },
     # v1: queries.py:110, "setor_pendencia_LA" (copiada em 16/11/2026). protocolo_LA, peticionamento_LA, org_doc_LA, pendencia_LA.
     "setor_pendencia_LA": {
@@ -2213,6 +2213,54 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN juridico.area_atuacao aa ON r.area_atuacao_id = aa.id
         """,
         "description": "Pendências de processos do banco LAADV",
+        "params": [],
+    },
+    # v1: queries.py:1910, "valor_causa_ajuizado_lexflow_NG" (copiada em 17/11/2026). financeiro-estrategico.
+    "valor_causa_ajuizado_lexflow_NG": {
+        "database": "lexflow",
+        "query": """
+        select
+            (p.distribuicao at time zone 'UTC')::date as "DATA_AJUIZAMENTO",
+            m.description as "MATERIA",
+            count(*) as "QUANTIDADE",
+            coalesce(sum(
+                case when m.description = 'ANP'
+                     then coalesce(nullif(p.valor_dano_moral, 0), p.valor_causa)
+                     else p.valor_causa
+                end
+            ), 0) as "VALOR_CAUSA"
+
+        from public.processo p
+        left join public.materia m on m.id = p.id_materia
+
+        where p.id_escritorio_assinante = 20
+            and coalesce(upper(trim(p.uf)), '') <> 'RJ'
+
+        group by 1, 2
+        """,
+        "description": (
+            "Valor de causa ajuizado do NG (escritório 20, sem RJ) agregado por dia de "
+            "distribuição e matéria — fonte única do Valor Protocolado/Ajuizado do Financeiro "
+            "Estratégico NG. Matéria ANP usa dano moral (fallback valor da causa quando "
+            "vazio/0), mesma regra do banco ng e do LexPre. A data é a data UTC de "
+            "`distribuicao` (gravada ora 00:00 UTC, ora 00:00 Manaus); sem distribuição "
+            "vem com DATA_AJUIZAMENTO nula."
+        ),
         "params": []
     },
 }
+
+
+# v1: queries.py:4641 — Financeiro Estratégico LA: mesma consulta do NG, escritório 21 (LAADV AM).
+QUERIES["valor_causa_ajuizado_lexflow_LA"] = {
+    **QUERIES["valor_causa_ajuizado_lexflow_NG"],
+    "query": QUERIES["valor_causa_ajuizado_lexflow_NG"]["query"].replace(
+        "p.id_escritorio_assinante = 20", "p.id_escritorio_assinante = 21"
+    ),
+    "description": (
+        "Valor de causa ajuizado do LAAM (escritório 21, sem RJ) por dia de distribuição e "
+        "matéria — Valor Protocolado/Ajuizado do Financeiro Estratégico LA. Mesmas regras da "
+        "valor_causa_ajuizado_lexflow_NG (ANP = dano moral)."
+    ),
+}
+assert "id_escritorio_assinante = 21" in QUERIES["valor_causa_ajuizado_lexflow_LA"]["query"]

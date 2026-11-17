@@ -35,6 +35,8 @@ import type { DashboardQuery, Meta } from '../types/index.ts'
 import { metaFor } from './mock/helpers.ts'
 import { orgDocumentosLegadoFor } from './mock/orgDocumentosLegado.ts'
 import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
+import { financeiroEstrategicoFor } from './mock/financeiroEstrategico.ts'
+import { metaAnualFor } from './mock/metaAnual.ts'
 import { preProtocoloFor } from './mock/preProtocolo.ts'
 import { peticionamentoLegadoFor } from './mock/peticionamentoLegado.ts'
 import { protocoloLegadoFor } from './mock/protocoloLegado.ts'
@@ -135,6 +137,8 @@ const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unk
     'org-documentos': orgDocumentosLegadoFor,
     pendencias: pendenciasLegadoFor,
     'pre-protocolo': preProtocoloFor,
+    'meta-anual': metaAnualFor,
+    'financeiro-estrategico': financeiroEstrategicoFor,
 }
 
 export function createMockClient(): DataClient {
