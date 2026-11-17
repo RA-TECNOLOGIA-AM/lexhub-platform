@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Navigate, useLocation, useSearchParams } from 'react-router'
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router'
 import { useAuth } from '../contexts/auth-context.ts'
 import { GoogleMark } from '../components/ui/GoogleMark.tsx'
 import { Icon } from '../components/ui/Icon.tsx'
@@ -145,6 +145,12 @@ export function LoginPage() {
                             <GoogleMark />
                             Entrar com conta corporativa
                         </button>
+
+                        {/* TV/tela sem teclado: mostra um QR que o gestor aprova pelo celular já logado. */}
+                        <Link className="btn btn-provider btn-block" to="/tv-login">
+                            <Icon name="qr" />
+                            Entrar com QR Code
+                        </Link>
 
                         <div className="auth-divider" role="separator">
                             <span>ou com e-mail e senha</span>

@@ -1,6 +1,6 @@
 import { Suspense, useRef, useState } from 'react'
 import { LoadingState } from '../states/LoadingState.tsx'
-import { Outlet, useLocation } from 'react-router'
+import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { Icon } from '../ui/Icon.tsx'
 import { NotificationsBell } from './NotificationsBell.tsx'
@@ -120,6 +120,16 @@ export function AppLayout() {
                         <span className="name">{user.name}</span>
                         <span className="sub">{user.role_label}</span>
                     </span>
+                    {/* Conectar uma TV: digitar o código que a TV mostra (/ativar), sem precisar do QR. */}
+                    <Link
+                        className="nav side-logout side-tv"
+                        to="/ativar"
+                        aria-label="Conectar uma TV"
+                        title="Conectar uma TV"
+                        onClick={closeMenu}
+                    >
+                        <Icon name="qr" />
+                    </Link>
                     {/* Sair só apaga a sessão; o <RequireAuth> é quem manda para o /login. */}
                     <button
                         className="nav side-logout"
