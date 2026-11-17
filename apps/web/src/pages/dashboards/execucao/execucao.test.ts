@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { ehExecucaoNG, lerExecucaoNG } from './execucao.ts'
+import { lerExecucao } from './execucao.ts'
 
 const meta = { unit: 'NG', from: '2026-11-01', to: '2026-11-17', source: 'LexFlow', synced_at: null, timezone: 'x' }
 
 describe('lerExecucaoNG', () => {
     it('separa o total de agora (histórico) da entrada no período e lê as seções da v1', () => {
-        const e = lerExecucaoNG({
+        const e = lerExecucao({
             meta,
             dashboard: 'execucao',
             stats: {
@@ -42,15 +42,47 @@ describe('lerExecucaoNG', () => {
     })
 
     it('resposta vazia (mock, campo faltando): números null e listas vazias', () => {
-        const e = lerExecucaoNG({ meta, dashboard: 'execucao' })
+        const e = lerExecucao({ meta, dashboard: 'execucao' })
         expect(e.totalEmExecucao).toBeNull()
         expect(e.semValor).toEqual({ total: 0, processos: [] })
         expect(e.setor.atividades.concluidas.lista).toEqual([])
     })
 
-    it('só a rota /execucao é a da NG (LA e RJ seguem na tela de KPIs)', () => {
-        expect(ehExecucaoNG({ meta, dashboard: 'execucao' })).toBe(true)
-        expect(ehExecucaoNG({ meta, dashboard: 'execucao_LA' })).toBe(false)
-        expect(ehExecucaoNG({ meta })).toBe(false)
+    it('LA e RJ: os mesmos campos com o sufixo da rota (_LA, _RJ), como a v1', () => {
+        const la = lerExecucao({
+            meta,
+            dashboard: 'execucao_LA',
+            stats: {
+                total_em_execucao_LA: 7, // entradas no período
+                total_em_execucao_historico: 900, // o total de agora tem o mesmo nome nas três
+                tre_LA: 1.5,
+                total_valor_execucao_vazio_LA: 1,
+                total_valor_execucao_vazio_LA_detalhe: [{ numero_processo: '9' }],
+                execucao_uf_opcoes_LA: ['AM'],
+                total_atividades_execucao_LA: 40,
+                total_em_execucao: 99, // da NG: não é lido na LA
+            },
+            execucao_por_subfase_LA: [{ name: 'ALVARÁ', value: 2 }],
+            execucao_resolvidos_por_dia_LA: [{ name: '2026-11-03', value: 4 }],
+        } as never)
+        expect(la.unidade).toBe('LA')
+        expect(la.entradas).toBe(7)
+        expect(la.totalEmExecucao).toBe(900)
+        expect(la.tre).toBe(1.5)
+        expect(la.semValor).toEqual({ total: 1, processos: ['9'] })
+        expect(la.opcoes.ufs).toEqual(['AM'])
+        expect(la.porSubfase).toEqual([{ name: 'ALVARÁ', value: 2 }])
+        expect(la.setor.atividades.concluidas.total).toBe(40)
+        expect(la.setor.atividades.concluidas.resolvidosPorDia).toEqual([{ name: '2026-11-03', value: 4 }])
+
+        const rj = lerExecucao({
+            meta,
+            dashboard: 'execucao_RJ',
+            stats: { total_diligencias_execucao_RJ: 5 },
+            execucao_diligencias_por_funcionario_RJ: [{ name: 'Ana', total: 3 }],
+        } as never)
+        expect(rj.unidade).toBe('RJ')
+        expect(rj.setor.diligencias.total).toBe(5)
+        expect(rj.setor.diligencias.porColaborador).toEqual([{ name: 'Ana', value: 3 }])
     })
 })

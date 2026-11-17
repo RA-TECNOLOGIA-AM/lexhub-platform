@@ -1,6 +1,7 @@
 import type { FilterField } from '../../../lib/filters.ts'
 import type { Tone } from '../../../components/dashboard/tone.ts'
 import { normalizar, type PontoComarca } from '../../../lib/mapa.ts'
+import { nomeNaUnidade, type Unidade } from './unidade.ts'
 import type { DashboardFilters, Point } from '../../../types/index.ts'
 
 // O que as páginas NG da v1 de Execução Condenação (NG/Execucao.tsx) e Execução Acordos (NG/ExecucaoAcordos.tsx)
@@ -207,20 +208,22 @@ export function processosLista(v: unknown): ProcessoLista[] {
 }
 
 // O prefixo da rota da resposta (as duas páginas leem as mesmas partes com nomes diferentes).
-export function lerSetor(data: Record<string, unknown>, setor: Setor): SetorExecucao {
-    const s = (typeof data.stats === 'object' && data.stats !== null ? data.stats : {}) as Record<string, unknown>
+// Os nomes são os da rota NG; `u` traduz para a rota da unidade (_LA, _RJ), como a API (nomeNaUnidade).
+export function lerSetor(data: Record<string, unknown>, setor: Setor, u: Unidade = 'NG'): SetorExecucao {
+    const stats = (typeof data.stats === 'object' && data.stats !== null ? data.stats : {}) as Record<string, unknown>
+    const s = (nome: string) => stats[nomeNaUnidade(nome, u)]
     const p = PREFIXO[setor]
-    const lista = (nome: string) => data[`${p}_${nome}_NG`]
+    const lista = (nome: string) => data[nomeNaUnidade(`${p}_${nome}_NG`, u)]
 
     const visao = (v: VisaoAtividades): Atividades => {
         const c = CAMPOS[setor][v]
         const sufixo = v === 'por_prazo' ? '_por_prazo' : ''
         return {
-            total: numero(s[c.total]),
-            emAndamento: numero(s[c.emAndamento]),
-            vencidas: numero(s[c.vencidas]),
-            vencemHoje: numero(s[c.vencemHoje]),
-            concluidas: numero(s[c.concluidas]),
+            total: numero(s(c.total)),
+            emAndamento: numero(s(c.emAndamento)),
+            vencidas: numero(s(c.vencidas)),
+            vencemHoje: numero(s(c.vencemHoje)),
+            concluidas: numero(s(c.concluidas)),
             porAtividade: pontos(lista(`processos_por_atividade${sufixo}`)),
             porFuncionario: objetos(lista(`demandas_por_funcionario${sufixo}`)).map((r) => ({
                 name: texto(r.name),
@@ -242,10 +245,10 @@ export function lerSetor(data: Record<string, unknown>, setor: Setor): SetorExec
     return {
         atividades: { concluidas: visao('concluidas'), por_prazo: visao('por_prazo') },
         diligencias: {
-            total: numero(s[`total_diligencias_${alvo}`]),
-            alvaras: numero(s[`total_diligencias_expedicao_alvara_${alvo}`]),
-            alvarasCumpridos: numero(s[`cumpridas_diligencias_expedicao_alvara_${alvo}`]),
-            valorRealizado: numero(s[`valor_diligencias_expedicao_alvara_${alvo}`]),
+            total: numero(s(`total_diligencias_${alvo}`)),
+            alvaras: numero(s(`total_diligencias_expedicao_alvara_${alvo}`)),
+            alvarasCumpridos: numero(s(`cumpridas_diligencias_expedicao_alvara_${alvo}`)),
+            valorRealizado: numero(s(`valor_diligencias_expedicao_alvara_${alvo}`)),
             porProcesso: objetos(lista('diligencias_por_processo')).map((r) => ({
                 processo: texto(r.name),
                 valor: numero(r.valor_execucao),

@@ -69,12 +69,12 @@ class ExportSpec:
     labels: dict[str, str]  # slug -> cabeçalho do arquivo (= _LABELS_EXPORT_* da v1)
     sheet_name: str  # nome da aba no XLSX (igual à v1)
     rows: Callable[[DashboardContext], Awaitable[list[dict[str, Any]]]]  # = _rows_*_export da v1
-    options: tuple[
-        ExportOption, ...
-    ] = ()  # escolhas da janela além dos campos (ctx.export_options)
-    title: str = (
-        ""  # nome do relatório quando o dashboard tem mais de um ("Processos", "Atividades")
-    )
+    # Escolhas da janela além dos campos (chegam em ctx.export_options).
+    options: tuple[ExportOption, ...] = ()
+    # Nome do relatório quando o dashboard tem mais de um ("Processos", "Atividades").
+    title: str = ""
+    # Nome da aba por unidade, quando a v1 mudava (ex.: "Execução LA"); sem a unidade, vale sheet_name.
+    sheet_name_por_unidade: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

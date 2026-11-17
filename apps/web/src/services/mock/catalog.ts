@@ -226,6 +226,15 @@ export const catalog: DashboardCatalog = {
             syncedMin: 10,
         }),
         entry({
+            key: 'execucao-estrategico',
+            title: 'Execução Estratégico Geral',
+            area: 'Estratégico',
+            desc: 'Condenação e acordos juntos: estoque, entradas, saídas, valores, Confecção CS e alvarás.',
+            units: ALL,
+            source: 'LexFlow',
+            syncedMin: 6,
+        }),
+        entry({
             key: 'financeiro-estrategico',
             title: 'Financeiro Estratégico',
             area: 'Financeiro',

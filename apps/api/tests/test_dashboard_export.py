@@ -355,15 +355,39 @@ def test_execucao_e_acordos_exportam_os_campos_da_v1():
     assert execucao.sheet_name == "Execução" and acordos.export.sheet_name == "Execução Acordos"
 
 
-def test_execucao_fora_da_ng_ainda_nao_exporta(client, signer, repo, sources):
-    """A v1 tem exportações próprias de LA e RJ (outras rotas): por enquanto só a da NG (501, sem quebrar).
-    O que decide é a unidade no LexFlow: aqui, a unidade de teste ligada ao escritório "LA"."""
+def test_execucao_exporta_pela_rota_da_unidade(client, signer, repo, sources, monkeypatch):
+    """NG, LA e RJ usam a função de linhas da própria rota da v1 (_rows_execucao_la_filtradas na LA); a aba do
+    XLSX da LA é "Execução LA", como na v1. Unidade sem rota na v1: 501."""
+    from openpyxl import load_workbook as _lw
+
+    from app.dashboards import execucao_export
+
+    chamadas = []
+
+    async def linhas_la(*args, **kwargs):
+        chamadas.append(kwargs.get("criterio"))
+        return [{"NUMERO_PROCESSO": "123"}]
+
+    monkeypatch.setitem(execucao_export.LINHAS_EXECUCAO, "LA", linhas_la)
     repo.grant(USER_ID, "NG", "execucao", "all")
     repo.exporters.add(USER_ID)
+    url = "/orgs/lexgroup/units/NG/dashboards/execucao/export"
     repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexflow")] = "LA"
-    r = client.get("/orgs/lexgroup/units/NG/dashboards/execucao/export", headers=auth(signer))
+    r = client.get(
+        url,
+        params={"format": "xlsx", "criterio": "total", "campos": ["numero_processo"]},
+        headers=auth(signer),
+    )
+    assert r.status_code == 200, r.text
+    assert chamadas == ["total"]
+    ws = _lw(io.BytesIO(r.content)).active
+    assert ws.title == "Execução LA"
+    assert [c.value for c in ws[2]] == ["123"]
+
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexflow")] = "XX"
+    r = client.get(url, headers=auth(signer))
     assert r.status_code == 501
-    assert "só a da NG" in r.json()["detail"]
+    assert "não tem exportação" in r.json()["detail"]
 
 
 def test_campos_da_execucao_e_acordos_iguais_no_front():

@@ -1,13 +1,17 @@
 import type { Point } from '../../../types/index.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
+import { nomeNaUnidade, unidadeExecucao, type Unidade } from './unidade.ts'
 import { comarcas, lerSetor, numero, pontos, type Comarcas, type SetorExecucao } from './setorExecucao.ts'
 
-// A Execução Condenação NG: a rota /execucao da v1 e a página NG/Execucao.tsx. Os campos que a página lia da
+// A Execução Condenação: as rotas da v1 /execucao (NG), /execucao_LA e /execucao_RJ e as páginas NG/Execucao.tsx,
+// LA/Execucao_LA.tsx e RJ/ExecucaoRJ.tsx (as mesmas seções; a LA sem Diligências). Os nomes abaixo são os da NG e
+// passam por nomeNaUnidade. Os campos que a página lia da
 // chamada sem data (o estoque de agora, as distribuições e o "mês a mês") a API já manda trocados pelos do
 // histórico (dashboards/execucao.py); o total em execução de agora vem em `total_em_execucao_historico`.
 // Só lógica pura (testada em execucao.test.ts).
 
-export type ExecucaoNG = {
+export type Execucao = {
+    unidade: Unidade // de que rota da v1 veio (a LA não tem Diligências)
     // Seção 01: indicadores
     totalEmExecucao: number | null // agora (não depende do período)
     valorTotal: number | null // agora: valor em aberto (remanescente quando já caiu o incontroverso)
@@ -39,9 +43,6 @@ export type ExecucaoNG = {
     setor: SetorExecucao
 }
 
-// A resposta é da Execução NG (a rota /execucao)? LA e RJ têm outras rotas e nomes (ainda na tela de KPIs).
-export const ehExecucaoNG = (data: V1GenericoResponse) => data.dashboard === 'execucao'
-
 const lista = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => String(x ?? '').trim()).filter(Boolean) : [])
 
 // Os nomes dos processos sem valor (a lista do aviso): a v1 manda objetos ou textos.
@@ -57,11 +58,15 @@ function semValorProcessos(v: unknown): string[] {
         .filter(Boolean)
 }
 
-export function lerExecucaoNG(data: V1GenericoResponse): ExecucaoNG {
-    const d = data as V1GenericoResponse & Record<string, unknown>
-    const s = data.stats ?? {}
-    const n = (campo: string) => numero(s[campo])
+export function lerExecucao(data: V1GenericoResponse): Execucao {
+    const u = unidadeExecucao(data) ?? 'NG'
+    const dados = data as V1GenericoResponse & Record<string, unknown>
+    const stats = data.stats ?? {}
+    const d = (campo: string) => dados[nomeNaUnidade(campo, u)]
+    const s = (campo: string) => stats[nomeNaUnidade(campo, u)]
+    const n = (campo: string) => numero(s(campo))
     return {
+        unidade: u,
         totalEmExecucao: n('total_em_execucao_historico'),
         valorTotal: n('valor_total_em_execucao'),
         valorRemanescente: n('valor_remanescente_em_execucao'),
@@ -78,26 +83,26 @@ export function lerExecucaoNG(data: V1GenericoResponse): ExecucaoNG {
         tre: n('tre'),
         semValor: {
             total: n('total_valor_execucao_vazio') ?? 0,
-            processos: semValorProcessos(s.total_valor_execucao_vazio_detalhe),
+            processos: semValorProcessos(s('total_valor_execucao_vazio_detalhe')),
         },
-        valorPorSubfase: pontos(d.valor_execucao_por_subfase),
-        porSubfase: pontos(d.execucao_por_subfase),
-        porMateria: pontos(d.execucao_por_materia),
+        valorPorSubfase: pontos(d('valor_execucao_por_subfase')),
+        porSubfase: pontos(d('execucao_por_subfase')),
+        porMateria: pontos(d('execucao_por_materia')),
         comarca: {
-            total: comarcas(d.execucao_por_comarca_total, d.execucao_valor_por_comarca_total),
-            entrada: comarcas(d.execucao_por_comarca_entrada, d.execucao_valor_por_comarca_entrada),
-            saida: comarcas(d.execucao_por_comarca_saida, d.execucao_valor_por_comarca_saida),
+            total: comarcas(d('execucao_por_comarca_total'), d('execucao_valor_por_comarca_total')),
+            entrada: comarcas(d('execucao_por_comarca_entrada'), d('execucao_valor_por_comarca_entrada')),
+            saida: comarcas(d('execucao_por_comarca_saida'), d('execucao_valor_por_comarca_saida')),
         },
-        remanescentePorMes: pontos(d.valor_remanescente_por_mes),
-        entradasPorMes: pontos(d.quantidade_entrada_execucao_por_mes),
-        valorEntradasPorMes: pontos(d.valor_entrada_execucao_por_mes),
-        valorSaidasPorMes: pontos(d.valor_execucao_saida_periodo_por_mes),
+        remanescentePorMes: pontos(d('valor_remanescente_por_mes')),
+        entradasPorMes: pontos(d('quantidade_entrada_execucao_por_mes')),
+        valorEntradasPorMes: pontos(d('valor_entrada_execucao_por_mes')),
+        valorSaidasPorMes: pontos(d('valor_execucao_saida_periodo_por_mes')),
         opcoes: {
-            ufs: lista(s.execucao_uf_opcoes_NG),
-            comarcas: lista(s.execucao_comarca_opcoes_NG),
-            materias: lista(s.execucao_materia_opcoes_NG),
-            subfases: lista(s.execucao_subfase_opcoes_NG),
+            ufs: lista(s('execucao_uf_opcoes_NG')),
+            comarcas: lista(s('execucao_comarca_opcoes_NG')),
+            materias: lista(s('execucao_materia_opcoes_NG')),
+            subfases: lista(s('execucao_subfase_opcoes_NG')),
         },
-        setor: lerSetor(d, 'condenacao'),
+        setor: lerSetor(dados, 'condenacao', u),
     }
 }

@@ -1,14 +1,8 @@
 import type { ContentProps } from '../types.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
-import { AcordosKpisContent } from './AcordosKpisContent.tsx'
-import { AcordosNGContent } from './AcordosNGContent.tsx'
-import { ehAcordosNG } from './execucaoAcordos.ts'
+import { AcordosPagina } from './AcordosPagina.tsx'
 
-// Execução Acordos: a NG (rota /execucao_acordos_NG) com a página da v1; LA e RJ, por enquanto, só com os KPIs.
+// Execução Acordos: a página da v1 (NG, LA e RJ, pelas rotas de cada escritório).
 export function AcordosContent(props: ContentProps<V1GenericoResponse>) {
-    return ehAcordosNG(props.data) ? (
-        <AcordosNGContent {...props} />
-    ) : (
-        <AcordosKpisContent data={{ ...props.data, stats: props.data.stats ?? {} }} />
-    )
+    return <AcordosPagina {...props} />
 }

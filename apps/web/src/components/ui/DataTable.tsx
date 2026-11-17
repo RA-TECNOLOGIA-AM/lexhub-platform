@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export type Column<T> = {
-    header: string
+    header: ReactNode // texto, ou um botão (ex.: ordenar pela coluna)
     render: (row: T) => ReactNode
     align?: 'left' | 'right'
 }
@@ -22,8 +22,8 @@ export function DataTable<T>({ columns, rows, rowKey, empty = 'Nada para mostrar
                 <table className="tbl">
                     <thead>
                         <tr>
-                            {columns.map((c) => (
-                                <th key={c.header} className={c.align === 'right' ? 'num' : undefined}>
+                            {columns.map((c, i) => (
+                                <th key={i} className={c.align === 'right' ? 'num' : undefined}>
                                     {c.header}
                                 </th>
                             ))}
@@ -39,8 +39,8 @@ export function DataTable<T>({ columns, rows, rowKey, empty = 'Nada para mostrar
                         ) : (
                             rows.map((row) => (
                                 <tr key={rowKey(row)} className={rowClassName?.(row)}>
-                                    {columns.map((c) => (
-                                        <td key={c.header} className={c.align === 'right' ? 'num' : undefined}>
+                                    {columns.map((c, i) => (
+                                        <td key={i} className={c.align === 'right' ? 'num' : undefined}>
                                             {c.render(row)}
                                         </td>
                                     ))}
