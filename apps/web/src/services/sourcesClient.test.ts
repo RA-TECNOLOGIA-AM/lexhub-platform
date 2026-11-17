@@ -30,6 +30,34 @@ describe('createSourcesClient', () => {
         expect(calls).toEqual([])
     })
 
+    it('banco e planilha vão para as rotas da API (testar e salvar, testar de novo, senha, desconectar)', async () => {
+        const calls: [string, string, unknown][] = []
+        const http = {
+            get: async (path: string) => (calls.push(['GET', path, undefined]), {}),
+            post: async (path: string, body?: unknown) => (calls.push(['POST', path, body]), { tabs: [] }),
+            put: async (path: string, body?: unknown) => (calls.push(['PUT', path, body]), {}),
+            delete: async (path: string) => (calls.push(['DELETE', path, undefined]), undefined),
+        } as unknown as Http
+        const { supabase } = fakeSupabase({ data: {} })
+        const client = createSourcesClientWith(supabase, http)
+        const input = { connector: 'sheets' as const, name: 'F', url: 'https://docs.google.com/x', tab: 'A' }
+        await client.getConnectInfo()
+        await client.inspectSheet('https://docs.google.com/x')
+        await client.connectSource('cliente', 'MC', input)
+        await client.retestSource('cliente', 'gs_mc_1')
+        await client.changeSourceSecret('cliente', 'gs_mc_1', { url: 'https://docs.google.com/y', writerAck: false })
+        await client.disconnectSource('cliente', 'gs_mc_1')
+        expect(calls.map(([m, p]) => `${m} ${p}`)).toEqual([
+            'GET /sources/connect-info',
+            'POST /sources/sheets/inspect',
+            'POST /orgs/cliente/units/MC/sources',
+            'POST /orgs/cliente/sources/gs_mc_1/test',
+            'PUT /orgs/cliente/sources/gs_mc_1/secret',
+            'DELETE /orgs/cliente/sources/gs_mc_1',
+        ])
+        expect(calls[2][2]).toEqual(input)
+    })
+
     it('linkProductOffice chama api.link_product_office com os nomes do banco', async () => {
         const { supabase, calls } = fakeSupabase({ data: {} })
         await createSourcesClient(supabase).linkProductOffice('cliente', 'C1', 'lexflow', '27')

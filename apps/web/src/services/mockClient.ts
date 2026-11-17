@@ -43,6 +43,14 @@ import { protocoloLegadoFor } from './mock/protocoloLegado.ts'
 import { sourceDetailFor } from './mock/sourceDetail.ts'
 import { createUnitIn, updateUnitIn } from './mock/units.ts'
 import { linkOfficeIn, productOffices } from './mock/offices.ts'
+import {
+    changeSecretIn,
+    connectIn,
+    disconnectIn,
+    EGRESS_IP_EXEMPLO,
+    inspectSheetIn,
+    retestIn,
+} from './mock/connections.ts'
 import { toCsv } from '../lib/csv.ts'
 import { periodLabel } from '../lib/period.ts'
 
@@ -340,6 +348,43 @@ export function createMockClient(): DataClient {
             requireSession()
             const own = requireOrg(org)
             return copy(linkOfficeIn(own ? sources : onboardingSources, own ? 'LexGroup' : org, unit, product, ref))
+        },
+
+        async getConnectInfo() {
+            await wait()
+            requireSession()
+            return { ready: true, egressIp: EGRESS_IP_EXEMPLO }
+        },
+
+        async inspectSheet(url) {
+            await wait()
+            requireSession()
+            return inspectSheetIn(url)
+        },
+
+        async connectSource(org, unit, input) {
+            await wait()
+            requireSession()
+            return copy(connectIn(requireOrg(org) ? sources : onboardingSources, unit, input))
+        },
+
+        async retestSource(org, source) {
+            await wait()
+            requireSession()
+            requireOrg(org)
+            return retestIn(source)
+        },
+
+        async changeSourceSecret(org, source, input) {
+            await wait()
+            requireSession()
+            return copy(changeSecretIn(requireOrg(org) ? sources : onboardingSources, source, input))
+        },
+
+        async disconnectSource(org, source) {
+            await wait()
+            requireSession()
+            disconnectIn(requireOrg(org) ? sources : onboardingSources, source)
         },
 
         // Mesma regra da API: só a equipe RA (platform_staff) vê os clientes.

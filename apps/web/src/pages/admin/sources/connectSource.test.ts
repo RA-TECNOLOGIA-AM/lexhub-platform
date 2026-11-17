@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { DataSource, ProductOffice } from '../../../types/index.ts'
-import { CONNECTORS, connectorBlock, officeSub, sortOffices } from './connectSource.ts'
+import type { DataSource, ProductOffice, SourceCheck } from '../../../types/index.ts'
+import { CONNECTORS, connectorBlock, failedChecks, officeSub, sortOffices } from './connectSource.ts'
 
 const office = (ref: string, name: string, linked = false): ProductOffice => ({
     ref,
@@ -11,15 +11,37 @@ const office = (ref: string, name: string, linked = false): ProductOffice => ({
 
 const lexpre = { id: 'lexpre' } as DataSource
 
+const check = (over: Partial<SourceCheck>): SourceCheck => ({
+    key: 'login',
+    ok: true,
+    message: '',
+    ms: 0,
+    severity: 'error',
+    skipped: false,
+    ...over,
+})
+
 describe('connectSource', () => {
-    it('só LexPre e LexFlow estão prontos nesta versão', () => {
-        expect(CONNECTORS.filter((c) => c.ready).map((c) => c.key)).toEqual(['lexpre', 'lexflow'])
+    it('os 5 tipos; banco e planilha guardam segredo', () => {
+        expect(CONNECTORS.map((c) => c.key)).toEqual(['lexpre', 'lexflow', 'postgres', 'mysql', 'sheets'])
+        expect(CONNECTORS.filter((c) => c.secret).map((c) => c.key)).toEqual(['postgres', 'mysql', 'sheets'])
     })
 
-    it('bloqueia tipo em breve e produto que a unidade já tem', () => {
-        expect(connectorBlock('postgres', false, [])).toBe('Em breve')
-        expect(connectorBlock('lexpre', true, [lexpre])).toBe('Já ligado a esta unidade')
-        expect(connectorBlock('lexflow', true, [lexpre])).toBeNull()
+    it('bloqueia produto que a unidade já tem e banco/planilha sem a chave na API', () => {
+        expect(connectorBlock('lexpre', false, [lexpre], true)).toBe('Já ligado a esta unidade')
+        expect(connectorBlock('lexflow', false, [lexpre], false)).toBeNull()
+        expect(connectorBlock('postgres', true, [], false)).toBe('Falta configurar a chave de cifra na API')
+        expect(connectorBlock('sheets', true, [], true)).toBeNull()
+    })
+
+    it('aviso de usuário que escreve não conta como falha; pulada também não', () => {
+        const checks = [
+            check({ key: 'network' }),
+            check({ key: 'readOnly', ok: false, severity: 'warn' }),
+            check({ key: 'read', ok: false, skipped: true }),
+        ]
+        expect(failedChecks(checks)).toEqual([])
+        expect(failedChecks([check({ ok: false, message: 'senha' })])).toHaveLength(1)
     })
 
     it('escritórios livres primeiro, por nome; ligados no fim', () => {

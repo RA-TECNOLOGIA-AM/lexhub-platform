@@ -120,6 +120,9 @@ describe('sourcesView', () => {
             unit: { code: 'RJ', name: 'LARJ' },
             source: source({}),
             owner,
+            config: {},
+            writerAck: false,
+            canManage: false,
             dashboards: [],
             runs: [],
         })
