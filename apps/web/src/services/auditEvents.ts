@@ -21,6 +21,9 @@ const day = (v: unknown): string | null => {
 }
 // 'lexpre' -> 'LexPre'
 const product = (v: unknown): string | null => ({ lexpre: 'LexPre', lexflow: 'LexFlow' })[text(v) ?? ''] ?? text(v)
+// 'postgres' -> 'Postgres', 'sheets' -> 'Google Planilhas'
+const connectorLabel = (v: unknown): string | null =>
+    ({ postgres: 'Postgres', mysql: 'MySQL', sheets: 'Google Planilhas' })[text(v) ?? ''] ?? text(v)
 // Junta as partes que existem: 'a · b · c'
 const join = (...parts: (string | null | undefined)[]): string => parts.filter(Boolean).join(' · ')
 
@@ -87,6 +90,29 @@ const EVENTS: Record<string, Rule> = {
         kind: 'source',
         action: 'Ligou escritório',
         detail: (_, m) => join(text(m.unit), product(m.product), text(m.office) && `escritório ${text(m.office)}`),
+    },
+    'source.connected': {
+        kind: 'source',
+        action: 'Conectou fonte',
+        detail: (_, m) =>
+            join(
+                text(m.name),
+                text(m.unit),
+                connectorLabel(m.connector),
+                text(m.host),
+                text(m.tab) && `aba ${text(m.tab)}`,
+                m.writerAck === true ? 'usuário que pode escrever' : null,
+            ),
+    },
+    'source.secret_changed': {
+        kind: 'source',
+        action: 'Trocou a senha da fonte',
+        detail: (_, m) => join(text(m.name), connectorLabel(m.connector)),
+    },
+    'source.disconnected': {
+        kind: 'source',
+        action: 'Desconectou fonte',
+        detail: (_, m) => join(text(m.name), connectorLabel(m.connector)),
     },
     'source.office_unlinked': {
         kind: 'source',

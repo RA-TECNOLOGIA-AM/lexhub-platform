@@ -1,34 +1,45 @@
 import type { IconName } from '../../../components/ui/Icon.tsx'
-import type { DataSource, ProductKey, ProductOffice } from '../../../types/index.ts'
+import type { DatabaseConnector, DataSource, ProductKey, ProductOffice, SourceCheck } from '../../../types/index.ts'
 
 // Módulo: as regras do Conectar fonte, sem React (testadas em connectSource.test.ts).
 
 export type ConnectorKey = ProductKey | 'postgres' | 'mysql' | 'sheets'
 
-// Os tipos do primeiro passo, nesta ordem. ready = já dá para conectar nesta versão.
+// Os tipos do primeiro passo, nesta ordem. secret = guarda senha ou link cifrado (precisa da chave na API).
 // Tipo novo = uma linha aqui (e o passo dele no ConnectSourceDialog).
-export const CONNECTORS: { key: ConnectorKey; label: string; hint: string; icon: IconName; ready: boolean }[] = [
-    { key: 'lexpre', label: 'LexPre', hint: 'Escolha o escritório no banco do LexPre.', icon: 'db', ready: true },
-    { key: 'lexflow', label: 'LexFlow', hint: 'Escolha o escritório no banco do LexFlow.', icon: 'flow', ready: true },
-    { key: 'postgres', label: 'Postgres', hint: 'Banco próprio da operação.', icon: 'db', ready: false },
-    { key: 'mysql', label: 'MySQL', hint: 'Banco próprio da operação.', icon: 'db', ready: false },
+export const CONNECTORS: { key: ConnectorKey; label: string; hint: string; icon: IconName; secret: boolean }[] = [
+    { key: 'lexpre', label: 'LexPre', hint: 'Escolha o escritório no banco do LexPre.', icon: 'db', secret: false },
     {
-        key: 'sheets',
-        label: 'Google Planilhas',
-        hint: 'Planilha compartilhada com o LexHub.',
-        icon: 'sheet',
-        ready: false,
+        key: 'lexflow',
+        label: 'LexFlow',
+        hint: 'Escolha o escritório no banco do LexFlow.',
+        icon: 'flow',
+        secret: false,
     },
+    { key: 'postgres', label: 'Postgres', hint: 'Banco próprio da operação.', icon: 'db', secret: true },
+    { key: 'mysql', label: 'MySQL', hint: 'Banco próprio da operação.', icon: 'db', secret: true },
+    { key: 'sheets', label: 'Google Planilhas', hint: 'Planilha publicada na Web.', icon: 'sheet', secret: true },
 ]
 
 export const isProduct = (key: ConnectorKey): key is ProductKey => key === 'lexpre' || key === 'lexflow'
+export const isDatabase = (key: ConnectorKey): key is DatabaseConnector => key === 'postgres' || key === 'mysql'
 
 // Por que um tipo não pode ser escolhido nesta unidade (null = pode).
-export function connectorBlock(key: ConnectorKey, ready: boolean, sources: DataSource[]): string | null {
-    if (!ready) return 'Em breve'
+// secretsReady = a API tem a chave que cifra senha e link (GET /sources/connect-info).
+export function connectorBlock(
+    key: ConnectorKey,
+    needsSecret: boolean,
+    sources: DataSource[],
+    secretsReady: boolean,
+): string | null {
+    if (needsSecret && !secretsReady) return 'Falta configurar a chave de cifra na API'
     if (isProduct(key) && sources.some((s) => s.id === key)) return 'Já ligado a esta unidade'
     return null
 }
+
+// As checagens que falharam por erro (aviso não conta). Vazio = passou.
+export const failedChecks = (checks: SourceCheck[]): SourceCheck[] =>
+    checks.filter((c) => !c.skipped && !c.ok && c.severity === 'error')
 
 // Os livres primeiro (por nome); os já ligados no fim, bloqueados.
 export const sortOffices = (offices: ProductOffice[]): ProductOffice[] =>

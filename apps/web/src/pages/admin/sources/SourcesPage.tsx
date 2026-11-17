@@ -126,6 +126,12 @@ export function SourcesPage() {
                     unit={current.unit.code}
                     source={open.id}
                     name={open.name}
+                    onChanged={() => setVersion((v) => v + 1)}
+                    onDisconnected={() => {
+                        setOpen(null)
+                        setVersion((v) => v + 1)
+                        setNotice(`${open.name} foi desconectada de ${current.unit.name}.`)
+                    }}
                     onClose={() => setOpen(null)}
                 />
             )}
@@ -135,6 +141,16 @@ export function SourcesPage() {
                     sources={current.sources}
                     loadOffices={(product) => dataClient.listProductOffices(product)}
                     onLink={linkOffice}
+                    loadConnectInfo={() => dataClient.getConnectInfo()}
+                    inspectSheet={(url) => dataClient.inspectSheet(url)}
+                    onConnect={(input) => dataClient.connectSource(org, current.unit.code, input)}
+                    onSaved={() => {
+                        setVersion((v) => v + 1)
+                        setNotice(
+                            `Fonte conectada a ${current.unit.name}. Ela aparece como "Aguardando dashboards" até o ` +
+                                'analista ligar os dashboards a ela.',
+                        )
+                    }}
                     onClose={() => setConnecting(false)}
                 />
             )}

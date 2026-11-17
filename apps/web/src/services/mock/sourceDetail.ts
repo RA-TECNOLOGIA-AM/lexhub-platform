@@ -1,5 +1,6 @@
 import type { DashboardCatalog, SourceDetail, SourcesResponse, SyncRun } from '../../types/index.ts'
 import { minAgo } from './helpers.ts'
+import { isManaged, managedConfig } from './connections.ts'
 
 // O detalhe de uma fonte no mock, no mesmo formato de api.source_detail (migration 20261113200000_detalhe_fonte.sql).
 
@@ -8,7 +9,7 @@ const SOURCE_OF_LABEL: Record<string, string> = { LexPre: 'lexpre', LexFlow: 'le
 
 // Sincronizações fictícias coerentes com o status da linha: saudável = só sucessos; atrasada = falhas no topo.
 function runsFor(status: string, failures: number): SyncRun[] {
-    if (status === 'waiting' || status === 'pending') return []
+    if (status === 'waiting' || status === 'pending' || status === 'no_dashboards') return []
     return Array.from({ length: 6 }, (_, i) => {
         const failed = status === 'late' && i < failures
         const start = 180 * (status === 'late' ? 1 : 0) + 10 * i + 5
@@ -46,5 +47,8 @@ export function sourceDetailFor(
             .filter((d) => SOURCE_OF_LABEL[d.source] === sourceId && d.units.includes(unitCode))
             .map((d) => ({ key: d.key, name: d.title })),
         runs: runsFor(source.status, source.failures),
+        config: managedConfig(sourceId)?.config ?? {},
+        writerAck: managedConfig(sourceId)?.writerAck ?? false,
+        canManage: isManaged(sourceId), // o mock entra como TI da LexGroup
     }
 }

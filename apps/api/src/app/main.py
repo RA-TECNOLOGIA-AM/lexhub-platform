@@ -15,8 +15,18 @@ from app.config import Settings, get_settings
 from app.dashboards import DASHBOARDS
 from app.database import DatabaseManager, connect_hint
 from app.logs import configure_logging, seconds
+from app.registered_sources import PgRegisteredRepo, RegisteredSources
 from app.request_log import RequestLogMiddleware
-from app.routes import catalog, dashboards, device_auth, health, hub, me, sources
+from app.routes import (
+    catalog,
+    dashboards,
+    device_auth,
+    health,
+    hub,
+    me,
+    source_connections,
+    sources,
+)
 from app.source_cache import MemoryStore, SourceCache, ttl_by_query
 from app.sources import source_fetcher
 from app.supabase_client import create_supabase
@@ -127,6 +137,13 @@ def create_app() -> FastAPI:
         # reconectam sozinhos; fora do ar, só os dashboards daquele banco ficam indisponíveis.
         # Sem variáveis no .env, o banco fica desligado.
         app.state.databases = DatabaseManager(settings)
+        # Fontes conectadas pela tela (banco próprio e planilha): lidas do banco da plataforma quando
+        # alguém usa, com o segredo decifrado pela SOURCE_SECRET_KEY (app/registered_sources.py).
+        app.state.registered_sources = (
+            RegisteredSources(PgRegisteredRepo(app.state.db_pool), settings)
+            if app.state.db_pool is not None
+            else None
+        )
         # Redis (L2): igual à v1, opcional; fora do ar = só memória, sem impedir a subida.
         app.state.cache = build_cache(settings)
         app.state.source_cache = SourceCache(
@@ -161,6 +178,8 @@ def create_app() -> FastAPI:
                 warmer.cancel()
                 await asyncio.gather(warmer, return_exceptions=True)
             await app.state.databases.close()
+            if app.state.registered_sources is not None:
+                await app.state.registered_sources.close()
             await app.state.cache.close()
             if app.state.db_pool is not None:
                 await app.state.db_pool.close()
@@ -186,6 +205,8 @@ def create_app() -> FastAPI:
     app.include_router(dashboards.router)
     app.include_router(device_auth.router)
     app.include_router(sources.router)
+    app.include_router(source_connections.platform)
+    app.include_router(source_connections.org)
     return app
 
 

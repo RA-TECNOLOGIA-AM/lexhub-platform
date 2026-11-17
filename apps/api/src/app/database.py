@@ -22,7 +22,7 @@ import socket
 import time
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 
 import asyncpg
 from fastapi import Request
@@ -281,8 +281,19 @@ class DatabaseManager:
                 await pool.release(conn)
 
 
+class ConnectionProvider(Protocol):
+    """Quem entrega conexões Postgres por nome de banco: o DatabaseManager (bancos do .env) ou o
+    SourceConnections (eles + as fontes conectadas pela tela, app/registered_sources.py)."""
+
+    def get_connection(self, name: str) -> Any: ...  # async context manager -> asyncpg.Connection
+
+    async def expire_connections(self, name: str) -> None: ...
+
+    def report_failure(self, name: str, exc: BaseException) -> None: ...
+
+
 async def run_with_connection_retry[T](
-    manager: DatabaseManager,
+    manager: ConnectionProvider,
     db_name: str,
     operation: Callable[[asyncpg.Connection], Awaitable[T]],
     *,

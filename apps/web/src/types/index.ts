@@ -382,7 +382,60 @@ export type SourceDetail = {
     owner: Unit | null // unidade dona; null = produto contratado pela organização
     dashboards: { key: string; name: string }[] // os desta unidade que usam a fonte
     runs: SyncRun[] // as 10 últimas, da mais recente para a mais antiga
+    // Banco: host, port, database, user, ssl. Planilha: tab. Nunca a senha nem o link.
+    config: Record<string, unknown>
+    writerAck: boolean // salva com um usuário que pode escrever ("Salvar mesmo assim")
+    canManage: boolean // TI da LexGroup numa fonte conectada pela tela: testar, trocar senha, desconectar
 }
+
+// Conectar fonte: banco próprio da operação e planilha publicada (rotas da API, app/routes/source_connections.py).
+export type DatabaseConnector = 'postgres' | 'mysql'
+
+export type DatabaseConnectInput = {
+    connector: DatabaseConnector
+    name: string
+    host: string
+    port: number | null // null = a padrão (5432 / 3306)
+    database: string
+    user: string
+    password: string
+    ssl: boolean
+    writerAck: boolean // true = "Salvar mesmo assim" com um usuário que pode escrever
+}
+
+export type SheetConnectInput = { connector: 'sheets'; name: string; url: string; tab: string }
+
+export type ConnectInput = DatabaseConnectInput | SheetConnectInput
+
+// Uma checagem do teste (rede, login, leitura, só leitura). warn = não impede salvar.
+export type SourceCheck = {
+    key: 'network' | 'login' | 'read' | 'readOnly'
+    ok: boolean
+    message: string
+    ms: number
+    severity: 'error' | 'warn'
+    skipped: boolean
+}
+
+// Testar e salvar: saved=false = nada gravado (o teste falhou ou falta confirmar o usuário que escreve).
+export type ConnectResult = {
+    saved: boolean
+    needsWriterAck: boolean
+    checks: SourceCheck[]
+    source: DataSource | null
+}
+
+export type SourceTestResult = { ok: boolean; checks: SourceCheck[] }
+
+export type SheetTab = { name: string; rows: number }
+
+export type ConnectInfo = {
+    ready: boolean // a API tem a chave para cifrar senhas (sem ela, só LexPre/LexFlow)
+    egressIp: string | null // o IP que a operação libera no firewall do banco
+}
+
+// Trocar a senha (banco) ou o link (planilha).
+export type SecretInput = { password?: string; url?: string; writerAck: boolean }
 
 export type SourcesResponse = {
     syncEveryMin: number // intervalo da sincronização (a tela monta o texto do cabeçalho)

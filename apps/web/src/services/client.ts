@@ -27,6 +27,12 @@ import type {
     UnitSources,
     ProductKey,
     ProductOffices,
+    ConnectInfo,
+    ConnectInput,
+    ConnectResult,
+    SecretInput,
+    SheetTab,
+    SourceTestResult,
     ExportRequest,
     ExportFile,
     AccessRequest,
@@ -104,6 +110,13 @@ export interface DataClient {
     // ligar grava a ref da unidade (Supabase). Escritório já ligado / unidade já ligada = 409 com a mensagem.
     listProductOffices(product: ProductKey): Promise<ProductOffices>
     linkProductOffice(org: string, unit: string, product: ProductKey, ref: string): Promise<UnitSources>
+    // Banco próprio e planilha (só a TI da LexGroup). O teste nunca é erro: saved/ok + as checagens.
+    getConnectInfo(): Promise<ConnectInfo>
+    inspectSheet(url: string): Promise<SheetTab[]> // link inválido ou que não baixa = 422 com a mensagem
+    connectSource(org: string, unit: string, input: ConnectInput): Promise<ConnectResult>
+    retestSource(org: string, source: string): Promise<SourceTestResult>
+    changeSourceSecret(org: string, source: string, input: SecretInput): Promise<ConnectResult>
+    disconnectSource(org: string, source: string): Promise<void>
     // Plataforma: todas as organizações. Só Owner/Desenvolvedor da LexGroup e equipe RA; os outros recebem 403.
     listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
