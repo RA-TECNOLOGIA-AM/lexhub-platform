@@ -271,6 +271,7 @@ export function ComercialLexpreContent({
                         items={rubricas}
                         centerLabel="ações fechadas"
                         labels
+                        legendWhenNarrow
                         selected={filters.rubrica}
                         onSelect={porRubrica}
                         selectLabel="Filtrar pela rubrica"
