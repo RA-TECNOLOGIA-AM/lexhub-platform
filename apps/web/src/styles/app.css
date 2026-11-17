@@ -5016,6 +5016,39 @@ body {
     overflow-x: clip;
 }
 
+/* Lista de páginas da barra lateral: é ela que rola quando o menu não cabe na altura da janela (janela baixa,
+   zoom alto). Logo, organização e usuário ficam parados; antes a barra inteira rolava sem barra visível e
+   parecia "subir e descer". A própria .side continua podendo rolar só se o topo e o rodapé sozinhos não
+   couberem (ex.: lista de organizações aberta numa janela muito baixa). */
+.side-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+.side-nav::-webkit-scrollbar {
+    display: none;
+}
+/* Janela baixa (ou zoom alto): menu mais justo, para caber inteiro sem rolar nos casos comuns. */
+@media (max-height: 760px) {
+    .side .brand {
+        padding-bottom: 10px;
+    }
+    .side-label {
+        padding-top: 12px;
+        padding-bottom: 4px;
+    }
+    .side-nav .nav {
+        min-height: 36px;
+        padding-block: 6px;
+    }
+}
+
 /* Barra lateral recolhível: o logo do LexHub no topo é o botão (no celular, onde a barra é gaveta, fecha o menu). */
 .side {
     overflow-x: hidden;

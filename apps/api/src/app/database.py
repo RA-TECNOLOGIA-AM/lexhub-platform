@@ -59,6 +59,11 @@ class SourceUnavailable(Exception):
     """Banco de origem (ou planilha) desligado, fora do ar ou sem resposta no momento."""
 
 
+class ConnectionLost(Exception):
+    """A conexão caiu no meio da consulta, e o asyncpg avisou com um InterfaceError
+    ("the underlying connection is closed") no lugar do erro original."""
+
+
 def connect_hint(exc: BaseException) -> str:
     """Tipo do erro + uma dica do que costuma ser (sem a mensagem, que pode trazer host/usuário)."""
     name = type(exc).__name__
@@ -299,12 +304,23 @@ async def run_with_connection_retry[T](
 
     Vira SourceUnavailable (503, ou o último dado bom do cache):
       * banco desligado, fora do ar ou sem conexão: o banco fica 'down' até voltar;
-      * consulta que passou do DB_POOL_COMMAND_TIMEOUT: o banco segue 'up' (lentidão não é queda).
+      * consulta que passou do DB_POOL_COMMAND_TIMEOUT, ou que o próprio banco cancelou
+        (statement_timeout do servidor): o banco segue 'up' (lentidão não é queda).
     """
     for attempt in range(1, max_retries + 1):
         try:
             async with manager.get_connection(db_name) as conn:
-                return await operation(conn)
+                try:
+                    return await operation(conn)
+                except asyncpg.InterfaceError as exc:
+                    # Quando a conexão cai no meio de uma transação, o asyncpg esconde o erro
+                    # original (ConnectionDoesNotExistError) atrás de "the underlying connection
+                    # is closed", ao fechar a transação. A pergunta tem de ser feita aqui dentro:
+                    # depois que a conexão volta ao pool, o proxy recusa qualquer chamada.
+                    # Com a conexão aberta, InterfaceError é bug: sobe na hora, sem repetir.
+                    if not conn.is_closed():
+                        raise
+                    raise ConnectionLost(db_name) from exc
         except SourceUnavailable:
             raise
         except TimeoutError as exc:  # antes dos transitórios: TimeoutError também é um OSError
@@ -314,22 +330,32 @@ async def run_with_connection_retry[T](
                 db_name,
             )
             raise SourceUnavailable(db_name) from exc
-        except _RETRYABLE_DB_ERRORS as exc:
+        except asyncpg.QueryCanceledError as exc:
+            # O próprio banco cancelou a consulta (statement_timeout do servidor). Repetir só
+            # esperaria o mesmo limite de novo.
             logger.warning(
-                "Falha transitória ao executar '%s' em '%s' (tentativa %d/%d): %s",
+                "'%s' em '%s' foi cancelada pelo próprio banco (statement_timeout do servidor)",
                 operation_name,
                 db_name,
-                attempt,
-                max_retries,
-                type(exc).__name__,
             )
-            if attempt >= max_retries:
-                if isinstance(exc, CONNECTION_ERRORS):
-                    manager.report_failure(db_name, exc)
-                    raise SourceUnavailable(db_name) from exc
-                raise
-            await manager.expire_connections(db_name)
-            await asyncio.sleep(_backoff(attempt))
+            raise SourceUnavailable(db_name) from exc
+        except (*_RETRYABLE_DB_ERRORS, ConnectionLost) as exc:
+            failure: Exception = exc
+        logger.warning(
+            "Falha transitória ao executar '%s' em '%s' (tentativa %d/%d): %s",
+            operation_name,
+            db_name,
+            attempt,
+            max_retries,
+            type(failure).__name__,
+        )
+        if attempt >= max_retries:
+            if isinstance(failure, (*CONNECTION_ERRORS, ConnectionLost)):
+                manager.report_failure(db_name, failure)
+                raise SourceUnavailable(db_name) from failure
+            raise failure
+        await manager.expire_connections(db_name)
+        await asyncio.sleep(_backoff(attempt))
     raise AssertionError("inalcançável")  # o laço sempre retorna ou levanta
 
 

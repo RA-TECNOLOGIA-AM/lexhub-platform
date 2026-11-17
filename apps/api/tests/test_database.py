@@ -48,11 +48,23 @@ async def wait_for(condition, timeout: float = 5.0) -> None:
 
 
 class FakeConn:
-    """Conexão de mentira: registra a ordem das chamadas (transação, consulta, fim)."""
+    """Conexão de mentira: registra a ordem das chamadas (transação, consulta, fim).
 
-    def __init__(self, rows=None):
+    Imita o proxy do pool do asyncpg: depois de devolvida (`released`), recusa chamadas.
+    """
+
+    def __init__(self, rows=None, closed: bool = False):
         self.calls: list[str] = []
         self._rows = rows or []
+        self.closed = closed
+        self.released = False
+
+    def is_closed(self) -> bool:
+        if self.released:
+            raise asyncpg.InterfaceError(
+                "cannot call Connection.is_closed(): connection has been released back to the pool"
+            )
+        return self.closed
 
     def transaction(self, **kwargs):
         conn = self
@@ -254,9 +266,13 @@ class FakeManager:
 
         class _Ctx:
             async def __aenter__(self):
+                if conn is not None:
+                    conn.released = False
                 return conn
 
             async def __aexit__(self, *exc):
+                if conn is not None:
+                    conn.released = True  # como o pool: devolvida, a conexão recusa chamadas
                 return False
 
         return _Ctx()
@@ -287,6 +303,70 @@ def test_retry_sem_conexao_ate_o_limite_marca_o_banco_fora(sem_espera):
     with pytest.raises(SourceUnavailable):
         asyncio.run(run_with_connection_retry(manager, "ng", operation, max_retries=2))
     assert manager.failures == [("ng", "PostgresConnectionError")]
+
+
+def test_consulta_cancelada_pelo_banco_vira_source_unavailable_sem_derrubar(sem_espera):
+    # Visto no LexFlow: o statement_timeout do servidor cancelou execucao_LA após 3 min.
+    manager = FakeManager()
+    calls = {"n": 0}
+
+    async def operation(_conn):
+        calls["n"] += 1
+        raise asyncpg.QueryCanceledError("canceling statement due to statement timeout")
+
+    with pytest.raises(SourceUnavailable) as caught:
+        asyncio.run(run_with_connection_retry(manager, "lexflow", operation))
+    assert isinstance(caught.value.__cause__, asyncpg.QueryCanceledError)
+    assert calls["n"] == 1  # repetir só esperaria o mesmo limite de novo
+    assert manager.failures == []
+
+
+# Visto no LexFlow: a conexão caiu no meio e o erro original ficou escondido atrás deste.
+CLOSED = "cannot call Transaction.__aexit__(): the underlying connection is closed"
+
+
+def test_interface_error_com_conexao_fechada_tenta_de_novo(sem_espera):
+    manager = FakeManager(FakeConn(closed=True))
+    calls = {"n": 0}
+
+    async def operation(_conn):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise asyncpg.InterfaceError(CLOSED)
+        return "ok"
+
+    assert asyncio.run(run_with_connection_retry(manager, "lexflow", operation)) == "ok"
+    assert calls["n"] == 2
+    assert manager.expired == 1  # pegou conexões novas antes de tentar de novo
+    assert manager.failures == []
+
+
+def test_interface_error_com_conexao_aberta_nao_e_repetido(sem_espera):
+    manager = FakeManager(FakeConn(closed=False))
+    calls = {"n": 0}
+
+    async def operation(_conn):
+        calls["n"] += 1
+        raise asyncpg.InterfaceError("erro de uso da conexão")
+
+    with pytest.raises(asyncpg.InterfaceError):
+        asyncio.run(run_with_connection_retry(manager, "lexflow", operation))
+    assert calls["n"] == 1  # é bug, não falha transitória
+    assert manager.expired == 0
+    assert manager.failures == []
+
+
+def test_conexao_fechada_ate_o_limite_marca_o_banco_fora(sem_espera):
+    manager = FakeManager(FakeConn(closed=True))
+
+    async def operation(_conn):
+        raise asyncpg.InterfaceError(CLOSED)
+
+    with pytest.raises(SourceUnavailable) as caught:
+        asyncio.run(run_with_connection_retry(manager, "lexflow", operation, max_retries=2))
+    assert manager.failures == [("lexflow", "ConnectionLost")]
+    # A cadeia guarda o erro original do asyncpg para o log.
+    assert isinstance(caught.value.__cause__.__cause__, asyncpg.InterfaceError)
 
 
 def test_retry_cache_de_statement_velho_esgota_sem_marcar_o_banco_fora(sem_espera):

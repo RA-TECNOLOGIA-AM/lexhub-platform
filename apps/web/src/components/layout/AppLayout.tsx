@@ -18,6 +18,7 @@ import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
 import { dataClient } from '../../services/client.ts'
 import { env } from '../../services/env.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
+import { useTransitionArea } from '../page_transition/useTransitionArea.ts'
 
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
@@ -26,6 +27,7 @@ export function AppLayout() {
     // Espaço da topbar que uma página pode ocupar (ex.: o Período de um dashboard). Ver TopbarSlot.tsx.
     const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null)
     const menuButton = useRef<HTMLButtonElement>(null)
+    const transitionArea = useTransitionArea()
     const { pathname } = useLocation()
     const { me, signOut } = useAuth()
     // Selo de pedidos de acesso pendentes: só a equipe RA busca.
@@ -79,31 +81,38 @@ export function AppLayout() {
                     onOpen={() => setCollapsed(false)}
                 />
 
-                {NAV_SECTIONS.map((section) => ({ section, items: visibleItems(section, perms, user.platform_staff) }))
-                    .filter(({ items }) => items.length > 0)
-                    .map(({ section, items }) => (
-                        <div key={section.title} className="stack" style={{ gap: 2 }}>
-                            <span className="side-label">{section.title}</span>
-                            {items.map((item) => (
-                                <PageTransitionLink
-                                    key={item.key}
-                                    className="nav"
-                                    to={pathOf(item, org.slug)}
-                                    aria-current={current?.item.key === item.key ? 'page' : undefined}
-                                    title={collapsed ? item.label : undefined}
-                                    onClick={closeMenu}
-                                >
-                                    <Icon name={item.icon} />
-                                    <span className="nav-label">{item.label}</span>
-                                    {item.badge === 'access-requests' && pending > 0 && (
-                                        <span className="count" aria-label={`${pending} pendentes`}>
-                                            {pending}
-                                        </span>
-                                    )}
-                                </PageTransitionLink>
-                            ))}
-                        </div>
-                    ))}
+                {/* Só a lista de páginas rola quando não cabe (janela baixa, zoom alto): logo, organização e
+                    usuário ficam parados. Antes a barra inteira rolava e parecia subir e descer. */}
+                <div className="side-nav">
+                    {NAV_SECTIONS.map((section) => ({
+                        section,
+                        items: visibleItems(section, perms, user.platform_staff),
+                    }))
+                        .filter(({ items }) => items.length > 0)
+                        .map(({ section, items }) => (
+                            <div key={section.title} className="stack" style={{ gap: 2 }}>
+                                <span className="side-label">{section.title}</span>
+                                {items.map((item) => (
+                                    <PageTransitionLink
+                                        key={item.key}
+                                        className="nav"
+                                        to={pathOf(item, org.slug)}
+                                        aria-current={current?.item.key === item.key ? 'page' : undefined}
+                                        title={collapsed ? item.label : undefined}
+                                        onClick={closeMenu}
+                                    >
+                                        <Icon name={item.icon} />
+                                        <span className="nav-label">{item.label}</span>
+                                        {item.badge === 'access-requests' && pending > 0 && (
+                                            <span className="count" aria-label={`${pending} pendentes`}>
+                                                {pending}
+                                            </span>
+                                        )}
+                                    </PageTransitionLink>
+                                ))}
+                            </div>
+                        ))}
+                </div>
 
                 <div className="side-user">
                     <span className="av">{user.initials}</span>
@@ -124,7 +133,8 @@ export function AppLayout() {
                 </div>
             </aside>
 
-            <div className="main">
+            {/* Troca de página: a logo da transição cobre só esta coluna, abaixo da topbar (ver PageTransitionProvider). */}
+            <div className="main" ref={transitionArea}>
                 <header className="topbar">
                     <button
                         ref={menuButton}

@@ -10,8 +10,9 @@ import time
 from collections.abc import Callable, Iterable
 
 from app.dashboards.base import DashboardModule, SourceFetcher
+from app.database import SourceUnavailable
 from app.logs import seconds
-from app.source_cache import SourceCache
+from app.source_cache import SourceCache, error_name
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,11 @@ async def warm_once(
                 f"{db}:{query}", lambda db=db, query=query: fetcher_for(db).fetch(query)
             )
             ok += 1
+        except SourceUnavailable as exc:
+            # Esperado (banco fora, lento ou que cancelou a consulta): uma linha basta, o motivo
+            # já foi registrado por app/database.py. Quem abrir o dashboard vê o último dado bom.
+            failed += 1
+            logger.warning("'%s:%s' não renovou: %s", db, query, error_name(exc))
         except Exception:
             failed += 1
             logger.exception("falha ao renovar '%s:%s'", db, query)
