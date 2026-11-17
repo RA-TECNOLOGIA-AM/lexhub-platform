@@ -254,7 +254,7 @@ QUERIES: dict[str, dict] = {
         "description": "Eventos de cancelamento de demanda (banco lexpre), usados para desconto de comissão por cancelamento tardio.",
         "params": [],
     },
-    # v1: queries.py:1326, "execucao_LA" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
+    # v1: queries.py:1326, "execucao_LA" (copiada em 17/11/2026). Execução, Acordos e Recursal (LexFlow).
     "execucao_LA": {
         "database": "lexflow",
         "query": """
@@ -294,6 +294,8 @@ QUERIES: dict[str, dict] = {
             p.valor_dano_material as "DANO_MATERIAL",
             p.valor_dano_moral as "DANO_MORAL",
             p.valor_causa_ve as "VALOR_EXECUCAO",
+            p.valor_causa_vs as "VALOR_SENTENCA",
+            p.valor_causa_va as "VALOR_ACORDAO",
             p.dano_material_ve as "DANO_MATERIAL_EXECUCAO",
             p.dano_moral_ve as "DANO_MORAL_EXECUCAO",
             p.valor_honorarios_contratuais as "VALOR_HONORARIOS",
@@ -349,6 +351,8 @@ QUERIES: dict[str, dict] = {
             p.valor_sucumbencia as "VALOR_SUCUMBENCIA",
             p.valor_alvara as "VALOR_ALVARA",
             p.valor_alvara_incontroverso as "VALOR_ALVARA_INCONTROVERSO",
+            p.datas_execucao_extras as "DATAS_EXECUCAO_EXTRAS",
+            p.valores_financeiros_extras as "VALORES_FINANCEIROS_EXTRAS",
             EXISTS (
                 SELECT 1
                 FROM public.processo_etiqueta pe
@@ -379,9 +383,9 @@ QUERIES: dict[str, dict] = {
             "DATA_COMPENSACAO_ALVARA é a data usada para definir a saída da "
             "Execução (quantidade e valor)."
         ),
-        "params": [],
+        "params": []
     },
-    # v1: queries.py:1452, "execucao_RJ" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
+    # v1: queries.py:1456, "execucao_RJ" (copiada em 17/11/2026). Execução, Acordos e Recursal (LexFlow).
     "execucao_RJ": {
         "database": "lexflow",
         "query": """
@@ -421,6 +425,8 @@ QUERIES: dict[str, dict] = {
             p.valor_dano_material as "DANO_MATERIAL",
             p.valor_dano_moral as "DANO_MORAL",
             p.valor_causa_ve as "VALOR_EXECUCAO",
+            p.valor_causa_vs as "VALOR_SENTENCA",
+            p.valor_causa_va as "VALOR_ACORDAO",
             p.dano_material_ve as "DANO_MATERIAL_EXECUCAO",
             p.dano_moral_ve as "DANO_MORAL_EXECUCAO",
             p.valor_honorarios_contratuais as "VALOR_HONORARIOS",
@@ -476,6 +482,8 @@ QUERIES: dict[str, dict] = {
             p.valor_sucumbencia as "VALOR_SUCUMBENCIA",
             p.valor_alvara as "VALOR_ALVARA",
             p.valor_alvara_incontroverso as "VALOR_ALVARA_INCONTROVERSO",
+            p.datas_execucao_extras as "DATAS_EXECUCAO_EXTRAS",
+            p.valores_financeiros_extras as "VALORES_FINANCEIROS_EXTRAS",
             -- RJ não tem uma etiqueta base "ACORDO" isolada por nome (diferente do
             -- NG/LA, que usam EXISTS em processo_etiqueta/etiquetas com nome ILIKE
             -- 'acordo') — usa 4 etiquetas via id_etiquetas_lista, igual à query
@@ -510,7 +518,7 @@ QUERIES: dict[str, dict] = {
             "nome. id_situacao IN (1, 2) = ATIVO + ARQUIVADO, mesmo motivo de "
             "execucao_LA."
         ),
-        "params": [],
+        "params": []
     },
     # v1: queries.py:1582, "execucao_acordos_NG" (copiada em 11/11/2026). Execução, Acordos e Recursal (LexFlow).
     "execucao_acordos_NG": {

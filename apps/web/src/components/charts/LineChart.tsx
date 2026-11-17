@@ -23,6 +23,8 @@ type LineChartProps = {
     partial?: { series: number; index: number } // ponto ainda em andamento (ex.: o mês atual): "parcial"
     emphasizeData?: boolean // rótulo do eixo em negrito onde há dado
     tooltip?: { heading: string; title: (i: number) => string } // caixa ao passar o cursor ("Mês" · "Abril")
+    onSelect?: (index: number) => void // clicar (ou Enter) num ponto com dado: o índice dele (ex.: abrir o mês)
+    selectLabel?: string // o que o clique faz, para o leitor de tela ("Ver os dias de")
 }
 
 const PAD = { top: 30, right: 40, bottom: 36, left: 52 }
@@ -41,6 +43,8 @@ export function LineChart({
     partial,
     emphasizeData = false,
     tooltip,
+    onSelect,
+    selectLabel,
 }: LineChartProps) {
     const [ref, width] = useWidth<HTMLDivElement>()
     const [hover, setHover] = useState<number | null>(null)
@@ -87,7 +91,8 @@ export function LineChart({
         const d = e.key === 'ArrowLeft' ? -1 : 1
         setHover((h) => Math.min(labels.length - 1, Math.max(0, (h ?? (d > 0 ? -1 : labels.length)) + d)))
     }
-    const interactive = tooltip !== undefined
+    const interactive = tooltip !== undefined || onSelect !== undefined
+    const select = (i: number | null) => i !== null && hasData[i] && onSelect?.(i)
 
     return (
         <div ref={ref} className="chart-svg line-wrap">
@@ -99,8 +104,13 @@ export function LineChart({
                 tabIndex={interactive ? 0 : undefined}
                 onMouseMove={interactive ? onMove : undefined}
                 onMouseLeave={interactive ? () => setHover(null) : undefined}
-                onKeyDown={interactive ? onKey : undefined}
+                onKeyDown={interactive ? (e) => (onSelect && e.key === 'Enter' ? select(hover) : onKey(e)) : undefined}
                 onBlur={interactive ? () => setHover(null) : undefined}
+                onClick={onSelect ? (e) => select(indexAt(e.clientX, e.currentTarget)) : undefined}
+                className={onSelect && hover !== null && hasData[hover] ? 'clicavel' : undefined}
+                aria-description={
+                    onSelect && selectLabel ? `${selectLabel}: clique num ponto ou use as setas e Enter` : undefined
+                }
             >
                 <defs>
                     {series.map((s, k) => (

@@ -21,6 +21,23 @@ export const FILTER_KEYS = [
     'conv_ano_financeiro',
     'pend_ano',
     'pend_mes',
+    'subfase',
+    'comarca',
+    'funcionario_execucao',
+    'atividade_execucao',
+    'situacao_execucao',
+    'status_execucao',
+    'diligencia_tipo_execucao',
+    'diligencia_colaborador_execucao',
+    'tipo_acao_execucao_acordos',
+    'tipo_sentenca_execucao_acordos',
+    'numero_processo_execucao_acordos',
+    'funcionario_execucao_acordos',
+    'atividade_execucao_acordos',
+    'situacao_execucao_acordos',
+    'status_execucao_acordos',
+    'diligencia_tipo_execucao_acordos',
+    'diligencia_colaborador_execucao_acordos',
 ] as const satisfies readonly (keyof DashboardFilters)[]
 
 // URL -> período e filtros. Período só vale com as duas datas e na ordem certa; senão, o servidor usa o padrão.

@@ -3,3 +3,5 @@ src/styles/tokens.css
 template/
 dist/
 package-lock.json
+# contornos dos municípios (IBGE, malha simplificada): arquivos de dados, não código
+public/geo/

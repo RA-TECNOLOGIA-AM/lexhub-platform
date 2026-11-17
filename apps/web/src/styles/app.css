@@ -3444,6 +3444,10 @@ button.fpcard-who:focus-visible {
 .barlist.wrap .barlist-hit {
     grid-template-columns: minmax(110px, 40%) 1fr 44px;
 }
+/* nome quebrando linha e valor por fora (R$ ...): a última coluna é a do valor, do tamanho dele */
+.barlist.wrap.out .barlist-hit {
+    grid-template-columns: minmax(110px, 40%) 1fr auto;
+}
 
 /* ---------- Comercial (LexPre) ---------- */
 .field-select select {
@@ -5165,4 +5169,449 @@ body {
     .side {
         transition: none;
     }
+}
+
+/* ===== Execução Condenação e Execução Acordos (NG): peças das páginas da v1 (prefixo ex-) ===== */
+.ex-mt {
+    margin-top: var(--gap);
+}
+.ex-duo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 1100px) {
+    .ex-duo {
+        grid-template-columns: 1fr;
+    }
+}
+/* aviso de processos sem valor, com o botão da lista */
+.ex-aviso {
+    align-items: center;
+}
+.ex-aviso > span {
+    flex: 1;
+}
+.ex-aviso-btn {
+    min-height: 30px;
+    font-size: var(--fs-xs);
+}
+.ex-lista-simples {
+    margin: 0;
+    padding: 0 0 0 18px;
+    columns: 2 220px;
+    font-size: var(--fs-sm);
+}
+/* medidor da TRE: centralizado no card */
+.ex-gauge {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 0;
+}
+.ex-nota {
+    margin: 8px 0 0;
+}
+/* barra de cima de uma seção: alternador de visão + etiquetas dos filtros da seção */
+.ex-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin-bottom: var(--gap);
+}
+.ex-chips {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+/* cards de número que filtram (Atividades e Diligências) */
+.ex-kpis {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+@media (max-width: 1300px) {
+    .ex-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 640px) {
+    .ex-kpis {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+.ex-cardbtn {
+    display: flex;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    border-radius: var(--r-lg);
+    min-width: 0;
+}
+.ex-cardbtn > .card {
+    flex: 1;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+}
+.ex-cardbtn:hover > .card {
+    border-color: var(--border-hover);
+}
+.ex-cardbtn.on > .card {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+.ex-cardbtn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+/* lista de tarefas e tabelas de processos */
+.ex-tarefa {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    max-width: 360px;
+}
+.ex-pager {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+.ex-pager .btn {
+    min-height: 30px;
+    font-size: var(--fs-xs);
+}
+.ex-modal {
+    width: min(960px, calc(100vw - 32px));
+}
+/* modal dos atrasos: uma faixa por linha, com a barra do % */
+.ex-atrasos {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.ex-atrasos li {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) auto;
+    align-items: center;
+    gap: 12px;
+}
+.ex-atrasos-l {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.ex-atrasos-bar {
+    height: 10px;
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+    overflow: hidden;
+}
+.ex-atrasos-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--danger);
+}
+/* pizza com a legenda ao lado (matérias da Execução) */
+.ex-pizza {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+.ex-pizza-leg {
+    flex: 1 1 220px;
+    max-width: 340px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: var(--fs-sm);
+}
+.ex-pizza-leg li > button,
+.ex-pizza-leg li > div {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto 52px;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border: 0;
+    border-radius: var(--r-sm);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+}
+.ex-pizza-leg li > button {
+    cursor: pointer;
+}
+.ex-pizza-leg li.on > *,
+.ex-pizza-leg li > button:hover {
+    background: var(--accent-soft);
+}
+.ex-pizza-leg li.dim {
+    opacity: 0.45;
+}
+.ex-pizza-leg .num:last-child {
+    text-align: right;
+}
+.ex-pizza-nome {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Seção 01 da Execução (como a v1): 2 cards do estoque de agora; embaixo, 5 colunas em 2 linhas, com o
+   estoque inicial ocupando as duas (4ª coluna de cada linha = tempo, 5ª = estoque inicial). */
+.ex-ind-topo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ex-ind {
+    margin-top: var(--gap);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+}
+.ex-ind .ex-ind-alto {
+    grid-column: 5;
+    grid-row: 1 / span 2;
+    justify-content: center;
+    text-align: center;
+    padding-top: 64px;
+    padding-bottom: 64px;
+}
+.ex-ind .ex-ind-alto .hero-top {
+    position: absolute;
+    top: 18px;
+    left: 18px;
+    right: 18px;
+    text-align: left;
+}
+.ex-ind .ex-ind-alto .hero-mid {
+    justify-content: center;
+}
+.ex-ind .ex-ind-alto .hero-v {
+    font-size: clamp(30px, 26cqi, 52px);
+}
+@media (max-width: 1200px) {
+    .ex-ind {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .ex-ind .ex-ind-alto {
+        grid-column: auto;
+        grid-row: auto;
+        padding-top: 22px;
+        padding-bottom: 18px;
+        text-align: left;
+    }
+    .ex-ind .ex-ind-alto .hero-top {
+        position: static;
+    }
+}
+@media (max-width: 640px) {
+    .ex-ind-topo,
+    .ex-ind {
+        grid-template-columns: 1fr;
+    }
+}
+/* Cards de lista longa (subfases): mesma altura do medidor ao lado; a lista rola dentro do card. */
+.ex-rolagem .chart-body {
+    flex: 0 0 300px; /* o flex: 1 do .chart-body passaria por cima da altura */
+    height: 300px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-hover) transparent;
+}
+.ex-rolagem .chart-body::-webkit-scrollbar {
+    width: 8px;
+}
+.ex-rolagem .chart-body::-webkit-scrollbar-thumb {
+    border-radius: var(--r-pill);
+    background: var(--border-hover);
+}
+@media (max-width: 640px) {
+    .ex-rolagem .chart-body {
+        flex-basis: 260px;
+        height: 260px;
+    }
+}
+/* Mapa de comarcas (MapaComarcas): municípios pintados pela quantidade, detalhe no cursor e legenda. */
+.mapa {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.mapa-area {
+    position: relative;
+    height: 520px;
+}
+.mapa-area svg {
+    width: 100%;
+    height: 100%;
+}
+.mapa-area .chart-empty {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mapa-mun {
+    stroke: var(--border);
+    stroke-width: 0.6;
+    transition: opacity 0.15s;
+}
+.mapa-mun.colorido {
+    fill: var(--chart-1);
+}
+.mapa-mun.zero {
+    fill: var(--border);
+    fill-opacity: 0.55;
+}
+.mapa-mun.fora_base {
+    fill: url(#mapa-fora-base);
+}
+.mapa-mun.clicavel {
+    cursor: pointer;
+}
+.mapa-mun:hover {
+    opacity: 0.8;
+}
+.mapa-mun.ativo {
+    stroke: var(--chart-1);
+    stroke-width: 2;
+}
+.mapa-fora-fundo {
+    fill: var(--border);
+    fill-opacity: 0.25;
+}
+.mapa-fora-risco {
+    stroke: var(--border-hover);
+    stroke-width: 1.5;
+}
+.mapa-dica {
+    position: absolute;
+    z-index: 5;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    box-shadow: var(--shadow-pop);
+    font-size: var(--fs-xs);
+    pointer-events: none;
+}
+.mapa-dica-v {
+    margin-top: 4px;
+    font-weight: 600;
+}
+.mapa-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+.mapa-legenda > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.mapa-legenda-txt {
+    flex-basis: 100%;
+}
+.mapa-key {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+}
+.mapa-key.colorido {
+    background: var(--chart-1);
+}
+.mapa-key.zero {
+    background: var(--border);
+}
+.mapa-key.fora_base {
+    border: 1px solid var(--border);
+    background: repeating-linear-gradient(45deg, var(--border-hover) 0 1px, transparent 1px 4px);
+}
+.mapa-aviso {
+    margin: 0;
+    padding: 6px 10px;
+    border: 1px solid var(--warn-line, var(--border));
+    border-radius: var(--r-sm);
+    background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+}
+@media (max-width: 640px) {
+    .mapa-area {
+        height: 340px;
+    }
+}
+/* LineChart com ponto clicável (ex.: o mês da produção diária abre os dias) */
+.line-wrap svg.clicavel {
+    cursor: pointer;
+}
+/* Produção diária: ao clicar num mês (e ao voltar), o gráfico entra com uma transição e a linha se desenha */
+.ex-drill {
+    animation: ex-drill-in 0.35s ease-out;
+}
+.ex-drill .chart-line:not(.dashed) {
+    stroke-dasharray: 4000;
+    stroke-dashoffset: 4000;
+    animation: ex-traco 0.9s ease-out 0.05s forwards;
+}
+@keyframes ex-drill-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+@keyframes ex-traco {
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .ex-drill,
+    .ex-drill .chart-line:not(.dashed) {
+        animation: none;
+        stroke-dasharray: none;
+        stroke-dashoffset: 0;
+    }
+}
+/* Lista de atividades: o modo compacto é uma linha por tarefa */
+.ex-lista.compacta .tbl td {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    white-space: nowrap;
+}
+.ex-corta {
+    display: inline-block;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
 }

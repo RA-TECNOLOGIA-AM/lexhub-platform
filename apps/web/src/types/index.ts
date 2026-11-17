@@ -72,6 +72,25 @@ export type DashboardFilters = {
     conv_ano_financeiro?: string[]
     pend_ano?: string[]
     pend_mes?: string[]
+    // Execução Condenação e Execução Acordos (LexFlow): os parâmetros das rotas da v1. Subfase e comarca valem
+    // para a página; os _execucao / _execucao_acordos são os seletores das seções Atividades e Diligências.
+    subfase?: string[]
+    comarca?: string[]
+    funcionario_execucao?: string[]
+    atividade_execucao?: string[]
+    situacao_execucao?: string[]
+    status_execucao?: string[]
+    diligencia_tipo_execucao?: string[]
+    diligencia_colaborador_execucao?: string[]
+    tipo_acao_execucao_acordos?: string[]
+    tipo_sentenca_execucao_acordos?: string[]
+    numero_processo_execucao_acordos?: string[]
+    funcionario_execucao_acordos?: string[]
+    atividade_execucao_acordos?: string[]
+    situacao_execucao_acordos?: string[]
+    status_execucao_acordos?: string[]
+    diligencia_tipo_execucao_acordos?: string[]
+    diligencia_colaborador_execucao_acordos?: string[]
 }
 
 export type DashboardQuery = { org: string; unit: string; from?: string; to?: string; filters?: DashboardFilters }

@@ -71,6 +71,15 @@ def _filtros(copia: ModuleType, nomes_v1: list[str]) -> dict[str, type]:
     return filtros
 
 
+def _lado(resposta: dict, campo: str) -> tuple[dict, str]:
+    """ "stats.x" -> (resposta["stats"], "x"); "x" -> (resposta, "x"). Cria `stats` se faltar."""
+    if campo.startswith("stats."):
+        if resposta.get("stats") is None:
+            resposta["stats"] = {}
+        return resposta["stats"], campo[6:]
+    return resposta, campo
+
+
 def modulo(
     key: str,
     v1_por_unidade: dict[str, str],
@@ -90,7 +99,9 @@ def modulo(
     que na v1 tem as rotas _LA no banco laadv. `commission_fields`: as listas de comissão da resposta (quem
     não gere a unidade recebe só a própria linha). `historico`: campos que vêm do histórico todo (o mesmo
     handler sem período), como os gráficos "mês a mês", que na v1 a página buscava numa chamada sem data;
-    "stats.<campo>" para um número de dentro de `stats`.
+    "stats.<campo>" para um número de dentro de `stats`; "<destino>=<origem>" grava com outro nome, quando o
+    mesmo campo tem sentido diferente nas duas chamadas (ex.: na Execução, `total_em_execucao` com período é
+    a entrada do período e sem período é o total em execução).
     """
     alternativas = alternativas or {}
     copias = {source_db: copia, **{db: c for db, (c, _) in alternativas.items()}}
@@ -125,14 +136,12 @@ def modulo(
             # Os mesmos filtros, sem período (na v1, a segunda chamada da página sem data).
             todo = await rodar(None, None)
             for campo in historico:
-                # "stats.x" = um número de dentro de stats (ex.: uma fila que não depende do período)
-                origem, destino, nome = (
-                    (todo.get("stats") or {}, body.setdefault("stats", {}), campo[6:])
-                    if campo.startswith("stats.")
-                    else (todo, body, campo)
-                )
-                if nome in origem:
-                    destino[nome] = origem[nome]
+                # "destino=origem": grava com outro nome; "stats.x" = um campo de dentro de stats
+                para, _, de = campo.partition("=")
+                origem, nome_origem = _lado(todo, de or para)
+                destino, nome_destino = _lado(body, para)
+                if nome_origem in origem:
+                    destino[nome_destino] = origem[nome_origem]
         return body
 
     def nomes_de(c: ModuleType) -> list[str]:
