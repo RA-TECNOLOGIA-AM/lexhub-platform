@@ -2,18 +2,20 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { DataError } from '../../services/errors.ts'
 import { dataClient } from '../../services/client.ts'
-
-const USER_CODE = /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/
+import { Icon } from '../../components/ui/Icon.tsx'
+import { formatUserCode, normalizeUserCode } from './userCode.ts'
 
 export function DeviceActivationPage() {
     const [params] = useSearchParams()
     const location = useLocation()
     const navigate = useNavigate()
-    const [code, setCode] = useState(params.get('code') ?? '')
+    const [code, setCode] = useState(formatUserCode(params.get('code') ?? ''))
     const [checkingSession, setCheckingSession] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [authorized, setAuthorized] = useState(false)
     const [error, setError] = useState('')
+    // Desconectar outros aparelhos: idle -> confirm (pergunta) -> working -> done.
+    const [others, setOthers] = useState<'idle' | 'confirm' | 'working' | 'done'>('idle')
 
     useEffect(() => {
         let cancelled = false
@@ -40,9 +42,9 @@ export function DeviceActivationPage() {
 
     async function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
-        const normalized = code.trim().toUpperCase()
-        if (!USER_CODE.test(normalized)) {
-            setError('Digite o código no formato ABCD-EFGH.')
+        const normalized = normalizeUserCode(code)
+        if (!normalized) {
+            setError('Digite os 8 caracteres do código que aparece na TV.')
             return
         }
 
@@ -54,9 +56,28 @@ export function DeviceActivationPage() {
             setCode('')
             navigate('/ativar', { replace: true })
         } catch (reason) {
+            // Sessão deste celular já foi encerrada no servidor (o token local ainda parecia válido):
+            // entra de novo e volta para cá com o mesmo código, em vez de travar no erro.
+            if (reason instanceof DataError && reason.status === 401) {
+                await dataClient.signOut().catch(() => {})
+                const returnTo = `/ativar?${new URLSearchParams({ code: normalized })}`
+                navigate(`/login?returnTo=${encodeURIComponent(returnTo)}`, { replace: true })
+                return
+            }
             setError(reason instanceof DataError ? reason.message : 'Não foi possível autorizar a TV.')
         } finally {
             setSubmitting(false)
+        }
+    }
+
+    async function disconnectOthers() {
+        setOthers('working')
+        try {
+            await dataClient.signOutOthers()
+            setOthers('done')
+        } catch (reason) {
+            setOthers('idle')
+            setError(reason instanceof DataError ? reason.message : 'Não foi possível desconectar os outros aparelhos.')
         }
     }
 
@@ -95,10 +116,9 @@ export function DeviceActivationPage() {
                                 id="device-code"
                                 autoComplete="one-time-code"
                                 autoCapitalize="characters"
-                                maxLength={9}
                                 placeholder="ABCD-EFGH"
                                 value={code}
-                                onChange={(event) => setCode(event.target.value.toUpperCase())}
+                                onChange={(event) => setCode(formatUserCode(event.target.value))}
                                 disabled={submitting}
                             />
                         </div>
@@ -112,6 +132,45 @@ export function DeviceActivationPage() {
                         </button>
                     </form>
                 )}
+
+                {/* TV esquecida logada: derruba as sessões dos outros aparelhos (este continua). */}
+                <div className="stack" style={{ gap: 8, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+                    {others === 'done' ? (
+                        <p className="muted small" role="status">
+                            Pronto. Os outros aparelhos saem da sua conta em até 1 minuto; as TVs voltam para o QR Code.
+                        </p>
+                    ) : others === 'idle' ? (
+                        <button className="btn btn-block" type="button" onClick={() => setOthers('confirm')}>
+                            <Icon name="logout" size={16} />
+                            Desconectar outros aparelhos
+                        </button>
+                    ) : (
+                        <>
+                            <p className="muted small">
+                                Sua conta sai de todos os outros lugares onde está aberta: TVs, computadores e
+                                celulares. Só este aparelho continua conectado.
+                            </p>
+                            <div className="row" style={{ gap: 8 }}>
+                                <button
+                                    className="btn"
+                                    type="button"
+                                    onClick={() => setOthers('idle')}
+                                    disabled={others === 'working'}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    type="button"
+                                    onClick={() => void disconnectOthers()}
+                                    disabled={others === 'working'}
+                                >
+                                    {others === 'working' ? 'Desconectando…' : 'Desconectar'}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
 
                 <p className="muted small auth-foot">
                     <Link className="linkbtn" to="/">

@@ -21,6 +21,7 @@ from app.device_auth import (
     SupabaseDeviceAuthRepository,
     digest_device_value,
 )
+from app.me import MeRepo, get_me_repo
 from app.supabase_client import get_supabase_admin, get_supabase_auth
 
 logger = logging.getLogger(__name__)
@@ -179,6 +180,7 @@ async def authorize_device(
     body: Annotated[DeviceAuthorizeIn, Body()],
     client: Annotated[AsyncClient, Depends(get_supabase_admin)],
     repository: Annotated[DeviceAuthRepository, Depends(get_device_auth_repository)],
+    me_repo: Annotated[MeRepo, Depends(get_me_repo)],
     settings: Annotated[Settings, Depends(get_settings)],
 ) -> dict[str, str] | JSONResponse:
     try:
@@ -208,6 +210,15 @@ async def authorize_device(
 
     if user_response is None or user_response.user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Não autenticado")
+
+    # Só quem já tem acesso ao LexHub (membro ativo de alguma organização) liga uma TV.
+    # Qualquer conta Google entra no login (é assim que se pede acesso); sem esta checagem,
+    # ela aprovaria uma TV que ficaria parada na tela "sem acesso" com uma sessão dela.
+    if not await me_repo.list_memberships(user_response.user.id):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail="Sua conta ainda não tem acesso ao LexHub. Peça acesso antes de conectar uma TV.",
+        )
 
     user_code = _normalize_user_code(body.user_code)
     if user_code is None:
