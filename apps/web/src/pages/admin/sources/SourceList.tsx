@@ -47,11 +47,32 @@ function SourceGroupCard({ section, onOpen }: { section: SourceSection; onOpen: 
 }
 
 // Módulo: as fontes de uma unidade, separadas em grupos. Clicar numa fonte avisa quem usa (onOpen).
-export function SourceList({ sources, onOpen }: { sources: DataSource[]; onOpen: OpenSource }) {
+// onConnect = quem pode conectar (TI da LexGroup); sem ele, o estado vazio não mostra o botão.
+export function SourceList({
+    sources,
+    onOpen,
+    onConnect,
+}: {
+    sources: DataSource[]
+    onOpen: OpenSource
+    onConnect?: () => void
+}) {
     if (sources.length === 0) {
         return (
-            <StateMessage icon="plug" title="Nenhuma fonte conectada">
-                Conecte o sistema jurídico, o LexPre ou uma planilha para os dashboards desta unidade ganharem dados.
+            <StateMessage
+                icon="plug"
+                title="Nenhuma fonte ligada"
+                action={
+                    onConnect && (
+                        <button className="btn btn-primary" type="button" onClick={onConnect}>
+                            <Icon name="plug" size={16} />
+                            Conectar fonte
+                        </button>
+                    )
+                }
+            >
+                Os dashboards desta unidade aparecem quando ela tiver uma fonte: o escritório no LexPre ou no LexFlow,
+                um banco próprio ou uma planilha.
             </StateMessage>
         )
     }

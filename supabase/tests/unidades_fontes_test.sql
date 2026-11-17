@@ -33,10 +33,21 @@ values ('10000000-0000-4000-8000-0000000000e1', '20000000-0000-4000-8000-0000000
        ('10000000-0000-4000-8000-0000000000e1', '20000000-0000-4000-8000-0000000000e2', '40000000-0000-4000-8000-0000000000e3', 'controller'),
        ('10000000-0000-4000-8000-0000000000e1', '20000000-0000-4000-8000-0000000000e1', '40000000-0000-4000-8000-0000000000e4', 'colaborador');
 
-insert into app.data_sources (id, org_id, key, kind, name, detail, owner_unit_id)
-values ('50000000-0000-4000-8000-0000000000e1', '10000000-0000-4000-8000-0000000000e1', 'prod1', 'flow', 'Produto 1', 'Contratado', null),
-       ('50000000-0000-4000-8000-0000000000e2', '10000000-0000-4000-8000-0000000000e1', 'db1', 'database', 'Banco 1', 'Postgres', '20000000-0000-4000-8000-0000000000e1'),
-       ('50000000-0000-4000-8000-0000000000e3', '10000000-0000-4000-8000-0000000000e1', 'sh1', 'sheet', 'Planilha 1', 'Sheets', '20000000-0000-4000-8000-0000000000e1');
+insert into app.data_sources (id, org_id, key, kind, name, detail, owner_unit_id, connector)
+values ('50000000-0000-4000-8000-0000000000e1', '10000000-0000-4000-8000-0000000000e1', 'prod1', 'flow', 'Produto 1', 'Contratado', null, 'lexflow'),
+       ('50000000-0000-4000-8000-0000000000e2', '10000000-0000-4000-8000-0000000000e1', 'db1', 'database', 'Banco 1', 'Postgres', '20000000-0000-4000-8000-0000000000e1', 'internal'),
+       ('50000000-0000-4000-8000-0000000000e3', '10000000-0000-4000-8000-0000000000e1', 'sh1', 'sheet', 'Planilha 1', 'Sheets', '20000000-0000-4000-8000-0000000000e1', 'sheets');
+-- Banco interno: só nas unidades liberadas (20261117100000_conectar_fonte.sql)
+insert into app.internal_source_units (source_id, unit_id)
+values ('50000000-0000-4000-8000-0000000000e2', '20000000-0000-4000-8000-0000000000e1'),
+       ('50000000-0000-4000-8000-0000000000e2', '20000000-0000-4000-8000-0000000000e2');
+-- Status pelo log só vale para fonte com dashboard ligado na unidade (senão é 'no_dashboards')
+insert into app.dashboard_catalog (key, name, description, area, source, sort_order, status)
+values ('dash-teste-fontes', 'Dashboard Teste Fontes', '', 'Teste', 'Banco 1', 1, 'available');
+insert into app.dashboard_sources (dashboard_key, source_key)
+values ('dash-teste-fontes', 'db1'), ('dash-teste-fontes', 'sh1'), ('dash-teste-fontes', 'prod1');
+insert into app.org_dashboards (org_id, unit_id, dashboard_key, enabled)
+values ('10000000-0000-4000-8000-0000000000e1', '20000000-0000-4000-8000-0000000000e1', 'dash-teste-fontes', true);
 insert into app.unit_source_refs (unit_id, source, ref)
 values ('20000000-0000-4000-8000-0000000000e1', 'prod1', '1'),
        ('20000000-0000-4000-8000-0000000000e1', 'db1', 'U1'),

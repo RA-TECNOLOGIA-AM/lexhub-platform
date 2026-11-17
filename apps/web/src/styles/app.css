@@ -447,6 +447,48 @@ button.org:hover {
     outline-offset: -2px;
 }
 /* Modal de detalhe da fonte */
+/* Conectar fonte: tipos em grade no passo 1; escritórios em lista (linha escolhida em destaque) no passo 2 */
+.connect-types {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 10px;
+}
+.connect-type {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.connect-type:hover:not(:disabled) {
+    border-color: var(--accent);
+}
+.connect-type:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.connect-type:disabled {
+    cursor: not-allowed;
+    background: var(--surface-2);
+    opacity: 0.7;
+}
+.connect-offices {
+    overflow: hidden;
+}
+.connect-office[aria-checked='true'] {
+    background: var(--accent-soft);
+}
+.connect-office:disabled {
+    cursor: default;
+    background: var(--surface-2);
+}
 /* Formulário de unidade: modal estreito, campos um embaixo do outro */
 .unit-dialog {
     width: min(480px, calc(100vw - 32px));

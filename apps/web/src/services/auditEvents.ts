@@ -19,6 +19,8 @@ const day = (v: unknown): string | null => {
     const s = text(v)
     return s && /^\d{4}-\d{2}-\d{2}/.test(s) ? `${s.slice(8, 10)}/${s.slice(5, 7)}` : null
 }
+// 'lexpre' -> 'LexPre'
+const product = (v: unknown): string | null => ({ lexpre: 'LexPre', lexflow: 'LexFlow' })[text(v) ?? ''] ?? text(v)
 // Junta as partes que existem: 'a · b · c'
 const join = (...parts: (string | null | undefined)[]): string => parts.filter(Boolean).join(' · ')
 
@@ -80,6 +82,16 @@ const EVENTS: Record<string, Rule> = {
                 .map((k) => `${text(before[k]) ?? '—'} → ${text(after[k]) ?? '—'}`)
             return join(e.targetName ?? text(m.code), ...changes)
         },
+    },
+    'source.office_linked': {
+        kind: 'source',
+        action: 'Ligou escritório',
+        detail: (_, m) => join(text(m.unit), product(m.product), text(m.office) && `escritório ${text(m.office)}`),
+    },
+    'source.office_unlinked': {
+        kind: 'source',
+        action: 'Desligou escritório',
+        detail: (_, m) => join(text(m.unit), product(m.product)),
     },
     'import.v1': {
         kind: 'source',

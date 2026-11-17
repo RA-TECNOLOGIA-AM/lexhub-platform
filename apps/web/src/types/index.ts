@@ -328,14 +328,18 @@ export type ClientsResponse = {
 
 // Unidades e fontes: de onde vêm os dados de cada unidade (conectores).
 export type SourceKind = 'database' | 'flow' | 'finance' | 'sheet' // define o ícone
-// pending = falta autorizar (ex.: Conta Azul); waiting = conectada, mas ainda não sincronizou nenhuma vez
-export type SourceStatus = 'healthy' | 'late' | 'pending' | 'waiting'
+// pending = falta autorizar (ex.: Conta Azul); waiting = conectada, mas ainda não sincronizou nenhuma vez;
+// no_dashboards = conectada, mas nenhum dashboard ligado na unidade usa a fonte (o analista liga depois)
+export type SourceStatus = 'healthy' | 'late' | 'pending' | 'waiting' | 'no_dashboards'
+// Como a API conecta na fonte (app.data_sources.connector)
+export type SourceConnector = 'lexpre' | 'lexflow' | 'internal' | 'postgres' | 'mysql' | 'sheets'
 // product = contratado pela organização (LexFlow, LexPre); connection = conectada por uma unidade (banco, planilha)
 export type SourceGroup = 'product' | 'connection'
 
 export type DataSource = {
     id: string
     kind: SourceKind
+    connector: SourceConnector
     group: SourceGroup
     name: string // "LexPre · escritório 1"
     detail: string // "Comercial e pré-protocolo"
@@ -377,6 +381,24 @@ export type SourcesResponse = {
     units: UnitSources[]
     unitLimit: { used: number; total: number } | null // "3 de 5 unidades do plano"; null = o plano não limita
     canManageUnits: boolean // Owner/Desenvolvedor: criar unidade e editar nome/fuso
+    canManageSources: boolean // só Owner/Desenvolvedor da LexGroup: conectar e gerenciar fontes
+}
+
+// Conectar fonte: os produtos Lex cujo escritório se escolhe numa lista do banco do produto.
+export type ProductKey = 'lexpre' | 'lexflow'
+
+// Um escritório no banco do produto (GET /sources/{product}/offices).
+export type ProductOffice = {
+    ref: string // id no banco do produto
+    name: string
+    activity: number // número para a TI reconhecer o escritório (o texto vem em activityLabel)
+    linkedTo: { org: string; unit: string; unitName: string } | null // já ligado (qualquer organização)
+}
+
+export type ProductOffices = {
+    product: ProductKey
+    activityLabel: string // 'movimentações nos últimos 30 dias', 'processos'
+    offices: ProductOffice[]
 }
 
 // O que o formulário de unidade grava (api.create_unit / api.update_unit). O código só vale na criação.

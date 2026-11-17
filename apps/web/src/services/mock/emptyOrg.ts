@@ -62,6 +62,7 @@ export const onboardingSources: SourcesResponse = {
     syncEveryMin: 10,
     unitLimit: { used: 1, total: 1 },
     canManageUnits: true,
+    canManageSources: true, // a TI da LexGroup conecta as fontes do cliente
     units: [
         {
             unit: { code: 'CP', name: 'Parceiro · sede' },

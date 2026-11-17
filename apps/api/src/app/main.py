@@ -16,7 +16,7 @@ from app.dashboards import DASHBOARDS
 from app.database import DatabaseManager
 from app.logs import configure_logging, seconds
 from app.request_log import RequestLogMiddleware
-from app.routes import catalog, dashboards, device_auth, health, hub, me
+from app.routes import catalog, dashboards, device_auth, health, hub, me, sources
 from app.source_cache import MemoryStore, SourceCache, ttl_by_query
 from app.sources import PgSourceFetcher
 from app.supabase_client import create_supabase
@@ -160,6 +160,7 @@ def create_app() -> FastAPI:
     app.include_router(hub.router)
     app.include_router(dashboards.router)
     app.include_router(device_auth.router)
+    app.include_router(sources.router)
     return app
 
 

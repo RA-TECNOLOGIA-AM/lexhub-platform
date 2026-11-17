@@ -40,6 +40,7 @@ import { peticionamentoLegadoFor } from './mock/peticionamentoLegado.ts'
 import { protocoloLegadoFor } from './mock/protocoloLegado.ts'
 import { sourceDetailFor } from './mock/sourceDetail.ts'
 import { createUnitIn, updateUnitIn } from './mock/units.ts'
+import { linkOfficeIn, productOffices } from './mock/offices.ts'
 import { toCsv } from '../lib/csv.ts'
 import { periodLabel } from '../lib/period.ts'
 
@@ -321,6 +322,20 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             return copy(updateUnitIn(requireOrg(org) ? sources : onboardingSources, unit))
+        },
+
+        // O mock entra como Desenvolvedor da LexGroup: conecta fontes em qualquer organização.
+        async listProductOffices(product) {
+            await wait()
+            requireSession()
+            return copy(productOffices[product])
+        },
+
+        async linkProductOffice(org, unit, product, ref) {
+            await wait()
+            requireSession()
+            const own = requireOrg(org)
+            return copy(linkOfficeIn(own ? sources : onboardingSources, own ? 'LexGroup' : org, unit, product, ref))
         },
 
         // Mesma regra da API: só a equipe RA (platform_staff) vê os clientes.

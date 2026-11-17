@@ -25,6 +25,8 @@ import type {
     SourcesResponse,
     UnitInput,
     UnitSources,
+    ProductKey,
+    ProductOffices,
     ExportRequest,
     ExportFile,
     AccessRequest,
@@ -98,6 +100,10 @@ export interface DataClient {
     // Owner/Desenvolvedor: criar unidade e mudar nome/fuso (o código não muda). Regra quebrada = 409 com a mensagem.
     createUnit(org: string, unit: UnitInput): Promise<UnitSources>
     updateUnit(org: string, unit: UnitInput): Promise<UnitSources>
+    // Conectar fonte (só a TI da LexGroup; os outros recebem 403). A lista vem do banco do produto (API);
+    // ligar grava a ref da unidade (Supabase). Escritório já ligado / unidade já ligada = 409 com a mensagem.
+    listProductOffices(product: ProductKey): Promise<ProductOffices>
+    linkProductOffice(org: string, unit: string, product: ProductKey, ref: string): Promise<UnitSources>
     // Plataforma: todas as organizações. Só Owner/Desenvolvedor da LexGroup e equipe RA; os outros recebem 403.
     listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>

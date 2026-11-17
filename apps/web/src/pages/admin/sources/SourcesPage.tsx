@@ -12,12 +12,10 @@ import { SourceList } from './SourceList.tsx'
 import { UnitNav } from './UnitNav.tsx'
 import { SourceDetailDialog } from './SourceDetailDialog.tsx'
 import { UnitFormDialog } from './UnitFormDialog.tsx'
-import type { DataSource, UnitInput } from '../../../types/index.ts'
+import { ConnectSourceDialog } from './ConnectSourceDialog.tsx'
+import type { DataSource, ProductKey, UnitInput } from '../../../types/index.ts'
 import { lastFailureLabel, pickUnit, syncNote } from './sourcesView.ts'
 import { timezoneLabel } from './unitForm.ts'
-
-// Conectar fonte ainda não existe (depende do worker de sincronização): o botão aparece e explica isso.
-const SOON = 'ainda não está disponível. Fale com a equipe RA.'
 
 // O formulário aberto: criar, ou editar a unidade que está na tela.
 type UnitForm = { mode: 'create' } | { mode: 'edit'; unit: UnitInput }
@@ -31,6 +29,7 @@ export function SourcesPage() {
     const [notice, setNotice] = useState<string | null>(null)
     const [open, setOpen] = useState<DataSource | null>(null) // a fonte do modal de detalhe
     const [form, setForm] = useState<UnitForm | null>(null)
+    const [connecting, setConnecting] = useState(false) // o modal Conectar fonte
 
     if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
@@ -45,20 +44,28 @@ export function SourcesPage() {
         pickUnitCode(saved.unit.code)
     }
 
+    async function linkOffice(product: ProductKey, ref: string) {
+        if (!current) return
+        await dataClient.linkProductOffice(org, current.unit.code, product, ref)
+        setVersion((v) => v + 1)
+        setNotice(`Escritório ligado a ${current.unit.name}. Os dashboards aparecem quando forem ativados para ela.`)
+    }
+
+    // Só a TI da LexGroup conecta fontes (o servidor confere de novo).
+    const connect = data.canManageSources && current ? () => setConnecting(true) : undefined
+
     return (
         <>
             <PageHeader
                 title="Unidades e fontes de dados"
                 description={syncNote(data.syncEveryMin)}
                 actions={
-                    <button
-                        className="btn btn-primary"
-                        type="button"
-                        onClick={() => setNotice(`Conectar fonte ${SOON}`)}
-                    >
-                        <Icon name="plug" size={16} />
-                        Conectar fonte
-                    </button>
+                    connect && (
+                        <button className="btn btn-primary" type="button" onClick={connect}>
+                            <Icon name="plug" size={16} />
+                            Conectar fonte
+                        </button>
+                    )
                 }
             />
             <div className="stack">
@@ -108,7 +115,7 @@ export function SourcesPage() {
                                     tone={current.lastFailure ? 'warn' : undefined}
                                 />
                             </div>
-                            <SourceList sources={current.sources} onOpen={setOpen} />
+                            <SourceList sources={current.sources} onOpen={setOpen} onConnect={connect} />
                         </div>
                     )}
                 </div>
@@ -120,6 +127,15 @@ export function SourcesPage() {
                     source={open.id}
                     name={open.name}
                     onClose={() => setOpen(null)}
+                />
+            )}
+            {connecting && current && (
+                <ConnectSourceDialog
+                    unit={current.unit}
+                    sources={current.sources}
+                    loadOffices={(product) => dataClient.listProductOffices(product)}
+                    onLink={linkOffice}
+                    onClose={() => setConnecting(false)}
                 />
             )}
             {form && (
