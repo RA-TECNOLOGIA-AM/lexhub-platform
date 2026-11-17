@@ -59,6 +59,11 @@ class SourceUnavailable(Exception):
     """Banco de origem (ou planilha) desligado, fora do ar ou sem resposta no momento."""
 
 
+class ConnectionLost(Exception):
+    """A conexão caiu no meio da consulta, e o asyncpg avisou com um InterfaceError
+    ("the underlying connection is closed") no lugar do erro original."""
+
+
 def connect_hint(exc: BaseException) -> str:
     """Tipo do erro + uma dica do que costuma ser (sem a mensagem, que pode trazer host/usuário)."""
     name = type(exc).__name__
@@ -292,10 +297,19 @@ async def run_with_connection_retry[T](
         (statement_timeout do servidor): o banco segue 'up' (lentidão não é queda).
     """
     for attempt in range(1, max_retries + 1):
-        conn: asyncpg.Connection | None = None
         try:
             async with manager.get_connection(db_name) as conn:
-                return await operation(conn)
+                try:
+                    return await operation(conn)
+                except asyncpg.InterfaceError as exc:
+                    # Quando a conexão cai no meio de uma transação, o asyncpg esconde o erro
+                    # original (ConnectionDoesNotExistError) atrás de "the underlying connection
+                    # is closed", ao fechar a transação. A pergunta tem de ser feita aqui dentro:
+                    # depois que a conexão volta ao pool, o proxy recusa qualquer chamada.
+                    # Com a conexão aberta, InterfaceError é bug: sobe na hora, sem repetir.
+                    if not conn.is_closed():
+                        raise
+                    raise ConnectionLost(db_name) from exc
         except SourceUnavailable:
             raise
         except TimeoutError as exc:  # antes dos transitórios: TimeoutError também é um OSError
@@ -314,15 +328,8 @@ async def run_with_connection_retry[T](
                 db_name,
             )
             raise SourceUnavailable(db_name) from exc
-        except asyncpg.InterfaceError as exc:
-            # Quando a conexão cai no meio de uma transação, o asyncpg esconde o erro original
-            # (ConnectionDoesNotExistError) atrás de "the underlying connection is closed", ao
-            # fechar a transação. Com a conexão aberta, InterfaceError é bug: não repete.
-            if conn is None or not conn.is_closed():
-                raise
+        except (*_RETRYABLE_DB_ERRORS, ConnectionLost) as exc:
             failure: Exception = exc
-        except _RETRYABLE_DB_ERRORS as exc:
-            failure = exc
         logger.warning(
             "Falha transitória ao executar '%s' em '%s' (tentativa %d/%d): %s",
             operation_name,
@@ -332,7 +339,7 @@ async def run_with_connection_retry[T](
             type(failure).__name__,
         )
         if attempt >= max_retries:
-            if isinstance(failure, (*CONNECTION_ERRORS, asyncpg.InterfaceError)):
+            if isinstance(failure, (*CONNECTION_ERRORS, ConnectionLost)):
                 manager.report_failure(db_name, failure)
                 raise SourceUnavailable(db_name) from failure
             raise failure
