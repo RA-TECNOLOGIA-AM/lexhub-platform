@@ -107,6 +107,12 @@ services:
       # Uma réplica só: cada réplica tem o próprio aquecedor, que repetiria as 37 consultas
       # nos bancos de origem
       replicas: 1
+      placement:
+        # Fixa no worker1 (46.224.164.226), o IP liberado no firewall do NG: a saída para os
+        # bancos usa o IP do nó onde o container roda, e em outro nó o NG fica inalcançável.
+        # Custo: se o worker1 cair, a API não muda de nó. Para tirar isto, libere antes o IP do
+        # manager1 (167.233.234.255) no NG.
+        constraints: [node.hostname == worker1]
       labels:
         - 'traefik.enable=true'
         # Só as rotas usadas pelo front saem para a internet; /health, /health/sources e
@@ -124,8 +130,8 @@ services:
         limits: { cpus: '3', memory: 6144M }
       update_config:
         # Sobe a réplica nova antes de derrubar a antiga; por alguns segundos as duas rodam
-        # juntas, então o nó precisa de RAM para as duas. Se a nova não ficar saudável em
-        # 60 s, volta para a versão anterior.
+        # juntas no worker1, então ele precisa de RAM para as duas. Se a nova não ficar
+        # saudável em 60 s, volta para a versão anterior.
         order: start-first
         monitor: 60s
         failure_action: rollback
