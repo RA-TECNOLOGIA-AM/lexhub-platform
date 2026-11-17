@@ -3,14 +3,13 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { DataError } from '../../services/errors.ts'
 import { dataClient } from '../../services/client.ts'
 import { Icon } from '../../components/ui/Icon.tsx'
-
-const USER_CODE = /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/
+import { formatUserCode, normalizeUserCode } from './userCode.ts'
 
 export function DeviceActivationPage() {
     const [params] = useSearchParams()
     const location = useLocation()
     const navigate = useNavigate()
-    const [code, setCode] = useState(params.get('code') ?? '')
+    const [code, setCode] = useState(formatUserCode(params.get('code') ?? ''))
     const [checkingSession, setCheckingSession] = useState(true)
     const [submitting, setSubmitting] = useState(false)
     const [authorized, setAuthorized] = useState(false)
@@ -43,9 +42,9 @@ export function DeviceActivationPage() {
 
     async function submit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
-        const normalized = code.trim().toUpperCase()
-        if (!USER_CODE.test(normalized)) {
-            setError('Digite o código no formato ABCD-EFGH.')
+        const normalized = normalizeUserCode(code)
+        if (!normalized) {
+            setError('Digite os 8 caracteres do código que aparece na TV.')
             return
         }
 
@@ -117,10 +116,9 @@ export function DeviceActivationPage() {
                                 id="device-code"
                                 autoComplete="one-time-code"
                                 autoCapitalize="characters"
-                                maxLength={9}
                                 placeholder="ABCD-EFGH"
                                 value={code}
-                                onChange={(event) => setCode(event.target.value.toUpperCase())}
+                                onChange={(event) => setCode(formatUserCode(event.target.value))}
                                 disabled={submitting}
                             />
                         </div>
@@ -139,7 +137,7 @@ export function DeviceActivationPage() {
                 <div className="stack" style={{ gap: 8, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
                     {others === 'done' ? (
                         <p className="muted small" role="status">
-                            Pronto. TVs e outros aparelhos saem da sua conta em até 1 hora e voltam para o QR Code.
+                            Pronto. Os outros aparelhos saem da sua conta em até 1 minuto; as TVs voltam para o QR Code.
                         </p>
                     ) : others === 'idle' ? (
                         <button className="btn btn-block" type="button" onClick={() => setOthers('confirm')}>
@@ -149,8 +147,8 @@ export function DeviceActivationPage() {
                     ) : (
                         <>
                             <p className="muted small">
-                                Todas as TVs e outros aparelhos conectados à sua conta vão sair. Este celular continua
-                                logado.
+                                Sua conta sai de todos os outros lugares onde está aberta: TVs, computadores e
+                                celulares. Só este aparelho continua conectado.
                             </p>
                             <div className="row" style={{ gap: 8 }}>
                                 <button

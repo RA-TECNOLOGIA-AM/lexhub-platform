@@ -48,6 +48,31 @@ describe('createTvSession', () => {
     })
 })
 
+describe('watchTvSession com conferência no servidor', () => {
+    it('sessão derrubada em outro aparelho: a TV sai no minuto seguinte', async () => {
+        vi.useFakeTimers()
+        const session = createTvSession(memoryStorage(), () => 0)
+        session.start()
+        const onExpire = vi.fn()
+        const stop = watchTvSession(session, onExpire, { isAlive: async () => false })
+        await vi.advanceTimersByTimeAsync(60_000)
+        expect(onExpire).toHaveBeenCalledTimes(1)
+        stop()
+        vi.useRealTimers()
+    })
+
+    it('fora de um login pela TV não pergunta nada ao servidor', async () => {
+        vi.useFakeTimers()
+        const session = createTvSession(memoryStorage(), () => 0)
+        const isAlive = vi.fn(async () => false)
+        const stop = watchTvSession(session, vi.fn(), { isAlive })
+        await vi.advanceTimersByTimeAsync(60_000 * 3)
+        expect(isAlive).not.toHaveBeenCalled()
+        stop()
+        vi.useRealTimers()
+    })
+})
+
 describe('watchTvSession', () => {
     it('confere de minuto em minuto e chama onExpire uma vez só', () => {
         vi.useFakeTimers()
