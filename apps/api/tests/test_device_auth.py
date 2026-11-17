@@ -73,7 +73,9 @@ async def _user_by_id(user_id: str):
 
 
 @pytest.fixture
-def device_auth(client):
+def device_auth(client, me_repo):
+    # Quem aprova a TV é membro de uma organização (o caso normal).
+    me_repo.add(USER_ID, SimpleNamespace(slug="lexgroup"), SimpleNamespace())
     repository = FakeDeviceAuthRepository()
     auth = FakeSupabaseAuth()
     otp_auth = FakeOtpAuth()
@@ -150,6 +152,22 @@ def test_authorize_requires_validated_bearer_and_approves_code(device_auth):
         digest_device_value(settings.supabase_secret_key, "user", user_code),
         USER_ID,
     )
+
+
+def test_authorize_refuses_account_without_lexhub_access(device_auth, me_repo):
+    """Conta Google sem organização (ex.: pediu acesso e ainda não foi aprovada) não liga TV."""
+    client, repository, _, _, _ = device_auth
+    me_repo.memberships.clear()
+
+    response = client.post(
+        "/auth/device/authorize",
+        headers={"Authorization": "Bearer mobile-token"},
+        json={"user_code": "ABCD-EFGH"},
+    )
+
+    assert response.status_code == 403
+    assert "acesso" in response.json()["detail"]
+    assert repository.approved is None
 
 
 def test_authorize_rate_limit_restricts_user_code_guessing(device_auth):
