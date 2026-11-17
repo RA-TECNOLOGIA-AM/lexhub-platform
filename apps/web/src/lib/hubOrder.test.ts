@@ -5,11 +5,13 @@ const items = (...keys: string[]) => keys.map((key) => ({ key }))
 const keysOf = (list: { key: string }[]) => list.map((x) => x.key)
 
 describe('hubOrder', () => {
-    it('Gestão sobe para o topo das áreas; o resto mantém a ordem do catálogo', () => {
-        expect(sortAreas(['Comercial', 'Operação jurídica', 'Gestão'])).toEqual([
-            'Gestão',
+    it('áreas na ordem das abas do hub; área fora da lista vai para o fim, na ordem do catálogo', () => {
+        expect(sortAreas(['Outros', 'Estratégico', 'Pré-protocolo', 'Comercial', 'Antiga'])).toEqual([
             'Comercial',
-            'Operação jurídica',
+            'Pré-protocolo',
+            'Estratégico',
+            'Outros',
+            'Antiga',
         ])
         expect(sortAreas(['B', 'A'], [])).toEqual(['B', 'A'])
     })

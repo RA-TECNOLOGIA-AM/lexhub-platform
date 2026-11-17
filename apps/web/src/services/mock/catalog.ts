@@ -96,11 +96,19 @@ export const catalog: DashboardCatalog = {
             syncedMin: 180,
         }),
 
-        // Operação jurídica
+        // Pré-protocolo (o geral primeiro, depois cada setor)
+        entry({
+            key: 'pre-protocolo',
+            title: 'Pré-protocolo',
+            area: 'Pré-protocolo',
+            desc: 'Processos em preparação para o protocolo.',
+            units: ALL,
+            syncedMin: 6,
+        }),
         entry({
             key: 'protocolo',
             title: 'Protocolo',
-            area: 'Operação jurídica',
+            area: 'Pré-protocolo',
             desc: 'Métricas de protocolo, represados e comissionamento do setor (banco legado).',
             units: ALL,
             source: 'NG · LA',
@@ -108,14 +116,14 @@ export const catalog: DashboardCatalog = {
         entry({
             key: 'protocolo-lexpre',
             title: 'Protocolo (LexPre)',
-            area: 'Operação jurídica',
+            area: 'Pré-protocolo',
             desc: 'Protocolados, represados e devoluções do setor Protocolo.',
             units: ALL,
         }),
         entry({
             key: 'pendencias',
             title: 'Pendências',
-            area: 'Operação jurídica',
+            area: 'Pré-protocolo',
             desc: 'Pendências abertas, resolvidas e tempo de resolução.',
             units: ALL,
             source: 'NG · LA',
@@ -123,14 +131,14 @@ export const catalog: DashboardCatalog = {
         entry({
             key: 'pendencias-lexpre',
             title: 'Pendências (LexPre)',
-            area: 'Operação jurídica',
+            area: 'Pré-protocolo',
             desc: 'Pendências abertas, resolvidas e tempo de resolução.',
             units: ALL,
         }),
         entry({
             key: 'org-documentos',
             title: 'Organização de Documentos',
-            area: 'Operação jurídica',
+            area: 'Pré-protocolo',
             desc: 'Documentos organizados e devolvidos.',
             units: ALL,
             source: 'NG · LA',
@@ -138,14 +146,14 @@ export const catalog: DashboardCatalog = {
         entry({
             key: 'org-documentos-lexpre',
             title: 'Organização de Documentos (LexPre)',
-            area: 'Operação jurídica',
+            area: 'Pré-protocolo',
             desc: 'Documentos organizados e devolvidos.',
             units: ALL,
         }),
         entry({
             key: 'peticionamento',
             title: 'Peticionamento',
-            area: 'Operação jurídica',
+            area: 'Pré-protocolo',
             desc: 'Peticionados, represados e valor de causa.',
             units: ALL,
             source: 'NG · LA',
@@ -153,24 +161,16 @@ export const catalog: DashboardCatalog = {
         entry({
             key: 'peticionamento-lexpre',
             title: 'Peticionamento (LexPre)',
-            area: 'Operação jurídica',
+            area: 'Pré-protocolo',
             desc: 'Peticionados, represados e valor de causa.',
             units: ALL,
         }),
-        entry({
-            key: 'pre-protocolo',
-            title: 'Pré-protocolo',
-            area: 'Operação jurídica',
-            desc: 'Processos em preparação para o protocolo.',
-            units: ALL,
-            syncedMin: 6,
-        }),
 
-        // Execução e recursal
+        // Jurídico
         entry({
             key: 'execucao',
             title: 'Execução',
-            area: 'Execução e recursal',
+            area: 'Jurídico',
             desc: 'Processos em execução e valores.',
             units: ALL,
             source: 'LexFlow',
@@ -179,7 +179,7 @@ export const catalog: DashboardCatalog = {
         entry({
             key: 'acordos',
             title: 'Acordos',
-            area: 'Execução e recursal',
+            area: 'Jurídico',
             desc: 'Acordos fechados e valores.',
             units: ALL,
             source: 'LexFlow',
@@ -188,36 +188,38 @@ export const catalog: DashboardCatalog = {
         entry({
             key: 'recursal',
             title: 'Recursal',
-            area: 'Execução e recursal',
+            area: 'Jurídico',
             desc: 'Recursos e julgados.',
             units: NG_AM,
             source: 'LexFlow',
             syncedMin: 6,
         }),
 
-        // Gestão
+        // Financeiro
+        entry({
+            key: 'despesas',
+            title: 'Despesas',
+            area: 'Financeiro',
+            desc: 'Contas a pagar e a receber.',
+            units: ['Consolidado'],
+            source: 'Conta Azul',
+            syncedMin: 12,
+        }),
+
+        // Estratégico
         entry({
             key: 'estrategico',
             title: 'Estratégico',
-            area: 'Gestão',
+            area: 'Estratégico',
             desc: 'Visão geral das unidades.',
             units: ['Consolidado'],
             source: '3 unidades',
             syncedMin: 10,
         }),
         entry({
-            key: 'despesas',
-            title: 'Despesas',
-            area: 'Gestão',
-            desc: 'Contas a pagar e a receber.',
-            units: ['Consolidado'],
-            source: 'Conta Azul',
-            syncedMin: 12,
-        }),
-        entry({
             key: 'meta-anual',
             title: 'Meta anual',
-            area: 'Gestão',
+            area: 'Estratégico',
             desc: 'Meta do ano e quanto já foi atingido.',
             units: NG_AM,
             syncedMin: 60,

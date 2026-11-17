@@ -1,14 +1,15 @@
 // Módulo: as regras de ordem do hub, sem React (testadas em hubOrder.test.ts).
 // A ordem salva é UMA lista de keys para o hub inteiro; cada seção ordena os seus cards por ela.
 
-// Áreas que sobem para logo abaixo de Favoritos, nesta ordem. As outras seguem a ordem do catálogo.
-export const AREA_PRIORITY = ['Gestão']
+// As abas (seções) do hub, nesta ordem, logo abaixo de Favoritos. Aparecem mesmo sem dashboard
+// (as análises ainda vão ser migradas). Área fora da lista vai para o fim, na ordem do catálogo.
+export const HUB_AREAS = ['Comercial', 'Pré-protocolo', 'Tecnologia', 'Jurídico', 'Financeiro', 'Estratégico']
 
-// ['Comercial', 'Gestão', 'Operação jurídica'] -> ['Gestão', 'Comercial', 'Operação jurídica']
-export function sortAreas(areas: string[], priority: string[] = AREA_PRIORITY): string[] {
+// ['Estratégico', 'Outros', 'Comercial'] -> ['Comercial', 'Estratégico', 'Outros']
+export function sortAreas(areas: string[], order: string[] = HUB_AREAS): string[] {
     const rank = (area: string) => {
-        const i = priority.indexOf(area)
-        return i === -1 ? priority.length : i
+        const i = order.indexOf(area)
+        return i === -1 ? order.length : i
     }
     return [...areas].sort((a, b) => rank(a) - rank(b)) // o sort é estável: empate mantém a ordem do catálogo
 }

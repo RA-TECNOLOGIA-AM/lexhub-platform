@@ -4125,3 +4125,135 @@ button.at-name:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* ---------- Hub: escolha de visualização (Quadro | Lista) e o quadro em colunas ---------- */
+.hub-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.view-toggle {
+    border-radius: var(--r-md);
+}
+.view-toggle button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    border-radius: calc(var(--r-md) - 3px);
+}
+.view-toggle button.on {
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 0 0 1px var(--border-strong);
+}
+
+/* As colunas ficam lado a lado e o quadro rola na horizontal (a página não). */
+.board {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scroll-snap-type: x proximity;
+}
+.board-col {
+    flex: 0 0 min(320px, 85vw);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    background: color-mix(in srgb, var(--col) 5%, var(--card-muted));
+    scroll-snap-align: start;
+    transition:
+        background-color 0.15s,
+        outline-color 0.15s;
+}
+.board-col.over {
+    background: var(--accent-soft);
+    outline: 2px dashed var(--accent);
+    outline-offset: 2px;
+}
+.board-col-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 4px 9px;
+    border-bottom: 2px solid color-mix(in srgb, var(--col) 70%, transparent);
+}
+.board-dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--col);
+}
+.board-col-title {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: 600;
+}
+.board-count {
+    margin-left: auto;
+    padding: 1px 9px;
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--col) 22%, transparent);
+    font-family: var(--num);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+}
+.board-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.board-col .dcard {
+    min-height: 0;
+    gap: 8px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--col);
+}
+.board-col .dcard .title {
+    font-size: var(--fs-md);
+}
+.board-hint {
+    margin: 0;
+    padding: 14px;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-md);
+}
+/* Coluna sem dashboard: uma faixa estreita com o nome na vertical (como uma etapa vazia de quadro). */
+.board-col.collapsed {
+    flex: 0 0 46px;
+    align-self: stretch;
+    min-height: 220px;
+    padding: 12px 0;
+    border-style: dashed;
+    background: transparent;
+}
+.board-col.collapsed .board-col-head {
+    flex-direction: column;
+    padding: 0;
+    border: 0;
+}
+.board-col.collapsed .board-col-title {
+    writing-mode: vertical-rl;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+}
+.board-col.collapsed .board-count {
+    order: 3;
+    margin: 0;
+    padding: 0;
+    background: none;
+    color: var(--text-faint);
+}
+@media (prefers-reduced-motion: reduce) {
+    .board-col {
+        transition: none;
+    }
+}
