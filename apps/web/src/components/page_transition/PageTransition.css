@@ -24,6 +24,13 @@
     filter: drop-shadow(0 0 8px var(--loader-glow));
 }
 
+/* Troca de página dentro do app: cobre só o miolo (top e left medidos no PageTransitionProvider), com menu
+   lateral e topbar à vista. Acima do que flutua no conteúdo (faixa do dashboard, menus de filtro) e abaixo
+   da gaveta do menu no celular (20). */
+.transition-overlay.in-content {
+    z-index: 15;
+}
+
 /* Saída da transição */
 .transition-overlay.exiting {
     animation: overlayExit 0.45s ease-in-out forwards;
