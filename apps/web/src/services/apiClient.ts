@@ -135,10 +135,12 @@ export function createApiClient({
             dashboard<T>(dashboardKey)(query),
 
         // Mesmo formato da v1: ?format=xlsx&campos=id_demanda&campos=materia&from=...&materia=ANP
-        async exportDashboard({ org, unit, dashboard, format, campos, ...query }) {
+        async exportDashboard({ org, unit, dashboard, format, campos, relatorio, opcoes, ...query }) {
             const params = paramsFromQuery(query)
             params.set('format', format)
             for (const campo of campos) params.append('campos', campo)
+            if (relatorio) params.set('relatorio', relatorio)
+            for (const [chave, valor] of Object.entries(opcoes ?? {})) params.set(chave, valor)
             const path = `/orgs/${org}/units/${unit}/dashboards/${dashboard}/export?${params}`
             const { blob, filename } = await http.file(path)
             return { blob, filename: filename ?? `${dashboard}_${unit}.${format}` }

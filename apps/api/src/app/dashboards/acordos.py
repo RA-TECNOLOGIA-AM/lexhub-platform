@@ -7,9 +7,11 @@ agora (total e valor em execução, processos sem valor de alçada), as distribu
 subfase, sentença, tipo de ação, comarca) e os gráficos "mês a mês".
 """
 
-from app.dashboards import generico_v1
+from dataclasses import replace
 
-MODULE = generico_v1.modulo(
+from app.dashboards import execucao_export, generico_v1
+
+_MODULO = generico_v1.modulo(
     key="acordos",
     v1_por_unidade={
         "NG": "execucao_acordos_NG",
@@ -38,4 +40,11 @@ MODULE = generico_v1.modulo(
         "execucao_acordos_resolvidos_por_dia_NG",
         "execucao_acordos_resolvidos_por_dia_por_prazo_NG",
     ),
+)
+
+# A exportação da v1 (execucao_export.py).
+MODULE = replace(
+    _MODULO,
+    export=execucao_export.ACORDOS,
+    export_reports={"atividades": execucao_export.ATIVIDADES_ACORDOS},
 )

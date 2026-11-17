@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { BarList } from '../../../components/charts/BarList.tsx'
+import { PieChart } from '../../../components/charts/PieChart.tsx'
 import { ChartCard } from '../../../components/charts/ChartCard.tsx'
 import { DashSection } from '../../../components/dashboard/DashSection.tsx'
-import { FootRow, HeroStat, MiniStat, Pill } from '../../../components/dashboard/StatCard.tsx'
+import { FootRow, HeroStat, Pill } from '../../../components/dashboard/StatCard.tsx'
 import { CountUp } from '../../../components/ui/CountUp.tsx'
 import { Segmented } from '../../../components/ui/Segmented.tsx'
 import { pickSingle, toggleFilter } from '../../../lib/filters.ts'
@@ -12,7 +13,7 @@ import type { ContentProps } from '../types.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
 import { AtividadesSection } from '../execucao/AtividadesSection.tsx'
 import { DiligenciasSection } from '../execucao/DiligenciasSection.tsx'
-import { ComarcaCard, MesAMes, PizzaLegenda, ProcessosTabela, SemValorAviso, TreCard } from '../execucao/partes.tsx'
+import { ComarcaCard, MesAMes, ProcessosTabela, SemValorAviso, TreCard } from '../execucao/partes.tsx'
 import { lerAcordosNG } from './execucaoAcordos.ts'
 
 const valor = (v: number | null, format: (n: number) => string) =>
@@ -70,10 +71,12 @@ export function AcordosNGContent({ data, filters = {}, onFiltersChange }: Conten
                 title="Indicadores"
                 subtitle="Volume em execução, acordos com entrada e pagos, valores de alçada final e tempos no intervalo selecionado."
             >
-                <div className="grid grid-stat">
+                {/* Como a Execução: o estoque de agora em cima; embaixo, 4 colunas em 2 linhas, com o estoque
+                    inicial ocupando as duas (sem incontroverso e remanescente, que os acordos não têm). */}
+                <div className="grid ex-ind-topo">
                     <HeroStat
                         label="Total em execução de acordos"
-                        icon="scale"
+                        icon="check-circle"
                         tone="accent"
                         value={valor(a.totalEmExecucao, fmt.int)}
                         hint="Processos na fase de Execução com a etiqueta 'Acordo' ou a data de acordo fechado preenchida, agora (independente do período)."
@@ -84,7 +87,7 @@ export function AcordosNGContent({ data, filters = {}, onFiltersChange }: Conten
                         icon="dollar"
                         tone="ok"
                         value={valor(a.valorTotal, fmt.brl)}
-                        hint="Soma do VALOR_ALCADA_FINAL dos acordos em execução agora, independente do período."
+                        hint="Soma do VALOR_ALCADA_FINAL dos acordos em execução agora, independente do período. Ticket médio: valor total ÷ total em execução de acordos."
                         footer={
                             <FootRow
                                 left="Ticket médio total"
@@ -96,13 +99,14 @@ export function AcordosNGContent({ data, filters = {}, onFiltersChange }: Conten
                             />
                         }
                     />
+                </div>
+                <div className="grid ex-ind ex-ind-4">
                     <HeroStat
                         label="Entradas de acordos"
-                        icon="trend-up"
+                        icon="check-circle"
                         tone="info"
                         value={valor(a.entradas, fmt.int)}
                         hint="Processos com a etiqueta 'Acordo' cuja DATA DE EXECUÇÃO está no período, independente da fase atual (a fase muda depois, ex.: acordo pago e arquivado)."
-                        footer={<FootRow left="Pela data da execução" right={<Pill tone="info">no período</Pill>} />}
                     />
                     <HeroStat
                         label="Acordos pagos no período"
@@ -110,53 +114,48 @@ export function AcordosNGContent({ data, filters = {}, onFiltersChange }: Conten
                         tone="ok"
                         value={valor(a.pagos, fmt.int)}
                         hint="Processos em Execução cuja DATA PAGAMENTO ACORDO está no período."
-                        footer={<FootRow left="Pela data do pagamento" right={<Pill tone="ok">no período</Pill>} />}
                     />
-                </div>
-                <div className="grid grid-mini-5 grid-mini grid-mini-stack">
-                    <MiniStat
+                    <HeroStat
+                        label="Média de tempo"
+                        icon="clock"
+                        tone="info"
+                        value={valor(a.mediaTempo, fmt.duracao)}
+                        hint="Média do tempo da DATA EXECUÇÃO até a DATA PAGAMENTO ACORDO dos acordos pagos no período."
+                    />
+                    <HeroStat
+                        className="ex-ind-alto"
+                        label="Estoque inicial do período anterior"
+                        icon="scale"
+                        tone="neutral"
+                        value={valor(a.estoqueInicial, fmt.int)}
+                        hint="Estoque inicial de acordos em execução considerado para o período: a base de entradas, saídas e da TRE."
+                    />
+                    <HeroStat
                         label="Valor de entradas de acordos"
                         icon="dollar"
                         tone="info"
                         value={valor(a.valorEntradas, fmt.brl)}
                         below={
                             <span className="muted small">
-                                Ticket médio {fmt.brl(razao(a.valorEntradas, a.entradas) ?? 0)}
+                                Ticket médio:{' '}
+                                <strong className="num">{fmt.brl(razao(a.valorEntradas, a.entradas) ?? 0)}</strong>
                             </span>
                         }
-                        hint="Soma do VALOR_ALCADA_FINAL dos acordos com entrada no período (mesmo critério de 'Entradas de acordos')."
+                        hint="Soma do VALOR_ALCADA_FINAL dos acordos com entrada no período (mesmo critério de 'Entradas de acordos'). Ticket médio: valor ÷ entradas."
                     />
-                    <MiniStat
+                    <HeroStat
                         label="Valor de acordos pagos"
                         icon="dollar"
                         tone="ok"
                         value={valor(a.valorPagos, fmt.brl)}
-                        below={<span className="muted small">no período</span>}
                         hint="Soma do VALOR_ALCADA_FINAL dos processos cuja DATA PAGAMENTO ACORDO está no período."
                     />
-                    <MiniStat
-                        label="Média de tempo"
-                        icon="clock"
-                        tone="info"
-                        value={valor(a.mediaTempo, fmt.duracao)}
-                        below={<span className="muted small">da execução ao pagamento</span>}
-                        hint="Média do tempo da DATA EXECUÇÃO até a DATA PAGAMENTO ACORDO dos acordos pagos no período."
-                    />
-                    <MiniStat
+                    <HeroStat
                         label="Mediana de tempo"
                         icon="clock"
                         tone="info"
                         value={valor(a.medianaTempo, fmt.duracao)}
-                        below={<span className="muted small">da execução ao pagamento</span>}
                         hint="Metade dos acordos pagos no período levou até este tempo da execução ao pagamento."
-                    />
-                    <MiniStat
-                        label="Estoque inicial do período anterior"
-                        icon="layers"
-                        tone="neutral"
-                        value={valor(a.estoqueInicial, fmt.int)}
-                        below={<span className="muted small">base de entradas e saídas</span>}
-                        hint="Estoque inicial de acordos em execução considerado para o período: a base de entradas, saídas e da TRE."
                     />
                 </div>
             </DashSection>
@@ -200,32 +199,46 @@ export function AcordosNGContent({ data, filters = {}, onFiltersChange }: Conten
                     </ChartCard>
                     <TreCard tre={a.tre} />
                 </div>
-                <div className="grid taxas-grid ex-mt">
-                    <ChartCard title="Pré x Pós-Sentença" subtitle="Pelas etiquetas do processo no LexFlow">
-                        <PizzaLegenda
+                <ChartCard
+                    className="ex-mt"
+                    title="Execução de acordos por matéria"
+                    subtitle={`${fmt.int(a.porMateria.reduce((s, p) => s + p.value, 0))} acordos em execução agora · ${a.porMateria.length} matérias · clique numa matéria para filtrar a página`}
+                >
+                    <PieChart
+                        items={a.porMateria}
+                        centerLabel="acordos"
+                        labels
+                        selected={filters.materia}
+                        onSelect={alternar && ((v) => alternar('materia', v))}
+                        selectLabel="Filtrar pela matéria"
+                    />
+                </ChartCard>
+                <div className="grid dist-grid ex-duo ex-pizzas ex-mt">
+                    <ChartCard
+                        title="Pré x Pós-Sentença"
+                        subtitle="Pelas etiquetas do processo no LexFlow · clique para filtrar a página"
+                    >
+                        <PieChart
                             items={a.porSentenca}
                             centerLabel="acordos"
+                            labels
+                            labelsTwoLines
+                            size={240}
                             selected={filters.tipo_sentenca_execucao_acordos}
                             onSelect={escolher && ((v) => escolher('tipo_sentenca_execucao_acordos', v))}
                             selectLabel="Filtrar por"
                         />
                     </ChartCard>
                     <ChartCard
-                        title="Execução de acordos por matéria"
-                        subtitle="Acordos em execução agora, por matéria"
+                        title="Judicial x Extrajudicial"
+                        subtitle="Pelas etiquetas do processo no LexFlow · clique para filtrar a página"
                     >
-                        <PizzaLegenda
-                            items={a.porMateria}
-                            centerLabel="acordos"
-                            selected={filters.materia}
-                            onSelect={alternar && ((v) => alternar('materia', v))}
-                            selectLabel="Filtrar pela matéria"
-                        />
-                    </ChartCard>
-                    <ChartCard title="Judicial x Extrajudicial" subtitle="Pelas etiquetas do processo no LexFlow">
-                        <PizzaLegenda
+                        <PieChart
                             items={a.porTipoAcao}
                             centerLabel="acordos"
+                            labels
+                            labelsTwoLines
+                            size={240}
                             selected={filters.tipo_acao_execucao_acordos}
                             onSelect={escolher && ((v) => escolher('tipo_acao_execucao_acordos', v))}
                             selectLabel="Filtrar por"

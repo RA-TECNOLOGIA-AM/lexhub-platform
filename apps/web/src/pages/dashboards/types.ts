@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react'
 import type { DashboardFilters, DashboardQuery, Meta } from '../../types/index.ts'
 import type { FilterField } from '../../lib/filters.ts'
-import type { ExportGroup } from '../../lib/exportFields.ts'
+import type { ExportGroup, ExportReport } from '../../lib/exportFields.ts'
 import type { CommissionTable } from '../../lib/commissionReport.ts'
 
 // Contrato de um dashboard: tudo o que muda de um para outro, passado como parâmetro.
@@ -12,6 +12,8 @@ export type DashboardModule<T extends { meta: Meta }> = {
     Content: ComponentType<ContentProps<T>> // o miolo da página (KPIs, gráficos...)
     filters?: (data: T) => FilterField[] // os filtros deste dashboard (opções vêm da resposta); sem = não tem filtros
     exportFields?: ExportGroup[] // campos do relatório (cópia da lista do servidor); sem = não exporta ainda
+    // Mais de um relatório e/ou escolhas além dos campos (recorte, visão), como na v1. Tem preferência sobre exportFields.
+    exportReports?: ExportReport[]
     // Tabela de comissão do período para o "Gerar comissão (PDF)"; sem = o botão não aparece. Vem da resposta,
     // e o botão só aparece para quem vê a comissão de todos (can_see_commission: Gestor/Desenvolvedor, como na v1).
     commission?: (data: T) => CommissionTable

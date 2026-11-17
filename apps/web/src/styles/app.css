@@ -5322,59 +5322,6 @@ body {
     border-radius: inherit;
     background: var(--danger);
 }
-/* pizza com a legenda ao lado (matérias da Execução) */
-.ex-pizza {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 20px;
-    flex-wrap: wrap;
-}
-.ex-pizza-leg {
-    flex: 1 1 220px;
-    max-width: 340px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: var(--fs-sm);
-}
-.ex-pizza-leg li > button,
-.ex-pizza-leg li > div {
-    width: 100%;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto 52px;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 8px;
-    border: 0;
-    border-radius: var(--r-sm);
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-}
-.ex-pizza-leg li > button {
-    cursor: pointer;
-}
-.ex-pizza-leg li.on > *,
-.ex-pizza-leg li > button:hover {
-    background: var(--accent-soft);
-}
-.ex-pizza-leg li.dim {
-    opacity: 0.45;
-}
-.ex-pizza-leg .num:last-child {
-    text-align: right;
-}
-.ex-pizza-nome {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
 /* Seção 01 da Execução (como a v1): 2 cards do estoque de agora; embaixo, 5 colunas em 2 linhas, com o
    estoque inicial ocupando as duas (4ª coluna de cada linha = tempo, 5ª = estoque inicial). */
 .ex-ind-topo {
@@ -5614,4 +5561,52 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
     vertical-align: middle;
+}
+/* TRE: o medidor maior acompanha o card (--gs = largura do medidor); número e escala crescem junto */
+.ex-gauge .gauge-center {
+    bottom: calc(var(--gs) * 0.1);
+}
+.ex-gauge .gauge-center strong {
+    font-size: clamp(32px, calc(var(--gs) * 0.15), 60px);
+}
+.ex-gauge .gauge-scale {
+    font-size: clamp(12px, calc(var(--gs) * 0.038), 16px);
+}
+/* Indicadores dos Acordos: 3 colunas + o estoque inicial na 4ª (sem incontroverso e remanescente) */
+.ex-ind.ex-ind-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.ex-ind.ex-ind-4 .ex-ind-alto {
+    grid-column: 4;
+}
+@media (max-width: 1200px) {
+    .ex-ind.ex-ind-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .ex-ind.ex-ind-4 .ex-ind-alto {
+        grid-column: auto;
+    }
+}
+@media (max-width: 640px) {
+    .ex-ind.ex-ind-4 {
+        grid-template-columns: 1fr;
+    }
+}
+/* Pré x Pós-Sentença e Judicial x Extrajudicial lado a lado só com espaço para os rótulos; senão, um embaixo do outro */
+@media (max-width: 1300px) {
+    .ex-duo.ex-pizzas {
+        grid-template-columns: 1fr;
+    }
+}
+/* Janela de exportação: o relatório e as opções dele (ex.: o recorte Entradas/Saídas/Total), acima dos campos */
+.export-opcoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    margin-bottom: 14px;
+}
+.export-opcao {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }

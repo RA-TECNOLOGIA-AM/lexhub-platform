@@ -1,5 +1,6 @@
 import { dataClient } from '../../../services/client.ts'
 import type { DashboardModule } from '../types.ts'
+import { acordosExport } from './exportFields.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
 import { AcordosContent } from './AcordosContent.tsx'
 import { acordosFilters } from './filters.ts'
@@ -9,6 +10,7 @@ import { acordosFilters } from './filters.ts'
 export const acordos: DashboardModule<V1GenericoResponse> = {
     key: 'acordos',
     fetch: (query) => dataClient.getDashboardData<V1GenericoResponse>('acordos', query),
+    exportReports: acordosExport,
     Content: AcordosContent,
     filters: acordosFilters,
 }

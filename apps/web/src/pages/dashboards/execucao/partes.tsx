@@ -1,15 +1,15 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { ChartCard, ChartEmpty } from '../../../components/charts/ChartCard.tsx'
 import { GaugeChart } from '../../../components/charts/GaugeChart.tsx'
 import { LineChart } from '../../../components/charts/LineChart.tsx'
 import { MapaComarcas } from '../../../components/charts/MapaComarcas.tsx'
-import { PieChart } from '../../../components/charts/PieChart.tsx'
+import { useWidth } from '../../../components/charts/useWidth.ts'
 import { Pill } from '../../../components/dashboard/StatCard.tsx'
 import { DataTable } from '../../../components/ui/DataTable.tsx'
 import { Icon } from '../../../components/ui/Icon.tsx'
 import { Modal } from '../../../components/ui/Modal.tsx'
 import { Segmented } from '../../../components/ui/Segmented.tsx'
-import { pieSlices, seriesByYear } from '../../../lib/charts.ts'
+import { seriesByYear } from '../../../lib/charts.ts'
 import { fmt } from '../../../lib/format.ts'
 import type { Point } from '../../../types/index.ts'
 import { CORES_ANO, MESES, diaLongo, mesNome } from '../setor/datas.ts'
@@ -63,8 +63,11 @@ export function MesAMes({
     )
 }
 
-// Taxa de Redução de Estoque (TRE), o medidor da v1: de -50 a 50, com 2 casas.
+// Taxa de Redução de Estoque (TRE), o medidor da v1: de -50 a 50, com 2 casas e o risco no zero. Ocupa a largura
+// do card (até 440 px), com o número e a escala crescendo junto.
 export function TreCard({ tre }: { tre: number | null }) {
+    const [ref, largura] = useWidth<HTMLDivElement>(320)
+    const size = Math.round(Math.min(440, Math.max(220, largura - 16)))
     return (
         <ChartCard
             title="Taxa de Redução Estoque (TRE)"
@@ -75,8 +78,16 @@ export function TreCard({ tre }: { tre: number | null }) {
                 </Pill>
             }
         >
-            <div className="ex-gauge">
-                <GaugeChart value={tre ?? 0} min={-50} max={50} marker={0} format={fmt.dec2} color="var(--chart-1)" />
+            <div ref={ref} className="ex-gauge" style={{ '--gs': `${size}px` } as CSSProperties}>
+                <GaugeChart
+                    value={tre ?? 0}
+                    min={-50}
+                    max={50}
+                    marker={0}
+                    size={size}
+                    format={fmt.dec2}
+                    color="var(--chart-1)"
+                />
             </div>
         </ChartCard>
     )
@@ -247,84 +258,5 @@ export function CardFiltro({
         >
             {children}
         </button>
-    )
-}
-
-// Pizza com a legenda ao lado (nome, quantidade e %), para quando os rótulos em volta não cabem (ex.: matérias).
-// As mesmas fatias e cores do PieChart (as `max` maiores e "Outras"); clicar na legenda filtra como a fatia.
-export function PizzaLegenda({
-    items,
-    max = 8,
-    centerLabel,
-    selected = [],
-    onSelect,
-    selectLabel = 'Filtrar por',
-}: {
-    items: Point[]
-    max?: number
-    centerLabel: string
-    selected?: string[]
-    onSelect?: (name: string) => void
-    selectLabel?: string
-}) {
-    const [hover, setHover] = useState<string | null>(null)
-    const fatias = pieSlices(items, max, 'Outras')
-    if (fatias.length === 0) return <ChartEmpty />
-    const cor = (k: number, outras: number) => (outras ? 'var(--pie-rest)' : `var(--pie-${(k % 10) + 1})`)
-    return (
-        <div className="ex-pizza">
-            <PieChart
-                items={items}
-                max={max}
-                size={220}
-                centerLabel={centerLabel}
-                selected={selected}
-                onSelect={onSelect && ((n) => n !== 'Outras' && onSelect(n))}
-                selectLabel={selectLabel}
-                hover={hover}
-                onHover={setHover}
-            />
-            <ul className="ex-pizza-leg" role="list">
-                {fatias.map((f, k) => {
-                    const clicavel = onSelect && !f.others
-                    const ativo = selected.includes(f.name)
-                    const conteudo = (
-                        <>
-                            <span className="chart-key dot" style={{ background: cor(k, f.others) }} />
-                            <span className="ex-pizza-nome" title={f.name}>
-                                {f.others ? `Outras (${f.others})` : f.name}
-                            </span>
-                            <span className="num">{fmt.int(f.value)}</span>
-                            <span className="num muted">{fmt.dec1(f.share)}%</span>
-                        </>
-                    )
-                    return (
-                        <li
-                            key={f.name}
-                            className={
-                                [hover === f.name && 'on', selected.length > 0 && !ativo && 'dim']
-                                    .filter(Boolean)
-                                    .join(' ') || undefined
-                            }
-                            onMouseEnter={() => setHover(f.name)}
-                            onMouseLeave={() => setHover(null)}
-                        >
-                            {clicavel ? (
-                                <button
-                                    type="button"
-                                    aria-pressed={ativo}
-                                    aria-label={`${selectLabel} ${f.name} (${fmt.int(f.value)})`}
-                                    onClick={() => onSelect(f.name)}
-                                >
-                                    {conteudo}
-                                </button>
-                            ) : (
-                                <div>{conteudo}</div>
-                            )}
-                        </li>
-                    )
-                })}
-            </ul>
-        </div>
     )
 }

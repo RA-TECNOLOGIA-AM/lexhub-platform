@@ -48,6 +48,17 @@ class DashboardContext:
     extra_refs: dict[str, str] = field(default_factory=dict)
     # De que banco `source` lê: o do módulo ou, numa unidade sem ele, um dos alt_sources.
     source_db: str = ""
+    # Exportação: as opções escolhidas na janela (ExportSpec.options), ex.: {"criterio": "saida"}.
+    export_options: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ExportOption:
+    """Uma escolha da exportação além dos campos, como na v1 (ex.: o recorte entrada/saida/total da Execução)."""
+
+    key: str  # o parâmetro na URL (?criterio=saida)
+    label: str  # o nome na janela ("Recorte")
+    choices: dict[str, str]  # valor -> rótulo, na ordem da janela; o primeiro é o padrão
 
 
 @dataclass(frozen=True)
@@ -58,6 +69,12 @@ class ExportSpec:
     labels: dict[str, str]  # slug -> cabeçalho do arquivo (= _LABELS_EXPORT_* da v1)
     sheet_name: str  # nome da aba no XLSX (igual à v1)
     rows: Callable[[DashboardContext], Awaitable[list[dict[str, Any]]]]  # = _rows_*_export da v1
+    options: tuple[
+        ExportOption, ...
+    ] = ()  # escolhas da janela além dos campos (ctx.export_options)
+    title: str = (
+        ""  # nome do relatório quando o dashboard tem mais de um ("Processos", "Atividades")
+    )
 
 
 @dataclass(frozen=True)
@@ -81,6 +98,8 @@ class DashboardModule:
     commission_person_key: str = "funcionario"  # campo de cada linha com o nome da pessoa na fonte
     v2_only_fields: tuple[str, ...] = ()  # campos novos da V2 sem regra ainda: vêm null
     export: ExportSpec | None = None  # None = o dashboard não exporta
+    # Outros relatórios do mesmo dashboard (?relatorio=<chave>), ex.: as Atividades dos Acordos na v1.
+    export_reports: dict[str, ExportSpec] = field(default_factory=dict)
     queries: tuple[str, ...] = ()  # queries que usa: o aquecedor do cache as mantém quentes
     # A página inteira só com os dados da própria pessoa para quem não gere a unidade
     # (v1: escopo_proprio da Comissão Comercial). A casca preenche ctx.own_ref.

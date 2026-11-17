@@ -235,8 +235,10 @@ from app.analyses.NG.comercial_geral import (
 )
 from app.analyses.NG.execucao import (
     _extrair_duracoes_dias as _duracoes_execucao_ng,
+    _filtrar_em_execucao as _filtrar_em_execucao_ng,
     _filtrar_entrada_execucao_no_periodo as _filtrar_entrada_execucao_no_periodo_ng,
     _get_ag_processo_id_ng,
+    anotar_saida_execucao_export as anotar_saida_execucao_export_ng,
     filter_execucao_por_ano_ajuizamento,
     filter_execucao_por_comarca,
     filter_execucao_por_materia,
@@ -247,6 +249,7 @@ from app.analyses.NG.execucao import (
     filtrar_agendamentos_diligencia_por_colaborador_NG,
     filtrar_agendamentos_diligencia_por_tipo_NG,
     filtrar_agendamentos_execucao_NG,
+    filtrar_saida_execucao_export as filtrar_saida_execucao_export_ng,
     get_atrasos_detalhamento_execucao_NG,
     get_detalhe_valor_execucao_vazio,
     get_estoque_final,
@@ -319,6 +322,9 @@ from app.analyses.NG.execucao import (
 )
 from app.analyses.NG.execucao_acordos import (
     _extrair_duracoes_dias as _duracoes_execucao_acordos_ng,
+    _filtrar_em_execucao_acordos,
+    _filtrar_entrada_execucao_acordos_no_periodo,
+    _filtrar_saida_execucao_acordos_no_periodo,
     filter_execucao_acordos_por_ano_ajuizamento,
     filter_execucao_acordos_por_comarca,
     filter_execucao_acordos_por_materia,
@@ -6755,6 +6761,330 @@ def _filtro_multi(valor: Any) -> Optional[Union[str, List[str]]]:
     return texto or None
 
 
+# v1: dashboard_routes.py:20666
+_CAMPOS_EXPORT_EXECUCAO_NG: Dict[str, str] = {
+    "numero_processo": "NUMERO_PROCESSO",
+    "fase": "FASE",
+    "subfase": "SUBFASE",
+    "materia": "MATERIA",
+    "uf": "UF",
+    "comarca": "COMARCA",
+    "vara": "VARA",
+    "competencia": "COMPETENCIA",
+    "data_distribuicao": "DATA_DISTRIBUICAO",
+    "data_execucao": "DATA_EXECUCAO",
+    "ultima_movimentacao": "ULTIMA_MOVIMENTACAO",
+    "valor_causa": "VALOR_CAUSA",
+    "dano_material": "DANO_MATERIAL",
+    "dano_moral": "DANO_MORAL",
+    "valor_execucao": "VALOR_EXECUCAO",
+    "dano_material_execucao": "DANO_MATERIAL_EXECUCAO",
+    "dano_moral_execucao": "DANO_MORAL_EXECUCAO",
+    "valor_honorarios": "VALOR_HONORARIOS",
+    "valor_ted": "VALOR_TED",
+    "valor_multas": "VALOR_MULTAS",
+    "sucumbencia_porcentagem": "SUCUMBENCIA_PORCENTAGEM",
+    "valor_sucumbencia": "VALOR_SUCUMBENCIA",
+    "valor_alvara": "VALOR_ALVARA",
+    "valor_alvara_incontroverso": "VALOR_ALVARA_INCONTROVERSO",
+    "data_transito_julgado": "DATA_TRANSITO_JULGADO",
+    "data_encerramento": "DATA_ENCERRAMENTO",
+    "data_expedicao_alvara": "DATA_EXPEDICAO_ALVARA",
+    "data_saida": "DATA_COMPENSACAO_ALVARA",
+    "valor_incontroverso": "VALOR_INCONTROVERSO",
+    "data_expedicao_alvara_incontroverso": "DATA_EXPEDICAO_ALVARA_INCONTROVERSO",
+    "data_compensacao_alvara_incontroverso": "DATA_COMPENSACAO_ALVARA_INCONTROVERSO",
+    "valor_remanescente": "VALOR_REMANESCENTE",
+    "tipo_saida_periodo": "TIPO_SAIDA_PERIODO",
+    "valor_saida_periodo": "VALOR_SAIDA_PERIODO",
+}
+
+
+# v1: dashboard_routes.py:20703
+_LABELS_EXPORT_EXECUCAO_NG: Dict[str, str] = {
+    "numero_processo": "Número do Processo",
+    "fase": "Fase",
+    "subfase": "Subfase",
+    "materia": "Matéria",
+    "uf": "UF",
+    "comarca": "Comarca",
+    "vara": "Vara",
+    "competencia": "Competência",
+    "data_distribuicao": "Data de Distribuição",
+    "data_execucao": "Data de Execução",
+    "ultima_movimentacao": "Última Movimentação",
+    "valor_causa": "Valor de Causa (R$)",
+    "dano_material": "Dano Material (R$)",
+    "dano_moral": "Dano Moral (R$)",
+    "valor_execucao": "Valor de Execução (R$)",
+    "dano_material_execucao": "Dano Material Execução (R$)",
+    "dano_moral_execucao": "Dano Moral Execução (R$)",
+    "valor_honorarios": "Valor de Honorários (R$)",
+    "valor_ted": "Valor TED (R$)",
+    "valor_multas": "Valor das Multas (R$)",
+    "sucumbencia_porcentagem": "Sucumbência (%)",
+    "valor_sucumbencia": "Valor da Sucumbência (R$)",
+    "valor_alvara": "Valor do Alvará (R$)",
+    "valor_alvara_incontroverso": "Valor do Alvará do Incontroverso (R$)",
+    "data_transito_julgado": "Data de Trânsito em Julgado",
+    "data_encerramento": "Data de Encerramento",
+    "data_expedicao_alvara": "Data da Expedição do Alvará",
+    "data_saida": "Data de Saída (Compensação do Alvará)",
+    "valor_incontroverso": "Valor Incontroverso (R$)",
+    "data_expedicao_alvara_incontroverso": "Data da Expedição do Alvará do Incontroverso",
+    "data_compensacao_alvara_incontroverso": "Data de Compensação do Alvará do Incontroverso",
+    "valor_remanescente": "Valor Remanescente (R$)",
+    "tipo_saida_periodo": "Tipo de Saída no Período",
+    "valor_saida_periodo": "Valor de Saída no Período (R$)",
+}
+
+
+# v1: dashboard_routes.py:20741
+_CRITERIOS_EXPORT_EXECUCAO_NG = ("entrada", "saida", "total")
+
+
+# v1: dashboard_routes.py:20744
+async def _rows_execucao_filtradas(
+    from_date: Optional[date],
+    to_date: Optional[date],
+    materia: Optional[str],
+    subfase: Optional[str],
+    ano_ajuizamento_execucao: Optional[str],
+    criterio: str = "entrada",
+    uf: Optional[List[str]] = None,
+    comarca: Optional[List[str]] = None,
+) -> List[Dict[str, Any]]:
+    """Réplica os filtros do dashboard `/execucao` (Execução NG), para exportação
+    linha a linha — mesma query, sem campos adicionais e sem a seção de Atividades.
+
+    ``criterio`` escolhe o mesmo recorte usado pelos cards de Indicadores (mesmo
+    padrão do extrator de Execução de Acordos):
+    - "entrada": processos com DATA_EXECUCAO no período — mesmo critério de
+      `_filtrar_entrada_execucao_no_periodo`.
+    - "saida": processos que saíram da Execução (foram para o Financeiro) no
+      período — mesmo critério de `_filtrar_saida_no_periodo`.
+    - "total": total atual em Execução (ID_FASE == 12), sem filtro de período —
+      mesmo critério do card "Total em Execução" / `_filtrar_em_execucao`.
+
+    Não pré-filtra por data via `filter_data` (que usa DATA_EXECUCAO): "saida" e
+    "total" usam colunas/critério de data diferentes, e cada critério abaixo já
+    aplica seu próprio recorte de data internamente.
+    """
+    all_rows = await fetch_execucao()
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    materia_filtro = _filtro_multi(materia)
+    subfase_filtro = _filtro_multi(subfase)
+    ano_filtro = (
+        str(ano_ajuizamento_execucao).strip()
+        if ano_ajuizamento_execucao and str(ano_ajuizamento_execucao).strip()
+        else None
+    )
+    uf_filtro = [str(u).strip().upper() for u in uf if str(u).strip()] if uf else None
+    comarca_filtro = [str(c).strip() for c in comarca if str(c).strip()] if comarca else None
+    rows = filter_execucao_por_comarca(
+        filter_execucao_por_uf(
+            filter_execucao_por_ano_ajuizamento(
+                filter_execucao_por_subfase(
+                    filter_execucao_por_materia(all_rows, materia_filtro),
+                    subfase_filtro,
+                ),
+                ano_filtro,
+            ),
+            uf_filtro,
+        ),
+        comarca_filtro,
+    )
+    if criterio == "saida":
+        recorte = filtrar_saida_execucao_export_ng(rows, from_date, to_date)
+    elif criterio == "total":
+        recorte = _filtrar_em_execucao_ng(rows)
+    else:
+        recorte = _filtrar_entrada_execucao_no_periodo_ng(rows, from_date, to_date)
+    return anotar_saida_execucao_export_ng(recorte, from_date, to_date)
+
+
+# v1: dashboard_routes.py:21006
+_CAMPOS_EXPORT_EXECUCAO_ACORDOS_NG: Dict[str, str] = {
+    "numero_processo": "NUMERO_PROCESSO",
+    "fase": "FASE",
+    "subfase": "SUBFASE",
+    "materia": "MATERIA",
+    "uf": "UF",
+    "comarca": "COMARCA",
+    "vara": "VARA",
+    "competencia": "COMPETENCIA",
+    "data_acordo_fechado": "DATA_ACORDO_FECHADO",
+    "data_acordo_homologado": "DATA_ACORDO_HOMOLOGADO",
+    "data_pagamento_acordo": "DATA_PAGAMENTO_ACORDO",
+    "data_expedicao_alvara_acordo": "DATA_EXPEDICAO_ALVARA_ACORDO",
+    "data_distribuicao": "DATA_DISTRIBUICAO",
+    "data_execucao": "DATA_EXECUCAO",
+    "ultima_movimentacao": "ULTIMA_MOVIMENTACAO",
+    "valor_alcada_final": "VALOR_ALCADA_FINAL",
+    "valor_proposta_recebida": "VALOR_PROPOSTA_RECEBIDA",
+    "valor_contraproposta": "VALOR_CONTRAPROPOSTA",
+    "valor_alvara": "VALOR_ALVARA",
+}
+
+
+# v1: dashboard_routes.py:21028
+_LABELS_EXPORT_EXECUCAO_ACORDOS_NG: Dict[str, str] = {
+    "numero_processo": "Número do Processo",
+    "fase": "Fase",
+    "subfase": "Subfase",
+    "materia": "Matéria",
+    "uf": "UF",
+    "comarca": "Comarca",
+    "vara": "Vara",
+    "competencia": "Competência",
+    "data_acordo_fechado": "Data de Acordo Fechado",
+    "data_acordo_homologado": "Data de Acordo Homologado",
+    "data_pagamento_acordo": "Data de Pagamento do Acordo",
+    "data_expedicao_alvara_acordo": "Data da Expedição do Alvará de Acordo",
+    "data_distribuicao": "Data de Distribuição",
+    "data_execucao": "Data de Execução",
+    "ultima_movimentacao": "Última Movimentação",
+    "valor_alcada_final": "Valor de Alçada Final (R$)",
+    "valor_proposta_recebida": "Valor de Proposta Recebida (R$)",
+    "valor_contraproposta": "Valor de Contraproposta (R$)",
+    "valor_alvara": "Valor do Alvará (R$)",
+}
+
+
+# v1: dashboard_routes.py:21051
+_CRITERIOS_EXPORT_EXECUCAO_ACORDOS_NG = ("entrada", "saida", "total")
+
+
+# v1: dashboard_routes.py:21149
+async def _rows_execucao_acordos_filtradas(
+    from_date: Optional[date],
+    to_date: Optional[date],
+    materia: Optional[str],
+    subfase: Optional[str],
+    tipo_acao_execucao_acordos: Optional[str],
+    uf: Optional[List[str]],
+    criterio: str = "entrada",
+    comarca: Optional[List[str]] = None,
+    ano_ajuizamento_execucao_acordos: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Réplica os filtros do dashboard `/execucao_acordos_NG`, para exportação
+    linha a linha — mesma query, sem campos adicionados e sem a seção de
+    Atividades.
+
+    ``criterio`` escolhe o mesmo recorte usado pela seção "Execuções de
+    Acordo" (tabela) e pelos cards de Indicadores:
+    - "entrada": acordos com entrada na execução no período (etiqueta "Acordo"
+      + DATA_EXECUCAO no período) — mesmo critério de
+      `list_execucao_acordos_lista_entrada`.
+    - "saida": acordos pagos no período (DATA_PAGAMENTO_ACORDO no período) —
+      mesmo critério de `list_execucao_acordos_lista_saida`.
+    - "total": total atual em Execução de Acordos (fase ACORDO, sem filtro de
+      período) — mesmo critério de `list_execucao_acordos_lista_total` e do
+      card "Total em Execução de Acordos".
+
+    Não pré-filtra por data via `filter_data`/`_FILTER_COLUMNS` (que usa
+    DATA_EXECUCAO): "saida" e "total" usam colunas/critério de data
+    diferentes, e cada filtro de critério abaixo já aplica seu próprio recorte
+    de data internamente.
+    """
+    all_rows = await fetch_execucao_acordos_NG()
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    materia_filtro = _filtro_multi(materia)
+    subfase_filtro = _filtro_multi(subfase)
+    tipo_acao_filtro = (
+        str(tipo_acao_execucao_acordos).strip()
+        if tipo_acao_execucao_acordos and str(tipo_acao_execucao_acordos).strip()
+        else None
+    )
+    uf_filtro = (
+        [str(u).strip().upper() for u in uf if str(u).strip()]
+        if uf
+        else None
+    )
+    comarca_filtro = (
+        [str(c).strip() for c in comarca if str(c).strip()]
+        if comarca
+        else None
+    )
+    ano_ajuizamento_filtro = (
+        str(ano_ajuizamento_execucao_acordos).strip()
+        if ano_ajuizamento_execucao_acordos and str(ano_ajuizamento_execucao_acordos).strip()
+        else None
+    )
+    rows = filter_execucao_acordos_por_ano_ajuizamento(
+        filter_execucao_acordos_por_comarca(
+            filter_execucao_acordos_por_uf(
+                filter_execucao_acordos_por_tipo_acao(
+                    filter_execucao_acordos_por_subfase(
+                        filter_execucao_acordos_por_materia(all_rows, materia_filtro),
+                        subfase_filtro,
+                    ),
+                    tipo_acao_filtro,
+                ),
+                uf_filtro,
+            ),
+            comarca_filtro,
+        ),
+        ano_ajuizamento_filtro,
+    )
+    if criterio == "saida":
+        return _filtrar_saida_execucao_acordos_no_periodo(rows, from_date, to_date)
+    if criterio == "total":
+        return _filtrar_em_execucao_acordos(rows)
+    return _filtrar_entrada_execucao_acordos_no_periodo(rows, from_date, to_date)
+
+
+# v1: dashboard_routes.py:21983
+_CAMPOS_EXPORT_EXECUCAO_ACORDOS_ATIVIDADES_NG: Dict[str, str] = {
+    "numero_processo": "numero_processo",
+    "atividade": "atividade",
+    "status": "status",
+    "situacao": "situacao",
+    "funcionario": "funcionario",
+    "funcionario_atribuido": "funcionario_atribuido",
+    "funcionario_encerramento": "funcionario_encerramento",
+    "prazo": "prazo",
+    "criado_em": "criado_em",
+    "descricao": "descricao",
+    "operacao": "operacao",
+}
+
+
+# v1: dashboard_routes.py:21997
+_LABELS_EXPORT_EXECUCAO_ACORDOS_ATIVIDADES_NG: Dict[str, str] = {
+    "numero_processo": "Número do Processo",
+    "atividade": "Atividade",
+    "status": "Status",
+    "situacao": "Situação",
+    "funcionario": "Responsável Atual",
+    "funcionario_atribuido": "Funcionário Atribuído",
+    "funcionario_encerramento": "Funcionário que Encerrou",
+    "prazo": "Prazo",
+    "criado_em": "Criado em",
+    "descricao": "Descrição",
+    "operacao": "Operação",
+}
+
+
+# v1: dashboard_routes.py:22011
+_VIEWS_EXPORT_EXECUCAO_ACORDOS_ATIVIDADES_NG = ("concluidas", "por_prazo")
+
+
+# v1: dashboard_routes.py:22074
+def _situacao_label_execucao_acordos_atividade(item: Dict[str, Any]) -> str:
+    """Reduz os 4 flags booleanos (em_andamento/vencida/vence_hoje/concluida) de
+    ``RecursalAtividadeTarefaRow`` a um único rótulo legível para a planilha."""
+    if item.get("concluida"):
+        return "Concluída"
+    if item.get("vencida"):
+        return "Vencida"
+    if item.get("vence_hoje"):
+        return "Vence hoje"
+    if item.get("em_andamento"):
+        return "Em andamento"
+    return "—"
+
+
 # v1: dashboard_routes.py:22088
 def _mapa_agendamento_para_processo_id_acordos_ng(
     agendamentos: List[Dict[str, Any]],
@@ -6944,6 +7274,49 @@ def _enriquecer_atividades_acordos_rj_com_dados_processo(
         if incluir_numero_processo:
             item["numero_processo"] = numero_por_id.get(pid) if pid is not None else None
         item["valor_execucao"] = valor_por_id.get(pid) if pid is not None else None
+    return itens
+
+
+# v1: dashboard_routes.py:22271
+async def _rows_execucao_acordos_atividades_filtradas(
+    from_date: Optional[date],
+    to_date: Optional[date],
+    funcionario: Optional[List[str]],
+    atividade: Optional[List[str]],
+    status: Optional[List[str]],
+    situacao: Optional[List[str]],
+    view: str,
+) -> List[Dict[str, Any]]:
+    """Réplica os filtros da seção Atividades do dashboard `/execucao_acordos_NG`,
+    para exportação linha a linha da tabela de tarefas (agendamentos).
+
+    ``view`` escolhe o mesmo eixo temporal do toggle "Concluídas"/"Por prazo"
+    da seção: "concluidas" usa DATA_HORA_CRIACAO/DATA_HORA_CONCLUSAO; "por_prazo"
+    usa PRAZO como eixo.
+    """
+    agendamentos = await fetch_agendamentos_setor_execucao_acordos_NG()
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros = _parse_execucao_atividades_filtros(funcionario, atividade, status, situacao)
+    ag_filtrados = filtrar_agendamentos_execucao_acordos_NG(
+        agendamentos, filtros, from_date=from_date, to_date=to_date
+    )
+    if view == "por_prazo":
+        itens = list_execucao_atividades_por_prazo_periodo_acordos_NG(
+            ag_filtrados, from_date=from_date, to_date=to_date
+        )
+    else:
+        itens = list_execucao_atividades_periodo_acordos_NG(
+            ag_filtrados, from_date=from_date, to_date=to_date
+        )
+
+    processos = await fetch_execucao_acordos_NG()
+    itens = _enriquecer_atividades_acordos_ng_com_dados_processo(
+        itens, ag_filtrados, processos, incluir_numero_processo=True
+    )
+
+    for item in itens:
+        item["situacao"] = _situacao_label_execucao_acordos_atividade(item)
+
     return itens
 
 

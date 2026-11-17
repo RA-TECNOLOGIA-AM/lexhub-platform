@@ -10,7 +10,7 @@ from typing import Any
 
 from openpyxl import Workbook
 
-from app.dashboards.base import ExportSpec
+from app.dashboards.base import DashboardModule, ExportSpec
 
 FORMATS = {
     "csv": "text/csv; charset=utf-8",
@@ -27,6 +27,27 @@ def pick_format(raw: str | None) -> str:
     if fmt not in FORMATS:
         raise ExportError("Formato inválido. Use csv ou xlsx.")
     return fmt
+
+
+def pick_report(module: DashboardModule, relatorio: str | None) -> ExportSpec | None:
+    """O relatório pedido: o principal (sem ?relatorio) ou um dos export_reports. None = não exporta."""
+    if not relatorio:
+        return module.export
+    spec = module.export_reports.get(relatorio)
+    if spec is None:
+        raise ExportError(f"Relatório desconhecido: {relatorio}")
+    return spec
+
+
+def pick_options(spec: ExportSpec, raw: dict[str, str]) -> dict[str, str]:
+    """As escolhas da janela (ex.: criterio), com o padrão (a primeira) quando não vem. Valor desconhecido = erro."""
+    escolhas: dict[str, str] = {}
+    for opt in spec.options:
+        valor = (raw.get(opt.key) or "").strip().lower() or next(iter(opt.choices))
+        if valor not in opt.choices:
+            raise ExportError(f"{opt.label} inválido: '{valor}'. Use {', '.join(opt.choices)}.")
+        escolhas[opt.key] = valor
+    return escolhas
 
 
 def pick_fields(spec: ExportSpec, campos: list[str]) -> list[str]:
@@ -78,6 +99,8 @@ def to_xlsx(headers: list[str], data: list[list[str]], sheet_name: str) -> bytes
     return buffer.getvalue()
 
 
-def filename(dashboard_key: str, unit_code: str, fmt: str) -> str:
-    """protocolo_lexpre_NG_relatorio.xlsx (padrão da v1: <dashboard>_<unidade>_relatorio)."""
-    return f"{dashboard_key.replace('-', '_')}_{unit_code}_relatorio.{fmt}"
+def filename(dashboard_key: str, unit_code: str, fmt: str, partes: list[str] | None = None) -> str:
+    """protocolo_lexpre_NG_relatorio.xlsx (padrão da v1: <dashboard>_<unidade>_relatorio). Com o relatório e as
+    opções escolhidas no meio, como a v1: execucao_NG_saida_relatorio.csv, acordos_NG_atividades_por_prazo_..."""
+    meio = "".join(f"_{p}" for p in (partes or []) if p)
+    return f"{dashboard_key.replace('-', '_')}_{unit_code}{meio}_relatorio.{fmt}"

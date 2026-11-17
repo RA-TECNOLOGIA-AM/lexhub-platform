@@ -8,9 +8,11 @@ Ver generico_v1.py (entrada) e app/analyses/v1_dashboard_generico.py (cálculo c
 como `total_em_execucao_historico`.
 """
 
-from app.dashboards import generico_v1
+from dataclasses import replace
 
-MODULE = generico_v1.modulo(
+from app.dashboards import execucao_export, generico_v1
+
+_MODULO = generico_v1.modulo(
     key="execucao",
     v1_por_unidade={"NG": "execucao", "LA": "execucao_LA", "RJ": "execucao_RJ"},
     descricao_falta="Execução não existe na v1 para esta unidade",
@@ -32,4 +34,10 @@ MODULE = generico_v1.modulo(
         "execucao_resolvidos_por_dia_NG",
         "execucao_resolvidos_por_dia_por_prazo_NG",
     ),
+)
+
+# A exportação da v1 (execucao_export.py).
+MODULE = replace(
+    _MODULO,
+    export=execucao_export.EXECUCAO,
 )

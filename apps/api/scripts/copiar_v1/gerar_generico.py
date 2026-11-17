@@ -9,7 +9,8 @@ lê api_dashboards/src/app/dashboard_routes.py pela AST e escreve um módulo com
   * os fetch_* trocados por `_fetch_v2('<query>')` (fonte da V2 + recorte de situação do processo);
     fontes de outro banco saem de FETCHES_BY_DASHBOARD (um módulo da V2 lê um banco só);
   * FETCHES_BY_DASHBOARD, DASHBOARD_NAMES, HANDLERS e QUERIES_POR_DASHBOARD para a casca.
-Também copia, sem mudança, os módulos app/analyses/* da v1 que ainda faltam na V2.
+Também copia, sem mudança, os módulos app/analyses/* da v1 que ainda faltam na V2. Com --extra NOME,
+copia também essa definição da v1 (e o que ela usa), ex.: as linhas e os campos de uma exportação.
 
 Uso (PowerShell, em apps/api):
   .venv\\Scripts\\python.exe scripts\\copiar_v1\\gerar_generico.py --banco ng \\
@@ -250,7 +251,7 @@ def gerar_get_dashboard_response(
     return texto, usados | anotacoes | nomes_usados(fn.returns)
 
 
-def gerar(pedidos: list[str], banco: str, saida: Path) -> None:
+def gerar(pedidos: list[str], banco: str, saida: Path, extras: list[str] | None = None) -> None:
     v1 = V1()
     sys.path.insert(0, str(V1_APP.parent))
     queries_v1 = ast.literal_eval(_dict_queries())
@@ -276,6 +277,11 @@ def gerar(pedidos: list[str], banco: str, saida: Path) -> None:
 
     # Fecho: tudo do dashboard_routes.py que os handlers e o _get_dashboard_response usam.
     pendentes = set(usados_resp)
+    # --extra: outras definições da v1 que a V2 usa direto (ex.: as linhas da exportação), com o que elas usam.
+    for nome in extras or []:
+        if nome not in v1.defs:
+            raise SystemExit(f"--extra {nome}: não existe no dashboard_routes.py da v1")
+        pendentes.add(nome)
     for h in handlers.values():
         corpo = ast.Module(body=h.body, type_ignores=[])
         pendentes |= nomes_usados(corpo) | nomes_usados(h.args)
@@ -512,5 +518,11 @@ if __name__ == "__main__":
     p.add_argument("--banco", required=True, choices=("ng", "laadv", "lexflow", "lexpre"))
     p.add_argument("--saida", required=True, type=Path)
     p.add_argument("dashboards", nargs="+", help="nomes da v1 (chaves de FETCHES_BY_DASHBOARD)")
+    p.add_argument(
+        "--extra",
+        action="append",
+        default=[],
+        help="definição da v1 que também entra na cópia, com as dependências (ex.: _rows_execucao_filtradas)",
+    )
     a = p.parse_args()
-    gerar(a.dashboards, a.banco, a.saida)
+    gerar(a.dashboards, a.banco, a.saida, a.extra)

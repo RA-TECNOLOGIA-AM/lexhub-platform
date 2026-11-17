@@ -10,8 +10,14 @@ import type { DashboardQuery } from '../types/index.ts'
 export function useDashboardExport(dashboard: string, query: DashboardQuery) {
     const [notice, setNotice] = useState<string | null>(null)
 
-    async function exportReport(format: ExportFormat, campos: string[]) {
-        const file = await dataClient.exportDashboard({ ...query, dashboard, format, campos })
+    // relatorio/opcoes: o relatório escolhido na janela (ex.: Atividades) e o recorte (ex.: { criterio: 'saida' }).
+    async function exportReport(
+        format: ExportFormat,
+        campos: string[],
+        relatorio?: string,
+        opcoes?: Record<string, string>,
+    ) {
+        const file = await dataClient.exportDashboard({ ...query, dashboard, format, campos, relatorio, opcoes })
         saveFile(file.blob, file.filename)
         setNotice(file.note ?? null)
     }
