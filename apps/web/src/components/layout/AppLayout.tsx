@@ -57,12 +57,17 @@ export function AppLayout() {
     const { org, user } = me
 
     const closeMenu = () => setMenuOpen(false)
+    // Logo da barra lateral: no computador recolhe/expande; no celular (gaveta) fecha o menu.
+    const toggleSide = () => {
+        if (window.matchMedia('(max-width: 860px)').matches) closeMenu()
+        else setCollapsed(!collapsed)
+    }
 
     return (
         <div className="app" data-menu={menuOpen ? 'open' : undefined} data-side={collapsed ? 'collapsed' : undefined}>
             <aside className="side" aria-label="Navegação principal">
                 <div className="brand">
-                    <span className="brand-mark">LH</span>
+                    <SidebarToggle collapsed={collapsed} onToggle={toggleSide} />
                     <span className="brand-name">LexHub</span>
                 </div>
                 <OrgSwitcher
@@ -131,7 +136,6 @@ export function AppLayout() {
                     >
                         <Icon name="menu" />
                     </button>
-                    <SidebarToggle collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
                     {/* Empurra o resto da topbar para a direita (antes era o breadcrumb). */}
                     <div className="topbar-spacer" />
                     {/* Só no modo mock: em modo api os dados vêm da API V2. */}
