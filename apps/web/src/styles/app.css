@@ -5061,6 +5061,10 @@ body {
     margin-left: auto;
     padding: 8px;
 }
+/* Conectar TV fica colado no Sair: só o primeiro botão empurra para a direita. */
+.side-tv + .side-logout {
+    margin-left: 0;
+}
 .brand-toggle {
     position: relative;
     display: inline-flex;
