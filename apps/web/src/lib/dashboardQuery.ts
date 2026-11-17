@@ -38,6 +38,16 @@ export const FILTER_KEYS = [
     'status_execucao_acordos',
     'diligencia_tipo_execucao_acordos',
     'diligencia_colaborador_execucao_acordos',
+    'materia_julgados',
+    'relator_julgados',
+    'comarca_julgados',
+    'competencia_julgados',
+    'categoria_julgados',
+    'uf_julgados',
+    'motivo_extincao_julgados',
+    'ano_ajuizamento_julgados',
+    'resultado_embargos_julgados',
+    'situacao_processo',
 ] as const satisfies readonly (keyof DashboardFilters)[]
 
 // URL -> período e filtros. Período só vale com as duas datas e na ordem certa; senão, o servidor usa o padrão.

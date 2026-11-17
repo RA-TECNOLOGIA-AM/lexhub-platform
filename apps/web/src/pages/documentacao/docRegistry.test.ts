@@ -22,6 +22,7 @@ describe('docFor', () => {
         expect(docFor(DOC_ENTRIES, 'recursal', 'LA')?.slug).toBe('recursal-la')
         expect(docFor(DOC_ENTRIES, 'recursal', 'NG')?.slug).toBe('recursal-ng')
         expect(docFor(DOC_ENTRIES, 'protocolo-lexpre', 'RJ')?.slug).toBe('protocolo-lexpre')
+        expect(docFor(DOC_ENTRIES, 'julgados-acordaos', 'RJ')?.slug).toBe('julgados-acordaos')
         expect(docFor(DOC_ENTRIES, 'nps', 'NG')).toBeNull()
     })
 

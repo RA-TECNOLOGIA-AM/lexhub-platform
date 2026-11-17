@@ -23,6 +23,16 @@ const ICONS: Partial<Record<keyof DashboardFilters, IconName>> = {
     sistema: 'db',
     origem: 'scale',
     ano_ajuizamento: 'calendar',
+    materia_julgados: 'book',
+    relator_julgados: 'users',
+    comarca_julgados: 'building',
+    competencia_julgados: 'briefcase',
+    categoria_julgados: 'scale',
+    uf_julgados: 'pin',
+    motivo_extincao_julgados: 'ban',
+    ano_ajuizamento_julgados: 'calendar',
+    resultado_embargos_julgados: 'layers',
+    situacao_processo: 'flow',
 }
 
 // Módulo: a janela "Filtros", como na v1: um botão por filtro (mostra o que está escolhido) que abre um menu

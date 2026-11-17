@@ -16,6 +16,9 @@ type PieChartProps = {
     onSelect?: (name: string) => void
     selectLabel?: string
     labels?: boolean // nome, valor e % de cada fatia em volta da rosca (some quando não há largura)
+    // Com `labels` e sem largura para eles (ex.: celular): a mesma informação numa legenda embaixo, que também
+    // destaca a fatia (cursor/foco) e filtra (clique). Sem isto, no estreito só o meio da rosca diz o nome.
+    legendWhenNarrow?: boolean
     sort?: boolean // fatias da maior para a menor (padrão); false mantém a ordem de `items`
     innerRatio?: number // raio do furo / raio da rosca
     hover?: string | null // fatia em destaque controlada de fora (ex.: pela legenda ao lado)
@@ -44,6 +47,7 @@ export function PieChart({
     onSelect,
     selectLabel = 'Filtrar por',
     labels = false,
+    legendWhenNarrow = false,
     sort = true,
     innerRatio = 0.62,
     hover: hoverProp,
@@ -76,6 +80,7 @@ export function PieChart({
     const rotulo = (s: (typeof slices)[number]) => `${s.name} ${format(s.value)} (${fmt.dec1(s.share)}%)`.length
     const labelRoom = Math.max(0, ...slices.map(rotulo)) * CHAR_W + 40
     const comRotulos = labels && width >= size + 2 * labelRoom
+    const comLegenda = labels && legendWhenNarrow && !comRotulos
     // Rótulos de cada lado (direita: metade da direita da volta), espalhados para não se encostarem.
     const angle = (f: number) => f * 2 * Math.PI - Math.PI / 2
     const mids = slices.map((s) => angle((s.start + s.end) / 2))
@@ -105,7 +110,7 @@ export function PieChart({
     })
 
     return (
-        <div ref={ref} className="pie">
+        <div ref={ref} className={comLegenda ? 'pie com-legenda' : 'pie'}>
             <div className="pie-figure" style={{ width: comRotulos ? '100%' : size, height: h }}>
                 <svg
                     width={w}
@@ -205,6 +210,46 @@ export function PieChart({
                     )}
                 </span>
             </div>
+            {comLegenda && (
+                <ul className="chart-legend pie-legend" role="list">
+                    {slices.map((s, k) => {
+                        const clickable = onSelect !== undefined && !s.others
+                        const dim = hover !== null ? hover !== s.name : selected.length > 0 && !isSel(s.name)
+                        const conteudo = (
+                            <>
+                                <span className="chart-key dot" style={{ background: fill(s.name, k, s.others) }} />
+                                {s.name}
+                                {s.others ? ` (${s.others})` : ''}{' '}
+                                <span className="pie-legend-v">
+                                    {format(s.value)} ({fmt.dec1(s.share)}%)
+                                </span>
+                            </>
+                        )
+                        return (
+                            <li key={s.name} className={dim ? 'dim' : undefined}>
+                                {clickable ? (
+                                    <button
+                                        type="button"
+                                        className="pie-legend-item"
+                                        aria-pressed={isSel(s.name)}
+                                        aria-label={`${selectLabel} ${s.name}: ${format(s.value)} (${fmt.dec1(s.share)}%)`}
+                                        {...hoverProps(s.name)}
+                                        onFocus={() => setHover(s.name)}
+                                        onBlur={() => setHover(null)}
+                                        onClick={() => onSelect(s.name)}
+                                    >
+                                        {conteudo}
+                                    </button>
+                                ) : (
+                                    <span className="pie-legend-item" {...hoverProps(s.name)}>
+                                        {conteudo}
+                                    </span>
+                                )}
+                            </li>
+                        )
+                    })}
+                </ul>
+            )}
         </div>
     )
 }

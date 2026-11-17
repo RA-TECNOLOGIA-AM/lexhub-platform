@@ -22,7 +22,7 @@ export function DashboardToolbar({ filterFields, filters, onFiltersChange, perio
     const chips = filterChips(filterFields, filters)
     // Seletores de seção (`inline`) ficam fora do contador, da janela e do "Limpar todos".
     const count = countFilters(semInline(filters, filterFields))
-    const dialogFields = filterFields.filter((f) => !f.inline)
+    const dialogFields = filterFields.filter((f) => !f.inline && !f.fromChart) // os do gráfico só viram etiqueta
     const limparTodos = () => onFiltersChange(soInline(filters, filterFields))
 
     function closeFilters() {

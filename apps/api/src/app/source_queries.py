@@ -2272,3 +2272,142 @@ QUERIES["valor_causa_ajuizado_lexflow_LA"] = {
     ),
 }
 assert "id_escritorio_assinante = 21" in QUERIES["valor_causa_ajuizado_lexflow_LA"]["query"]
+
+
+# v1: queries.py:4123, "julgados" (copiada em 17/11/2026). julgados_acordaos_NG, julgados_acordaos_LA, julgados_acordaos_RJ.
+QUERIES["julgados"] = {
+    "database": "lexflow",
+    "query": """
+        -- Mérito vigente ANTES dos embargos (o LexFlow atualiza o mérito na mesma edição em que
+        -- lança o resultado do embargo): último valor no processo_audit antes do lançamento do
+        -- resultado atual; sem histórico, o mérito atual. Só processos com resultado lançado.
+        WITH
+        pre_emb1 AS (
+            SELECT p.id,
+                COALESCE(
+                    (SELECT NULLIF(a.valor_novo, '')::int FROM public.processo_audit a
+                      WHERE a.id_processo = p.id AND a.campo = 'id_sentenca_merito_grau1' AND a.alterado_em < emb.t
+                      ORDER BY a.alterado_em DESC LIMIT 1),
+                    (SELECT NULLIF(a.valor_anterior, '')::int FROM public.processo_audit a
+                      WHERE a.id_processo = p.id AND a.campo = 'id_sentenca_merito_grau1' AND a.alterado_em >= emb.t
+                      ORDER BY a.alterado_em ASC LIMIT 1),
+                    p.id_sentenca_merito_grau1
+                ) AS id_pre
+            FROM public.processo p
+            CROSS JOIN LATERAL (
+                SELECT MAX(a.alterado_em) AS t FROM public.processo_audit a
+                 WHERE a.id_processo = p.id AND a.campo = 'id_sentenca_embargos_grau1'
+                   AND a.valor_novo = p.id_sentenca_embargos_grau1::text
+            ) emb
+            WHERE p.id_sentenca_embargos_grau1 IS NOT NULL
+        ),
+        pre_emb2 AS (
+            SELECT p.id,
+                COALESCE(
+                    (SELECT NULLIF(a.valor_novo, '')::int FROM public.processo_audit a
+                      WHERE a.id_processo = p.id AND a.campo = 'id_acordao_merito_grau2' AND a.alterado_em < emb.t
+                      ORDER BY a.alterado_em DESC LIMIT 1),
+                    (SELECT NULLIF(a.valor_anterior, '')::int FROM public.processo_audit a
+                      WHERE a.id_processo = p.id AND a.campo = 'id_acordao_merito_grau2' AND a.alterado_em >= emb.t
+                      ORDER BY a.alterado_em ASC LIMIT 1),
+                    p.id_acordao_merito_grau2
+                ) AS id_pre
+            FROM public.processo p
+            CROSS JOIN LATERAL (
+                SELECT MAX(a.alterado_em) AS t FROM public.processo_audit a
+                 WHERE a.id_processo = p.id AND a.campo = 'id_acordao_embargos_grau2'
+                   AND a.valor_novo = p.id_acordao_embargos_grau2::text
+            ) emb
+            WHERE p.id_acordao_embargos_grau2 IS NOT NULL
+        )
+        SELECT
+            p.id                                         AS "ID",
+            p.id_escritorio_assinante                    AS "ID_ESCRITORIO",
+            ea.razao_social                               AS "ESCRITORIO",
+            p.numero_processo                             AS "NUMERO_PROCESSO",
+            p.id_situacao                                 AS "ID_SITUACAO",
+            sit.description                               AS "SITUACAO",
+            m.description                                 AS "MATERIA",
+            c.nome                                         AS "COMARCA",
+            p.uf                                           AS "UF",
+            p.id_fase                                      AS "ID_FASE",
+            f.description                                  AS "FASE",
+            sp.description                                 AS "SUBFASE",
+            p.id_status_processual                         AS "ID_SUBFASE",
+            p.id_status_grau1                              AS "ID_1G",
+            spg.nome                                       AS "STATUS_1G",
+            msg1.description                               AS "MOTIVO_STATUS_1G",
+            p.juiz_1g                                      AS "JUIZ_1G",
+            p.id_status_grau2                              AS "ID_2G",
+            ssg.nome                                       AS "STATUS_2G",
+            p.id_sentenca_merito_grau1                     AS "ID_SENTENCA_MERITO_1G",
+            p.id_acordao_merito_grau2                      AS "ID_ACORDAO_MERITO_2G",
+            smpg.nome                                      AS "MERITO_SENTENCA_1G",
+            ampg.nome                                      AS "MERITO_ACORDAO_2G",
+            sepg.nome                                       AS "STATUS_SENTENCA_EMBARGOS",
+            aesg.nome                                       AS "STATUS_ACORDAO_EMBARGOS",
+            pre_emb1.id_pre                                 AS "ID_SENTENCA_MERITO_1G_PRE_EMBARGOS",
+            pre_emb2.id_pre                                 AS "ID_ACORDAO_MERITO_2G_PRE_EMBARGOS",
+            msg2.description                               AS "MOTIVO_STATUS_2G",
+            p.relator_2g                                   AS "RELATOR_2G",
+            ct.nome                                        AS "CAMARA_TURMA",
+            comp.nome                                      AS "COMPETENCIA",
+            CASE
+                WHEN p.distribuicao IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.distribuicao) BETWEEN 1900 AND 2100
+                THEN p.distribuicao
+            END                                             AS "DATA_AJUIZAMENTO",
+            CASE
+                WHEN p.sentenca IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.sentenca) BETWEEN 1900 AND 2100
+                THEN p.sentenca
+            END                                             AS "DATA_SENTENCA",
+            CASE
+                WHEN p.acordao_data IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.acordao_data) BETWEEN 1900 AND 2100
+                THEN p.acordao_data
+            END                                             AS "DATA_ACORDAO",
+            CASE
+                WHEN p.sentenca_embargos IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.sentenca_embargos) BETWEEN 1900 AND 2100
+                THEN p.sentenca_embargos
+            END                                             AS "SENTENCA_EMBARGOS",
+            CASE
+                WHEN p.acordao_embargos IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.acordao_embargos) BETWEEN 1900 AND 2100
+                THEN p.acordao_embargos
+            END                                             AS "ACORDAO_EMBARGOS",
+            p.valor_causa                                   AS "VALOR_CAUSA_SENTENCA",
+            p.valor_causa                                   AS "VALOR_CAUSA_ACORDO",
+            -- "Novo Valor da Causa do Valor Acordão" (comentário da coluna): valor fixado no acórdão,
+            -- diferente do valor de causa inicial. Só exportado no relatório de Acórdãos.
+            p.valor_causa_va                                AS "VALOR_ACORDAO",
+            -- Valor fixado na sentença (sem comentário no banco; >0 quase só em mérito com proveito
+            -- econômico). Diferente do valor de causa inicial. Só exportado no relatório de Sentenças.
+            p.valor_causa_vs                                AS "VALOR_SENTENCA"
+        FROM public.processo p
+        LEFT JOIN public.materia m ON p.id_materia = m.id
+        LEFT JOIN public.fase f ON p.id_fase = f.id
+        LEFT JOIN public.status_processual sp ON p.id_status_processual = sp.id
+        LEFT JOIN public.status_primeiro_grau spg ON p.id_status_grau1 = spg.id
+        LEFT JOIN public.motivo_status_grau msg1 ON p.id_motivo_status_grau1 = msg1.id
+        LEFT JOIN public.status_segundo_grau ssg ON p.id_status_grau2 = ssg.id
+        LEFT JOIN public.sentenca_merito_primeiro_grau smpg ON p.id_sentenca_merito_grau1 = smpg.id
+        LEFT JOIN public.acordao_merito_segundo_grau ampg   ON p.id_acordao_merito_grau2 = ampg.id
+        LEFT JOIN public.sentenca_embargos_primeiro_grau sepg ON p.id_sentenca_embargos_grau1 = sepg.id
+        LEFT JOIN public.acordao_embargos_segundo_grau aesg   ON p.id_acordao_embargos_grau2 = aesg.id
+        LEFT JOIN public.motivo_status_grau msg2 ON p.id_motivo_status_grau2 = msg2.id
+        LEFT JOIN public.camara_turma ct ON p.id_camara_turma = ct.id
+        LEFT JOIN public.comarca c ON p.id_comarca = c.id
+        LEFT JOIN public.competencias comp ON p.id_competencia = comp.id
+        LEFT JOIN public.escritorio_assinante ea ON p.id_escritorio_assinante = ea.id
+        LEFT JOIN public.situacao sit ON sit.id = p.id_situacao
+        LEFT JOIN pre_emb1 ON pre_emb1.id = p.id
+        LEFT JOIN pre_emb2 ON pre_emb2.id = p.id
+        """,
+    "description": (
+        "Dashboard Julgados — processos de todos os escritórios, com dados de 1º e 2º grau. "
+        "O recorte por escritório é aplicado nas análises (ex.: analyses/NG/julgados_sentenca.py)."
+    ),
+    "params": []
+}

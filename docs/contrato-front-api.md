@@ -16,7 +16,8 @@ ordem dos cards (`GET` e `PUT /orgs/{org}/hub-order`), além de `GET /health`, `
 Organização de Documentos, Peticionamento, Comercial e Comissão Comercial (LexPre); números conferidos contra a v1 nas
 mesmas linhas (NG, LA e RJ, mês fechado e mês corrente), aguardando a validação do analista para abrir os cards.
 Marketing (LexPre) ainda não (usa também o banco NG). Desde 12/11 também Execução, Acordos e Recursal (LexFlow), com
-o mesmo conteúdo da v1 nas mesmas linhas (ver "Dashboards do LexFlow" abaixo). **As demais rotas de dados abaixo
+o mesmo conteúdo da v1 nas mesmas linhas (ver "Dashboards do LexFlow" abaixo), e desde 17/11 Julgados Acórdãos
+(LexFlow, ver abaixo). **As demais rotas de dados abaixo
 ainda não existem.** No modo `api`, cada tela sem rota mostra o erro 404
 ("Não encontrado").
 
@@ -146,6 +147,22 @@ Cada uma precisa existir no servidor.
 - Resposta: a mesma `DashboardResponse` da v1 (`dashboard`, `stats` e os gráficos), com `meta`. As opções dos
   filtros vêm dentro de `stats`, como na v1 (ex.: `execucao_uf_opcoes_NG`); não há `opcoes_filtro`.
 - Exportar ainda não (na v1: `/execucao/export`, `/execucao_acordos_*/export`, `/recursal_*/export`).
+
+### Julgados Acórdãos (`julgados-acordaos`, LexFlow)
+
+- Desde 17/11. Cálculo da v1 das rotas `/julgados_acordaos_NG`, `_LA` e `_RJ`, todas sobre a query `julgados`, que é
+  uma só para os três escritórios (NG = 20, LA = 21, RJ = 27). Unidade sem versão na v1 = **501**.
+- Filtros, como na v1: `materia_julgados`, `relator_julgados`, `comarca_julgados`, `competencia_julgados`,
+  `categoria_julgados` (`procedente`, `improcedente`, `extinto`), `uf_julgados`, `motivo_extincao_julgados`,
+  `ano_ajuizamento_julgados`, `resultado_embargos_julgados` (`revertido`, `mantido`), mais `situacao_processo`.
+- Resposta: a `DashboardResponse` da v1, com os campos com sufixo da unidade (`julgados_acordao_total_NG`...). A
+  página da v1 buscava a rota duas vezes, com e sem período; a V2 junta as duas numa resposta:
+  `julgados_acordao_{procedentes,improcedentes,extintos}_por_mes_<U>` vêm do histórico todo, e
+  `historico_julgados_acordao_por_materia_<U>` (campo novo da V2) traz a matéria do histórico todo, para as
+  opções do filtro de matéria, enquanto `julgados_acordao_por_materia_<U>` continua sendo o do período.
+- Exportar: `GET .../julgados-acordaos/export`, com os campos, rótulos, filtros e período da rota
+  `/julgados_acordaos_*/export` da v1. O valor do acórdão sai em reais ("R$ 1.234,56"), como no CSV da v1; no XLSX
+  vira texto, como nos outros dashboards da V2 (a v1 gravava número com formato de moeda).
 
 ### Opções dos filtros (`opcoes_filtro`)
 

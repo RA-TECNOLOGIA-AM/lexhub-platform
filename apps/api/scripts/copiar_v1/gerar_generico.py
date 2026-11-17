@@ -422,17 +422,20 @@ def registrar_queries(nomes: list[str], para_que: str) -> None:
     novas = []
     hoje = date.today().strftime("%d/%m/%Y")
     for nome in nomes:
-        if f'\n    "{nome}": {{' in atual:
+        if f'\n    "{nome}": {{' in atual or f'\nQUERIES["{nome}"] = {{' in atual:
             continue
         linha, texto = entradas[nome]
         novas.append(
-            f'    # v1: queries.py:{linha}, "{nome}" (copiada em {hoje}). {para_que}.\n    "{nome}": {texto},\n'
+            f'\n\n# v1: queries.py:{linha}, "{nome}" (copiada em {hoje}). {para_que}.\n'
+            f'QUERIES["{nome}"] = {texto}\n'
         )
     if not novas:
         return
-    fim = atual.rstrip().rfind("}")
+    # Cada query nova vira uma atribuição no fim do arquivo. Antes ela entrava antes da última "}" do
+    # arquivo, o que só funciona se ele terminar no dicionário QUERIES: com uma atribuição avulsa no
+    # fim (ex.: QUERIES["valor_causa_ajuizado_lexflow_LA"]), a query nova caía dentro dela.
     destino.write_text(
-        atual[:fim] + "".join(novas) + atual[fim:], encoding="utf-8"
+        atual.rstrip() + "\n" + "".join(novas), encoding="utf-8"
     )  # fim de linha nativo, como o .editorconfig
     print(f"  queries registradas em source_queries.py: {len(novas)}")
 
