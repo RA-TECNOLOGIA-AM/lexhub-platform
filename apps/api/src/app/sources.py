@@ -16,7 +16,12 @@ from fastapi import Depends, Request
 
 from app.access import get_db_pool
 from app.dashboards.base import SourceFetcher
-from app.database import DatabaseManager, get_databases, run_with_connection_retry
+from app.database import (
+    DatabaseManager,
+    fetch_read_only,
+    get_databases,
+    run_with_connection_retry,
+)
 from app.source_cache import CachedSourceFetcher, SourceCache
 from app.source_queries import QUERIES
 
@@ -65,7 +70,7 @@ class PgSourceFetcher:
             rows = await run_with_connection_retry(
                 self._manager,
                 self._db,
-                lambda conn: conn.fetch(spec["query"]),
+                lambda conn: fetch_read_only(conn, spec["query"]),
                 operation_name=query_name,
             )
         except ValueError as exc:  # pool não inicializado (banco off ou down na subida)
