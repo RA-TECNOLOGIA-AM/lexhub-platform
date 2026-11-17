@@ -4,7 +4,8 @@ import asyncpg
 import pytest
 
 from app.config import Settings
-from app.database import DatabaseManager, run_with_connection_retry
+from app.database import DatabaseManager, fetch_read_only, run_with_connection_retry
+from app.sources import PgSourceFetcher
 
 BASE = {"SUPABASE_URL": "https://x.supabase.co", "SUPABASE_PUBLISHABLE_KEY": "pk"}
 # Porta 1 no localhost: conexão recusada na hora.
@@ -109,6 +110,65 @@ def test_retry_desiste_depois_do_limite():
 
     with pytest.raises(asyncpg.PostgresConnectionError):
         asyncio.run(run_with_connection_retry(manager, "ng", operation, max_retries=2))
+
+
+class FakeConn:
+    """Conexão de mentira: registra a ordem das chamadas (transação, consulta, fim)."""
+
+    def __init__(self, rows=None):
+        self.calls: list[str] = []
+        self._rows = rows or []
+
+    def transaction(self, **kwargs):
+        conn = self
+
+        class _Tx:
+            async def __aenter__(self):
+                conn.calls.append(f"begin readonly={kwargs.get('readonly')}")
+
+            async def __aexit__(self, *exc):
+                conn.calls.append("end")
+                return False
+
+        return _Tx()
+
+    async def fetch(self, query):
+        self.calls.append(f"fetch {query}")
+        return self._rows
+
+
+def test_fetch_read_only_roda_a_consulta_dentro_de_transacao_so_leitura():
+    # SET de sessão se perde atrás de PgBouncer em modo transação; BEGIN READ ONLY não.
+    conn = FakeConn(rows=[{"id": 1}])
+    rows = asyncio.run(fetch_read_only(conn, "select 1"))
+    assert rows == [{"id": 1}]
+    assert conn.calls == ["begin readonly=True", "fetch select 1", "end"]
+
+
+class FakeConnManager(FakeManager):
+    def __init__(self, conn):
+        super().__init__()
+        self.conn = conn
+
+    def get_connection(self, _name):
+        conn = self.conn
+
+        class _Ctx:
+            async def __aenter__(self):
+                return conn
+
+            async def __aexit__(self, *exc):
+                return False
+
+        return _Ctx()
+
+
+def test_pg_source_fetcher_busca_em_transacao_so_leitura():
+    conn = FakeConn(rows=[{"x": 1}])
+    queries = {"q": {"database": "ng", "query": "select x from t"}}
+    fetcher = PgSourceFetcher(FakeConnManager(conn), "ng", queries)
+    assert asyncio.run(fetcher.fetch("q")) == [{"x": 1}]
+    assert conn.calls == ["begin readonly=True", "fetch select x from t", "end"]
 
 
 def test_health_sources_sem_bancos_configurados(client):
