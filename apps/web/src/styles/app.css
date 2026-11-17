@@ -4908,7 +4908,7 @@ body {
     overflow-x: clip;
 }
 
-/* Barra lateral recolhível: o botão fica na topbar (só no computador; no celular a barra é gaveta). */
+/* Barra lateral recolhível: o logo do LexHub no topo é o botão (no celular, onde a barra é gaveta, fecha o menu). */
 .side {
     overflow-x: hidden;
     transition:
@@ -4920,10 +4920,44 @@ body {
     margin-left: auto;
     padding: 8px;
 }
-@media (max-width: 860px) {
-    .topbar .side-toggle {
-        display: none;
-    }
+.brand-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    margin: -4px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--side-text);
+    cursor: pointer;
+}
+.brand-toggle:hover {
+    background: var(--side-hover);
+    color: #fff;
+}
+.brand-toggle-logo,
+.brand-toggle-icon {
+    transition: opacity 0.15s ease;
+}
+.brand-toggle-icon {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+}
+/* Ao passar o mouse ou focar pelo teclado, o logo vira o ícone de painel (mostra que recolhe/expande). */
+.brand-toggle:is(:hover, :focus-visible) .brand-toggle-logo {
+    opacity: 0;
+}
+.brand-toggle:is(:hover, :focus-visible) .brand-toggle-icon {
+    opacity: 1;
 }
 @media (min-width: 861px) {
     .app[data-side='collapsed'] .side {
