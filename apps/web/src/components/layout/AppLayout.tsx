@@ -7,10 +7,13 @@ import { NotificationsBell } from './NotificationsBell.tsx'
 import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { SearchBox } from './SearchBox.tsx'
 import { ThemeToggle } from './ThemeToggle.tsx'
+import { FullscreenToggle } from './FullscreenToggle.tsx'
+import { SidebarToggle } from './SidebarToggle.tsx'
 import { TopbarSlotContext } from './topbar-slot.ts'
 import { activeItem, menuPermissions, NAV_SECTIONS, pathOf, visibleItems } from '../../navigation.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { useSidebarCollapsed } from '../../hooks/useSidebarCollapsed.ts'
 import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
 import { dataClient } from '../../services/client.ts'
 import { env } from '../../services/env.ts'
@@ -18,6 +21,8 @@ import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
+    // Barra lateral recolhida (só ícones), lembrada no localStorage. Só vale no computador: no celular é gaveta.
+    const { collapsed, setCollapsed } = useSidebarCollapsed()
     // Espaço da topbar que uma página pode ocupar (ex.: o Período de um dashboard). Ver TopbarSlot.tsx.
     const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null)
     const menuButton = useRef<HTMLButtonElement>(null)
@@ -34,10 +39,9 @@ export function AppLayout() {
     )
     const perms = menuPermissions(permsQuery.data ?? null, permsQuery.error)
 
-    // Página atual: marca o item do menu e monta o breadcrumb ("Administração / Membros").
+    // Página atual: marca o item do menu.
     const current = me ? activeItem(pathname, me.org.slug) : null
     const dashboardKey = pathname.split('/dashboards/')[1]
-    const crumb = [current?.section.title, current?.item.label, dashboardKey].filter(Boolean).join(' / ')
 
     // Menu do celular: fecha com Esc (foco volta ao botão) ou clicando fora da barra lateral.
     useDismiss({
@@ -55,11 +59,11 @@ export function AppLayout() {
     const closeMenu = () => setMenuOpen(false)
 
     return (
-        <div className="app" data-menu={menuOpen ? 'open' : undefined}>
+        <div className="app" data-menu={menuOpen ? 'open' : undefined} data-side={collapsed ? 'collapsed' : undefined}>
             <aside className="side" aria-label="Navegação principal">
                 <div className="brand">
                     <span className="brand-mark">LH</span>
-                    <span>LexHub</span>
+                    <span className="brand-name">LexHub</span>
                 </div>
                 <OrgSwitcher
                     current={org}
@@ -67,6 +71,7 @@ export function AppLayout() {
                     units={me.units}
                     canCreate={user.platform_staff}
                     onNavigate={closeMenu}
+                    onOpen={() => setCollapsed(false)}
                 />
 
                 {NAV_SECTIONS.map((section) => ({ section, items: visibleItems(section, perms, user.platform_staff) }))
@@ -80,10 +85,11 @@ export function AppLayout() {
                                     className="nav"
                                     to={pathOf(item, org.slug)}
                                     aria-current={current?.item.key === item.key ? 'page' : undefined}
+                                    title={collapsed ? item.label : undefined}
                                     onClick={closeMenu}
                                 >
                                     <Icon name={item.icon} />
-                                    {item.label}
+                                    <span className="nav-label">{item.label}</span>
                                     {item.badge === 'access-requests' && pending > 0 && (
                                         <span className="count" aria-label={`${pending} pendentes`}>
                                             {pending}
@@ -96,16 +102,16 @@ export function AppLayout() {
 
                 <div className="side-user">
                     <span className="av">{user.initials}</span>
-                    <span>
+                    <span className="side-user-text">
                         <span className="name">{user.name}</span>
                         <span className="sub">{user.role_label}</span>
                     </span>
                     {/* Sair só apaga a sessão; o <RequireAuth> é quem manda para o /login. */}
                     <button
-                        className="nav"
+                        className="nav side-logout"
                         type="button"
                         aria-label="Sair"
-                        style={{ width: 'auto', marginLeft: 'auto', padding: 8 }}
+                        title="Sair"
                         onClick={() => signOut()}
                     >
                         <Icon name="logout" />
@@ -125,12 +131,9 @@ export function AppLayout() {
                     >
                         <Icon name="menu" />
                     </button>
-                    <div className="crumb">
-                        <span className="small muted">
-                            {org.name} / {crumb}
-                        </span>
-                        <span className="path">lexhub.app{pathname}</span>
-                    </div>
+                    <SidebarToggle collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
+                    {/* Empurra o resto da topbar para a direita (antes era o breadcrumb). */}
+                    <div className="topbar-spacer" />
                     {/* Só no modo mock: em modo api os dados vêm da API V2. */}
                     {env.dataSource === 'mock' && <span className="badge warn">Dados fictícios</span>}
                     {/* A página atual pode ocupar este espaço (ex.: Período do dashboard). */}
@@ -138,6 +141,7 @@ export function AppLayout() {
                     {/* Busca de dashboards só fora deles (hub, admin...): dentro de um dashboard sai da frente. */}
                     {!dashboardKey && <SearchBox org={org.slug} />}
                     <NotificationsBell staff={user.platform_staff} pending={pending} onNavigate={closeMenu} />
+                    <FullscreenToggle />
                     <ThemeToggle />
                 </header>
 

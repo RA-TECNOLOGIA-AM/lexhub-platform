@@ -67,6 +67,7 @@
   --r-sm: 6px; --r-md: 8px; --r-lg: 12px; --r-pill: 999px;
   --gap: 16px;
   --side-w: 248px;
+  --side-w-collapsed: 68px; /* barra lateral recolhida: só os ícones */
 }
 
 /* ---------- modo escuro "Carvão quente" ----------
@@ -147,14 +148,14 @@ h1, h2, h3, p { margin: 0; }
 }
 
 /* ---------- shell: barra lateral + conteúdo ---------- */
-.app { display: flex; min-height: 100vh; }
+.app { display: flex; min-height: 100vh; min-height: 100dvh; }
 .side {
   flex: 0 0 var(--side-w);
   background: var(--side-bg);
   color: var(--side-text);
   padding: 16px 12px 20px;
   display: flex; flex-direction: column; gap: 2px;
-  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  position: sticky; top: 0; height: 100vh; height: 100dvh; overflow-y: auto;
 }
 .brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 14px; color: #fff; font-weight: 600; }
 .brand-mark {
@@ -195,8 +196,7 @@ h1, h2, h3, p { margin: 0; }
   padding: 12px 28px; background: var(--surface); border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 5;
 }
-.crumb { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
-.crumb .path { font-size: var(--fs-xs); color: var(--text-faint); font-family: var(--mono); }
+.topbar-spacer { flex: 1 1 0; min-width: 0; }
 .search { position: relative; flex: 0 1 300px; }
 .search .field { padding-left: 34px; }
 .search svg { position: absolute; left: 11px; top: 12px; pointer-events: none; }
@@ -212,8 +212,7 @@ h1, h2, h3, p { margin: 0; }
   .topbar .menu-btn { display: inline-flex; }
   .topbar { padding: 10px 16px; }
   .search { flex: 1 1 100%; order: 3; }
-  .crumb .path, .topbar > .badge { display: none; }
-  .crumb { flex: 1 1 0; }
+  .topbar > .badge { display: none; }
   .content { padding: 18px 16px 40px; }
 }
 
