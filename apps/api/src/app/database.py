@@ -67,8 +67,17 @@ def _backoff(attempt: int) -> float:
 
 async def _read_only(conn: asyncpg.Connection) -> None:
     """Cada conexão nova fica só leitura. Vai num SET depois de conectar (e não na abertura)
-    porque bancos com PgBouncer na frente, como o LAADV, recusam esse parâmetro na abertura."""
+    porque bancos com PgBouncer na frente, como o LAADV, recusam esse parâmetro na abertura.
+    Camada extra: atrás de PgBouncer em modo transação esse SET pode se perder; quem garante
+    é fetch_read_only."""
     await conn.execute("SET default_transaction_read_only = on")
+
+
+async def fetch_read_only(conn: asyncpg.Connection, query: str) -> list[asyncpg.Record]:
+    """Roda a consulta dentro de BEGIN READ ONLY ... COMMIT. Vale mesmo atrás de PgBouncer em
+    modo transação, onde o SET de sessão de _read_only pode cair numa conexão diferente."""
+    async with conn.transaction(readonly=True):
+        return await conn.fetch(query)
 
 
 class DatabaseManager:
