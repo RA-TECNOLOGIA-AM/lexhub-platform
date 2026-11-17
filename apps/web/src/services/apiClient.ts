@@ -75,8 +75,13 @@ export function createApiClient({
             return 'redirecting'
         },
 
+        // Só este aparelho: o padrão do Supabase ('global') derrubava também o celular ao sair na TV.
         async signOut() {
-            await auth.auth.signOut()
+            await auth.auth.signOut({ scope: 'local' })
+        },
+        async signOutOthers() {
+            const { error } = await auth.auth.signOut({ scope: 'others' })
+            if (error) throw new DataError(error.status ?? 0, 'Não foi possível desconectar os outros aparelhos.')
         },
 
         async getSessionEmail() {
