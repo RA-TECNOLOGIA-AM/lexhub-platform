@@ -59,9 +59,6 @@ export function LoginPage() {
         if (isGoogleSignIn) return <LoadingState />
         return <Navigate to={from ?? `/${me.org.slug}/dashboards`} replace />
     }
-    if (noAccess && from?.split('?')[0] === '/ativar') {
-        return <Navigate to={from} replace />
-    }
 
     async function handleSubmit(e: FormEvent<HTMLFormElement>) {
         e.preventDefault() // impede o navegador de recarregar a página

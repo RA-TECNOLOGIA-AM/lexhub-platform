@@ -27,7 +27,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         window.location.replace('/tv-login')
     }, [])
 
-    useEffect(() => watchTvSession(tvSession, () => void expireTvSession()), [expireTvSession])
+    // TV: confere o prazo e, no servidor, se a sessão não foi derrubada em outro aparelho
+    // ("Desconectar outros aparelhos"): assim a TV sai em até 1 minuto, não quando o token vence.
+    useEffect(
+        () =>
+            watchTvSession(tvSession, () => void expireTvSession(), {
+                isAlive: () => dataClient.isSessionAlive(),
+            }),
+        [expireTvSession],
+    )
 
     // Ao abrir o app (ou dar F5, ou voltar do Google): já existe sessão? Com organização?
     useEffect(() => {

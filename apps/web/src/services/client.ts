@@ -73,6 +73,9 @@ export interface DataClient {
     signOut(): Promise<void>
     // Encerra as sessões da conta em todos os outros aparelhos (ex.: TVs esquecidas); este continua logado.
     signOutOthers(): Promise<void>
+    // A sessão deste aparelho ainda existe no servidor? false = foi derrubada (ex.: por outro aparelho).
+    // Erro de rede responde true: na dúvida, não tira a pessoa.
+    isSessionAlive(): Promise<boolean>
     // E-mail de quem está logado (null = sem sessão). Serve à tela "sem acesso", quando o /me dá 403.
     getSessionEmail(): Promise<string | null>
     getSessionAccessToken(): Promise<string | null>

@@ -12,6 +12,7 @@ type KeyValue = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 export type TvSession = {
     start(): void // login pela TV: a sessão vale TV_SESSION_MS a partir de agora
     clear(): void // sair, ou login normal no mesmo navegador
+    active(): boolean // este navegador entrou pelo QR (com prazo, vencido ou não)
     expired(): boolean
 }
 
@@ -42,6 +43,9 @@ export function createTvSession(
                 // nada a apagar
             }
         },
+        active() {
+            return read() !== null
+        },
         expired() {
             const value = read()
             if (value === null) return false
@@ -52,15 +56,41 @@ export function createTvSession(
     }
 }
 
-// Confere o prazo de minuto em minuto e quando a aba volta a aparecer
-// (TV que dormiu ou aba em segundo plano atrasa timers longos). Devolve stop().
-export function watchTvSession(session: TvSession, onExpire: () => void, everyMs = 60_000): () => void {
+type WatchOptions = {
+    everyMs?: number
+    // Pergunta ao servidor se a sessão ainda existe (ex.: "Desconectar outros aparelhos" no celular).
+    // false = derrubada; erro de rede deve responder true (TV não sai por Wi-Fi instável).
+    isAlive?: () => Promise<boolean>
+}
+
+// Confere de minuto em minuto, e quando a aba volta a aparecer (TV que dormiu atrasa timers):
+// o prazo de 24 h e, se houver isAlive, se a sessão não foi derrubada em outro aparelho.
+// Sem login pela TV neste navegador, não faz nada. Devolve stop().
+export function watchTvSession(
+    session: TvSession,
+    onExpire: () => void,
+    { everyMs = 60_000, isAlive }: WatchOptions = {},
+): () => void {
     let fired = false
+    let asking = false
+    const fire = () => {
+        if (fired) return
+        fired = true
+        onExpire()
+    }
     const check = () => {
-        if (!fired && session.expired()) {
-            fired = true
-            onExpire()
-        }
+        if (fired || !session.active()) return
+        if (session.expired()) return fire()
+        if (!isAlive || asking) return
+        asking = true
+        isAlive()
+            .then((alive) => {
+                if (!alive) fire()
+            })
+            .catch(() => {})
+            .finally(() => {
+                asking = false
+            })
     }
     const timer = setInterval(check, everyMs)
     const onVisible = () => {

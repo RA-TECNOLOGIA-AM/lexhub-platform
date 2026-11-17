@@ -83,6 +83,12 @@ export function createApiClient({
             const { error } = await auth.auth.signOut({ scope: 'others' })
             if (error) throw new DataError(error.status ?? 0, 'Não foi possível desconectar os outros aparelhos.')
         },
+        // getUser vai ao servidor (getSession só lê o token local, que segue "válido" até vencer).
+        async isSessionAlive() {
+            const { error } = await auth.auth.getUser()
+            if (!error) return true
+            return !(error.status === 401 || error.status === 403)
+        },
 
         async getSessionEmail() {
             const { data } = await auth.auth.getSession()

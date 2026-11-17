@@ -179,6 +179,9 @@ export function createMockClient(): DataClient {
         async signOutOthers() {
             await wait()
         },
+        async isSessionAlive() {
+            return sessionStorage.getItem(SESSION_KEY) !== null
+        },
 
         async getSessionEmail() {
             return sessionStorage.getItem(SESSION_KEY)
