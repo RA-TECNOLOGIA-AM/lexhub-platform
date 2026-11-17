@@ -1736,6 +1736,18 @@ div.org {
     min-height: 34px;
     font-size: var(--fs-sm);
 }
+.dsec-action {
+    flex: none;
+    display: flex;
+    align-items: center;
+}
+/* Com controle próprio, o cabeçalho quebra linha quando falta largura (o controle e o "Ocultar" descem). */
+.dsec-head:has(> .dsec-action) {
+    flex-wrap: wrap;
+}
+.dsec-head:has(> .dsec-action) > .dsec-text {
+    flex-basis: 320px;
+}
 
 /* grades de cards */
 .grid-stat {

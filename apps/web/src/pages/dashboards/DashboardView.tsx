@@ -72,7 +72,7 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
         <>
             {/* Filtros e Período vão na topbar; filtros ativos e Exportar, na faixa logo abaixo. */}
             <DashboardToolbar
-                filterFields={module.filters?.(data) ?? []}
+                filterFields={module.filters?.(data, query.filters) ?? []}
                 filters={query.filters}
                 onFiltersChange={setFilters}
                 period={<PeriodPicker value={period} onChange={setPeriod} />}

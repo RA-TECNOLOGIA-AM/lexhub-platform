@@ -194,6 +194,15 @@ export const catalog: DashboardCatalog = {
             source: 'LexFlow',
             syncedMin: 6,
         }),
+        entry({
+            key: 'julgados-acordaos',
+            title: 'Julgados Acórdãos',
+            area: 'Jurídico',
+            desc: 'Resultados de acórdão (2º grau) no período.',
+            units: ALL,
+            source: 'LexFlow',
+            syncedMin: 6,
+        }),
 
         // Financeiro
         entry({

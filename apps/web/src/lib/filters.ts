@@ -11,6 +11,9 @@ export type FilterField = {
     // Seletor que fica dentro de uma seção ou modal (ex.: os anos da Conversão no Financeiro Estratégico): vai
     // na URL e na API como os outros, mas não aparece na janela Filtros, nas etiquetas nem no "Limpar todos".
     inline?: boolean
+    // Filtro que só se liga clicando nos gráficos (ex.: relator no Julgados Acórdãos, como na v1): aparece nas
+    // etiquetas, no contador e no "Limpar todos", mas não na janela Filtros. As opções servem só para o rótulo.
+    fromChart?: boolean
 }
 
 // Só os filtros da página (sem os seletores de seção, `inline`): os da janela, das etiquetas e do contador.
