@@ -1,11 +1,7 @@
 /* Julgados Acórdãos: as grades e as peças próprias da página (o resto vem de app.css). Fica com o dashboard e só
    carrega quando ele abre. As grades seguem as da página da v1 (Tailwind lg:grid-cols-*). */
 
-/* 01 · os seis cards (3 × 2) e, ao lado, a pizza "Resultado dos embargos" */
-.jl-topo {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
-    align-items: stretch;
-}
+/* 01 · os seis cards (3 × 2); a pizza "Resultado dos embargos" vem embaixo, na largura toda (como no Comercial) */
 /* Valor dos acórdãos procedentes (1 coluna) e a Taxa de procedência (3 colunas) */
 .jl-linha2 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -18,11 +14,6 @@
 }
 .jl-dois {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-@media (max-width: 1300px) {
-    .jl-topo {
-        grid-template-columns: 1fr;
-    }
 }
 @media (max-width: 1100px) {
     .jl-tres,

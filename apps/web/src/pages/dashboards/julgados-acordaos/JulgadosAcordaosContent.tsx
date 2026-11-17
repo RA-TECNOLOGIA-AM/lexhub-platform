@@ -183,6 +183,7 @@ export function JulgadosAcordaosContent({
         value: j.embargosResultado.find((p) => p.name.toLowerCase() === s.name.toLowerCase())?.value ?? 0,
         color: s.color,
     })).filter((e) => e.value > 0)
+    const totalEmbargos = embargos.reduce((s, e) => s + e.value, 0)
 
     // Histórico (os anos desde 2024): o ano do "mês a mês" é o escolhido ou o mais recente.
     const anos = acordaosPorAno(j.porMes)
@@ -225,102 +226,98 @@ export function JulgadosAcordaosContent({
                 subtitle="Processos com acórdão proferido no período selecionado."
             >
                 <div className="stack">
-                    <div className="grid jl-topo">
-                        <div className="grid grid-stat-3 jl-cards">
+                    <div className="grid grid-stat-3 jl-cards">
+                        <HeroStat
+                            label="Total de Acórdãos"
+                            icon="scale"
+                            tone="accent"
+                            value={valor(n.total, fmt.int)}
+                            below={<DeltaPill value={c.total} suffix={VS} plain />}
+                            hint="Processos com acórdão no período, comparados ao período anterior de mesma duração"
+                        />
+                        {cardCategoria(
+                            'procedente',
                             <HeroStat
-                                label="Total de Acórdãos"
-                                icon="scale"
-                                tone="accent"
-                                value={valor(n.total, fmt.int)}
-                                below={<DeltaPill value={c.total} suffix={VS} plain />}
-                                hint="Processos com acórdão no período, comparados ao período anterior de mesma duração"
-                            />
-                            {cardCategoria(
-                                'procedente',
-                                <HeroStat
-                                    label="Procedentes"
-                                    icon="check-circle"
-                                    tone="ok"
-                                    outline={categorias.includes('procedente')}
-                                    value={valor(n.procedentes, fmt.int)}
-                                    below={<DeltaPill value={c.procedentes} suffix={VS} plain />}
-                                    hint="Status 2G procedente (total ou parcial, com ou sem proveito econômico), comparados ao período anterior de mesma duração. Clique para filtrar a página."
-                                />,
-                            )}
-                            {cardCategoria(
-                                'improcedente',
-                                <HeroStat
-                                    label="Improcedentes"
-                                    icon="x-circle"
-                                    tone="danger"
-                                    outline={categorias.includes('improcedente')}
-                                    value={valor(n.improcedentes, fmt.int)}
-                                    below={<DeltaPill value={c.improcedentes} betterWhenDown suffix={VS} plain />}
-                                    hint="Status 2G improcedente, comparados ao período anterior de mesma duração. Clique para filtrar a página."
-                                />,
-                            )}
-                            {cardCategoria(
-                                'extinto',
-                                <HeroStat
-                                    label="Extintos"
-                                    icon="ban"
-                                    tone="warn"
-                                    outline={categorias.includes('extinto')}
-                                    value={valor(n.extintos, fmt.int)}
-                                    below={<DeltaPill value={c.extintos} suffix={VS} plain />}
-                                    hint="Status 2G extinto sem mérito, comparados ao período anterior de mesma duração. Clique para filtrar a página."
-                                />,
-                            )}
+                                label="Procedentes"
+                                icon="check-circle"
+                                tone="ok"
+                                outline={categorias.includes('procedente')}
+                                value={valor(n.procedentes, fmt.int)}
+                                below={<DeltaPill value={c.procedentes} suffix={VS} plain />}
+                                hint="Status 2G procedente (total ou parcial, com ou sem proveito econômico), comparados ao período anterior de mesma duração. Clique para filtrar a página."
+                            />,
+                        )}
+                        {cardCategoria(
+                            'improcedente',
                             <HeroStat
-                                label="Não classificados"
-                                icon="info"
-                                tone="neutral"
-                                value={valor(n.naoClassificados, fmt.int)}
-                                below={<DeltaPill value={c.naoClassificados} suffix={VS} plain />}
-                                hint="Status 2G fora de Procedente/Improcedente/Extinto (ex.: sentença anulada, encerrado 1G, ou sem status lançado), comparados ao período anterior de mesma duração."
-                            />
+                                label="Improcedentes"
+                                icon="x-circle"
+                                tone="danger"
+                                outline={categorias.includes('improcedente')}
+                                value={valor(n.improcedentes, fmt.int)}
+                                below={<DeltaPill value={c.improcedentes} betterWhenDown suffix={VS} plain />}
+                                hint="Status 2G improcedente, comparados ao período anterior de mesma duração. Clique para filtrar a página."
+                            />,
+                        )}
+                        {cardCategoria(
+                            'extinto',
                             <HeroStat
-                                label="Média sentença → acórdão"
-                                icon="clock"
-                                tone="info"
-                                value={dias(n.tempoMedio)}
-                                below={<DeltaPill value={c.tempoMedio} betterWhenDown suffix={VS} plain />}
-                                hint="Média de dias entre a data da sentença (1G) e a data do acórdão, para os acórdãos do período com as duas datas, comparada ao período anterior de mesma duração."
-                            />
-                        </div>
-                        <ChartCard
-                            title="Resultado dos embargos"
-                            action={
-                                <Acoes info="Acórdãos de embargos com data no período (eixo: data do acórdão de embargos, não do acórdão original), pelo Status Resultante da matriz (mérito antes dos embargos × resultado lançado). Com data e sem resultado lançado: “Sem resultado lançado”. Clique para filtrar." />
-                            }
-                            footer={
-                                <>
-                                    Tempo médio entre o acórdão e os embargos:{' '}
-                                    <strong className="num">{dias(n.embargosTempoMedio)}</strong>
-                                </>
-                            }
-                        >
+                                label="Extintos"
+                                icon="ban"
+                                tone="warn"
+                                outline={categorias.includes('extinto')}
+                                value={valor(n.extintos, fmt.int)}
+                                below={<DeltaPill value={c.extintos} suffix={VS} plain />}
+                                hint="Status 2G extinto sem mérito, comparados ao período anterior de mesma duração. Clique para filtrar a página."
+                            />,
+                        )}
+                        <HeroStat
+                            label="Não classificados"
+                            icon="info"
+                            tone="neutral"
+                            value={valor(n.naoClassificados, fmt.int)}
+                            below={<DeltaPill value={c.naoClassificados} suffix={VS} plain />}
+                            hint="Status 2G fora de Procedente/Improcedente/Extinto (ex.: sentença anulada, encerrado 1G, ou sem status lançado), comparados ao período anterior de mesma duração."
+                        />
+                        <HeroStat
+                            label="Média sentença → acórdão"
+                            icon="clock"
+                            tone="info"
+                            value={dias(n.tempoMedio)}
+                            below={<DeltaPill value={c.tempoMedio} betterWhenDown suffix={VS} plain />}
+                            hint="Média de dias entre a data da sentença (1G) e a data do acórdão, para os acórdãos do período com as duas datas, comparada ao período anterior de mesma duração."
+                        />
+                    </div>
+
+                    {/* Largura toda, como a Distribuição por rubrica do Comercial (LexPre): rótulos em volta da
+                        rosca (nome, quantidade e %), a fatia sob o cursor no meio e clique para filtrar. */}
+                    <ChartCard
+                        title="Resultado dos embargos"
+                        subtitle={`${fmt.int(totalEmbargos)} acórdão(s) de embargos no período · clique na fatia para filtrar`}
+                        action={
+                            <Acoes info="Acórdãos de embargos com data no período (eixo: data do acórdão de embargos, não do acórdão original), pelo Status Resultante da matriz (mérito antes dos embargos × resultado lançado). Com data e sem resultado lançado: “Sem resultado lançado”. Clique para filtrar." />
+                        }
+                        footer={
+                            <>
+                                Tempo médio entre o acórdão e os embargos:{' '}
+                                <strong className="num">{dias(n.embargosTempoMedio)}</strong>
+                            </>
+                        }
+                    >
+                        {embargos.length > 0 ? (
                             <PieChart
                                 items={embargos}
-                                size={220}
+                                centerLabel="embargos"
+                                labels
                                 sort={false}
-                                innerRatio={0.66}
                                 selected={filters.resultado_embargos_julgados}
                                 onSelect={filtrar('resultado_embargos_julgados')}
                                 selectLabel="Filtrar pelo resultado dos embargos"
                             />
-                            {embargos.length > 0 && (
-                                <ul className="jl-legend" role="list">
-                                    {embargos.map((e) => (
-                                        <li key={e.name}>
-                                            <span className="chart-key dot" style={{ background: e.color }} />
-                                            {e.name} <strong className="num">{fmt.int(e.value)}</strong>
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </ChartCard>
-                    </div>
+                        ) : (
+                            <ChartEmpty>Sem dados para o período selecionado.</ChartEmpty>
+                        )}
+                    </ChartCard>
 
                     <div className="grid jl-linha2">
                         <HeroStat
