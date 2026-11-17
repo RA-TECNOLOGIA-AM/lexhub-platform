@@ -274,6 +274,14 @@ const PATHS = {
             <path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
         </>
     ),
+    qr: (
+        <>
+            <rect x="3.5" y="3.5" width="6" height="6" rx="1" />
+            <rect x="14.5" y="3.5" width="6" height="6" rx="1" />
+            <rect x="3.5" y="14.5" width="6" height="6" rx="1" />
+            <path d="M14.5 14.5h2.5v2.5M20.5 14.5v.01M14.5 20.5h.01M17.5 20.5h3v-3" />
+        </>
+    ),
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof PATHS | 'moon'

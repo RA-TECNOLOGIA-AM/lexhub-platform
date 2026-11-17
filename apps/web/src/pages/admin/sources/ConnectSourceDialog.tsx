@@ -1,36 +1,97 @@
 import { useState } from 'react'
-import type { DataSource, ProductKey, ProductOffices, Unit } from '../../../types/index.ts'
+import type {
+    ConnectInfo,
+    ConnectInput,
+    ConnectResult,
+    DataSource,
+    ProductKey,
+    ProductOffices,
+    SheetTab,
+    Unit,
+} from '../../../types/index.ts'
 import { Modal } from '../../../components/ui/Modal.tsx'
 import { Icon } from '../../../components/ui/Icon.tsx'
 import { useAsync } from '../../../hooks/useAsync.ts'
 import { toDataError } from '../../../services/errors.ts'
-import { CONNECTORS, connectorBlock, isProduct, officeSub, sortOffices, type ConnectorKey } from './connectSource.ts'
+import {
+    CONNECTORS,
+    connectorBlock,
+    isDatabase,
+    isProduct,
+    officeSub,
+    sortOffices,
+    type ConnectorKey,
+} from './connectSource.ts'
+import { DatabaseStep } from './DatabaseStep.tsx'
+import { SheetsStep } from './SheetsStep.tsx'
 
 type ConnectSourceDialogProps = {
     unit: Unit
     sources: DataSource[] // as fontes que a unidade já tem (bloqueia produto repetido)
     loadOffices: (product: ProductKey) => Promise<ProductOffices>
     onLink: (product: ProductKey, ref: string) => Promise<void> // grava; se rejeitar, a mensagem aparece no modal
+    loadConnectInfo: () => Promise<ConnectInfo> // a API cifra senha/link? qual o IP de saída?
+    inspectSheet: (url: string) => Promise<SheetTab[]>
+    onConnect: (input: ConnectInput) => Promise<ConnectResult> // testa e salva banco ou planilha
+    onSaved: () => void // banco/planilha gravado: a página busca a lista de novo
     onClose: () => void
 }
 
-// Módulo: o assistente Conectar fonte. Passo 1 escolhe o tipo; passo 2 é o do tipo (hoje: o escritório do
-// LexPre/LexFlow). Não sabe de API: recebe quem busca a lista (loadOffices) e quem grava (onLink).
-export function ConnectSourceDialog({ unit, sources, loadOffices, onLink, onClose }: ConnectSourceDialogProps) {
-    const [product, setProduct] = useState<ProductKey | null>(null)
+// Módulo: o assistente Conectar fonte. Passo 1 escolhe o tipo; passo 2 é o do tipo (escritório do
+// LexPre/LexFlow, banco próprio ou planilha). Não sabe de API: recebe quem busca e quem grava.
+export function ConnectSourceDialog({
+    unit,
+    sources,
+    loadOffices,
+    onLink,
+    loadConnectInfo,
+    inspectSheet,
+    onConnect,
+    onSaved,
+    onClose,
+}: ConnectSourceDialogProps) {
+    const [step, setStep] = useState<ConnectorKey | null>(null)
+    const info = useAsync(loadConnectInfo, [])
+    const back = () => setStep(null)
 
-    if (product) {
+    if (step && isProduct(step)) {
         return (
             <OfficeStep
                 unit={unit}
-                product={product}
+                product={step}
                 loadOffices={loadOffices}
                 onLink={onLink}
-                onBack={() => setProduct(null)}
+                onBack={back}
                 onClose={onClose}
             />
         )
     }
+    if (step && isDatabase(step)) {
+        return (
+            <DatabaseStep
+                unit={unit}
+                connector={step}
+                egressIp={info.data?.egressIp ?? null}
+                onSave={onConnect}
+                onSaved={onSaved}
+                onBack={back}
+                onClose={onClose}
+            />
+        )
+    }
+    if (step === 'sheets') {
+        return (
+            <SheetsStep
+                unit={unit}
+                inspect={inspectSheet}
+                onSave={onConnect}
+                onSaved={onSaved}
+                onBack={back}
+                onClose={onClose}
+            />
+        )
+    }
+    const secretsReady = Boolean(info.data?.ready)
     return (
         <Modal
             title="Conectar fonte"
@@ -48,14 +109,14 @@ export function ConnectSourceDialog({ unit, sources, loadOffices, onLink, onClos
             </p>
             <div className="connect-types">
                 {CONNECTORS.map((c) => {
-                    const block = connectorBlock(c.key, c.ready, sources)
+                    const block = connectorBlock(c.key, c.secret, sources, secretsReady)
                     return (
                         <button
                             key={c.key}
                             type="button"
                             className="connect-type"
-                            disabled={block !== null}
-                            onClick={() => pick(c.key)}
+                            disabled={block !== null || (c.secret && info.loading)}
+                            onClick={() => setStep(c.key)}
                         >
                             <span className="source-icon">
                                 <Icon name={c.icon} />
@@ -68,10 +129,6 @@ export function ConnectSourceDialog({ unit, sources, loadOffices, onLink, onClos
             </div>
         </Modal>
     )
-
-    function pick(key: ConnectorKey) {
-        if (isProduct(key)) setProduct(key)
-    }
 }
 
 type OfficeStepProps = {
@@ -162,8 +219,8 @@ function OfficeStep({ unit, product, loadOffices, onLink, onBack, onClose }: Off
                 </div>
             )}
             <p className="muted small" style={{ margin: 0 }}>
-                Não achou a operação? Ela ainda não existe no {label}. Ligue depois, ou conecte um banco próprio ou uma
-                planilha quando estiverem disponíveis.
+                Não achou a operação? Ela ainda não existe no {label}. Volte e conecte o banco próprio dela ou uma
+                planilha, ou ligue depois.
             </p>
             {saveError && (
                 <p className="invite-error" role="alert" style={{ margin: 0 }}>

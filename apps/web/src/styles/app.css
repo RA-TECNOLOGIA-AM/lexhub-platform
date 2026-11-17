@@ -489,6 +489,114 @@ button.org:hover {
     cursor: default;
     background: var(--surface-2);
 }
+/* Banco próprio e planilha: campos lado a lado, "ou preencha", passo a passo e o resultado do teste */
+.connect-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+.connect-grow {
+    flex: 1 1 200px;
+    min-width: 0;
+}
+.connect-port {
+    flex: 0 1 140px;
+}
+.connect-or {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+.connect-or::before,
+.connect-or::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--divider);
+}
+.connect-howto {
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 10px 12px;
+    background: var(--surface-2);
+    font-size: var(--fs-sm);
+}
+.connect-howto summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-2);
+}
+.connect-howto ol,
+.connect-steps {
+    margin: 10px 0 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 12px;
+}
+.connect-steps > li {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.connect-sql {
+    margin: 6px 0;
+    padding: 10px 12px;
+    border-radius: var(--r-sm);
+    background: var(--surface-3);
+    font-size: var(--fs-xs);
+    line-height: 1.6;
+    white-space: pre;
+    overflow-x: auto;
+}
+.check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.check-list {
+    list-style: none;
+    margin: 0;
+    padding: 10px 12px;
+    display: grid;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    font-size: var(--fs-sm);
+}
+.check-list li {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+.check-list svg {
+    flex: none;
+    margin-top: 2px;
+}
+.check-ok svg {
+    color: var(--ok);
+}
+.check-warn svg {
+    color: var(--warn);
+}
+.check-bad svg {
+    color: var(--danger);
+}
+.connect-confirm {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid var(--danger-line);
+    border-radius: var(--r-md);
+    background: var(--danger-bg);
+}
+.btn-danger {
+    color: var(--danger);
+}
 /* Formulário de unidade: modal estreito, campos um embaixo do outro */
 .unit-dialog {
     width: min(480px, calc(100vw - 32px));
@@ -4912,7 +5020,40 @@ body {
     overflow-x: clip;
 }
 
-/* Barra lateral recolhível: o botão fica na topbar (só no computador; no celular a barra é gaveta). */
+/* Lista de páginas da barra lateral: é ela que rola quando o menu não cabe na altura da janela (janela baixa,
+   zoom alto). Logo, organização e usuário ficam parados; antes a barra inteira rolava sem barra visível e
+   parecia "subir e descer". A própria .side continua podendo rolar só se o topo e o rodapé sozinhos não
+   couberem (ex.: lista de organizações aberta numa janela muito baixa). */
+.side-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+.side-nav::-webkit-scrollbar {
+    display: none;
+}
+/* Janela baixa (ou zoom alto): menu mais justo, para caber inteiro sem rolar nos casos comuns. */
+@media (max-height: 760px) {
+    .side .brand {
+        padding-bottom: 10px;
+    }
+    .side-label {
+        padding-top: 12px;
+        padding-bottom: 4px;
+    }
+    .side-nav .nav {
+        min-height: 36px;
+        padding-block: 6px;
+    }
+}
+
+/* Barra lateral recolhível: o logo do LexHub no topo é o botão (no celular, onde a barra é gaveta, fecha o menu). */
 .side {
     overflow-x: hidden;
     transition:
@@ -4924,10 +5065,48 @@ body {
     margin-left: auto;
     padding: 8px;
 }
-@media (max-width: 860px) {
-    .topbar .side-toggle {
-        display: none;
-    }
+/* Conectar TV fica colado no Sair: só o primeiro botão empurra para a direita. */
+.side-tv + .side-logout {
+    margin-left: 0;
+}
+.brand-toggle {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    margin: -4px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--r-md);
+    background: transparent;
+    color: var(--side-text);
+    cursor: pointer;
+}
+.brand-toggle:hover {
+    background: var(--side-hover);
+    color: #fff;
+}
+.brand-toggle-logo,
+.brand-toggle-icon {
+    transition: opacity 0.15s ease;
+}
+.brand-toggle-icon {
+    position: absolute;
+    inset: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+}
+/* Ao passar o mouse ou focar pelo teclado, o logo vira o ícone de painel (mostra que recolhe/expande). */
+.brand-toggle:is(:hover, :focus-visible) .brand-toggle-logo {
+    opacity: 0;
+}
+.brand-toggle:is(:hover, :focus-visible) .brand-toggle-icon {
+    opacity: 1;
 }
 @media (min-width: 861px) {
     .app[data-side='collapsed'] .side {

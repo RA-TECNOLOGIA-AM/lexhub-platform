@@ -2,11 +2,32 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DataClient } from './client.ts'
 import type { Http } from './http.ts'
 import { createRpc } from './rpc.ts'
-import type { ProductOffices, SourceDetail, SourcesResponse, UnitInput, UnitSources } from '../types/index.ts'
+import type {
+    ConnectInfo,
+    ConnectResult,
+    ProductOffices,
+    SheetTab,
+    SourceDetail,
+    SourcesResponse,
+    SourceTestResult,
+    UnitInput,
+    UnitSources,
+} from '../types/index.ts'
 
 type SourcesClient = Pick<
     DataClient,
-    'getSources' | 'getSourceDetail' | 'createUnit' | 'updateUnit' | 'listProductOffices' | 'linkProductOffice'
+    | 'getSources'
+    | 'getSourceDetail'
+    | 'createUnit'
+    | 'updateUnit'
+    | 'listProductOffices'
+    | 'linkProductOffice'
+    | 'getConnectInfo'
+    | 'inspectSheet'
+    | 'connectSource'
+    | 'retestSource'
+    | 'changeSourceSecret'
+    | 'disconnectSource'
 >
 
 // Os parâmetros que create_unit e update_unit recebem (mesmos nomes do banco).
@@ -17,11 +38,12 @@ const unitArgs = (org: string, unit: UnitInput) => ({
     p_timezone: unit.timezone,
 })
 
-// Módulo: Unidades e fontes. Quase tudo pelo Supabase (schema api); a lista de escritórios do
-// LexPre/LexFlow vem da API em Python, que é quem fala com o banco do produto.
+// Módulo: Unidades e fontes. Ler e ligar escritório pelo Supabase (schema api); o que fala com o banco
+// do produto ou da operação (lista de escritórios, testar e salvar, trocar senha) pela API em Python.
 // As funções devolvem só o que quem chama vê (Owner/Desenvolvedor: todas as unidades; Gestor/Controller: as dele).
 export function createSourcesClient(supabase: SupabaseClient, http: Http): SourcesClient {
     const call = createRpc(supabase)
+    const enc = encodeURIComponent
     return {
         getSources: (org) => call<SourcesResponse>('list_sources', { p_org: org }),
         getSourceDetail: (org, unit, source) =>
@@ -31,5 +53,13 @@ export function createSourcesClient(supabase: SupabaseClient, http: Http): Sourc
         listProductOffices: (product) => http.get<ProductOffices>(`/sources/${product}/offices`),
         linkProductOffice: (org, unit, product, ref) =>
             call<UnitSources>('link_product_office', { p_org: org, p_unit: unit, p_product: product, p_ref: ref }),
+        getConnectInfo: () => http.get<ConnectInfo>('/sources/connect-info'),
+        inspectSheet: async (url) => (await http.post<{ tabs: SheetTab[] }>('/sources/sheets/inspect', { url })).tabs,
+        connectSource: (org, unit, input) =>
+            http.post<ConnectResult>(`/orgs/${enc(org)}/units/${enc(unit)}/sources`, input),
+        retestSource: (org, source) => http.post<SourceTestResult>(`/orgs/${enc(org)}/sources/${enc(source)}/test`),
+        changeSourceSecret: (org, source, input) =>
+            http.put<ConnectResult>(`/orgs/${enc(org)}/sources/${enc(source)}/secret`, input),
+        disconnectSource: (org, source) => http.delete<void>(`/orgs/${enc(org)}/sources/${enc(source)}`),
     }
 }

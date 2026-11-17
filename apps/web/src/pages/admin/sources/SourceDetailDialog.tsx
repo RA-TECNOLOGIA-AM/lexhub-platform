@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { SourceDetail } from '../../../types/index.ts'
+import { ManageSource } from './ManageSource.tsx'
 import { Modal } from '../../../components/ui/Modal.tsx'
 import { LoadingState } from '../../../components/states/LoadingState.tsx'
 import { dataClient } from '../../../services/client.ts'
@@ -20,13 +22,28 @@ type SourceDetailDialogProps = {
     unit: string // código da unidade aberta na página
     source: string // chave da fonte ('ng', 'lexpre'...)
     name: string // nome já conhecido pela lista (o título aparece antes de carregar)
+    onChanged: () => void // testou de novo ou trocou a senha: a lista da página busca de novo
+    onDisconnected: () => void
     onClose: () => void
 }
 
-// Módulo: o modal de uma fonte, vista de uma unidade — sobre, dashboards que usam e últimas sincronizações.
-// Só leitura; nenhuma credencial aparece (elas ficam no cofre).
-export function SourceDetailDialog({ org, unit, source, name, onClose }: SourceDetailDialogProps) {
-    const { data, error } = useAsync(() => dataClient.getSourceDetail(org, unit, source), [org, unit, source])
+// Módulo: o modal de uma fonte, vista de uma unidade — sobre, conexão (só a TI da LexGroup, nas fontes
+// conectadas pela tela), dashboards que usam e últimas sincronizações. Senha e link nunca aparecem.
+export function SourceDetailDialog({
+    org,
+    unit,
+    source,
+    name,
+    onChanged,
+    onDisconnected,
+    onClose,
+}: SourceDetailDialogProps) {
+    const [version, setVersion] = useState(0)
+    const { data, error } = useAsync(() => dataClient.getSourceDetail(org, unit, source), [org, unit, source, version])
+    const changed = () => {
+        setVersion((v) => v + 1)
+        onChanged()
+    }
     const status = data && statusOf(data.source.status)
     return (
         <Modal
@@ -43,7 +60,12 @@ export function SourceDetailDialog({ org, unit, source, name, onClose }: SourceD
             ) : !data ? (
                 <LoadingState />
             ) : (
-                <SourceDetailBody detail={data} />
+                <>
+                    {data.canManage && (
+                        <ManageSource org={org} detail={data} onChanged={changed} onDisconnected={onDisconnected} />
+                    )}
+                    <SourceDetailBody detail={data} />
+                </>
             )}
         </Modal>
     )

@@ -221,7 +221,7 @@ from app.analyses.v1_routes import (
 )
 from app.dashboards.base import DashboardContext, DashboardModule, ExportSpec
 from app.dashboards.identidade_v1 import get_atendente_vinculado, is_gestor_ou_desenvolvedor
-from app.sources import SourceUnavailable
+from app.database import SourceUnavailable
 
 QUERIES = (
     "comercial_lexpre_NG",

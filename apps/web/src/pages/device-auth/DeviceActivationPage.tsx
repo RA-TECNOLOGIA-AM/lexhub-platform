@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { DataError } from '../../services/errors.ts'
 import { dataClient } from '../../services/client.ts'
 
@@ -112,6 +112,12 @@ export function DeviceActivationPage() {
                         </button>
                     </form>
                 )}
+
+                <p className="muted small auth-foot">
+                    <Link className="linkbtn" to="/">
+                        Voltar ao LexHub
+                    </Link>
+                </p>
             </section>
         </main>
     )

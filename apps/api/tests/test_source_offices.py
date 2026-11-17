@@ -2,8 +2,8 @@ import asyncio
 
 import pytest
 
+from app.database import SourceUnavailable
 from app.source_offices import LinkedUnit, OfficeRow, ProductOfficeReader
-from app.sources import SourceUnavailable
 from conftest import USER_ID
 
 

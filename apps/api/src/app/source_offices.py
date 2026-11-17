@@ -18,8 +18,12 @@ from fastapi import Depends, Request
 from pydantic import BaseModel
 
 from app.access import get_db_pool
-from app.database import DatabaseManager, fetch_read_only, get_databases, run_with_connection_retry
-from app.sources import SourceUnavailable
+from app.database import (
+    DatabaseManager,
+    fetch_read_only,
+    get_databases,
+    run_with_connection_retry,
+)
 
 Product = Literal["lexpre", "lexflow"]
 
@@ -183,18 +187,15 @@ class ProductOfficeReader:
 
 
 def office_fetch(manager: DatabaseManager) -> OfficeFetch:
-    """Busca no banco do produto em transação só leitura; banco desligado = SourceUnavailable."""
+    """Busca no banco do produto em transação só leitura; banco desligado ou fora = SourceUnavailable."""
 
     async def fetch(product: str) -> list[OfficeRow]:
-        try:
-            rows = await run_with_connection_retry(
-                manager,
-                product,
-                lambda conn: fetch_read_only(conn, _OFFICES_SQL[product]),
-                operation_name=f"offices_{product}",
-            )
-        except ValueError as exc:  # pool não inicializado (banco off ou down na subida)
-            raise SourceUnavailable(product) from exc
+        rows = await run_with_connection_retry(
+            manager,
+            product,
+            lambda conn: fetch_read_only(conn, _OFFICES_SQL[product]),
+            operation_name=f"offices_{product}",
+        )
         return [OfficeRow(ref=r["ref"], name=r["name"], activity=r["activity"]) for r in rows]
 
     return fetch

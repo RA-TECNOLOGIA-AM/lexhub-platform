@@ -9,15 +9,17 @@ O cache de 5 min entra embrulhando o SourceFetcher (mesma interface), sem mudar 
 
 import time
 from collections.abc import Callable
-from typing import Annotated, Any, Protocol
+from typing import TYPE_CHECKING, Annotated, Any, Protocol
 
 import asyncpg
 from fastapi import Depends, Request
 
 from app.access import get_db_pool
+from app.config import SOURCE_DATABASES
 from app.dashboards.base import SourceFetcher
 from app.database import (
     DatabaseManager,
+    SourceUnavailable,
     fetch_read_only,
     get_databases,
     run_with_connection_retry,
@@ -25,9 +27,12 @@ from app.database import (
 from app.source_cache import CachedSourceFetcher, SourceCache
 from app.source_queries import QUERIES
 
+if TYPE_CHECKING:
+    from app.registered_sources import RegisteredSources
 
-class SourceUnavailable(Exception):
-    """Banco de origem desligado ou fora do ar (ex.: LexPre fora da rede da empresa)."""
+# SourceUnavailable mora em app.database; segue importável daqui porque as cópias da v1 em
+# app/analyses (que não editamos, para comparar linha a linha) importam de app.sources.
+__all__ = ["SourceUnavailable"]
 
 
 class SourceRefsRepo(Protocol):
@@ -63,18 +68,16 @@ class PgSourceFetcher:
         self._fetched: list[float] = []
 
     async def fetch(self, query_name: str) -> list[dict[str, Any]]:
+        """Banco desligado, fora do ar ou lento demais = SourceUnavailable (ver app/database.py)."""
         spec = self._queries[query_name]  # KeyError = query não copiada da v1: erro de programação
         if spec["database"] != self._db:
             raise ValueError(f"Query {query_name} é do banco {spec['database']}, não de {self._db}")
-        try:
-            rows = await run_with_connection_retry(
-                self._manager,
-                self._db,
-                lambda conn: fetch_read_only(conn, spec["query"]),
-                operation_name=query_name,
-            )
-        except ValueError as exc:  # pool não inicializado (banco off ou down na subida)
-            raise SourceUnavailable(self._db) from exc
+        rows = await run_with_connection_retry(
+            self._manager,
+            self._db,
+            lambda conn: fetch_read_only(conn, spec["query"]),
+            operation_name=query_name,
+        )
         self._fetched.append(time.time())
         return [dict(r) for r in rows]
 
@@ -89,23 +92,33 @@ def get_source_cache(request: Request) -> SourceCache:
     return request.app.state.source_cache
 
 
-def source_fetcher(manager: DatabaseManager, db_name: str) -> SourceFetcher:
-    """O leitor de uma fonte, sem cache: um banco (Postgres) ou uma planilha do Google (app/sheets.py)."""
-    from app import sheets  # aqui: app.sheets usa SourceUnavailable deste módulo
+def source_fetcher(
+    manager: DatabaseManager, db_name: str, registered: "RegisteredSources | None" = None
+) -> SourceFetcher:
+    """O leitor de uma fonte, sem cache: banco do .env (Postgres), planilha do .env (app/sheets.py) ou
+    fonte conectada pela tela (banco próprio ou planilha; app/registered_sources.py)."""
+    from app import sheets  # aqui, e não no topo: evita import circular (sheets -> dashboards)
+    from app.registered_sources import RegisteredSourceFetcher
 
     if sheets.is_sheet(db_name):
         return sheets.SheetSourceFetcher(db_name)
+    if db_name not in SOURCE_DATABASES and registered is not None:
+        return RegisteredSourceFetcher(registered, db_name)
     return PgSourceFetcher(manager, db_name)
 
 
-def source_is_up(manager: DatabaseManager, db_name: str) -> bool:
-    """O banco está no ar: o aquecedor só lê esses (planilhas ficam fora dele: cache_warmer.warm_targets)."""
-    return manager.status().get(db_name) == "up"
+def get_registered_sources(request: Request) -> "RegisteredSources | None":
+    """As fontes conectadas pela tela (None sem o banco da plataforma)."""
+    return getattr(request.app.state, "registered_sources", None)
 
 
 def get_source_factory(
     manager: Annotated[DatabaseManager, Depends(get_databases)],
     cache: Annotated[SourceCache, Depends(get_source_cache)],
+    # Any: o FastAPI lê esta anotação em tempo de execução (RegisteredSources só existe no TYPE_CHECKING).
+    registered: Annotated[Any, Depends(get_registered_sources)],
 ) -> SourceFactory:
     """Dependency: db_name -> SourceFetcher daquela fonte (banco ou planilha), com o cache de 5 min."""
-    return lambda db_name: CachedSourceFetcher(cache, source_fetcher(manager, db_name), db_name)
+    return lambda db_name: CachedSourceFetcher(
+        cache, source_fetcher(manager, db_name, registered), db_name
+    )

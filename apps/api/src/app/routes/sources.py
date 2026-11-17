@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.auth import CurrentUser, get_current_user
+from app.database import SourceUnavailable
 from app.source_offices import (
     OfficeFetch,
     OfficesOut,
@@ -12,7 +13,6 @@ from app.source_offices import (
     get_office_reader,
     get_offices_repo,
 )
-from app.sources import SourceUnavailable
 
 # Fora de /orgs/{org}: a lista é do banco do produto inteiro e só a TI da LexGroup vê.
 router = APIRouter(prefix="/sources", tags=["sources"])

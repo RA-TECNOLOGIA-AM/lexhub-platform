@@ -48,11 +48,13 @@ async def health_cache(cache: Annotated[CacheService, Depends(get_cache)]):
 
 @router.get("/sources")
 async def health_sources(manager: Annotated[DatabaseManager, Depends(get_databases)]):
-    """Estado de cada banco de origem: up, down ou off (sem variáveis). 503 se algum configurado caiu.
+    """Estado de cada banco de origem: connecting, up, down ou off (sem variáveis).
 
-    Só nomes e estados: nunca host, usuário ou mensagem de erro (é uma rota pública).
+    503 se algum configurado não está no ar. Não entra no healthcheck do container: banco de
+    origem fora do ar não derruba a API, só deixa os dashboards dele indisponíveis.
+    Só nomes e estados: nunca host, usuário ou mensagem de erro.
     """
     databases = manager.status()
-    ok = "down" not in databases.values()
+    ok = all(state in ("up", "off") for state in databases.values())
     body = {"status": "ok" if ok else "error", "databases": databases}
     return body if ok else JSONResponse(status_code=503, content=body)

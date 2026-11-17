@@ -13,27 +13,40 @@ from app.cache import CacheService, build_cache, safe_redis_target
 from app.cache_warmer import warm_loop, warm_targets
 from app.config import Settings, get_settings
 from app.dashboards import DASHBOARDS
-from app.database import DatabaseManager
+from app.database import DatabaseManager, connect_hint
 from app.logs import configure_logging, seconds
+from app.registered_sources import PgRegisteredRepo, RegisteredSources
 from app.request_log import RequestLogMiddleware
-from app.routes import catalog, dashboards, device_auth, health, hub, me, sources
+from app.routes import (
+    catalog,
+    dashboards,
+    device_auth,
+    health,
+    hub,
+    me,
+    source_connections,
+    sources,
+)
 from app.source_cache import MemoryStore, SourceCache, ttl_by_query
-from app.sources import source_fetcher, source_is_up
+from app.sources import source_fetcher
 from app.supabase_client import create_supabase
 
 VERSION = "0.1.0"
+
+# Tentativas de conectar no banco da plataforma na subida (cada uma limitada por DB_CONNECT_TIMEOUT).
+PLATFORM_DB_ATTEMPTS = 3
 
 logger = logging.getLogger("app.startup")
 
 
 async def _start_warmer(app: FastAPI, settings) -> None:
     """Mantém quentes as queries dos dashboards (só dos bancos que estão no ar)."""
-    databases = app.state.databases
+    databases: DatabaseManager = app.state.databases
     await warm_loop(
         app.state.source_cache,
         lambda db: source_fetcher(databases, db),
         warm_targets(DASHBOARDS.values()),
-        lambda db: source_is_up(databases, db),
+        databases.is_up,
         interval=settings.SOURCE_CACHE_WARM_INTERVAL,
     )
 
@@ -63,7 +76,12 @@ def _log_auth(settings: Settings) -> None:
 
 
 async def _open_platform_db(settings: Settings) -> asyncpg.Pool | None:
-    """Banco da plataforma (acesso, catálogo, auditoria). Sem DATABASE_URL, as rotas dão 503."""
+    """Banco da plataforma (login, acesso, catálogo, auditoria). Sem DATABASE_URL, as rotas dão 503.
+
+    Diferente dos bancos de origem, este impede a subida: sem ele nenhuma rota de usuário funciona,
+    e falhar na subida faz o Swarm voltar à versão anterior num deploy com DATABASE_URL errada.
+    As tentativas têm tempo limite, então a falha aparece no log em segundos.
+    """
     if not settings.DATABASE_URL:
         logger.warning(
             "Banco da plataforma: DATABASE_URL vazio; rotas protegidas vão responder 503"
@@ -71,21 +89,36 @@ async def _open_platform_db(settings: Settings) -> asyncpg.Pool | None:
         return None
     logger.info("Banco da plataforma: conectando...")
     started = time.perf_counter()
-    try:
-        pool = await asyncpg.create_pool(
-            settings.DATABASE_URL,
-            min_size=1,
-            max_size=10,
-            command_timeout=60,
-            # O pooler do Supabase (modo transaction) não suporta prepared statements.
-            statement_cache_size=0,
-        )
-    except Exception as exc:
-        # Só o tipo: a mensagem pode trazer host ou usuário da DATABASE_URL.
-        logger.error("Banco da plataforma: falha ao conectar (%s)", type(exc).__name__)
-        raise
-    logger.info("Banco da plataforma conectado em %s", seconds(time.perf_counter() - started))
-    return pool
+    for attempt in range(1, PLATFORM_DB_ATTEMPTS + 1):
+        try:
+            pool = await asyncpg.create_pool(
+                settings.DATABASE_URL,
+                min_size=1,
+                max_size=10,
+                command_timeout=60,
+                timeout=settings.DB_CONNECT_TIMEOUT,
+                # O pooler do Supabase (modo transaction) não suporta prepared statements.
+                statement_cache_size=0,
+            )
+        except (OSError, asyncpg.PostgresError, asyncpg.InterfaceError) as exc:
+            # Só o tipo e a dica: a mensagem pode trazer host ou usuário da DATABASE_URL.
+            logger.error(
+                "Banco da plataforma: falha ao conectar (tentativa %d/%d): %s",
+                attempt,
+                PLATFORM_DB_ATTEMPTS,
+                connect_hint(exc),
+            )
+            if attempt == PLATFORM_DB_ATTEMPTS:
+                raise RuntimeError(
+                    "Banco da plataforma (DATABASE_URL) indisponível: a API não sobe sem ele"
+                ) from None
+            await asyncio.sleep(2 * attempt)
+        else:
+            logger.info(
+                "Banco da plataforma conectado em %s", seconds(time.perf_counter() - started)
+            )
+            return pool
+    raise AssertionError("inalcançável")  # o laço sempre retorna ou levanta
 
 
 def create_app() -> FastAPI:
@@ -100,9 +133,17 @@ def create_app() -> FastAPI:
         app.state.supabase = await create_supabase(settings)
         app.state.token_verifier = build_verifier(settings)
         app.state.db_pool = await _open_platform_db(settings)
-        # Bancos de origem da v1 (NG, LAADV, LEXFLOW, LEXPRE). Igual à v1: obrigatório fora do ar
-        # impede a subida; o LEXPRE é opcional. Sem variáveis no .env, o banco fica desligado.
+        # Bancos de origem da v1 (NG, LAADV, LEXFLOW, LEXPRE): conectam em segundo plano e se
+        # reconectam sozinhos; fora do ar, só os dashboards daquele banco ficam indisponíveis.
+        # Sem variáveis no .env, o banco fica desligado.
         app.state.databases = DatabaseManager(settings)
+        # Fontes conectadas pela tela (banco próprio e planilha): lidas do banco da plataforma quando
+        # alguém usa, com o segredo decifrado pela SOURCE_SECRET_KEY (app/registered_sources.py).
+        app.state.registered_sources = (
+            RegisteredSources(PgRegisteredRepo(app.state.db_pool), settings)
+            if app.state.db_pool is not None
+            else None
+        )
         # Redis (L2): igual à v1, opcional; fora do ar = só memória, sem impedir a subida.
         app.state.cache = build_cache(settings)
         app.state.source_cache = SourceCache(
@@ -115,7 +156,7 @@ def create_app() -> FastAPI:
         warmer = None
         try:
             await _log_cache(app.state.cache, settings)
-            await app.state.databases.initialize()
+            app.state.databases.start()  # não espera: cada banco conecta numa tarefa de fundo
             logger.info(
                 "Cache: dados valem %s; se o banco cair, serve o último dado bom por até %s",
                 seconds(settings.SOURCE_CACHE_TTL),
@@ -135,7 +176,10 @@ def create_app() -> FastAPI:
             logger.info("Desligando a API...")
             if warmer is not None:
                 warmer.cancel()
+                await asyncio.gather(warmer, return_exceptions=True)
             await app.state.databases.close()
+            if app.state.registered_sources is not None:
+                await app.state.registered_sources.close()
             await app.state.cache.close()
             if app.state.db_pool is not None:
                 await app.state.db_pool.close()
@@ -161,6 +205,8 @@ def create_app() -> FastAPI:
     app.include_router(dashboards.router)
     app.include_router(device_auth.router)
     app.include_router(sources.router)
+    app.include_router(source_connections.platform)
+    app.include_router(source_connections.org)
     return app
 
 

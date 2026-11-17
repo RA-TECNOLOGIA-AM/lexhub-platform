@@ -52,3 +52,5 @@ watchfiles==1.3.0
 websockets==15.0.1
 wheel==0.48.0
 yarl==1.25.1
+aiomysql==0.3.2
+PyMySQL==1.2.4

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { QRCodeSVG } from 'qrcode.react'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { DataError } from '../../services/errors.ts'
 import { dataClient } from '../../services/client.ts'
+import { activationAddress } from './activationAddress.ts'
 
 export function TvLoginScreen() {
     const navigate = useNavigate()
@@ -13,6 +14,7 @@ export function TvLoginScreen() {
     const [userCode, setUserCode] = useState('')
     const [secondsLeft, setSecondsLeft] = useState<number | null>(null)
     const [error, setError] = useState('')
+    const address = verificationUri ? activationAddress(verificationUri) : null
 
     useEffect(() => {
         let cancelled = false
@@ -122,7 +124,15 @@ export function TvLoginScreen() {
                     <div className="stack" style={{ alignItems: 'center', gap: 14 }}>
                         <QRCodeSVG value={verificationUri} size={240} level="M" />
                         <div className="stack" style={{ alignItems: 'center', gap: 4 }}>
-                            <span className="muted small">Ou acesse lexhub e digite:</span>
+                            <span className="muted small">
+                                {address ? (
+                                    <>
+                                        Ou acesse <strong>{address}</strong> e digite:
+                                    </>
+                                ) : (
+                                    'Ou abra a página de ativação do LexHub e digite:'
+                                )}
+                            </span>
                             <strong style={{ fontSize: 24, letterSpacing: 4 }}>{userCode}</strong>
                         </div>
                         <span className="muted small">
@@ -144,6 +154,12 @@ export function TvLoginScreen() {
                         Gerar novo QR Code
                     </button>
                 )}
+
+                <p className="muted small auth-foot">
+                    <Link className="linkbtn" to="/login">
+                        Voltar ao login
+                    </Link>
+                </p>
             </section>
         </main>
     )

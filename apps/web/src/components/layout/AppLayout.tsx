@@ -1,6 +1,6 @@
 import { Suspense, useRef, useState } from 'react'
 import { LoadingState } from '../states/LoadingState.tsx'
-import { Outlet, useLocation } from 'react-router'
+import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { Icon } from '../ui/Icon.tsx'
 import { NotificationsBell } from './NotificationsBell.tsx'
@@ -18,6 +18,7 @@ import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
 import { dataClient } from '../../services/client.ts'
 import { env } from '../../services/env.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
+import { useTransitionArea } from '../page_transition/useTransitionArea.ts'
 
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
@@ -26,6 +27,7 @@ export function AppLayout() {
     // Espaço da topbar que uma página pode ocupar (ex.: o Período de um dashboard). Ver TopbarSlot.tsx.
     const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null)
     const menuButton = useRef<HTMLButtonElement>(null)
+    const transitionArea = useTransitionArea()
     const { pathname } = useLocation()
     const { me, signOut } = useAuth()
     // Selo de pedidos de acesso pendentes: só a equipe RA busca.
@@ -57,12 +59,17 @@ export function AppLayout() {
     const { org, user } = me
 
     const closeMenu = () => setMenuOpen(false)
+    // Logo da barra lateral: no computador recolhe/expande; no celular (gaveta) fecha o menu.
+    const toggleSide = () => {
+        if (window.matchMedia('(max-width: 860px)').matches) closeMenu()
+        else setCollapsed(!collapsed)
+    }
 
     return (
         <div className="app" data-menu={menuOpen ? 'open' : undefined} data-side={collapsed ? 'collapsed' : undefined}>
             <aside className="side" aria-label="Navegação principal">
                 <div className="brand">
-                    <span className="brand-mark">LH</span>
+                    <SidebarToggle collapsed={collapsed} onToggle={toggleSide} />
                     <span className="brand-name">LexHub</span>
                 </div>
                 <OrgSwitcher
@@ -74,31 +81,38 @@ export function AppLayout() {
                     onOpen={() => setCollapsed(false)}
                 />
 
-                {NAV_SECTIONS.map((section) => ({ section, items: visibleItems(section, perms, user.platform_staff) }))
-                    .filter(({ items }) => items.length > 0)
-                    .map(({ section, items }) => (
-                        <div key={section.title} className="stack" style={{ gap: 2 }}>
-                            <span className="side-label">{section.title}</span>
-                            {items.map((item) => (
-                                <PageTransitionLink
-                                    key={item.key}
-                                    className="nav"
-                                    to={pathOf(item, org.slug)}
-                                    aria-current={current?.item.key === item.key ? 'page' : undefined}
-                                    title={collapsed ? item.label : undefined}
-                                    onClick={closeMenu}
-                                >
-                                    <Icon name={item.icon} />
-                                    <span className="nav-label">{item.label}</span>
-                                    {item.badge === 'access-requests' && pending > 0 && (
-                                        <span className="count" aria-label={`${pending} pendentes`}>
-                                            {pending}
-                                        </span>
-                                    )}
-                                </PageTransitionLink>
-                            ))}
-                        </div>
-                    ))}
+                {/* Só a lista de páginas rola quando não cabe (janela baixa, zoom alto): logo, organização e
+                    usuário ficam parados. Antes a barra inteira rolava e parecia subir e descer. */}
+                <div className="side-nav">
+                    {NAV_SECTIONS.map((section) => ({
+                        section,
+                        items: visibleItems(section, perms, user.platform_staff),
+                    }))
+                        .filter(({ items }) => items.length > 0)
+                        .map(({ section, items }) => (
+                            <div key={section.title} className="stack" style={{ gap: 2 }}>
+                                <span className="side-label">{section.title}</span>
+                                {items.map((item) => (
+                                    <PageTransitionLink
+                                        key={item.key}
+                                        className="nav"
+                                        to={pathOf(item, org.slug)}
+                                        aria-current={current?.item.key === item.key ? 'page' : undefined}
+                                        title={collapsed ? item.label : undefined}
+                                        onClick={closeMenu}
+                                    >
+                                        <Icon name={item.icon} />
+                                        <span className="nav-label">{item.label}</span>
+                                        {item.badge === 'access-requests' && pending > 0 && (
+                                            <span className="count" aria-label={`${pending} pendentes`}>
+                                                {pending}
+                                            </span>
+                                        )}
+                                    </PageTransitionLink>
+                                ))}
+                            </div>
+                        ))}
+                </div>
 
                 <div className="side-user">
                     <span className="av">{user.initials}</span>
@@ -106,6 +120,16 @@ export function AppLayout() {
                         <span className="name">{user.name}</span>
                         <span className="sub">{user.role_label}</span>
                     </span>
+                    {/* Conectar uma TV: digitar o código que a TV mostra (/ativar), sem precisar do QR. */}
+                    <Link
+                        className="nav side-logout side-tv"
+                        to="/ativar"
+                        aria-label="Conectar uma TV"
+                        title="Conectar uma TV"
+                        onClick={closeMenu}
+                    >
+                        <Icon name="qr" />
+                    </Link>
                     {/* Sair só apaga a sessão; o <RequireAuth> é quem manda para o /login. */}
                     <button
                         className="nav side-logout"
@@ -119,7 +143,8 @@ export function AppLayout() {
                 </div>
             </aside>
 
-            <div className="main">
+            {/* Troca de página: a logo da transição cobre só esta coluna, abaixo da topbar (ver PageTransitionProvider). */}
+            <div className="main" ref={transitionArea}>
                 <header className="topbar">
                     <button
                         ref={menuButton}
@@ -131,7 +156,6 @@ export function AppLayout() {
                     >
                         <Icon name="menu" />
                     </button>
-                    <SidebarToggle collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
                     {/* Empurra o resto da topbar para a direita (antes era o breadcrumb). */}
                     <div className="topbar-spacer" />
                     {/* Só no modo mock: em modo api os dados vêm da API V2. */}

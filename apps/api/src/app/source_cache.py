@@ -49,6 +49,15 @@ HEAVY_QUERIES: frozenset[str] = frozenset(
 )
 
 
+def error_name(exc: BaseException) -> str:
+    """Tipo do erro e, se houver, o da causa: 'SourceUnavailable (QueryCanceledError)'.
+
+    Só os tipos: a mensagem pode trazer host ou usuário do banco.
+    """
+    cause = exc.__cause__
+    return f"{type(exc).__name__} ({type(cause).__name__})" if cause else type(exc).__name__
+
+
 def ttl_by_query(heavy_ttl: int, default_ttl: int) -> TtlFor:
     """TTL no Redis por chave 'banco:query' (regra `_redis_ttl` da v1)."""
 
@@ -149,7 +158,7 @@ class SourceCache:
                     logger.warning(
                         "%s: banco falhou (%s); servindo o último dado bom, de %s atrás",
                         key,
-                        type(exc).__name__,
+                        error_name(exc),
                         seconds(self._clock() - entry.fetched_at),
                     )
                     return entry
@@ -166,7 +175,7 @@ class SourceCache:
             data = await load()
         except Exception as exc:
             logger.warning(
-                "%s: falhou após %s (%s)", key, seconds(self._clock() - started), type(exc).__name__
+                "%s: falhou após %s (%s)", key, seconds(self._clock() - started), error_name(exc)
             )
             raise
         entry = Entry(data=data, fetched_at=self._clock())

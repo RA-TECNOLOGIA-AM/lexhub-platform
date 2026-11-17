@@ -37,6 +37,17 @@ class Settings(BaseSettings):
     SHEETS_HTTP_READ_TIMEOUT: float = 60.0  # download (s)
     SHEETS_HTTP_MAX_RETRIES: int = 3
 
+    # --- Fontes conectadas pela tela (Conectar fonte: banco próprio e planilha). Ver app/secret_box.py. ---
+    # Chave AES-256 (base64 de 32 bytes) que cifra a senha do banco e o link da planilha no Supabase.
+    # Vazia = conectar banco/planilha pela tela fica desligado (LexPre/LexFlow continuam).
+    SOURCE_SECRET_KEY: str = ""
+    # IP de saída da API, que a tela pede para a operação liberar no firewall do banco ("" = não mostra).
+    SOURCE_EGRESS_IP: str = ""
+    # Tempo limite de cada etapa do teste de conexão (s).
+    SOURCE_TEST_TIMEOUT: float = Field(default=8.0, ge=1.0, le=60.0)
+    # Só desenvolvimento: deixa conectar em banco de rede interna (localhost, 10.x...). Em produção, False.
+    SOURCE_ALLOW_PRIVATE_HOSTS: bool = False
+
     # --- Bancos de origem (iguais à v1). Banco sem variáveis = desligado. ---
     DB_NG_URL: str = ""
     DB_NG_NAME: str = ""
@@ -70,9 +81,14 @@ class Settings(BaseSettings):
     DB_POOL_MIN_SIZE: int = Field(default=2, ge=1, le=64)
     DB_POOL_MAX_SIZE: int = Field(default=10, ge=1, le=128)
     DB_POOL_MAX_INACTIVE_CONNECTION_LIFETIME: float = Field(default=90.0, ge=5.0, le=3600.0)
+    # Tempo limite de uma consulta (s). Passou disso: 503 (ou o último dado bom), banco segue no ar.
     DB_POOL_COMMAND_TIMEOUT: float = Field(default=300.0, ge=1.0)
+    # Espera máxima por uma conexão livre do pool (s), incluindo abrir uma nova.
     DB_POOL_ACQUIRE_TIMEOUT: float = Field(default=120.0, ge=1.0)
     DB_POOL_MAX_QUERIES: int = Field(default=10_000, ge=100)
+    # Tempo limite para abrir cada conexão (s), nos bancos de origem e no da plataforma. Curto de
+    # propósito: banco que não responde aparece no log em segundos, não depois de minutos.
+    DB_CONNECT_TIMEOUT: float = Field(default=10.0, ge=1.0, le=120.0)
 
     # Consultas simultâneas por banco (mesmos padrões da v1): protege a origem.
     DB_QUERY_CONCURRENCY_NG: int = Field(default=2, ge=1, le=16)
