@@ -107,6 +107,18 @@ const PATHS = {
     'chevron-up': <path d="M6 15l6-6 6 6" />,
     'chevron-down': <path d="M6 9l6 6 6-6" />,
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
+    'panel-left': (
+        <>
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <path d="M9 4v16" />
+        </>
+    ),
+    maximize: (
+        <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3" />
+    ),
+    minimize: (
+        <path d="M8 3v3a2 2 0 0 1-2 2H3M16 3v3a2 2 0 0 0 2 2h3M8 21v-3a2 2 0 0 0-2-2H3M16 21v-3a2 2 0 0 1 2-2h3" />
+    ),
     list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />,
     lock: (
         <>

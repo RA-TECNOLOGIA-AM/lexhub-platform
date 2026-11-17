@@ -1052,16 +1052,6 @@ button.org:hover {
 .topbar-slot:empty {
     display: none;
 }
-/* O breadcrumb encolhe (com reticências) antes de a topbar quebrar linha: assim o Período,
-   a busca, o sino e o botão de tema cabem numa linha só nos dashboards. */
-.topbar .crumb {
-    flex: 1 1 160px;
-}
-.topbar .crumb > span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
 
 /* Faixa logo abaixo da topbar nos dashboards: filtros em uso à esquerda, Filtros e Exportar à direita.
    Encostada na topbar (margem negativa anula o espaço do .content) e presa ao rolar. */
@@ -4883,4 +4873,117 @@ button.at-name:hover {
 .fe-cenario.base {
     border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* ---------- Visualização da tela (17/11): menu recolhível, rolagem sem barra, tela cheia ---------- */
+
+/* Rolagem sem barra visível: continua rolando com a roda do mouse, o teclado e o toque.
+   As tabelas largas (rolagem para o lado) ficam com a barra: é a pista de que há mais colunas. */
+html,
+.side,
+.export-dialog,
+.export-body,
+.filter-groups,
+.notif-list,
+.people-list,
+.fmenu-list,
+.fplist,
+.org-menu {
+    scrollbar-width: none;
+}
+html::-webkit-scrollbar,
+.side::-webkit-scrollbar,
+.export-dialog::-webkit-scrollbar,
+.export-body::-webkit-scrollbar,
+.filter-groups::-webkit-scrollbar,
+.notif-list::-webkit-scrollbar,
+.people-list::-webkit-scrollbar,
+.fmenu-list::-webkit-scrollbar,
+.fplist::-webkit-scrollbar,
+.org-menu::-webkit-scrollbar {
+    display: none;
+}
+/* A página nunca rola para o lado (clip não cria área de rolagem: topbar e barra lateral seguem presas). */
+body {
+    overflow-x: clip;
+}
+
+/* Barra lateral recolhível: o botão fica na topbar (só no computador; no celular a barra é gaveta). */
+.side {
+    overflow-x: hidden;
+    transition:
+        flex-basis 0.2s ease,
+        padding 0.2s ease;
+}
+.side-logout {
+    width: auto;
+    margin-left: auto;
+    padding: 8px;
+}
+@media (max-width: 860px) {
+    .topbar .side-toggle {
+        display: none;
+    }
+}
+@media (min-width: 861px) {
+    .app[data-side='collapsed'] .side {
+        flex-basis: var(--side-w-collapsed);
+        padding-inline: 10px;
+    }
+    .app[data-side='collapsed'] .brand {
+        justify-content: center;
+        padding-inline: 0;
+    }
+    .app[data-side='collapsed'] :is(.brand-name, .side .org-text, .side .org > svg, .side-user-text) {
+        display: none;
+    }
+    .app[data-side='collapsed'] .side .org {
+        justify-content: center;
+        padding: 8px 0;
+    }
+    /* Só o ícone; o nome continua para leitor de tela (fora da vista) e aparece no title ao passar o mouse. */
+    .app[data-side='collapsed'] .side .stack > .nav {
+        position: relative;
+        justify-content: center;
+        padding-inline: 0;
+    }
+    .app[data-side='collapsed'] .nav-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+    .app[data-side='collapsed'] .side .stack > .nav .count {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        min-width: 16px;
+        height: 16px;
+        padding: 0 4px;
+        font-size: 10px;
+    }
+    /* O título da seção vira um traço (o texto segue no HTML para o leitor de tela). */
+    .app[data-side='collapsed'] .side-label {
+        height: 1px;
+        margin: 12px 8px 6px;
+        padding: 0;
+        overflow: hidden;
+        color: transparent;
+        background: var(--side-active);
+    }
+    .app[data-side='collapsed'] .side-user {
+        flex-direction: column;
+        gap: 6px;
+        padding-inline: 0;
+    }
+    .app[data-side='collapsed'] .side-logout {
+        margin-left: 0;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .side {
+        transition: none;
+    }
 }

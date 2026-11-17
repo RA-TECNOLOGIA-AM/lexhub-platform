@@ -16,6 +16,7 @@ type OrgSwitcherProps = {
     units: Unit[] // as unidades que a pessoa vê na organização atual
     canCreate: boolean // equipe RA: mostra "Criar organização" (leva ao console da plataforma)
     onNavigate: () => void // ao escolher um item (ex.: fechar o menu do celular)
+    onOpen?: () => void // ao abrir a lista (ex.: expandir a barra lateral recolhida, onde a lista não cabe)
 }
 
 const DASHBOARD_ROUTE = '/:org/:unit/dashboards/:dashboardKey'
@@ -24,7 +25,7 @@ const DASHBOARD_ROUTE = '/:org/:unit/dashboards/:dashboardKey'
 // - Num dashboard: as unidades em que ele está liberado; trocar abre o mesmo dashboard na outra unidade.
 // - No resto: "Todas as unidades" (se vê mais de uma) + cada unidade; escolher leva ao hub filtrado.
 // - A escolha fica lembrada na sessão (lib/activeUnit.ts). Uma unidade e uma organização só: travado.
-export function OrgSwitcher({ current, orgs, units, canCreate, onNavigate }: OrgSwitcherProps) {
+export function OrgSwitcher({ current, orgs, units, canCreate, onNavigate, onOpen }: OrgSwitcherProps) {
     const [open, setOpen] = useState(false)
     const root = useRef<HTMLDivElement>(null)
     const button = useRef<HTMLButtonElement>(null)
@@ -95,7 +96,11 @@ export function OrgSwitcher({ current, orgs, units, canCreate, onNavigate }: Org
                 type="button"
                 aria-expanded={open}
                 aria-controls="org-menu"
-                onClick={() => setOpen((o) => !o)}
+                title={`${current.name}, ${unit ? unitName(unit, units) : 'Todas as unidades'}`}
+                onClick={() => {
+                    if (!open) onOpen?.()
+                    setOpen(!open)
+                }}
             >
                 {label}
                 <Icon name="chevrons" size={16} />
