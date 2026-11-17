@@ -12,3 +12,9 @@ export const TransitionContext = createContext<TransitionContextType | undefined
 export type HoldTransition = () => () => void
 
 export const TransitionHoldContext = createContext<HoldTransition | undefined>(undefined)
+
+// Coluna do conteúdo do AppLayout (topbar + miolo): com ela na tela, a logo cobre só o miolo
+// (menu lateral e topbar ficam à vista). Sem ela (login, abertura do app), cobre a tela inteira.
+export type RegisterTransitionArea = (element: HTMLElement | null) => void
+
+export const TransitionAreaContext = createContext<RegisterTransitionArea | undefined>(undefined)

@@ -18,6 +18,7 @@ import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
 import { dataClient } from '../../services/client.ts'
 import { env } from '../../services/env.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
+import { useTransitionArea } from '../page_transition/useTransitionArea.ts'
 
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
@@ -26,6 +27,7 @@ export function AppLayout() {
     // Espaço da topbar que uma página pode ocupar (ex.: o Período de um dashboard). Ver TopbarSlot.tsx.
     const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null)
     const menuButton = useRef<HTMLButtonElement>(null)
+    const transitionArea = useTransitionArea()
     const { pathname } = useLocation()
     const { me, signOut } = useAuth()
     // Selo de pedidos de acesso pendentes: só a equipe RA busca.
@@ -124,7 +126,8 @@ export function AppLayout() {
                 </div>
             </aside>
 
-            <div className="main">
+            {/* Troca de página: a logo da transição cobre só esta coluna, abaixo da topbar (ver PageTransitionProvider). */}
+            <div className="main" ref={transitionArea}>
                 <header className="topbar">
                     <button
                         ref={menuButton}
