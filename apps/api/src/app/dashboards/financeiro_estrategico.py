@@ -40,6 +40,7 @@ from app.analyses.sheets.financeiro_NG import (
     get_financeiro_NG_reflexo_financeiro,
 )
 from app.dashboards.base import AltSource, DashboardContext, DashboardModule
+from app.database import SourceUnavailable
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 
 ABA = "REPASSES CLIENTES"
@@ -65,8 +66,6 @@ async def _valor_causa_ajuizado_lexflow(ctx: DashboardContext, escritorio: str) 
     processo sem distribuição; matéria com o mesmo rótulo normalizado das pizzas da planilha."""
     fonte = ctx.extra_sources.get(LEXFLOW)
     if fonte is None:  # unidade sem o LexFlow ligado: como banco fora do ar
-        from app.sources import SourceUnavailable
-
         raise SourceUnavailable(LEXFLOW)
     rows = await fonte.fetch(QUERY_AJUIZADO[escritorio])
     return [

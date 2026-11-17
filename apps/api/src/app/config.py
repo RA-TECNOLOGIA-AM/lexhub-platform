@@ -70,9 +70,14 @@ class Settings(BaseSettings):
     DB_POOL_MIN_SIZE: int = Field(default=2, ge=1, le=64)
     DB_POOL_MAX_SIZE: int = Field(default=10, ge=1, le=128)
     DB_POOL_MAX_INACTIVE_CONNECTION_LIFETIME: float = Field(default=90.0, ge=5.0, le=3600.0)
+    # Tempo limite de uma consulta (s). Passou disso: 503 (ou o último dado bom), banco segue no ar.
     DB_POOL_COMMAND_TIMEOUT: float = Field(default=300.0, ge=1.0)
+    # Espera máxima por uma conexão livre do pool (s), incluindo abrir uma nova.
     DB_POOL_ACQUIRE_TIMEOUT: float = Field(default=120.0, ge=1.0)
     DB_POOL_MAX_QUERIES: int = Field(default=10_000, ge=100)
+    # Tempo limite para abrir cada conexão (s), nos bancos de origem e no da plataforma. Curto de
+    # propósito: banco que não responde aparece no log em segundos, não depois de minutos.
+    DB_CONNECT_TIMEOUT: float = Field(default=10.0, ge=1.0, le=120.0)
 
     # Consultas simultâneas por banco (mesmos padrões da v1): protege a origem.
     DB_QUERY_CONCURRENCY_NG: int = Field(default=2, ge=1, le=16)
