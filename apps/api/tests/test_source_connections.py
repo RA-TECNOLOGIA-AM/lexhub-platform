@@ -6,7 +6,7 @@ import pytest
 from app.connection_check import Check, CheckResult
 from app.database import SourceUnavailable
 from app.secret_box import SecretBox
-from app.sheets import InvalidSheetLink
+from app.sheets import InvalidSheetLink, TabInfo
 from app.source_admin import ManagedSource, RuleBroken
 from conftest import USER_ID
 
@@ -62,6 +62,12 @@ class FakeAdminRepo:
     async def disconnect(self, user_id, source_id):
         self.calls.append(("disconnect", source_id))
 
+    async def set_enabled(self, user_id, source_id, enabled):
+        if self.fail:
+            raise self.fail
+        self.calls.append(("set_enabled", user_id, source_id, enabled))
+        return {"id": "pg_mc_000001", "status": "healthy" if enabled else "disabled"}
+
     async def record_run(self, source_id, kind, ok, checks, ms, error):
         self.runs.append((source_id, kind, ok, error))
 
@@ -83,8 +89,12 @@ class Fakes:
         self.repo = FakeAdminRepo()
         self.db = db_result()
         self.targets: list = []
-        self.tabs: dict[str, int] | Exception = {"FINANCEIRO": 120, "METAS": 12}
+        self.tabs: dict[str, TabInfo] | Exception = {
+            "FINANCEIRO": TabInfo(120, ["DATA", "VALOR"]),
+            "METAS": TabInfo(12, ["MES", "META"]),
+        }
         self.invalidated: list[str] = []
+        self.switch_invalidated = 0
 
     async def check_db(self, target):
         self.targets.append(target)
@@ -99,11 +109,19 @@ class Fakes:
         self.invalidated.append(key)
 
 
+class FakeSwitch:
+    def __init__(self, fakes):
+        self.fakes = fakes
+
+    def invalidate(self):
+        self.fakes.switch_invalidated += 1
+
+
 @pytest.fixture
 def fx(client):
     from app.routes import source_connections as sc
     from app.source_admin import get_source_admin_repo
-    from app.sources import get_registered_sources
+    from app.sources import get_registered_sources, get_source_switch
 
     f = Fakes()
     o = client.app.dependency_overrides
@@ -113,6 +131,7 @@ def fx(client):
     o[sc.get_secret_box] = lambda: BOX
     o[sc.get_rate_limit] = lambda: sc.RateLimit(limit=100)
     o[get_registered_sources] = lambda: f
+    o[get_source_switch] = lambda: FakeSwitch(f)
     return f
 
 
@@ -198,6 +217,12 @@ def test_conecta_planilha_com_o_link_cifrado(client, signer, fx):
         and BOX.decrypt(ciphertext) == LINK
     )
     assert detail == "Google Planilhas · aba FINANCEIRO"
+    # As abas e colunas vão para o detalhe técnico (o analista vê); o link nunca volta.
+    assert fx.repo.calls[0][7] == {
+        "FINANCEIRO": [["DATA", ""], ["VALOR", ""]],
+        "METAS": [["MES", ""], ["META", ""]],
+    }
+    assert LINK not in str(body)
 
 
 def test_planilha_com_aba_inexistente_ou_que_nao_baixa(client, signer, fx):
@@ -287,6 +312,39 @@ def test_desconectar_e_fonte_que_nao_e_da_tela(client, signer, fx):
         secret_ciphertext=None,
     )
     assert client.delete("/orgs/cliente/sources/lexpre", headers=auth(signer)).status_code == 409
+
+
+def test_desligar_e_religar_limpa_os_caches_na_hora(client, signer, fx):
+    _connected(fx)
+    url = "/orgs/cliente/sources/pg_mc_000001/enabled"
+    r = client.put(url, json={"enabled": False}, headers=auth(signer))
+    assert r.status_code == 200 and r.json()["status"] == "disabled"
+    assert fx.repo.calls[-1] == ("set_enabled", USER_ID, "src-1", False)
+    assert fx.invalidated == ["pg_mc_000001"] and fx.switch_invalidated == 1
+    r = client.put(url, json={"enabled": True}, headers=auth(signer))
+    assert r.json()["status"] == "healthy" and fx.switch_invalidated == 2
+    # Religar não pede segredo: nenhuma troca de senha aconteceu.
+    assert not any(c[0] == "set_secret" for c in fx.repo.calls)
+    assert client.put(url, json={}, headers=auth(signer)).status_code == 422
+
+
+def test_so_a_ti_liga_e_desliga(client, signer, fx):
+    _connected(fx)
+    fx.repo.admins.clear()
+    r = client.put(
+        "/orgs/cliente/sources/pg_mc_000001/enabled", json={"enabled": False}, headers=auth(signer)
+    )
+    assert r.status_code == 403 and fx.repo.calls == [] and fx.switch_invalidated == 0
+
+
+def test_ligar_desligar_regra_do_banco_vira_409(client, signer, fx):
+    _connected(fx)
+    fx.repo.fail = RuleBroken("Informe se a fonte fica ligada ou desligada.\nCONTEXT: ...")
+    r = client.put(
+        "/orgs/cliente/sources/pg_mc_000001/enabled", json={"enabled": False}, headers=auth(signer)
+    )
+    assert r.status_code == 409 and r.json()["detail"].startswith("Informe se a fonte")
+    assert fx.switch_invalidated == 0
 
 
 def test_connect_info(client, signer, fx):

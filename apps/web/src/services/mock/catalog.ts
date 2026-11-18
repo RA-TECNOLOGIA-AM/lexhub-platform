@@ -213,6 +213,17 @@ export const catalog: DashboardCatalog = {
             syncedMin: 6,
         }),
 
+        // Tecnologia
+        entry({
+            key: 'tickets',
+            title: 'Tickets',
+            area: 'Tecnologia',
+            desc: 'Chamados de suporte do Discord: fila, SLA, categorias e servidores.',
+            units: ['NG'],
+            source: 'NG',
+            syncedMin: 5,
+        }),
+
         // Financeiro
         entry({
             key: 'despesas',

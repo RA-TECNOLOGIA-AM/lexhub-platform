@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import type { SourceDetail } from '../../../types/index.ts'
+import type { SourceDetail, SourceTechnical } from '../../../types/index.ts'
 import { ManageSource } from './ManageSource.tsx'
+import { CopyButton } from './CheckList.tsx'
 import { Modal } from '../../../components/ui/Modal.tsx'
 import { LoadingState } from '../../../components/states/LoadingState.tsx'
 import { dataClient } from '../../../services/client.ts'
@@ -65,9 +66,52 @@ export function SourceDetailDialog({
                         <ManageSource org={org} detail={data} onChanged={changed} onDisconnected={onDisconnected} />
                     )}
                     <SourceDetailBody detail={data} />
+                    {data.technical && <SourceTechnicalSection technical={data.technical} />}
                 </>
             )}
         </Modal>
+    )
+}
+
+// Módulo: o detalhe técnico para o analista (só a TI da LexGroup recebe): a chave que as queries usam
+// e a estrutura salva no teste de conexão (tabelas e colunas do banco, ou abas e colunas da planilha).
+function SourceTechnicalSection({ technical }: { technical: SourceTechnical }) {
+    const tables = Object.entries(technical.schema ?? {})
+    return (
+        <section aria-label="Detalhe técnico">
+            <h3 className="source-section-title">Detalhe técnico (só LexGroup)</h3>
+            <div className="source-key">
+                <span className="muted small">Chave da fonte</span>
+                <code>{technical.key}</code>
+                <CopyButton text={technical.key} label="Copiar chave" />
+            </div>
+            {tables.length === 0 ? (
+                <p className="muted small" style={{ margin: '8px 0 0' }}>
+                    Estrutura ainda não salva. Ela é lida no teste de conexão (Testar de novo ou Trocar senha/link).
+                </p>
+            ) : (
+                <div className="source-schema" style={{ marginTop: 8 }}>
+                    <span className="muted small">
+                        {tables.length} {tables.length === 1 ? 'tabela/aba' : 'tabelas/abas'}
+                    </span>
+                    {tables.map(([table, columns]) => (
+                        <details key={table}>
+                            <summary>
+                                <code>{table}</code> <span className="muted">({columns.length} colunas)</span>
+                            </summary>
+                            <ul>
+                                {columns.map(([column, type]) => (
+                                    <li key={column}>
+                                        <code>{column}</code>
+                                        {type && <span className="muted"> · {type}</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                        </details>
+                    ))}
+                </div>
+            )}
+        </section>
     )
 }
 

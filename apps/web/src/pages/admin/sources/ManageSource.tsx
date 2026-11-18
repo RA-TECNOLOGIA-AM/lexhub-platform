@@ -8,16 +8,20 @@ import { CheckList } from './CheckList.tsx'
 type ManageSourceProps = {
     org: string
     detail: SourceDetail
-    onChanged: () => void // senha trocada ou teste novo: a lista e o detalhe buscam de novo
+    onChanged: () => void // senha trocada, teste novo ou ligou/desligou: a lista e o detalhe buscam de novo
     onDisconnected: () => void
 }
 
 type Mode = 'idle' | 'secret' | 'disconnect'
 
-// Módulo: o que a TI da LexGroup faz numa fonte conectada pela tela (banco próprio ou planilha):
-// ver a configuração (sem senha nem link), testar de novo, trocar a senha/o link e desconectar.
+// Módulo: o que a TI da LexGroup faz numa fonte com o segredo no banco (banco próprio ou planilha):
+// ligar/desligar (pausa, em destaque), ver a configuração (sem senha nem link), testar de novo, trocar a
+// senha/o link e desconectar (destrutivo, ação secundária com confirmação).
 export function ManageSource({ org, detail, onChanged, onDisconnected }: ManageSourceProps) {
     const isSheet = detail.source.connector === 'sheets'
+    // Planilha inteira (as antigas, sheets_financeiro_*): a chave está no código dos dashboards, então
+    // não se desconecta pela tela; desliga-se (o banco também recusa).
+    const wholeSheet = isSheet && !('tab' in detail.config)
     const key = detail.source.id
     const [mode, setMode] = useState<Mode>('idle')
     const [checks, setChecks] = useState<SourceCheck[] | null>(null)
@@ -65,15 +69,43 @@ export function ManageSource({ org, detail, onChanged, onDisconnected }: ManageS
             onDisconnected()
         })
 
+    const toggle = () =>
+        run(async () => {
+            await dataClient.setSourceEnabled(org, key, !detail.enabled)
+            setChecks(null)
+            onChanged()
+        })
+
     const c = detail.config
+    const secretName = isSheet ? 'o link' : 'a senha'
     return (
         <section aria-label="Conexão" className="stack" style={{ gap: 10 }}>
             <h3 className="source-section-title">Conexão</h3>
+            <div className={`source-power ${detail.enabled ? 'on' : 'off'}`}>
+                <div>
+                    <strong id="source-power-label">{detail.enabled ? 'Fonte ligada' : 'Fonte desligada'}</strong>
+                    <span className="small muted">
+                        {detail.enabled
+                            ? 'A API lê esta fonte para os dashboards.'
+                            : `Os dashboards mostram "Fonte desligada". ${isSheet ? 'O link continua salvo' : 'A senha continua salva'}: religar não pede de novo.`}
+                    </span>
+                </div>
+                <button
+                    className="switch"
+                    type="button"
+                    role="switch"
+                    aria-checked={detail.enabled}
+                    aria-labelledby="source-power-label"
+                    title={detail.enabled ? 'Desligar a fonte' : 'Ligar a fonte'}
+                    onClick={toggle}
+                    disabled={busy}
+                />
+            </div>
             <dl className="source-facts">
                 {isSheet ? (
                     <>
                         <dt>Aba</dt>
-                        <dd>{String(c.tab ?? '')}</dd>
+                        <dd>{wholeSheet ? 'todas (planilha inteira)' : String(c.tab ?? '')}</dd>
                         <dt>Link</dt>
                         <dd className="muted">guardado cifrado (não aparece na tela)</dd>
                     </>
@@ -157,8 +189,9 @@ export function ManageSource({ org, detail, onChanged, onDisconnected }: ManageS
                         Desconectar {detail.source.name} de {detail.unit.name}?
                     </strong>
                     <span className="small">
-                        Os dashboards desta fonte somem para a unidade, {isSheet ? 'o link' : 'a senha'} é apagado e o
-                        histórico também. Fica registrado na auditoria.
+                        Os dashboards desta fonte somem para a unidade, {secretName} é {isSheet ? 'apagado' : 'apagada'}{' '}
+                        e o histórico também. Não dá para desfazer; para só pausar, desligue a fonte. Fica registrado na
+                        auditoria.
                     </span>
                     <div className="row">
                         <button className="btn" type="button" onClick={() => setMode('idle')} disabled={busy}>
@@ -173,14 +206,11 @@ export function ManageSource({ org, detail, onChanged, onDisconnected }: ManageS
 
             {mode === 'idle' && (
                 <div className="row">
-                    <button className="btn" type="button" onClick={retest} disabled={busy}>
-                        {busy ? 'Testando…' : 'Testar de novo'}
+                    <button className="btn" type="button" onClick={retest} disabled={busy || !detail.enabled}>
+                        {busy ? 'Aguarde…' : 'Testar de novo'}
                     </button>
                     <button className="btn" type="button" onClick={() => setMode('secret')}>
                         {isSheet ? 'Trocar link' : 'Trocar senha'}
-                    </button>
-                    <button className="btn btn-danger" type="button" onClick={() => setMode('disconnect')}>
-                        Desconectar
                     </button>
                 </div>
             )}
@@ -190,6 +220,15 @@ export function ManageSource({ org, detail, onChanged, onDisconnected }: ManageS
                 <p className="invite-error" role="alert" style={{ margin: 0 }}>
                     {error}
                 </p>
+            )}
+            {mode === 'idle' && !wholeSheet && (
+                <button
+                    className="btn btn-sm btn-ghost btn-danger source-disconnect"
+                    type="button"
+                    onClick={() => setMode('disconnect')}
+                >
+                    Desconectar fonte…
+                </button>
             )}
         </section>
     )

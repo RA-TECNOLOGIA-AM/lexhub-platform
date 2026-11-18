@@ -4,6 +4,8 @@ Só a TI da LexGroup (app_private.is_source_admin), em qualquer organização: a
 pessoa seja membro da organização (o banco confere quem é TI). O segredo (senha ou link) chega aqui,
 é testado, cifrado (app/secret_box.py) e só o cifrado vai para o banco; nenhuma resposta o devolve.
 
+Ligar/desligar (PUT .../enabled) é pausa reversível: o segredo fica; a fonte desligada não é lida.
+
 Resultado de teste nunca é erro HTTP: `saved`/`ok` + as checagens. Erro HTTP é só o que impede tentar
 (403 quem não é TI, 404 unidade/fonte, 409 regra do banco, 422 campos, 429 testes demais, 503 sem chave).
 """
@@ -21,7 +23,7 @@ from app.config import Settings, get_settings
 from app.connection_check import Check, CheckResult, DbTarget, check_database
 from app.database import SourceUnavailable
 from app.secret_box import SecretBox, SecretKeyMissing, SecretUnreadable
-from app.sheets import InvalidSheetLink, sheet_tabs
+from app.sheets import InvalidSheetLink, TabInfo, sheet_tabs
 from app.source_admin import (
     ManagedSource,
     NotAllowed,
@@ -29,7 +31,7 @@ from app.source_admin import (
     SourceAdminRepo,
     get_source_admin_repo,
 )
-from app.sources import get_registered_sources
+from app.sources import get_registered_sources, get_source_switch
 
 DEFAULT_PORT = {"postgres": 5432, "mysql": 3306}
 LABEL = {"postgres": "Postgres", "mysql": "MySQL"}
@@ -127,7 +129,7 @@ def _checks(result: CheckResult) -> list[CheckOut]:
 # --- Peças trocáveis (os testes passam falsas) ----------------------------------------------------
 
 DbChecker = Callable[[DbTarget], Awaitable[CheckResult]]
-SheetReader = Callable[[str], Awaitable[dict[str, int]]]
+SheetReader = Callable[[str], Awaitable[dict[str, TabInfo]]]
 
 
 def get_db_checker(settings: Annotated[Settings, Depends(get_settings)]) -> DbChecker:
@@ -199,7 +201,7 @@ Repo = Annotated[SourceAdminRepo, Depends(get_source_admin_repo)]
 
 async def check_sheet(
     read: SheetReader, link: str, tab: str | None
-) -> tuple[CheckResult, dict[str, int]]:
+) -> tuple[CheckResult, dict[str, TabInfo]]:
     started = time.perf_counter()
 
     def ms() -> int:
@@ -221,8 +223,10 @@ async def check_sheet(
         if tab not in tabs:
             checks.append(Check("read", False, f"A aba {tab} não existe nessa planilha.", ms()))
         else:
-            checks.append(Check("read", True, f"Aba {tab}: {tabs[tab]} linhas", ms()))
-    return CheckResult(checks, ms=ms()), tabs
+            checks.append(Check("read", True, f"Aba {tab}: {tabs[tab].rows} linhas", ms()))
+    # A estrutura para o analista (detalhe técnico da fonte): {aba: [[coluna, ""], ...]}, como a do banco.
+    schema = {name: [[col, ""] for col in info.columns] for name, info in tabs.items()}
+    return CheckResult(checks, schema_cache=schema or None, ms=ms()), tabs
 
 
 # --- Rotas da plataforma ------------------------------------------------------------------------------
@@ -250,7 +254,7 @@ async def inspect_sheet(
     result, tabs = await check_sheet(read, body.url, None)
     if not result.ok:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=result.error)
-    return InspectOut(tabs=[TabOut(name=n, rows=r) for n, r in tabs.items()])
+    return InspectOut(tabs=[TabOut(name=n, rows=info.rows) for n, info in tabs.items()])
 
 
 # --- Rotas da organização ---------------------------------------------------------------------------
@@ -280,7 +284,7 @@ async def connect_source(
         if not result.ok:
             return ConnectOut(saved=False, checks=_checks(result))
         secret, config, writer_ack = body.url.strip(), {"tab": body.tab}, False
-        detail, schema = f"Google Planilhas · aba {body.tab}", None
+        detail, schema = f"Google Planilhas · aba {body.tab}", result.schema_cache
     else:
         target = body.target()
         result = await check_db(target)
@@ -325,7 +329,7 @@ async def _managed(repo: SourceAdminRepo, org_slug: str, key: str) -> ManagedSou
     if source.secret_ciphertext is None or source.connector not in ("postgres", "mysql", "sheets"):
         raise HTTPException(
             status.HTTP_409_CONFLICT,
-            detail="Esta fonte não é gerenciada pela tela (produto Lex, banco interno ou planilha antiga).",
+            detail="Esta fonte não é gerenciada pela tela (produto Lex ou banco interno).",
         )
     return source
 
@@ -434,6 +438,39 @@ async def change_secret(
     if registered is not None:
         await registered.invalidate(source.key)
     return ConnectOut(saved=True, checks=_checks(result), source=item)
+
+
+class EnabledIn(BaseModel):
+    enabled: bool
+
+
+@org.put("/sources/{key}/enabled")
+async def set_source_enabled(
+    org_slug: str,
+    key: KeyPath,
+    body: EnabledIn,
+    user: Admin,
+    repo: Repo,
+    registered: Annotated[Any, Depends(get_registered_sources)],
+    switch: Annotated[Any, Depends(get_source_switch)],
+) -> dict[str, Any]:
+    """Ligar/desligar: pausa reversível. O segredo fica salvo (religar não pede de novo); desligada, a API
+    não lê a fonte (nem o cache) e o dashboard responde 423 "Fonte desligada". Vai para a auditoria."""
+    source = await _managed(repo, org_slug, key)
+    try:
+        item = await repo.set_enabled(user.user_id, source.id, body.enabled)
+    except NotAllowed as exc:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, detail="Só a TI da LexGroup gerencia fontes"
+        ) from exc
+    except RuleBroken as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail=_db_message(exc)) from exc
+    # Na hora nesta réplica: a lista de desligadas e a fonte decifrada (com os pools dela).
+    if switch is not None:
+        switch.invalidate()
+    if registered is not None:
+        await registered.invalidate(source.key)
+    return item
 
 
 @org.delete("/sources/{key}", status_code=status.HTTP_204_NO_CONTENT)

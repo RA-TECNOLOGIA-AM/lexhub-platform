@@ -25,7 +25,7 @@ describe('sourceDetailFor (mock de api.source_detail)', () => {
     })
 
     it('fonte atrasada traz as falhas no topo', () => {
-        const runs = sourceDetailFor(sources, catalog, 'NG', 'sheets_protocolo_passado_ng')!.runs
+        const runs = sourceDetailFor(sources, catalog, 'NG', 'sheets_financeiro_ng')!.runs
         expect(runs[0].ok).toBe(false)
         expect(runs.at(-1)?.ok).toBe(true)
     })

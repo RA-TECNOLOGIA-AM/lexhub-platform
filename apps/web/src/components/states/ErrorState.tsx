@@ -18,6 +18,12 @@ const BY_STATUS: Record<number, { icon: IconName; title: string; text: string }>
         text: 'Peça liberação ao gestor da unidade. A tentativa foi registrada na auditoria.',
     },
     404: { icon: 'inbox', title: 'Não encontrado', text: 'O endereço pode estar errado ou o item não existe mais.' },
+    // A API responde 423 quando a TI da LexGroup desligou a fonte (não é erro de integração).
+    423: {
+        icon: 'inbox',
+        title: 'Fonte desligada',
+        text: 'A fonte deste dashboard foi desligada pela TI da LexGroup. Os dados voltam quando ela for religada.',
+    },
 }
 
 // Módulo: transforma um DataError na mensagem certa para o usuário.

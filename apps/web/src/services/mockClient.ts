@@ -38,6 +38,7 @@ import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
 import { financeiroEstrategicoFor } from './mock/financeiroEstrategico.ts'
 import { acordosFor, execucaoFor } from './mock/execucao.ts'
 import { execucaoEstrategicoFor } from './mock/execucaoEstrategico.ts'
+import { ticketsFor } from './mock/tickets.ts'
 import { julgadosAcordaosFor } from './mock/julgadosAcordaos.ts'
 import { julgadosSentencasFor } from './mock/julgadosSentencas.ts'
 import { metaAnualFor } from './mock/metaAnual.ts'
@@ -53,7 +54,9 @@ import {
     disconnectIn,
     EGRESS_IP_EXEMPLO,
     inspectSheetIn,
+    requireSourceOn,
     retestIn,
+    setEnabledIn,
 } from './mock/connections.ts'
 import { toCsv } from '../lib/csv.ts'
 import { periodLabel } from '../lib/period.ts'
@@ -132,6 +135,7 @@ async function dashboardResponse<T extends { meta: Meta }>(
     await wait()
     requireSession()
     checkAccess(dashboardKey, query.unit)
+    requireSourceOn(dashboardKey, query.unit)
     const data = build(query.unit, query)
     data.meta.from = query.from ?? data.meta.from
     data.meta.to = query.to ?? data.meta.to
@@ -154,6 +158,7 @@ const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unk
     execucao: execucaoFor,
     acordos: acordosFor,
     'execucao-estrategico': execucaoEstrategicoFor,
+    tickets: ticketsFor,
     'julgados-acordaos': julgadosAcordaosFor,
     'julgados-sentencas': julgadosSentencasFor,
 }
@@ -402,6 +407,12 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             disconnectIn(requireOrg(org) ? sources : onboardingSources, source)
+        },
+
+        async setSourceEnabled(org, source, enabled) {
+            await wait()
+            requireSession()
+            return copy(setEnabledIn(requireOrg(org) ? sources : onboardingSources, source, enabled))
         },
 
         // Mesma regra da API: só a equipe RA (platform_staff) vê os clientes.

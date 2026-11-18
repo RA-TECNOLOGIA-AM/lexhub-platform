@@ -1,6 +1,7 @@
 """Conectar fonte (banco próprio e planilha) e gerenciar a fonte: o banco da plataforma.
 
-As regras ficam nas funções do banco (migration 20261117180000_conectar_banco_planilha.sql): só a TI da
+As regras ficam nas funções do banco (migrations 20261117180000_conectar_banco_planilha.sql e
+20261118100000_fontes_liga_desliga.sql): só a TI da
 LexGroup (app_private.is_source_admin), auditoria, key gerada. Aqui só chamamos e traduzimos o erro:
   42501 -> NotAllowed (403); P0001 -> RuleBroken (409, a mensagem vai para a tela).
 """
@@ -65,6 +66,8 @@ class SourceAdminRepo(Protocol):
     ) -> dict[str, Any]: ...
 
     async def disconnect(self, user_id: str, source_id: str) -> None: ...
+
+    async def set_enabled(self, user_id: str, source_id: str, enabled: bool) -> dict[str, Any]: ...
 
     async def record_run(
         self, source_id: str, kind: str, ok: bool, checks: list[dict], ms: int, error: str | None
@@ -169,6 +172,16 @@ class PgSourceAdminRepo:
             user_id,
             source_id,
         )
+
+    async def set_enabled(self, user_id: str, source_id: str, enabled: bool) -> dict[str, Any]:
+        out = await _call(
+            self._pool,
+            "select app_private.set_source_enabled($1::uuid, $2::uuid, $3)::text",
+            user_id,
+            source_id,
+            enabled,
+        )
+        return json.loads(out)
 
     async def record_run(self, source_id, kind, ok, checks, ms, error):
         await self._pool.execute(
