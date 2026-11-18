@@ -23,7 +23,7 @@ Preencha o `.env` com valores de desenvolvimento/staging fornecidos pela equipe.
 | `SUPABASE_JWT_SECRET` | Opcional; somente para projetos que ainda assinam JWT legado com HS256. |
 | `CORS_ORIGINS` | Origens web permitidas, separadas por vírgula. Vazio significa nenhuma origem. |
 | `DB_<FONTE>_URL` ou `DB_<FONTE>_NAME/USER/PASSWORD/HOST/PORT` | Conexões das fontes `NG`, `LAADV`, `LEXFLOW` e `LEXPRE`. URL tem prioridade; fonte sem configuração fica desligada. |
-| `SOURCE_CACHE_*`, `DB_POOL_*`, `DB_CONNECT_TIMEOUT`, `DB_QUERY_CONCURRENCY_*`, `PLATFORM_DB_*` | Ajustes opcionais do cache, pools, tempo limite de conexão e concorrência; padrões definidos em `app/config.py`. |
+| `SOURCE_CACHE_*`, `DASHBOARD_MEMO_MAX_ENTRIES`, `DB_POOL_*`, `DB_CONNECT_TIMEOUT`, `DB_QUERY_CONCURRENCY_*`, `PLATFORM_DB_*` | Ajustes opcionais do cache das fontes, da memória dos cálculos, pools, tempo limite de conexão e concorrência; padrões definidos em `app/config.py`. |
 
 As conexões dos bancos de origem são somente leitura. O `.env.example` documenta as variáveis e seus valores padrão. Para desenvolvimento local do front, libere `http://localhost:5173` em `CORS_ORIGINS`.
 

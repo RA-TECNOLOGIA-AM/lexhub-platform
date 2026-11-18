@@ -117,6 +117,10 @@ class Settings(BaseSettings):
     SOURCE_CACHE_WARM_ENABLED: bool = True
     # De quanto em quanto tempo (s) começa um ciclo do aquecedor, contado do início do anterior.
     SOURCE_CACHE_WARM_INTERVAL: int = Field(default=240, ge=30)
+    # Memória dos cálculos dos dashboards (app/result_memo.py): quantos resultados guarda (cada um é uma
+    # resposta inteira; sai o usado há mais tempo). Vale até o dado ser renovado ou SOURCE_CACHE_TTL.
+    # 0 = desligada (todo pedido calcula).
+    DASHBOARD_MEMO_MAX_ENTRIES: int = Field(default=64, ge=0)
 
     # Redis: cache compartilhado (L2) atrás do cache em memória (L1). Mesmos nomes e padrões da v1
     # (api_dashboards). Desligado = só memória. Ver app/cache.py.

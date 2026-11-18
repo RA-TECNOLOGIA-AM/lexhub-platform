@@ -35,6 +35,7 @@ from app.dashboards.base import (
     DashboardModule,
     NotReady,
 )
+from app.result_memo import filters_key
 
 FILTRO_SITUACAO = "situacao_processo"  # v1: PARAM_SITUACAO_PROCESSO, lido pelo middleware
 
@@ -185,15 +186,29 @@ def modulo(
         # Um tuple vale para todas as unidades; um dict, por ref da unidade (os nomes da v1 mudam: _NG, _LA, _RJ).
         campos_hist = historico.get(ctx.unit_ref, ()) if isinstance(historico, dict) else historico
         if campos_hist:
-            # Os mesmos filtros, sem período (na v1, a segunda chamada da página sem data).
-            todo = await rodar(None, None)
+
+            async def do_historico() -> dict[str, Any]:
+                """Os mesmos filtros, sem período (na v1, a segunda chamada da página sem data):
+                só os campos que a página usa, por campo de `campos_hist`."""
+                todo = await rodar(None, None)
+                valores = {}
+                for campo in campos_hist:
+                    # "destino=origem": grava com outro nome; "stats.x" = um campo de dentro de stats
+                    para, _, de = campo.partition("=")
+                    origem, nome_origem = _lado(todo, de or para)
+                    if nome_origem in origem:
+                        valores[campo] = origem[nome_origem]
+                return valores
+
+            # Não depende do período: trocar só o período reaproveita o histórico já calculado
+            # (é o cálculo mais pesado: roda sobre a base inteira).
+            valores = await ctx.remember(
+                ("historico", nome, filters_key(ctx.filters)), do_historico
+            )
             for campo in campos_hist:
-                # "destino=origem": grava com outro nome; "stats.x" = um campo de dentro de stats
-                para, _, de = campo.partition("=")
-                origem, nome_origem = _lado(todo, de or para)
-                destino, nome_destino = _lado(body, para)
-                if nome_origem in origem:
-                    destino[nome_destino] = origem[nome_origem]
+                destino, nome_destino = _lado(body, campo.partition("=")[0])
+                if campo in valores:
+                    destino[nome_destino] = valores[campo]
         return body
 
     def nomes_de(c: ModuleType) -> list[str]:

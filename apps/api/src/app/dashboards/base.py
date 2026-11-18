@@ -5,10 +5,14 @@ A casca (routes/dashboards.py) cuida do que é da V2: acesso, período, filtros,
 com as queries e funções `filter_*` copiadas da v1, a partir do `DashboardContext`.
 """
 
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Hashable
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any, Protocol
+
+from app.result_memo import run_now
+
+Remember = Callable[[Hashable, Callable[[], Awaitable[Any]]], Awaitable[Any]]
 
 
 class DashboardInputError(ValueError):
@@ -50,6 +54,10 @@ class DashboardContext:
     source_db: str = ""
     # Exportação: as opções escolhidas na janela (ExportSpec.options), ex.: {"criterio": "saida"}.
     export_options: dict[str, str] = field(default_factory=dict)
+    # Memória dos cálculos (app/result_memo.py): `await ctx.remember(chave, calcular)` devolve o resultado
+    # guardado do mesmo cálculo sobre os mesmos dados, ou calcula. A chave só precisa dizer o que muda
+    # dentro do dashboard (ex.: período e filtros): a casca junta dashboard, unidade, fonte, comissão e dia.
+    remember: Remember = run_now
 
 
 @dataclass(frozen=True)

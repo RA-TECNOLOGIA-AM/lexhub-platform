@@ -124,6 +124,43 @@ def test_quem_desistiu_nao_ocupa_o_worker_com_o_calculo(client, signer, module, 
     assert "ctx" not in module  # build não rodou
 
 
+def test_mesmo_pedido_sobre_os_mesmos_dados_usa_o_calculo_guardado(
+    client, signer, ready, sources, monkeypatch
+):
+    """Com o cache real das fontes: repetir período e filtros (ou voltar a eles) não calcula de novo."""
+    from app.source_cache import CachedSourceFetcher, MemoryStore, SourceCache
+    from app.sources import get_source_factory
+
+    calculos = []
+
+    async def build(ctx):
+        calculos.append(ctx.filters["materia"])
+        rows = await ctx.source.fetch("log_setor_demanda_lexpre_NG")
+        return {"stats": {"total": len(rows)}}
+
+    fake = DashboardModule(
+        key="protocolo-lexpre",
+        source_db="lexpre",
+        source_label="LexPre",
+        build=build,
+        filters={"materia": str},
+    )
+    monkeypatch.setitem(DASHBOARDS, "protocolo-lexpre", fake)
+    cache = SourceCache(MemoryStore())
+    client.app.dependency_overrides[get_source_factory] = lambda: (
+        lambda db: CachedSourceFetcher(cache, sources.factory(db), db)
+    )
+
+    urls = [URL, URL, f"{URL}?materia=ANP", URL, f"{URL}?from=2026-10-01&to=2026-10-31"]
+    respostas = [client.get(u, headers=auth(signer)) for u in urls]
+
+    assert [r.status_code for r in respostas] == [200] * 5
+    assert calculos == [[], ["ANP"], []]  # a 2ª e a 4ª vieram guardadas; outro período calcula
+    assert respostas[1].json() == respostas[0].json()
+    assert respostas[3].json() == respostas[0].json()
+    assert respostas[1].json()["meta"]["synced_at"] is not None  # a hora do dado vem mesmo guardado
+
+
 def test_campos_da_v2_sem_regra_vem_null(client, signer, module, ready):
     body = client.get(URL, headers=auth(signer)).json()
     assert body["protocolados_no_prazo"] is None
