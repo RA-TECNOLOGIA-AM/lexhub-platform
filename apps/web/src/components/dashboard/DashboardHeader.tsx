@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useAuth } from '../../contexts/auth-context.ts'
 import type { DashboardSummary, Meta } from '../../types/index.ts'
 import { Icon } from '../ui/Icon.tsx'
+import { TopbarPortal } from '../layout/TopbarSlot.tsx'
 import { minutesSince } from '../../lib/format.ts'
 import { unitName } from '../../lib/units.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
@@ -23,8 +24,16 @@ export function DashboardHeader({ org, dashboard, meta, actions }: DashboardHead
     const entry = docFor(DOC_ENTRIES, dashboard.key, meta.unit)
     const doc = entry && DOC_PAGES[entry.slug] ? entry : null
     const late = meta.synced_at === null || minutesSince(meta.synced_at) > dashboard.max_delay_min
+    const title = `${dashboard.title} · ${unitName(meta.unit, me?.units ?? [])}`
     return (
         <section className="dhead">
+            {/* O nome também fica na topbar: continua à vista quando o cabeçalho sai da tela ao rolar. */}
+            <TopbarPortal place="start">
+                <span className="topbar-title" title={title}>
+                    <Icon name="sheet" size={16} />
+                    <span className="topbar-title-text">{title}</span>
+                </span>
+            </TopbarPortal>
             <div className="dhead-main">
                 <span className="dhead-trail">
                     <PageTransitionLink to={`/${org}/dashboards`}>Dashboards</PageTransitionLink>
@@ -37,9 +46,7 @@ export function DashboardHeader({ org, dashboard, meta, actions }: DashboardHead
                     <span className="dhead-icon" aria-hidden="true">
                         <Icon name="sheet" size={20} />
                     </span>
-                    <h1 className="h1">
-                        {dashboard.title} · {unitName(meta.unit, me?.units ?? [])}
-                    </h1>
+                    <h1 className="h1">{title}</h1>
                 </div>
                 {dashboard.desc && <p className="dhead-desc">{dashboard.desc}</p>}
             </div>
