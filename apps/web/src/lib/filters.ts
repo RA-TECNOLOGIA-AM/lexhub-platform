@@ -66,7 +66,7 @@ export function toggleFilter(filters: DashboardFilters, key: keyof DashboardFilt
 }
 
 // O texto do botão de um filtro na janela: o nome (nada escolhido), a opção (uma) ou "ANP +2" (várias).
-export function pickerLabel(field: FilterField, chosen: string[]): string {
+export function pickerLabel(field: Pick<FilterField, 'label' | 'options'>, chosen: string[]): string {
     if (chosen.length === 0) return field.label
     const first = field.options.find((o) => o.value === chosen[0])?.label ?? chosen[0]
     return chosen.length === 1 ? first : `${first} +${chosen.length - 1}`

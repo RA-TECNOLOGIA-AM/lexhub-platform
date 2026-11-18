@@ -21,6 +21,7 @@ from app.dashboards import (
     peticionamento,
     peticionamento_lexpre,
     pre_protocolo,
+    previsao_individualizada,
     protocolo,
     protocolo_lexpre,
     publicacoes,
@@ -59,5 +60,6 @@ DASHBOARDS: dict[str, DashboardModule] = {
         tickets.MODULE,
         publicacoes.MODULE,
         sobrevivencia_processual.MODULE,
+        previsao_individualizada.MODULE,
     )
 }

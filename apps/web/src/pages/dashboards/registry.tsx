@@ -107,6 +107,10 @@ export const DASHBOARD_PAGES: Record<string, ComponentType> = {
         () => import('./sobrevivencia-processual/index.ts'),
         (m) => m.sobrevivenciaProcessual,
     ),
+    'previsao-individualizada': lazyDashboard(
+        () => import('./previsao-individualizada/index.ts'),
+        (m) => m.previsaoIndividualizada,
+    ),
     publicacoes: lazyDashboard(
         () => import('./publicacoes/index.ts'),
         (m) => m.publicacoes,

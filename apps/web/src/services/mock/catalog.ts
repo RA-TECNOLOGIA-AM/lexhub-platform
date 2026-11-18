@@ -273,6 +273,15 @@ export const catalog: DashboardCatalog = {
             syncedMin: 6,
         }),
         entry({
+            key: 'previsao-individualizada',
+            title: 'Previsão Individualizada',
+            area: 'Estratégico',
+            desc: 'Tempo previsto até mérito/acordo e pagamento, chance de procedência e de acordo para uma combinação de processo (modelo XGBoost-AFT do estudo do TCC).',
+            units: NG_AM,
+            source: 'LexFlow',
+            syncedMin: 6,
+        }),
+        entry({
             key: 'financeiro-estrategico',
             title: 'Financeiro Estratégico',
             area: 'Financeiro',
