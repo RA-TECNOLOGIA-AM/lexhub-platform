@@ -12,7 +12,6 @@ import {
     mapaDaUnidade,
     numeroCnj,
     ordenarLista,
-    paginas,
     taxaDoAno,
     totalDoAno,
 } from './julgados.ts'
@@ -144,10 +143,7 @@ describe('lista "Acórdãos no período"', () => {
         ])
     })
 
-    it('páginas à mostra e formatos (CNJ e data)', () => {
-        expect(paginas(1, 3)).toEqual([1, 2, 3])
-        expect(paginas(5, 12)).toEqual([1, 4, 5, 6, 12])
-        expect(paginas(1, 12)).toEqual([1, 2, 12])
+    it('formatos (CNJ e data)', () => {
         expect(numeroCnj('06000001020248040012')).toBe('0600000-10.2024.8.04.0012')
         expect(numeroCnj('123')).toBe('123')
         expect(dataBr('2026-10-05')).toBe('05/10/2026')

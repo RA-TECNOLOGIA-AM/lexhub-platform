@@ -16,7 +16,7 @@ export function DadosFaltando({ avisos, itens }: { avisos: string[]; itens: Dado
             <button
                 type="button"
                 className="jl-atencao"
-                title="Clique para ver os processos e a informação que falta preencher"
+                title="Toda a base de acórdãos, sem o filtro de período. Clique para ver os processos e a informação que falta preencher"
                 onClick={() => setAberto(true)}
             >
                 <span className="jl-letreiro" style={{ '--dur': `${14 * avisos.length}s` } as CSSProperties}>
@@ -38,7 +38,7 @@ function DadosFaltandoModal({ itens, onClose }: { itens: DadoFaltando[]; onClose
     return (
         <Modal
             title="Processos com informação faltando"
-            subtitle={`${fmt.int(visiveis.length)}${campo ? ` de ${fmt.int(itens.length)}` : ''} ocorrência${visiveis.length === 1 ? '' : 's'} — preencha esses campos no sistema de origem.`}
+            subtitle={`${fmt.int(visiveis.length)}${campo ? ` de ${fmt.int(itens.length)}` : ''} ocorrência${visiveis.length === 1 ? '' : 's'} em toda a base de acórdãos (sem o filtro de período) — preencha esses campos no sistema de origem.`}
             className="jl-modal"
             onClose={onClose}
         >
