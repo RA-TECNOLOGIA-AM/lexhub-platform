@@ -3,11 +3,17 @@
 Protege os bancos de origem e evita que o usuário espere a query pesada (LexPre: ~22 a 50 s):
   * fresco (até `ttl`): devolve da memória (L1), sem ir ao banco;
   * vencido na memória: tenta o Redis (L2, compartilhado e que sobrevive a restart/deploy);
-  * vencido nos dois: UMA busca por chave, mesmo com várias pessoas abrindo juntas (trava por chave),
-    e grava no L1 e no L2;
+  * vencido há pouco (até `ttl + stale_while_revalidate`): devolve o que tem NA HORA e renova em
+    segundo plano; quem pedir depois já recebe o dado novo;
+  * vencido há mais tempo (ou nunca buscado): espera a busca;
+  * nunca duas buscas da mesma chave ao mesmo tempo, venham elas de pessoas, da renovação em
+    segundo plano ou do aquecedor: todos esperam a mesma; grava no L1 e no L2;
   * banco fora do ar: devolve o último dado bom (L1 ou L2) até `stale_max_age` (igual à v1);
     depois, o erro;
   * o aquecedor (cache_warmer.py) renova antes de vencer, então a tela quase nunca espera.
+
+Por que servir o vencido: trocar um filtro logo depois de a query vencer (o aquecedor nem sempre chega
+antes) fazia a pessoa esperar a query inteira no banco. `meta.synced_at` continua dizendo a hora real.
 
 Diferença para a v1: o dado do Redis só vale como "fresco" se `fetched_at` estiver dentro do `ttl`
 (a v1 aceitava qualquer coisa ainda no Redis e reiniciava o relógio, podendo servir dado de 15 min).
@@ -105,6 +111,7 @@ class SourceCache:
         clock: Clock = time.time,
         shared: CacheService | None = None,
         shared_ttl: TtlFor | None = None,
+        stale_while_revalidate: float = 600,
     ):
         self._store = store
         self._ttl = ttl
@@ -112,27 +119,40 @@ class SourceCache:
         self._clock = clock
         self._shared: CacheService = shared or NullCache()
         self._shared_ttl: TtlFor = shared_ttl or (lambda _key: int(ttl))
+        self._swr = stale_while_revalidate
         self._locks: dict[str, asyncio.Lock] = {}
+        self._loading: dict[str, asyncio.Task[Entry]] = {}  # a busca em andamento de cada chave
 
     def fetched_at(self, key: str) -> float | None:
         """Quando o dado dessa chave veio do banco (None = ainda não buscado)."""
         entry = self._store.get(key)
         return entry.fetched_at if entry is not None else None
 
+    def _age(self, entry: Entry) -> float:
+        return self._clock() - entry.fetched_at
+
     def _fresh(self, entry: Entry | None) -> bool:
-        return entry is not None and self._clock() - entry.fetched_at < self._ttl
+        return entry is not None and self._age(entry) < self._ttl
+
+    def _servable(self, entry: Entry | None) -> bool:
+        """Fresco ou vencido há pouco: vai para a tela na hora (o vencido é renovado em segundo plano)."""
+        return entry is not None and self._age(entry) < self._ttl + self._swr
 
     async def _from_shared(self, key: str) -> Entry | None:
         value = await self._shared.get(key)
         return value if isinstance(value, Entry) else None
 
     async def get(self, key: str, load: Callable[[], Awaitable[Rows]]) -> Entry:
-        """Memória se fresco; senão Redis se fresco; senão busca (uma vez por chave).
+        """Memória se fresco; senão Redis se fresco; vencido há pouco = devolve e renova em segundo plano;
+        senão espera a busca (uma por chave).
 
         Banco fora = último dado bom (o mais recente entre memória e Redis).
         """
         entry = self._store.get(key)
         if self._fresh(entry):
+            return entry
+        if self._servable(entry):
+            self._renew_in_background(key, load, entry)
             return entry
         lock = self._locks.setdefault(key, asyncio.Lock())
         async with lock:
@@ -140,33 +160,71 @@ class SourceCache:
             if self._fresh(entry):
                 return entry
             shared = await self._from_shared(key)
-            if shared is not None:
-                if self._fresh(shared):
-                    logger.info(
-                        "%s: veio do Redis (de %s atrás)",
-                        key,
-                        seconds(self._clock() - shared.fetched_at),
-                    )
+            if shared is not None and (entry is None or shared.fetched_at > entry.fetched_at):
+                entry = shared  # o mais novo entre memória e Redis
+                if self._servable(shared):
+                    logger.info("%s: veio do Redis (de %s atrás)", key, seconds(self._age(shared)))
                     self._store.set(key, shared)
-                    return shared
-                if entry is None or shared.fetched_at > entry.fetched_at:
-                    entry = shared  # melhor candidato a "último dado bom"
+            if self._fresh(entry):
+                return entry
+            if self._servable(entry):
+                self._renew_in_background(key, load, entry)
+                return entry
             try:
-                return await self._load(key, load)
+                return await asyncio.shield(self._load_once(key, load))
             except Exception as exc:
-                if entry is not None and self._clock() - entry.fetched_at <= self._stale_max_age:
+                if entry is not None and self._age(entry) <= self._stale_max_age:
                     logger.warning(
                         "%s: banco falhou (%s); servindo o último dado bom, de %s atrás",
                         key,
                         error_name(exc),
-                        seconds(self._clock() - entry.fetched_at),
+                        seconds(self._age(entry)),
                     )
                     return entry
                 raise
 
     async def refresh(self, key: str, load: Callable[[], Awaitable[Rows]]) -> Entry:
-        """Aquecedor: busca sem segurar a trava (usuários seguem lendo o dado atual) e troca no fim."""
-        return await self._load(key, load)
+        """Aquecedor: busca sem segurar a trava (usuários seguem lendo o dado atual) e troca no fim.
+
+        Se a chave já está sendo buscada (renovação em segundo plano), espera essa mesma busca.
+        """
+        return await asyncio.shield(self._load_once(key, load))
+
+    async def wait_renewals(self) -> None:
+        """Espera as buscas em andamento terminarem (testes)."""
+        while self._loading:
+            await asyncio.gather(*self._loading.values(), return_exceptions=True)
+
+    def _renew_in_background(
+        self, key: str, load: Callable[[], Awaitable[Rows]], served: Entry
+    ) -> None:
+        if key in self._loading:
+            return  # já está renovando
+        logger.info(
+            "%s: vencido há %s; servindo o atual e renovando em segundo plano",
+            key,
+            seconds(self._age(served) - self._ttl),
+        )
+        self._load_once(key, load)
+
+    def _load_once(self, key: str, load: Callable[[], Awaitable[Rows]]) -> asyncio.Task[Entry]:
+        """A busca em andamento dessa chave ou, se não houver, uma nova (nunca duas juntas).
+
+        É uma tarefa à parte: quem espera a busca usa `asyncio.shield`, então uma requisição cancelada
+        (a pessoa desistiu) não cancela a busca que os outros estão esperando.
+        """
+        task = self._loading.get(key)
+        if task is None:
+            task = asyncio.create_task(self._load(key, load), name=f"source_cache:{key}")
+            self._loading[key] = task
+            task.add_done_callback(lambda done: self._loaded(key, done))
+        return task
+
+    def _loaded(self, key: str, task: asyncio.Task[Entry]) -> None:
+        if self._loading.get(key) is task:
+            del self._loading[key]
+        if not task.cancelled():
+            task.exception()  # já registrada em _load; lida aqui para o asyncio não reclamar
 
     async def _load(self, key: str, load: Callable[[], Awaitable[Rows]]) -> Entry:
         started = self._clock()

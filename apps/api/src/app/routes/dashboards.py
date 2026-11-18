@@ -28,6 +28,9 @@ from app.sources import (
 
 router = APIRouter(prefix="/orgs/{org_slug}/units/{unit_code}/dashboards", tags=["dashboards"])
 
+# Status do nginx para "o cliente fechou a conexão antes da resposta": só aparece no log da API.
+CLIENT_CLOSED_REQUEST = 499
+
 
 @router.get("/{dashboard_key}/access")
 async def dashboard_access(access: Annotated[DashboardAccess, Depends(require_dashboard)]):
@@ -170,6 +173,10 @@ async def dashboard_data(
 ):
     """Dados de um dashboard numa unidade: período, filtros da v1, `meta` e o que o módulo calcula."""
     module, ctx = await _prepare(request, access, refs, sources, audit, today, start, end)
+    # O cálculo prende o único worker. Se a pessoa já desistiu (trocou o filtro de novo e o front
+    # cancelou esta busca), não calcula: a requisição que vale não fica esperando na fila.
+    if await request.is_disconnected():
+        return Response(status_code=CLIENT_CLOSED_REQUEST)
     data = await _run(module, module.build(ctx))
 
     meta = {

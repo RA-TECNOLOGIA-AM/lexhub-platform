@@ -116,7 +116,14 @@ export type DashboardFilters = {
     situacao_processo?: string[] // ATIVO | SUSPENSO/SOBRESTADO | ARQUIVADO (sem nenhum = recorte padrão da query)
 }
 
-export type DashboardQuery = { org: string; unit: string; from?: string; to?: string; filters?: DashboardFilters }
+export type DashboardQuery = {
+    org: string
+    unit: string
+    from?: string
+    to?: string
+    filters?: DashboardFilters
+    signal?: AbortSignal // cancela a busca (ex.: o filtro mudou de novo antes da resposta)
+}
 
 // Campos da v1 (ProtocoloLexpreNGResponse) + o que é novo da V2 (marcado abaixo).
 export type ProtocoloResponse = {

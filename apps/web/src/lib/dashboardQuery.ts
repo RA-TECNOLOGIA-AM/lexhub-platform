@@ -5,6 +5,10 @@ import type { DashboardFilters } from '../types/index.ts'
 
 export type DashboardParams = { from?: string; to?: string; filters: DashboardFilters }
 
+// Quanto tempo (ms) período e filtros precisam ficar parados para a busca sair: cliques seguidos na
+// janela Filtros viram uma busca só, com tudo marcado (cada busca ocupa a API com o cálculo inteiro).
+export const FETCH_DELAY_MS = 500
+
 // Os filtros que existem (DashboardFilters). Filtro novo = acrescentar aqui e no tipo.
 export const FILTER_KEYS = [
     'materia',

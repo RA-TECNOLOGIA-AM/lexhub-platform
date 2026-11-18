@@ -96,3 +96,45 @@ describe('http.file', () => {
         expect((await http.file('/x')).filename).toBeNull()
     })
 })
+
+describe('createHttp: cancelamento', () => {
+    it('repassa o signal ao fetch', async () => {
+        const calls: Call[] = []
+        const http = createHttp({
+            baseUrl: 'http://api.test',
+            getToken: async () => null,
+            fetch: fakeFetch(200, {}, calls),
+        })
+        const controller = new AbortController()
+        await http.get('/x', controller.signal)
+        expect(calls[0].init?.signal).toBe(controller.signal)
+    })
+
+    it('busca cancelada sobe o erro do cancelamento, não "sem conexão"', async () => {
+        const controller = new AbortController()
+        const http = createHttp({
+            baseUrl: 'http://api.test',
+            getToken: async () => null,
+            fetch: async (_url, init) => {
+                controller.abort()
+                throw init?.signal?.reason
+            },
+        })
+        const err = await http.get('/x', controller.signal).catch((e: unknown) => e)
+        expect(err).not.toBeInstanceOf(DataError)
+        expect((err as DOMException).name).toBe('AbortError')
+    })
+
+    it('falha de rede sem cancelamento continua virando DataError 0', async () => {
+        const http = createHttp({
+            baseUrl: 'http://api.test',
+            getToken: async () => null,
+            fetch: async () => {
+                throw new TypeError('Failed to fetch')
+            },
+        })
+        const err = await http.get('/x', new AbortController().signal).catch((e: unknown) => e)
+        expect(err).toBeInstanceOf(DataError)
+        expect((err as DataError).status).toBe(0)
+    })
+})

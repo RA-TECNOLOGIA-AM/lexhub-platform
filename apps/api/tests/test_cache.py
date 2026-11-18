@@ -225,18 +225,34 @@ def test_restart_usa_o_redis_sem_ir_ao_banco():
     assert entry.fetched_at == 1000.0  # mantém a hora real da busca (meta.synced_at)
 
 
-def test_dado_vencido_no_redis_nao_conta_como_fresco():
+def test_dado_vencido_no_redis_vai_para_a_tela_e_e_renovado():
     redis_cache, _, _ = make_redis()
     clock, origin = Clock(), Origin()
 
     async def go():
         await make_source(redis_cache, clock).get("ng:q", origin.fetch)
         clock.now += 301
+        nova_replica = make_source(redis_cache, clock)
+        served = await nova_replica.get("ng:q", origin.fetch)
+        await nova_replica.wait_renewals()
+        return served, await nova_replica.get("ng:q", origin.fetch)
+
+    served, after = run(go())
+    assert served.data == [{"busca": 1}]  # na hora, sem esperar o banco
+    assert origin.calls == 2  # vencido não conta como fresco: renovou
+    assert after.data == [{"busca": 2}]
+
+
+def test_dado_vencido_ha_muito_tempo_no_redis_espera_a_busca():
+    redis_cache, _, _ = make_redis()
+    clock, origin = Clock(), Origin()
+
+    async def go():
+        await make_source(redis_cache, clock).get("ng:q", origin.fetch)
+        clock.now += 1000  # passou de ttl + stale_while_revalidate
         return await make_source(redis_cache, clock).get("ng:q", origin.fetch)
 
-    entry = run(go())
-    assert origin.calls == 2
-    assert entry.data == [{"busca": 2}]
+    assert run(go()).data == [{"busca": 2}]
 
 
 def test_banco_fora_usa_o_ultimo_dado_bom_do_redis():
@@ -245,7 +261,7 @@ def test_banco_fora_usa_o_ultimo_dado_bom_do_redis():
 
     async def go():
         await make_source(redis_cache, clock).get("ng:q", origin.fetch)
-        clock.now += 400
+        clock.now += 1000
         origin.fail = True
         return await make_source(redis_cache, clock).get("ng:q", origin.fetch)
 

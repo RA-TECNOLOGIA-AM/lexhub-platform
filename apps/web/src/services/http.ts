@@ -16,7 +16,14 @@ export function createHttp({ baseUrl, getToken, fetch: doFetch = (url, init) => 
     const base = baseUrl.replace(/\/+$/, '')
 
     // O caminho comum de toda chamada: token, envio e erro HTTP -> DataError. Devolve a resposta crua.
-    async function send(method: string, path: string, body?: unknown, accept = 'application/json'): Promise<Response> {
+    // signal: quem chamou pode cancelar (ex.: o filtro mudou antes da resposta); o erro de cancelamento sobe como veio.
+    async function send(
+        method: string,
+        path: string,
+        body?: unknown,
+        accept = 'application/json',
+        signal?: AbortSignal,
+    ): Promise<Response> {
         const headers = new Headers({ Accept: accept })
         const token = await getToken()
         if (token) headers.set('Authorization', `Bearer ${token}`)
@@ -28,8 +35,10 @@ export function createHttp({ baseUrl, getToken, fetch: doFetch = (url, init) => 
                 method,
                 headers,
                 body: body === undefined ? undefined : JSON.stringify(body),
+                signal,
             })
-        } catch {
+        } catch (err) {
+            if (signal?.aborted) throw err // cancelada: não é falha de conexão
             throw new DataError(0, 'Não foi possível falar com a API. Confira a conexão.')
         }
         if (!res.ok) throw await errorOf(res)
@@ -37,8 +46,8 @@ export function createHttp({ baseUrl, getToken, fetch: doFetch = (url, init) => 
     }
 
     // JSON: quase todas as rotas.
-    async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
-        const res = await send(method, path, body)
+    async function request<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+        const res = await send(method, path, body, 'application/json', signal)
         return res.status === 204 ? (undefined as T) : ((await res.json()) as T)
     }
 
@@ -49,7 +58,7 @@ export function createHttp({ baseUrl, getToken, fetch: doFetch = (url, init) => 
     }
 
     return {
-        get: <T>(path: string) => request<T>('GET', path),
+        get: <T>(path: string, signal?: AbortSignal) => request<T>('GET', path, undefined, signal),
         post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
         put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
         delete: <T>(path: string) => request<T>('DELETE', path),

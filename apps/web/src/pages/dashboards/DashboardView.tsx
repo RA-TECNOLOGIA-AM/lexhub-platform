@@ -16,6 +16,8 @@ import { toggleFilter } from '../../lib/filters.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
 import { useDashboardExport } from '../../hooks/useDashboardExport.ts'
 import { useDashboardQuery } from '../../hooks/useDashboardQuery.ts'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue.ts'
+import { FETCH_DELAY_MS, queryFromParams } from '../../lib/dashboardQuery.ts'
 import type { DashboardModule } from './types.ts'
 
 // Módulo: o roteiro comum de todo dashboard. Lê período e filtros da URL, busca os dados da unidade
@@ -30,15 +32,21 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
     const { exportReport, notice, clearNotice } = useDashboardExport(module.key, { org, unit, ...query })
     // "Atualizar" soma 1 aqui e busca de novo (os números atuais ficam na tela até os novos chegarem).
     const [reload, setReload] = useState(0)
-    // search na lista: mudar período ou filtros na URL busca de novo.
+    // A busca usa a URL depois de ela ficar parada um instante: marcar várias opções seguidas na janela
+    // Filtros faz UMA busca, com tudo marcado, e não uma por clique (cada uma ocupava a API com o cálculo).
+    const settled = useDebouncedValue(search, FETCH_DELAY_MS)
+    const asked = queryFromParams(new URLSearchParams(settled))
+    // settled na lista: mudar período ou filtros na URL busca de novo (e cancela a busca anterior).
     const {
         data: result,
         error,
-        loading,
+        loading: fetching,
     } = useAsync(
-        () => Promise.all([module.fetch({ org, unit, ...query }), dataClient.listDashboards(org)]),
-        [module, org, unit, search, reload],
+        (signal) => Promise.all([module.fetch({ org, unit, ...asked, signal }), dataClient.listDashboards(org)]),
+        [module, org, unit, settled, reload],
     )
+    // Esperando a URL parar de mudar também conta como "atualizando".
+    const loading = fetching || settled !== search
 
     if (error) return <ErrorState error={error} backTo={hub} />
     if (!result) return <LoadingState variant="dashboard" />

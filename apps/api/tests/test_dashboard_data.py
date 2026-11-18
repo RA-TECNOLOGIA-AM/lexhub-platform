@@ -111,6 +111,19 @@ def test_resposta_com_meta_e_dados(client, signer, module, ready, repo):
     assert body["opcoes_filtro"]["materias"] == ["ANP"]
 
 
+def test_quem_desistiu_nao_ocupa_o_worker_com_o_calculo(client, signer, module, ready, monkeypatch):
+    """O front cancelou a busca (filtro trocado de novo): a API não roda o cálculo."""
+    from starlette.requests import Request
+
+    async def desconectado(self):
+        return True
+
+    monkeypatch.setattr(Request, "is_disconnected", desconectado)
+    r = client.get(URL, headers=auth(signer))
+    assert r.status_code == 499
+    assert "ctx" not in module  # build não rodou
+
+
 def test_campos_da_v2_sem_regra_vem_null(client, signer, module, ready):
     body = client.get(URL, headers=auth(signer)).json()
     assert body["protocolados_no_prazo"] is None
