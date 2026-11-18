@@ -59,6 +59,11 @@ class SourceUnavailable(Exception):
     """Banco de origem (ou planilha) desligado, fora do ar ou sem resposta no momento."""
 
 
+class SourceDisabled(SourceUnavailable):
+    """A TI da LexGroup desligou a fonte na tela (app.data_sources.enabled = false). Não é falha: a
+    casca responde 423 "Fonte desligada" e o cache não serve o último dado bom (app/source_switch.py)."""
+
+
 class ConnectionLost(Exception):
     """A conexão caiu no meio da consulta, e o asyncpg avisou com um InterfaceError
     ("the underlying connection is closed") no lugar do erro original."""

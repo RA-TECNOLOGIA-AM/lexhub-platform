@@ -28,6 +28,7 @@ from app.routes import (
     sources,
 )
 from app.source_cache import MemoryStore, SourceCache, ttl_by_query
+from app.source_switch import PgDisabledRepo, SourceSwitch
 from app.sources import source_fetcher
 from app.supabase_client import create_supabase
 
@@ -93,6 +94,12 @@ def create_app() -> FastAPI:
         # alguém usa, com o segredo decifrado pela SOURCE_SECRET_KEY (app/registered_sources.py).
         app.state.registered_sources = (
             RegisteredSources(PgRegisteredRepo(app.state.db_pool), settings)
+            if app.state.db_pool is not None
+            else None
+        )
+        # Liga/desliga das fontes da tela, checado antes do cache (app/source_switch.py).
+        app.state.source_switch = (
+            SourceSwitch(PgDisabledRepo(app.state.db_pool))
             if app.state.db_pool is not None
             else None
         )

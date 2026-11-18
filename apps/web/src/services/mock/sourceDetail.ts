@@ -49,6 +49,9 @@ export function sourceDetailFor(
         runs: runsFor(source.status, source.failures),
         config: managedConfig(sourceId)?.config ?? {},
         writerAck: managedConfig(sourceId)?.writerAck ?? false,
+        enabled: managedConfig(sourceId)?.enabled ?? true,
         canManage: isManaged(sourceId), // o mock entra como TI da LexGroup
+        // A TI da LexGroup vê a chave e a estrutura salva (produto Lex e bancos internos: sem estrutura)
+        technical: { key: sourceId, schema: managedConfig(sourceId)?.schema ?? null },
     }
 }

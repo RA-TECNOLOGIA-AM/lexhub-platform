@@ -369,8 +369,9 @@ export type ClientsResponse = {
 // Unidades e fontes: de onde vêm os dados de cada unidade (conectores).
 export type SourceKind = 'database' | 'flow' | 'finance' | 'sheet' // define o ícone
 // pending = falta autorizar (ex.: Conta Azul); waiting = conectada, mas ainda não sincronizou nenhuma vez;
-// no_dashboards = conectada, mas nenhum dashboard ligado na unidade usa a fonte (o analista liga depois)
-export type SourceStatus = 'healthy' | 'late' | 'pending' | 'waiting' | 'no_dashboards'
+// no_dashboards = conectada, mas nenhum dashboard ligado na unidade usa a fonte (o analista liga depois);
+// disabled = a TI da LexGroup desligou a fonte (pausa: o segredo fica salvo, a API não lê)
+export type SourceStatus = 'healthy' | 'late' | 'pending' | 'waiting' | 'no_dashboards' | 'disabled'
 // Como a API conecta na fonte (app.data_sources.connector)
 export type SourceConnector = 'lexpre' | 'lexflow' | 'internal' | 'postgres' | 'mysql' | 'sheets'
 // product = contratado pela organização (LexFlow, LexPre); connection = conectada por uma unidade (banco, planilha)
@@ -417,7 +418,17 @@ export type SourceDetail = {
     // Banco: host, port, database, user, ssl. Planilha: tab. Nunca a senha nem o link.
     config: Record<string, unknown>
     writerAck: boolean // salva com um usuário que pode escrever ("Salvar mesmo assim")
-    canManage: boolean // TI da LexGroup numa fonte conectada pela tela: testar, trocar senha, desconectar
+    enabled: boolean // false = desligada pela TI da LexGroup (religar não pede o segredo de novo)
+    // TI da LexGroup numa fonte com o segredo no banco: testar, trocar senha, ligar/desligar, desconectar
+    canManage: boolean
+    technical: SourceTechnical | null // só para a TI da LexGroup; null para os demais
+}
+
+// Para o analista escrever as queries: a chave da fonte e a estrutura salva no teste de conexão.
+// schema: banco = { 'public.processo': [['id', 'integer'], ...] }; planilha = { ABA: [['COLUNA', ''], ...] }
+export type SourceTechnical = {
+    key: string
+    schema: Record<string, [string, string][]> | null
 }
 
 // Conectar fonte: banco próprio da operação e planilha publicada (rotas da API, app/routes/source_connections.py).

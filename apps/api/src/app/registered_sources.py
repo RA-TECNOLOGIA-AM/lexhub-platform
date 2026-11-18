@@ -1,7 +1,8 @@
-"""Fontes conectadas pela tela (Conectar fonte): banco próprio da operação e planilha publicada.
+"""Fontes com o segredo cifrado no banco: banco próprio da operação e planilha publicada.
 
 Os bancos do `.env` (LexPre, LexFlow, NG, LAADV) seguem no DatabaseManager. As fontes conectadas pela
-tela vivem em app.data_sources (connector postgres/mysql/sheets, segredo cifrado) e chegam aqui pela key
+tela e as planilhas antigas (sheets_financeiro_*, cujo link saiu do .env no PR 3) vivem em
+app.data_sources (connector postgres/mysql/sheets, segredo cifrado) e chegam aqui pela key
 (o "nome do banco" das queries, ex.: 'pg_mco_3fa9c1'):
 
   * RegisteredRepo        lê a linha da fonte no banco da plataforma;
@@ -32,6 +33,7 @@ from app.connection_check import ssl_context
 from app.database import (
     APPLICATION_NAME,
     CONNECTION_ERRORS,
+    SourceDisabled,
     SourceUnavailable,
     fetch_read_only,
     run_with_connection_retry,
@@ -53,6 +55,7 @@ class RegisteredRow:
     config: dict[str, Any]
     secret_ciphertext: str
     config_version: int
+    enabled: bool = True
 
 
 @dataclass(frozen=True)
@@ -67,7 +70,7 @@ class RegisteredRepo(Protocol):
 
 
 _LOAD_SQL = """
-select id::text, key, connector, config::text, secret_ciphertext, config_version
+select id::text, key, connector, config::text, secret_ciphertext, config_version, enabled
   from app.data_sources
  where key = $1 and active and connector = any($2::text[]) and secret_ciphertext is not null
 """
@@ -88,6 +91,7 @@ class PgRegisteredRepo:
             config=json.loads(r["config"]),
             secret_ciphertext=r["secret_ciphertext"],
             config_version=r["config_version"],
+            enabled=r["enabled"],
         )
 
 
@@ -119,7 +123,8 @@ class RegisteredSources:
         return SecretBox.from_setting(self._settings.SOURCE_SECRET_KEY)
 
     async def get(self, key: str) -> RegisteredSource:
-        """A fonte com o segredo decifrado. Não existe, chave faltando ou segredo ilegível = SourceUnavailable."""
+        """A fonte com o segredo decifrado. Não existe, chave faltando ou segredo ilegível = SourceUnavailable;
+        desligada na tela = SourceDisabled."""
         hit = self._cache.get(key)
         if hit is not None and self._clock() - hit.loaded_at < self._ttl:
             return hit
@@ -127,6 +132,9 @@ class RegisteredSources:
         if row is None:
             self._cache.pop(key, None)
             raise SourceUnavailable(key)
+        if not row.enabled:
+            await self.invalidate(key)
+            raise SourceDisabled(key)
         try:
             secret = self._box().decrypt(row.secret_ciphertext)
         except (SecretKeyMissing, SecretUnreadable, ValueError) as exc:
@@ -139,7 +147,7 @@ class RegisteredSources:
         return source
 
     async def invalidate(self, key: str) -> None:
-        """Senha trocada ou fonte desconectada: esquece a fonte e fecha os pools dela nesta réplica."""
+        """Senha trocada, fonte desligada ou desconectada: esquece a fonte e fecha os pools dela nesta réplica."""
         self._cache.pop(key, None)
         for pools in (self._pg, self._my):
             entry = pools.pop(key, None)

@@ -52,7 +52,9 @@ import {
     disconnectIn,
     EGRESS_IP_EXEMPLO,
     inspectSheetIn,
+    requireSourceOn,
     retestIn,
+    setEnabledIn,
 } from './mock/connections.ts'
 import { toCsv } from '../lib/csv.ts'
 import { periodLabel } from '../lib/period.ts'
@@ -131,6 +133,7 @@ async function dashboardResponse<T extends { meta: Meta }>(
     await wait()
     requireSession()
     checkAccess(dashboardKey, query.unit)
+    requireSourceOn(dashboardKey, query.unit)
     const data = build(query.unit, query)
     data.meta.from = query.from ?? data.meta.from
     data.meta.to = query.to ?? data.meta.to
@@ -400,6 +403,12 @@ export function createMockClient(): DataClient {
             await wait()
             requireSession()
             disconnectIn(requireOrg(org) ? sources : onboardingSources, source)
+        },
+
+        async setSourceEnabled(org, source, enabled) {
+            await wait()
+            requireSession()
+            return copy(setEnabledIn(requireOrg(org) ? sources : onboardingSources, source, enabled))
         },
 
         // Mesma regra da API: só a equipe RA (platform_staff) vê os clientes.

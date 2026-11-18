@@ -1,8 +1,9 @@
 """Planilhas do Google publicadas como XLSX, como fonte de dados (como na v1: api_dashboards/src/app/sheets.py).
 
-A URL fica só no `.env` (GOOGLE_SHEETS_URL_*). Cada planilha é uma fonte da V2 com a mesma chave de
-app.data_sources / app.unit_source_refs (ex.: `sheets_financeiro_ng`): o "nome da query" é a aba
-("REPASSES CLIENTES"). O download e a leitura são os da v1, sem mudança (_download_and_parse, _parse_xlsx...).
+O link fica cifrado no banco da plataforma (app.data_sources.secret_ciphertext; desde o PR 3 também o das
+planilhas antigas, que antes ficava no `.env`) e chega aqui decifrado por app/registered_sources.py. Cada
+planilha é uma fonte da V2 (ex.: `sheets_financeiro_ng`): o "nome da query" é a aba ("REPASSES CLIENTES").
+O download e a leitura são os da v1, sem mudança (_download_and_parse, _parse_xlsx...).
 O cache é o mesmo dos bancos (CachedSourceFetcher: memória + Redis), no lugar do cache próprio da v1; fora do
 aquecedor (baixar o XLSX inteiro a cada ciclo pesaria): a planilha só é baixada quando alguém abre o dashboard.
 
@@ -20,6 +21,7 @@ import time
 import warnings
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar, Token
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from datetime import time as dtime
 from typing import TYPE_CHECKING, Any
@@ -38,18 +40,11 @@ logger = logging.getLogger(__name__)
 
 Row = dict[str, Any]
 
-# Fonte da V2 -> variável da URL no .env e o nome da planilha na v1 (o que o cálculo copiado pede).
+# Planilhas antigas (as dos dashboards copiados da v1): fonte da V2 -> o nome da planilha na v1 (o que o
+# cálculo copiado pede) e a aba padrão. O link delas está no banco, como o das planilhas novas.
 SHEETS: dict[str, dict[str, str]] = {
-    "sheets_financeiro_ng": {
-        "url_setting": "GOOGLE_SHEETS_URL_FINANCEIRO_NG",
-        "v1_name": "financeiro_NG",
-        "default_sheet": "REPASSES CLIENTES",
-    },
-    "sheets_financeiro_la": {
-        "url_setting": "GOOGLE_SHEETS_URL_FINANCEIRO_LA",
-        "v1_name": "financeiro_LA",
-        "default_sheet": "REPASSES CLIENTES",
-    },
+    "sheets_financeiro_ng": {"v1_name": "financeiro_NG", "default_sheet": "REPASSES CLIENTES"},
+    "sheets_financeiro_la": {"v1_name": "financeiro_LA", "default_sheet": "REPASSES CLIENTES"},
 }
 
 # Nome da v1 -> aba padrão (o `fetch_sheet(SHEET_NAME)` do cálculo copiado).
@@ -63,16 +58,19 @@ def is_sheet(db_name: str) -> bool:
 class SheetSourceFetcher:
     """SourceFetcher de uma planilha: `fetch(aba)` devolve as linhas da aba (dicts cabeçalho -> valor).
 
-    url_loader: de onde vem o link (planilha conectada pela tela: o link decifrado do banco). Sem ele,
-    o link vem do .env (as planilhas registradas em SHEETS)."""
+    url_loader: de onde vem o link (o link decifrado do banco). O link salvo é o que a pessoa colou
+    ("Publicar na Web" ou compartilhamento): vira o link de download em XLSX aqui."""
 
-    def __init__(self, db_name: str, url_loader: Callable[[], Awaitable[str]] | None = None):
+    def __init__(self, db_name: str, url_loader: Callable[[], Awaitable[str]]):
         self._db = db_name
         self._url_loader = url_loader
         self._fetched: list[float] = []
 
     async def fetch(self, query_name: str) -> list[Row]:
-        url = await self._url_loader() if self._url_loader else None
+        try:
+            url = sheet_download_url(await self._url_loader())
+        except InvalidSheetLink as exc:
+            raise _indisponivel(f"O link salvo da planilha '{self._db}' não é válido") from exc
         all_sheets = await _download_and_parse(self._db, url)
         if query_name not in all_sheets:
             available = ", ".join(all_sheets) or "(nenhuma)"
@@ -134,19 +132,28 @@ def sheet_download_url(link: str) -> str:
     raise InvalidSheetLink(link)
 
 
-async def sheet_tabs(link: str) -> dict[str, int]:
-    """Baixa a planilha do link e devolve {aba: linhas}. Link inválido = InvalidSheetLink;
+@dataclass(frozen=True)
+class TabInfo:
+    rows: int
+    columns: list[str]  # cabeçalhos da 1ª linha (vazio = aba sem dados)
+
+
+async def sheet_tabs(link: str) -> dict[str, TabInfo]:
+    """Baixa a planilha do link e devolve {aba: linhas e colunas}. Link inválido = InvalidSheetLink;
     planilha que não baixa (não publicada, sem acesso, fora do ar) = SourceUnavailable."""
     sheets = await _download_and_parse("nova planilha", sheet_download_url(link))
-    return {name: len(rows) for name, rows in sheets.items()}
+    return {
+        name: TabInfo(rows=len(rows), columns=list(rows[0]) if rows else [])
+        for name, rows in sheets.items()
+    }
 
 
 def _indisponivel(msg: str) -> Exception:
-    """Planilha sem URL ou que não baixou: SourceUnavailable (503 na casca, como banco fora do ar)."""
+    """Link inválido ou planilha que não baixou: SourceUnavailable (503 na casca, como banco fora do ar)."""
     return SourceUnavailable(msg)
 
 
-# --- Download e leitura: os da v1, sem mudança (só a URL vem do Settings da V2) -----------------------
+# --- Download e leitura: os da v1, sem mudança (só a URL vem do banco da V2) --------------------------
 
 _RETRYABLE_SHEET_HTTP_ERRORS: tuple[type[Exception], ...] = (
     httpx.ConnectTimeout,
@@ -167,22 +174,8 @@ def _http_timeout() -> httpx.Timeout:
     )
 
 
-def _resolve_url(db_name: str) -> str:
-    entry = SHEETS.get(db_name)
-    if entry is None:
-        raise KeyError(f"Planilha '{db_name}' não está registrada em SHEETS")
-    url = getattr(get_settings(), entry["url_setting"], "")
-    if not url:
-        raise _indisponivel(
-            f"A variável de ambiente '{entry['url_setting']}' não está definida: configure-a no `.env` "
-            f"para usar a planilha '{db_name}'."
-        )
-    return url
-
-
-async def _download_and_parse(db_name: str, url: str | None = None) -> dict[str, list[Row]]:
-    """Baixa a planilha e devolve `{nome_aba: linhas}` (url None = a do .env)."""
-    url = url or _resolve_url(db_name)
+async def _download_and_parse(db_name: str, url: str) -> dict[str, list[Row]]:
+    """Baixa a planilha (link de download em XLSX) e devolve `{nome_aba: linhas}`."""
     logger.info("Baixando planilha '%s' do Google Sheets", db_name)
     timeout = _http_timeout()
     max_retries = get_settings().SHEETS_HTTP_MAX_RETRIES

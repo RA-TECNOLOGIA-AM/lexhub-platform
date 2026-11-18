@@ -40,9 +40,8 @@ class Settings(BaseSettings):
     # Logs do terminal: DEBUG mostra também health checks, preflight e o motivo de token recusado.
     LOG_LEVEL: str = Field(default="INFO", pattern=r"(?i)^(DEBUG|INFO|WARNING|ERROR)$")
 
-    # --- Planilhas do Google publicadas como XLSX (iguais à v1; app/sheets.py). URL vazia = desligada. ---
-    GOOGLE_SHEETS_URL_FINANCEIRO_NG: str = ""
-    GOOGLE_SHEETS_URL_FINANCEIRO_LA: str = ""
+    # --- Planilhas do Google publicadas como XLSX (iguais à v1; app/sheets.py). O link fica cifrado no
+    # banco (desde o PR 3 também o das planilhas antigas; scripts/migrar_planilhas_env.py). ---
     SHEETS_HTTP_TIMEOUT: float = 15.0  # conexão (s)
     SHEETS_HTTP_READ_TIMEOUT: float = 60.0  # download (s)
     SHEETS_HTTP_MAX_RETRIES: int = 3
