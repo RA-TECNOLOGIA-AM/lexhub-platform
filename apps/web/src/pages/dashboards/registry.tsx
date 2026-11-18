@@ -107,6 +107,10 @@ export const DASHBOARD_PAGES: Record<string, ComponentType> = {
         () => import('./recursal/index.ts'),
         (m) => m.recursal,
     ),
+    'julgados-sentencas': lazyDashboard(
+        () => import('./julgados-sentencas/index.ts'),
+        (m) => m.julgadosSentencas,
+    ),
     'julgados-acordaos': lazyDashboard(
         () => import('./julgados-acordaos/index.ts'),
         (m) => m.julgadosAcordaos,

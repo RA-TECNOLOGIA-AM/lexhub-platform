@@ -45,6 +45,7 @@ export const FILTER_KEYS = [
     'ticket_status',
     'materia_julgados',
     'relator_julgados',
+    'juiz_julgados',
     'comarca_julgados',
     'competencia_julgados',
     'categoria_julgados',

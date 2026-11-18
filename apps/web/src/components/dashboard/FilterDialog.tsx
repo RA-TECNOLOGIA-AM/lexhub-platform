@@ -25,6 +25,7 @@ const ICONS: Partial<Record<keyof DashboardFilters, IconName>> = {
     ano_ajuizamento: 'calendar',
     materia_julgados: 'book',
     relator_julgados: 'users',
+    juiz_julgados: 'users',
     comarca_julgados: 'building',
     competencia_julgados: 'briefcase',
     categoria_julgados: 'scale',
