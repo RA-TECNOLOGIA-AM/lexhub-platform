@@ -3019,7 +3019,55 @@ button.barlist-hit[aria-pressed='true'] .barlist-name {
         animation: none;
     }
 }
-@media (max-width: 860px) {
+
+/* Dashboard atualizando (Atualizar, período, filtros): os cards esmaecem e um brilho passa por cima de cada um. */
+.dash-content {
+    display: contents;
+}
+.is-refreshing .card {
+    position: relative;
+    overflow: hidden;
+}
+/* O ::after faz as duas coisas: uma camada da cor do card (esmaece) e, por cima, a faixa de brilho que corre.
+   (Opacidade nos filhos não serve: a animação de entrada dos cards a sobrescreve.) */
+.is-refreshing .card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+        linear-gradient(
+            100deg,
+            transparent 30%,
+            color-mix(in srgb, var(--text) 14%, transparent) 50%,
+            transparent 70%
+        ),
+        color-mix(in srgb, var(--surface) 50%, transparent);
+    background-size:
+        250% 100%,
+        100% 100%;
+    animation: card-shimmer 1.3s ease-in-out infinite;
+}
+@keyframes card-shimmer {
+    from {
+        background-position:
+            150% 0,
+            0 0;
+    }
+    to {
+        background-position:
+            -100% 0,
+            0 0;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .is-refreshing .card::after {
+        animation: none;
+    }
+}
+@media (max-width: 860px) {I
     .dhead-side {
         align-items: flex-start;
     }

@@ -10,13 +10,22 @@ type DashboardToolbarProps = {
     filters: DashboardFilters
     onFiltersChange: (filters: DashboardFilters) => void
     period: ReactNode // o Período (vai na topbar, logo depois de Filtros)
+    refreshing: boolean // buscando dados de novo (gira o ícone e trava o botão)
+    onRefresh: () => void
 }
 
 // Módulo: os controles de todo dashboard.
-// Na topbar: "Filtros" (abre a janela; azul com o número quando há filtro) e o Período.
+// Na topbar: "Filtros" (abre a janela; azul com o número quando há filtro), o Período e "Atualizar".
 // Na faixa logo abaixo (só com filtro em uso): "Filtros ativos" (✕ tira um) e "Limpar todos".
-// Exportar, Gerar comissão e Atualizar ficam no cabeçalho (DashboardHeader).
-export function DashboardToolbar({ filterFields, filters, onFiltersChange, period }: DashboardToolbarProps) {
+// Exportar e Gerar comissão ficam no cabeçalho (DashboardHeader).
+export function DashboardToolbar({
+    filterFields,
+    filters,
+    onFiltersChange,
+    period,
+    refreshing,
+    onRefresh,
+}: DashboardToolbarProps) {
     const [filtersOpen, setFiltersOpen] = useState(false)
     const filterButton = useRef<HTMLButtonElement>(null)
     const chips = filterChips(filterFields, filters)
@@ -50,6 +59,12 @@ export function DashboardToolbar({ filterFields, filters, onFiltersChange, perio
                     )}
                 </button>
                 {period}
+                <button className="btn" type="button" disabled={refreshing} aria-busy={refreshing} onClick={onRefresh}>
+                    <span className={refreshing ? 'spin' : undefined}>
+                        <Icon name="refresh" size={16} />
+                    </span>
+                    {refreshing ? 'Atualizando…' : 'Atualizar'}
+                </button>
             </TopbarPortal>
 
             {/* A faixa só aparece com filtro em uso. */}
