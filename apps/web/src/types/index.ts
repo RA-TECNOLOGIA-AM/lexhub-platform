@@ -97,6 +97,11 @@ export type DashboardFilters = {
     diligencia_colaborador_execucao_acordos?: string[]
     // Execução Estratégico Geral: Ambos (sem o filtro) / condenacao / acordos. Só o front usa (como na v1).
     escopo?: string[]
+    // Tickets (banco NG): um valor de cada, como os pares selection_dim/selection_value da v1
+    ticket_servidor?: string[]
+    ticket_categoria?: string[]
+    ticket_subcategoria?: string[]
+    ticket_status?: string[]
     // Julgados Acórdãos e Sentenças (LexFlow): os filtros cumulativos da v1 (sufixo _julgados) e a situação do processo.
     materia_julgados?: string[]
     relator_julgados?: string[] // acórdãos: relator (2G)
