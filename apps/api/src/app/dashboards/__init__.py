@@ -23,6 +23,7 @@ from app.dashboards import (
     pre_protocolo,
     protocolo,
     protocolo_lexpre,
+    publicacoes,
     recursal,
     tickets,
 )
@@ -55,5 +56,6 @@ DASHBOARDS: dict[str, DashboardModule] = {
         meta_anual.MODULE,
         financeiro_estrategico.MODULE,
         tickets.MODULE,
+        publicacoes.MODULE,
     )
 }

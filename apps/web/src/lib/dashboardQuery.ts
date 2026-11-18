@@ -71,6 +71,14 @@ export const FILTER_KEYS = [
     'atividade_recursos',
     'status_recursos',
     'situacao_recursos',
+    'leitor_publicacoes',
+    'materia_publicacoes',
+    'documento_publicacoes',
+    'tribunal_publicacoes',
+    'orgao_publicacoes',
+    'atividade_agendamento_publicacoes',
+    'setor_agendamento_publicacoes',
+    'status_agendamento_publicacoes',
     'situacao_processo',
 ] as const satisfies readonly (keyof DashboardFilters)[]
 

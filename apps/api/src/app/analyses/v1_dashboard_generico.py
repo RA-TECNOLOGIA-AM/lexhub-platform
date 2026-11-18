@@ -5,7 +5,7 @@ Gerado por scripts/copiar_v1/gerar_generico.py (banco lexflow). Únicas trocas, 
   * fetch_*: buscam pela fonte da V2 (`usar_fonte`), com o recorte de situação do processo da v1;
   * _get_dashboard_response: mesmo início da v1 (fontes, datas, _f/_a), só com os ramos abaixo;
   * fontes de outro banco saem de FETCHES_BY_DASHBOARD (chegam vazias, como na v1 com a fonte fora do ar).
-Dashboards: execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA.
+Dashboards: execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA, publicacoes_NG, publicacoes_LA, publicacoes_RJ.
 """
 
 import asyncio
@@ -228,6 +228,43 @@ from app.analyses.LA.execucao_acordos_LA import (
     list_execucao_atividades_por_prazo_periodo_acordos_LA,
     list_processos_alvara_expedido_acordos_LA,
     list_processos_diligencia_expedicao_alvara_cumprida_acordos_LA,
+)
+from app.analyses.LA.publicacoes_LA import (
+    build_publicacoes_agendamento_apos_finalizacao_LA,
+    filter_publicacoes_por_atividade_agendamento_LA,
+    filter_publicacoes_por_documento_LA,
+    filter_publicacoes_por_leitor_LA,
+    filter_publicacoes_por_materia_LA,
+    filter_publicacoes_por_orgao_LA,
+    filter_publicacoes_por_setor_agendamento_LA,
+    filter_publicacoes_por_status_agendamento_LA,
+    filter_publicacoes_por_tribunal_LA,
+    filter_publicacoes_recebidas_no_periodo_LA,
+    filter_publicacoes_tratadas_no_periodo_LA,
+    get_media_tempo_tratamento_publicacoes_LA,
+    get_pct_tratadas_mesmo_dia_publicacoes_LA,
+    get_publicacoes_com_data_disponibilizacao_LA,
+    get_publicacoes_comissionamento_por_funcionario_LA,
+    get_publicacoes_cumpridas_mesmo_dia_chegada_LA,
+    get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia_LA,
+    get_publicacoes_pendentes_LA,
+    get_publicacoes_pendentes_zeradas_no_periodo_LA,
+    get_publicacoes_recebidas_no_dia_LA,
+    get_publicacoes_recebidas_periodo_LA,
+    get_publicacoes_tratadas_no_dia_LA,
+    get_publicacoes_tratadas_periodo_LA,
+    group_publicacoes_cumprido_por_leitor_LA,
+    group_publicacoes_pendentes_por_dias_atraso_LA,
+    group_publicacoes_pendentes_por_leitor_LA,
+    group_publicacoes_por_comarca_LA,
+    group_publicacoes_por_materia_LA,
+    group_publicacoes_por_orgao_LA,
+    group_publicacoes_por_tipo_documento_LA,
+    group_publicacoes_por_tribunal_LA,
+    group_publicacoes_recebidas_por_dia_LA,
+    group_publicacoes_tratadas_por_dia_LA,
+    list_publicacoes_LA,
+    resolve_dia_referencia_fim_periodo_LA,
 )
 from app.analyses.LA.recurso_LA import (
     DECISAO_EXTINCAO_REAJUIZAR,
@@ -527,6 +564,44 @@ from app.analyses.NG.execucao_acordos import (
     list_processos_alvara_expedido_acordos_NG,
     list_processos_diligencia_expedicao_alvara_cumprida_acordos_NG,
 )
+from app.analyses.NG.publicacoes_NG import (
+    build_publicacoes_agendamento_apos_finalizacao_NG,
+    filter_publicacoes_por_atividade_agendamento_NG,
+    filter_publicacoes_por_documento_NG,
+    filter_publicacoes_por_leitor_NG,
+    filter_publicacoes_por_materia_NG,
+    filter_publicacoes_por_orgao_NG,
+    filter_publicacoes_por_setor_agendamento_NG,
+    filter_publicacoes_por_status_agendamento_NG,
+    filter_publicacoes_por_tribunal_NG,
+    filter_publicacoes_recebidas_no_periodo_NG,
+    filter_publicacoes_tratadas_no_periodo_NG,
+    get_media_tempo_tratamento_publicacoes_NG,
+    get_pct_tratadas_mesmo_dia_publicacoes_NG,
+    get_publicacoes_com_data_disponibilizacao_NG,
+    get_publicacoes_comissionamento_por_funcionario_NG,
+    get_publicacoes_cumpridas_mesmo_dia_chegada_NG,
+    get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia_NG,
+    get_publicacoes_pendentes_NG,
+    get_publicacoes_pendentes_zeradas_no_periodo_NG,
+    get_publicacoes_recebidas_no_dia_NG,
+    get_publicacoes_recebidas_periodo_NG,
+    get_publicacoes_tratadas_no_dia_NG,
+    get_publicacoes_tratadas_periodo_NG,
+    group_publicacoes_cumprido_por_leitor_NG,
+    group_publicacoes_pendentes_por_dias_atraso_NG,
+    group_publicacoes_pendentes_por_leitor_NG,
+    group_publicacoes_por_comarca_NG,
+    group_publicacoes_por_materia_NG,
+    group_publicacoes_por_orgao_NG,
+    group_publicacoes_por_tipo_documento_NG,
+    group_publicacoes_por_tribunal_NG,
+    group_publicacoes_recebidas_por_dia_NG,
+    group_publicacoes_tratadas_por_dia_NG,
+    group_publicacoes_visualizadas_por_dia_NG,
+    list_publicacoes_NG,
+    resolve_dia_referencia_fim_periodo_NG,
+)
 from app.analyses.NG.recurso_NG import (
     META_PROVIMENTO_MENSAL_NG,
     _col_recursal_ng,
@@ -758,6 +833,44 @@ from app.analyses.RJ.execucao_acordos_RJ import (
     list_execucao_atividades_por_prazo_periodo_acordos_RJ,
     list_processos_alvara_expedido_acordos_RJ,
     list_processos_diligencia_expedicao_alvara_cumprida_acordos_RJ,
+)
+from app.analyses.RJ.publicacoes_RJ import (
+    build_publicacoes_agendamento_apos_finalizacao_RJ,
+    filter_publicacoes_por_atividade_agendamento_RJ,
+    filter_publicacoes_por_documento_RJ,
+    filter_publicacoes_por_leitor_RJ,
+    filter_publicacoes_por_materia_RJ,
+    filter_publicacoes_por_orgao_RJ,
+    filter_publicacoes_por_setor_agendamento_RJ,
+    filter_publicacoes_por_status_agendamento_RJ,
+    filter_publicacoes_por_tribunal_RJ,
+    filter_publicacoes_recebidas_no_periodo_RJ,
+    filter_publicacoes_tratadas_no_periodo_RJ,
+    get_media_tempo_tratamento_publicacoes_RJ,
+    get_pct_tratadas_mesmo_dia_publicacoes_RJ,
+    get_publicacoes_com_data_disponibilizacao_RJ,
+    get_publicacoes_comissionamento_por_funcionario_RJ,
+    get_publicacoes_cumpridas_mesmo_dia_chegada_RJ,
+    get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia_RJ,
+    get_publicacoes_pendentes_RJ,
+    get_publicacoes_pendentes_zeradas_no_periodo_RJ,
+    get_publicacoes_recebidas_no_dia_RJ,
+    get_publicacoes_recebidas_periodo_RJ,
+    get_publicacoes_tratadas_no_dia_RJ,
+    get_publicacoes_tratadas_periodo_RJ,
+    group_publicacoes_cumprido_por_leitor_RJ,
+    group_publicacoes_pendentes_por_dias_atraso_RJ,
+    group_publicacoes_pendentes_por_leitor_RJ,
+    group_publicacoes_por_comarca_RJ,
+    group_publicacoes_por_materia_RJ,
+    group_publicacoes_por_orgao_RJ,
+    group_publicacoes_por_tipo_documento_RJ,
+    group_publicacoes_por_tribunal_RJ,
+    group_publicacoes_recebidas_por_dia_RJ,
+    group_publicacoes_tratadas_por_dia_RJ,
+    group_publicacoes_visualizadas_por_dia_RJ,
+    list_publicacoes_RJ,
+    resolve_dia_referencia_fim_periodo_RJ,
 )
 from app.analyses.RJ.recurso_RJ import (
     META_PROVIMENTO_MENSAL_RJ,
@@ -1004,6 +1117,36 @@ async def fetch_log_subfase_processual() -> List[Dict[str, Any]]:
 # V2: v1 dashboard_routes.py:3096 -> fetch_data_with_cache('controle_processo', ...)
 async def fetch_controle_processo_LA() -> List[Dict[str, Any]]:
     return await _fetch_v2('controle_processo')
+
+
+# V2: v1 dashboard_routes.py:2846 -> fetch_data_with_cache('publicacoes_NG', ...)
+async def fetch_publicacoes_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('publicacoes_NG')
+
+
+# V2: v1 dashboard_routes.py:3015 -> fetch_data_with_cache('agendamentos_todos_setores_NG', ...)
+async def fetch_agendamentos_todos_setores_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_todos_setores_NG')
+
+
+# V2: v1 dashboard_routes.py:2843 -> fetch_data_with_cache('publicacoes_LA', ...)
+async def fetch_publicacoes_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('publicacoes_LA')
+
+
+# V2: v1 dashboard_routes.py:3009 -> fetch_data_with_cache('agendamentos_todos_setores_LA', ...)
+async def fetch_agendamentos_todos_setores_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_todos_setores_LA')
+
+
+# V2: v1 dashboard_routes.py:2849 -> fetch_data_with_cache('publicacoes_LA_RJ', ...)
+async def fetch_publicacoes_LA_RJ() -> List[Dict[str, Any]]:
+    return await _fetch_v2('publicacoes_LA_RJ')
+
+
+# V2: v1 dashboard_routes.py:2852 -> fetch_data_with_cache('agendamentos_todos_setores_LA_RJ', ...)
+async def fetch_agendamentos_todos_setores_LA_RJ() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_todos_setores_LA_RJ')
 
 
 # v1: dashboard_routes.py:2280
@@ -7459,6 +7602,170 @@ def _build_decisoes_recursal_RJ_stats(
     return stats
 
 
+# v1: dashboard_routes.py:11078
+def _build_publicacoes_LA_stats(
+    publicacoes: List[Dict],
+    agendamentos: List[Dict],
+    from_date: Optional[date],
+    to_date: Optional[date],
+) -> Tuple[Dict, Dict]:
+    dia_ref = resolve_dia_referencia_fim_periodo_LA(from_date, to_date)
+    hoje = date.today()
+    pub_recebidas_periodo = filter_publicacoes_recebidas_no_periodo_LA(publicacoes, from_date, to_date)
+    pub_tratadas_periodo = filter_publicacoes_tratadas_no_periodo_LA(publicacoes, from_date, to_date)
+    com_agendamento, sem_agendamento, agendamento_por_atividade, agendamento_por_setor = (
+        build_publicacoes_agendamento_apos_finalizacao_LA(publicacoes, agendamentos, from_date, to_date)
+    )
+
+    stats = {
+        "publicacoes_recebidas_periodo_LA": get_publicacoes_recebidas_periodo_LA(publicacoes, from_date, to_date),
+        "publicacoes_tratadas_periodo_LA": get_publicacoes_tratadas_periodo_LA(publicacoes, from_date, to_date),
+        "publicacoes_pendentes_LA": get_publicacoes_pendentes_LA(publicacoes),
+        "media_tempo_tratamento_publicacoes_LA": get_media_tempo_tratamento_publicacoes_LA(publicacoes, from_date, to_date),
+        "publicacoes_com_data_disponibilizacao_LA": get_publicacoes_com_data_disponibilizacao_LA(publicacoes),
+        "publicacoes_cumpridas_mesmo_dia_chegada_LA": get_publicacoes_cumpridas_mesmo_dia_chegada_LA(publicacoes),
+        "pct_tratadas_mesmo_dia_publicacoes_LA": get_pct_tratadas_mesmo_dia_publicacoes_LA(publicacoes, dia_ref),
+        "dia_referencia_publicacoes_LA": dia_ref.isoformat(),
+        "publicacoes_tratadas_ultimo_dia_LA": get_publicacoes_tratadas_no_dia_LA(publicacoes, dia_ref),
+        "publicacoes_recebidas_dia_referencia_LA": get_publicacoes_recebidas_no_dia_LA(publicacoes, dia_ref),
+        "publicacoes_cumpridas_mesmo_dia_dia_referencia_LA": get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia_LA(publicacoes, dia_ref),
+        "publicacoes_recebidas_hoje_LA": get_publicacoes_recebidas_no_dia_LA(publicacoes, hoje),
+        "publicacoes_com_agendamento_apos_finalizacao_LA": com_agendamento,
+        "publicacoes_sem_agendamento_apos_finalizacao_LA": sem_agendamento,
+        "publicacoes_pendentes_zeradas_no_periodo_LA": get_publicacoes_pendentes_zeradas_no_periodo_LA(publicacoes, from_date, to_date),
+    }
+    charts = {
+        "publicacoes_recebidas_por_dia_LA": [ChartDataPoint(**x) for x in group_publicacoes_recebidas_por_dia_LA(publicacoes, from_date, to_date)],
+        "publicacoes_tratadas_por_dia_LA": [ChartDataPoint(**x) for x in group_publicacoes_tratadas_por_dia_LA(publicacoes, from_date, to_date)],
+        "publicacoes_por_tribunal_LA": [ChartDataPoint(**x) for x in group_publicacoes_por_tribunal_LA(pub_recebidas_periodo)],
+        "publicacoes_por_tipo_documento_LA": [ChartDataPoint(**x) for x in group_publicacoes_por_tipo_documento_LA(pub_recebidas_periodo)],
+        "publicacoes_por_materia_LA": [ChartDataPoint(**x) for x in group_publicacoes_por_materia_LA(pub_recebidas_periodo)],
+        "publicacoes_por_orgao_LA": [ChartDataPoint(**x) for x in group_publicacoes_por_orgao_LA(pub_recebidas_periodo)],
+        "publicacoes_por_comarca_LA": [ChartDataPoint(**x) for x in group_publicacoes_por_comarca_LA(pub_recebidas_periodo)],
+        "publicacoes_cumprido_por_leitor_LA": [ChartDataPoint(**x) for x in group_publicacoes_cumprido_por_leitor_LA(pub_tratadas_periodo)],
+        "publicacoes_pendentes_por_leitor_LA": [ChartDataPoint(**x) for x in group_publicacoes_pendentes_por_leitor_LA(publicacoes)],
+        "publicacoes_pendentes_por_dias_atraso_LA": [ChartDataPoint(**x) for x in group_publicacoes_pendentes_por_dias_atraso_LA(publicacoes, data_referencia=dia_ref, modo_atraso="ate_referencia")],
+        "publicacoes_agendamento_apos_finalizacao_por_atividade_LA": [ChartDataPoint(**x) for x in agendamento_por_atividade],
+        "publicacoes_agendamento_apos_finalizacao_por_setor_LA": [ChartDataPoint(**x) for x in agendamento_por_setor],
+        "publicacoes_lista_LA": [RecursalAtividadeTarefaRow(**x) for x in list_publicacoes_LA(pub_recebidas_periodo)],
+        "comissionamento_publicacoes_LA_por_funcionario": [
+            ComissionamentoPublicacaoRow(**x)
+            for x in get_publicacoes_comissionamento_por_funcionario_LA(publicacoes, agendamentos, from_date, to_date)
+        ],
+    }
+    return stats, charts
+
+
+# v1: dashboard_routes.py:11131
+def _build_publicacoes_NG_stats(
+    publicacoes: List[Dict],
+    agendamentos: List[Dict],
+    from_date: Optional[date],
+    to_date: Optional[date],
+) -> Tuple[Dict, Dict]:
+    dia_ref = resolve_dia_referencia_fim_periodo_NG(from_date, to_date)
+    hoje = date.today()
+    pub_recebidas_periodo = filter_publicacoes_recebidas_no_periodo_NG(publicacoes, from_date, to_date)
+    pub_tratadas_periodo = filter_publicacoes_tratadas_no_periodo_NG(publicacoes, from_date, to_date)
+    com_agendamento, sem_agendamento, agendamento_por_atividade, agendamento_por_setor = (
+        build_publicacoes_agendamento_apos_finalizacao_NG(publicacoes, agendamentos, from_date, to_date)
+    )
+
+    stats = {
+        "publicacoes_recebidas_periodo_NG": get_publicacoes_recebidas_periodo_NG(publicacoes, from_date, to_date),
+        "publicacoes_tratadas_periodo_NG": get_publicacoes_tratadas_periodo_NG(publicacoes, from_date, to_date),
+        "publicacoes_pendentes_NG": get_publicacoes_pendentes_NG(publicacoes),
+        "media_tempo_tratamento_publicacoes_NG": get_media_tempo_tratamento_publicacoes_NG(publicacoes, from_date, to_date),
+        "publicacoes_com_data_disponibilizacao_NG": get_publicacoes_com_data_disponibilizacao_NG(publicacoes),
+        "publicacoes_cumpridas_mesmo_dia_chegada_NG": get_publicacoes_cumpridas_mesmo_dia_chegada_NG(publicacoes),
+        "pct_tratadas_mesmo_dia_publicacoes_NG": get_pct_tratadas_mesmo_dia_publicacoes_NG(publicacoes, dia_ref),
+        "dia_referencia_publicacoes_NG": dia_ref.isoformat(),
+        "publicacoes_tratadas_ultimo_dia_NG": get_publicacoes_tratadas_no_dia_NG(publicacoes, dia_ref),
+        "publicacoes_recebidas_dia_referencia_NG": get_publicacoes_recebidas_no_dia_NG(publicacoes, dia_ref),
+        "publicacoes_cumpridas_mesmo_dia_dia_referencia_NG": get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia_NG(publicacoes, dia_ref),
+        "publicacoes_recebidas_hoje_NG": get_publicacoes_recebidas_no_dia_NG(publicacoes, hoje),
+        "publicacoes_com_agendamento_apos_finalizacao_NG": com_agendamento,
+        "publicacoes_sem_agendamento_apos_finalizacao_NG": sem_agendamento,
+        "publicacoes_pendentes_zeradas_no_periodo_NG": get_publicacoes_pendentes_zeradas_no_periodo_NG(publicacoes, from_date, to_date),
+    }
+    charts = {
+        "publicacoes_recebidas_por_dia_NG": [ChartDataPoint(**x) for x in group_publicacoes_recebidas_por_dia_NG(publicacoes, from_date, to_date)],
+        "publicacoes_tratadas_por_dia_NG": [ChartDataPoint(**x) for x in group_publicacoes_tratadas_por_dia_NG(publicacoes, from_date, to_date)],
+        "publicacoes_visualizadas_por_dia_NG": [ChartDataPoint(**x) for x in group_publicacoes_visualizadas_por_dia_NG(publicacoes, from_date, to_date)],
+        "publicacoes_por_tribunal_NG": [ChartDataPoint(**x) for x in group_publicacoes_por_tribunal_NG(pub_recebidas_periodo)],
+        "publicacoes_por_tipo_documento_NG": [ChartDataPoint(**x) for x in group_publicacoes_por_tipo_documento_NG(pub_recebidas_periodo)],
+        "publicacoes_por_materia_NG": [ChartDataPoint(**x) for x in group_publicacoes_por_materia_NG(pub_recebidas_periodo)],
+        "publicacoes_por_orgao_NG": [ChartDataPoint(**x) for x in group_publicacoes_por_orgao_NG(pub_recebidas_periodo)],
+        "publicacoes_por_comarca_NG": [ChartDataPoint(**x) for x in group_publicacoes_por_comarca_NG(pub_recebidas_periodo)],
+        "publicacoes_cumprido_por_leitor_NG": [ChartDataPoint(**x) for x in group_publicacoes_cumprido_por_leitor_NG(pub_tratadas_periodo)],
+        "publicacoes_pendentes_por_leitor_NG": [ChartDataPoint(**x) for x in group_publicacoes_pendentes_por_leitor_NG(publicacoes)],
+        "publicacoes_pendentes_por_dias_atraso_NG": [ChartDataPoint(**x) for x in group_publicacoes_pendentes_por_dias_atraso_NG(publicacoes, data_referencia=dia_ref, modo_atraso="ate_referencia")],
+        "publicacoes_agendamento_apos_finalizacao_por_atividade_NG": [ChartDataPoint(**x) for x in agendamento_por_atividade],
+        "publicacoes_agendamento_apos_finalizacao_por_setor_NG": [ChartDataPoint(**x) for x in agendamento_por_setor],
+        "publicacoes_lista_NG": [RecursalAtividadeTarefaRow(**x) for x in list_publicacoes_NG(pub_recebidas_periodo, agendamentos)],
+        "comissionamento_publicacoes_NG_por_funcionario": [
+            ComissionamentoPublicacaoRow(**x)
+            for x in get_publicacoes_comissionamento_por_funcionario_NG(publicacoes, agendamentos, from_date, to_date)
+        ],
+    }
+    return stats, charts
+
+
+# v1: dashboard_routes.py:11185
+def _build_publicacoes_RJ_stats(
+    publicacoes: List[Dict],
+    agendamentos: List[Dict],
+    from_date: Optional[date],
+    to_date: Optional[date],
+) -> Tuple[Dict, Dict]:
+    dia_ref = resolve_dia_referencia_fim_periodo_RJ(from_date, to_date)
+    hoje = date.today()
+    pub_recebidas_periodo = filter_publicacoes_recebidas_no_periodo_RJ(publicacoes, from_date, to_date)
+    pub_tratadas_periodo = filter_publicacoes_tratadas_no_periodo_RJ(publicacoes, from_date, to_date)
+    com_agendamento, sem_agendamento, agendamento_por_atividade, agendamento_por_setor = (
+        build_publicacoes_agendamento_apos_finalizacao_RJ(publicacoes, agendamentos, from_date, to_date)
+    )
+
+    stats = {
+        "publicacoes_recebidas_periodo_RJ": get_publicacoes_recebidas_periodo_RJ(publicacoes, from_date, to_date),
+        "publicacoes_tratadas_periodo_RJ": get_publicacoes_tratadas_periodo_RJ(publicacoes, from_date, to_date),
+        "publicacoes_pendentes_RJ": get_publicacoes_pendentes_RJ(publicacoes),
+        "media_tempo_tratamento_publicacoes_RJ": get_media_tempo_tratamento_publicacoes_RJ(publicacoes, from_date, to_date),
+        "publicacoes_com_data_disponibilizacao_RJ": get_publicacoes_com_data_disponibilizacao_RJ(publicacoes),
+        "publicacoes_cumpridas_mesmo_dia_chegada_RJ": get_publicacoes_cumpridas_mesmo_dia_chegada_RJ(publicacoes),
+        "pct_tratadas_mesmo_dia_publicacoes_RJ": get_pct_tratadas_mesmo_dia_publicacoes_RJ(publicacoes, dia_ref),
+        "dia_referencia_publicacoes_RJ": dia_ref.isoformat(),
+        "publicacoes_tratadas_ultimo_dia_RJ": get_publicacoes_tratadas_no_dia_RJ(publicacoes, dia_ref),
+        "publicacoes_recebidas_dia_referencia_RJ": get_publicacoes_recebidas_no_dia_RJ(publicacoes, dia_ref),
+        "publicacoes_cumpridas_mesmo_dia_dia_referencia_RJ": get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia_RJ(publicacoes, dia_ref),
+        "publicacoes_recebidas_hoje_RJ": get_publicacoes_recebidas_no_dia_RJ(publicacoes, hoje),
+        "publicacoes_com_agendamento_apos_finalizacao_RJ": com_agendamento,
+        "publicacoes_sem_agendamento_apos_finalizacao_RJ": sem_agendamento,
+        "publicacoes_pendentes_zeradas_no_periodo_RJ": get_publicacoes_pendentes_zeradas_no_periodo_RJ(publicacoes, from_date, to_date),
+    }
+    charts = {
+        "publicacoes_recebidas_por_dia_RJ": [ChartDataPoint(**x) for x in group_publicacoes_recebidas_por_dia_RJ(publicacoes, from_date, to_date)],
+        "publicacoes_tratadas_por_dia_RJ": [ChartDataPoint(**x) for x in group_publicacoes_tratadas_por_dia_RJ(publicacoes, from_date, to_date)],
+        "publicacoes_visualizadas_por_dia_RJ": [ChartDataPoint(**x) for x in group_publicacoes_visualizadas_por_dia_RJ(publicacoes, from_date, to_date)],
+        "publicacoes_por_tribunal_RJ": [ChartDataPoint(**x) for x in group_publicacoes_por_tribunal_RJ(pub_recebidas_periodo)],
+        "publicacoes_por_tipo_documento_RJ": [ChartDataPoint(**x) for x in group_publicacoes_por_tipo_documento_RJ(pub_recebidas_periodo)],
+        "publicacoes_por_materia_RJ": [ChartDataPoint(**x) for x in group_publicacoes_por_materia_RJ(pub_recebidas_periodo)],
+        "publicacoes_por_orgao_RJ": [ChartDataPoint(**x) for x in group_publicacoes_por_orgao_RJ(pub_recebidas_periodo)],
+        "publicacoes_por_comarca_RJ": [ChartDataPoint(**x) for x in group_publicacoes_por_comarca_RJ(pub_recebidas_periodo)],
+        "publicacoes_cumprido_por_leitor_RJ": [ChartDataPoint(**x) for x in group_publicacoes_cumprido_por_leitor_RJ(pub_tratadas_periodo)],
+        "publicacoes_pendentes_por_leitor_RJ": [ChartDataPoint(**x) for x in group_publicacoes_pendentes_por_leitor_RJ(publicacoes)],
+        "publicacoes_pendentes_por_dias_atraso_RJ": [ChartDataPoint(**x) for x in group_publicacoes_pendentes_por_dias_atraso_RJ(publicacoes, data_referencia=dia_ref, modo_atraso="ate_referencia")],
+        "publicacoes_agendamento_apos_finalizacao_por_atividade_RJ": [ChartDataPoint(**x) for x in agendamento_por_atividade],
+        "publicacoes_agendamento_apos_finalizacao_por_setor_RJ": [ChartDataPoint(**x) for x in agendamento_por_setor],
+        "publicacoes_lista_RJ": [RecursalAtividadeTarefaRow(**x) for x in list_publicacoes_RJ(pub_recebidas_periodo, agendamentos)],
+        "comissionamento_publicacoes_RJ_por_funcionario": [
+            ComissionamentoPublicacaoRow(**x)
+            for x in get_publicacoes_comissionamento_por_funcionario_RJ(publicacoes, agendamentos, from_date, to_date)
+        ],
+    }
+    return stats, charts
+
+
 # v1: dashboard_routes.py:15223
 def _filtro_multi(valor: Any) -> Optional[Union[str, List[str]]]:
     """Filtro de matéria/subfase da Execução: aceita texto único ou lista (``?materia=A&materia=B``).
@@ -11272,16 +11579,26 @@ FETCHES_BY_DASHBOARD: Dict[str, List[Tuple[str, Any]]] = {
     "recursal_RJ": [("recursal_RJ", fetch_recursal_RJ), ("agendamentos_setor_recursos_RJ", fetch_agendamentos_setor_recursos_RJ), ("atividades_setor_recursos_RJ", fetch_atividades_setor_recursos_RJ), ("controle_processo_todas_situacoes", fetch_controle_processo_todas_situacoes)],
     "controle_processo_NG": [("controle_processo_NG", fetch_controle_processo_NG), ("log_subfase_processual", fetch_log_subfase_processual), ("controle_processo_todas_situacoes", fetch_controle_processo_todas_situacoes)],
     "controle_processo_LA": [("controle_processo_LA", fetch_controle_processo_LA), ("log_subfase_processual", fetch_log_subfase_processual), ("controle_processo_todas_situacoes", fetch_controle_processo_todas_situacoes)],
+    "publicacoes_NG": [("publicacoes_NG", fetch_publicacoes_NG), ("agendamentos_todos_setores_NG", fetch_agendamentos_todos_setores_NG)],
+    "publicacoes_LA": [("publicacoes_LA", fetch_publicacoes_LA), ("agendamentos_todos_setores_LA", fetch_agendamentos_todos_setores_LA)],
+    "publicacoes_RJ": [("publicacoes_LA_RJ", fetch_publicacoes_LA_RJ), ("agendamentos_todos_setores_LA_RJ", fetch_agendamentos_todos_setores_LA_RJ)],
 }
 DASHBOARD_NAMES = set(FETCHES_BY_DASHBOARD)
 
 
-# v1: dashboard_routes.py:11255 — V2: início igual, só os ramos de execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA
+# v1: dashboard_routes.py:11255 — V2: início igual, só os ramos de execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA, publicacoes_NG, publicacoes_LA, publicacoes_RJ
 async def _get_dashboard_response(  # V2: só os parâmetros usados por estes dashboards
     dashboard_name: str,
     from_date: Optional[date],
     to_date: Optional[date],
+    leitor: Optional[Union[str, List[str]]] = None,
     materia: Optional[Union[str, List[str]]] = None,
+    documento: Optional[str] = None,
+    tribunal: Optional[str] = None,
+    orgao: Optional[str] = None,
+    atividade_agendamento: Optional[str] = None,
+    setor_agendamento: Optional[str] = None,
+    status_agendamento: Optional[str] = None,
     fase: Optional[str] = None,
     subfase: Optional[Any] = None,
     tipo_acao_execucao_acordos: Optional[str] = None,
@@ -12366,9 +12683,48 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
-    # V2: (bloco de outros dashboards da v1 omitido)
-    # V2: (bloco de outros dashboards da v1 omitido)
-    # V2: (bloco de outros dashboards da v1 omitido)
+    if dashboard_name == "publicacoes_LA":
+        pub = _a("publicacoes_LA")
+        pub = filter_publicacoes_por_leitor_LA(pub, leitor)
+        pub = filter_publicacoes_por_materia_LA(pub, materia)
+        pub = filter_publicacoes_por_documento_LA(pub, documento)
+        pub = filter_publicacoes_por_tribunal_LA(pub, tribunal)
+        pub = filter_publicacoes_por_orgao_LA(pub, orgao)
+        agendamentos_pub = _a("agendamentos_todos_setores_LA")
+        pub = filter_publicacoes_por_atividade_agendamento_LA(pub, agendamentos_pub, atividade_agendamento, from_date, to_date)
+        pub = filter_publicacoes_por_setor_agendamento_LA(pub, agendamentos_pub, setor_agendamento, from_date, to_date)
+        pub = filter_publicacoes_por_status_agendamento_LA(pub, agendamentos_pub, status_agendamento, from_date, to_date)
+        stats, charts = _build_publicacoes_LA_stats(pub, agendamentos_pub, from_date, to_date)
+        logger.info("Dashboard 'publicacoes_LA' processado em %.2fs", time.time() - t0)
+        return DashboardResponse(dashboard="publicacoes_LA", stats=DashboardStats(**stats), **charts)
+    if dashboard_name == "publicacoes_NG":
+        pub = _a("publicacoes_NG")
+        pub = filter_publicacoes_por_leitor_NG(pub, leitor)
+        pub = filter_publicacoes_por_materia_NG(pub, materia)
+        pub = filter_publicacoes_por_documento_NG(pub, documento)
+        pub = filter_publicacoes_por_tribunal_NG(pub, tribunal)
+        pub = filter_publicacoes_por_orgao_NG(pub, orgao)
+        agendamentos_pub = _a("agendamentos_todos_setores_NG")
+        pub = filter_publicacoes_por_atividade_agendamento_NG(pub, agendamentos_pub, atividade_agendamento, from_date, to_date)
+        pub = filter_publicacoes_por_setor_agendamento_NG(pub, agendamentos_pub, setor_agendamento, from_date, to_date)
+        pub = filter_publicacoes_por_status_agendamento_NG(pub, agendamentos_pub, status_agendamento, from_date, to_date)
+        stats, charts = _build_publicacoes_NG_stats(pub, agendamentos_pub, from_date, to_date)
+        logger.info("Dashboard 'publicacoes_NG' processado em %.2fs", time.time() - t0)
+        return DashboardResponse(dashboard="publicacoes_NG", stats=DashboardStats(**stats), **charts)
+    if dashboard_name == "publicacoes_RJ":
+        pub = _a("publicacoes_LA_RJ")
+        pub = filter_publicacoes_por_leitor_RJ(pub, leitor)
+        pub = filter_publicacoes_por_materia_RJ(pub, materia)
+        pub = filter_publicacoes_por_documento_RJ(pub, documento)
+        pub = filter_publicacoes_por_tribunal_RJ(pub, tribunal)
+        pub = filter_publicacoes_por_orgao_RJ(pub, orgao)
+        agendamentos_pub = _a("agendamentos_todos_setores_LA_RJ")
+        pub = filter_publicacoes_por_atividade_agendamento_RJ(pub, agendamentos_pub, atividade_agendamento, from_date, to_date)
+        pub = filter_publicacoes_por_setor_agendamento_RJ(pub, agendamentos_pub, setor_agendamento, from_date, to_date)
+        pub = filter_publicacoes_por_status_agendamento_RJ(pub, agendamentos_pub, status_agendamento, from_date, to_date)
+        stats, charts = _build_publicacoes_RJ_stats(pub, agendamentos_pub, from_date, to_date)
+        logger.info("Dashboard 'publicacoes_RJ' processado em %.2fs", time.time() - t0)
+        return DashboardResponse(dashboard="publicacoes_RJ", stats=DashboardStats(**stats), **charts)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
@@ -13194,6 +13550,165 @@ async def get_controle_processo_LA_dashboard(
     return await _get_dashboard_response("controle_processo_LA", from_date, to_date, fase=fase, situacao=situacao)
 
 
+# v1: dashboard_routes.py:30057 (rota sem os decoradores)
+async def get_publicacoes_NG_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    leitor: Optional[List[str]] = Query(
+        None,
+        description="Filtra todas as métricas e gráficos ao leitor (nome completo ou como nos rótulos). Omitir = visão geral.",
+    ),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela matéria (mesmo texto dos rótulos dos gráficos, ex. SEM MATERIA).",
+    ),
+    documento: Optional[str] = Query(
+        None,
+        description="Filtra pelo tipo de documento (rótulos em maiúsculas, alinhado ao gráfico por documento).",
+    ),
+    tribunal: Optional[str] = Query(
+        None,
+        description="Filtra pelo tribunal (ex. SEM TRIBUNAL ou sigla como nos rótulos).",
+    ),
+    orgao: Optional[str] = Query(
+        None,
+        description="Filtra pelo órgão (ex. SEM ORGAO ou valor como nos rótulos).",
+    ),
+    atividade_agendamento: Optional[str] = Query(
+        None,
+        description="Filtra pela atividade do agendamento criado após a conclusão (rótulo do gráfico 'Por atividade').",
+    ),
+    setor_agendamento: Optional[str] = Query(
+        None,
+        description="Filtra pelo setor de destino do agendamento criado após a conclusão (rótulo do gráfico 'Por setor').",
+    ),
+    status_agendamento: Optional[str] = Query(
+        None,
+        description="Filtra por 'com' ou 'sem' agendamento criado após a conclusão da publicação.",
+    ),
+):
+    """Dashboard de publicações LexFlow (NG)."""
+    return await _get_dashboard_response(
+        "publicacoes_NG",
+        from_date,
+        to_date,
+        leitor=leitor,
+        materia=materia,
+        documento=documento,
+        tribunal=tribunal,
+        orgao=orgao,
+        atividade_agendamento=atividade_agendamento,
+        setor_agendamento=setor_agendamento,
+        status_agendamento=status_agendamento,
+    )
+
+
+# v1: dashboard_routes.py:30003 (rota sem os decoradores)
+async def get_publicacoes_LA_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    leitor: Optional[List[str]] = Query(
+        None,
+        description="Filtra todas as métricas e gráficos ao leitor (nome completo ou como nos rótulos). Omitir = visão geral.",
+    ),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela matéria (mesmo texto dos rótulos dos gráficos, ex. SEM MATERIA).",
+    ),
+    documento: Optional[str] = Query(
+        None,
+        description="Filtra pelo tipo de documento (rótulos em maiúsculas, alinhado ao gráfico por documento).",
+    ),
+    tribunal: Optional[str] = Query(
+        None,
+        description="Filtra pelo tribunal (ex. SEM TRIBUNAL ou sigla como nos rótulos).",
+    ),
+    orgao: Optional[str] = Query(
+        None,
+        description="Filtra pelo órgão (ex. SEM ORGAO ou valor como nos rótulos).",
+    ),
+    atividade_agendamento: Optional[str] = Query(
+        None,
+        description="Filtra pela atividade do agendamento criado após a conclusão (rótulo do gráfico 'Por atividade').",
+    ),
+    setor_agendamento: Optional[str] = Query(
+        None,
+        description="Filtra pelo setor de destino do agendamento criado após a conclusão (rótulo do gráfico 'Por setor').",
+    ),
+    status_agendamento: Optional[str] = Query(
+        None,
+        description="Filtra por 'com' ou 'sem' agendamento criado após a conclusão da publicação.",
+    ),
+):
+    """Dashboard de publicações LexFlow (LAADV)."""
+    return await _get_dashboard_response(
+        "publicacoes_LA",
+        from_date,
+        to_date,
+        leitor=leitor,
+        materia=materia,
+        documento=documento,
+        tribunal=tribunal,
+        orgao=orgao,
+        atividade_agendamento=atividade_agendamento,
+        setor_agendamento=setor_agendamento,
+        status_agendamento=status_agendamento,
+    )
+
+
+# v1: dashboard_routes.py:30111 (rota sem os decoradores)
+async def get_publicacoes_RJ_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    leitor: Optional[List[str]] = Query(
+        None,
+        description="Filtra todas as métricas e gráficos ao leitor (nome completo ou como nos rótulos). Omitir = visão geral.",
+    ),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra pela matéria (mesmo texto dos rótulos dos gráficos, ex. SEM MATERIA).",
+    ),
+    documento: Optional[str] = Query(
+        None,
+        description="Filtra pelo tipo de documento (rótulos em maiúsculas, alinhado ao gráfico por documento).",
+    ),
+    tribunal: Optional[str] = Query(
+        None,
+        description="Filtra pelo tribunal (ex. SEM TRIBUNAL ou sigla como nos rótulos).",
+    ),
+    orgao: Optional[str] = Query(
+        None,
+        description="Filtra pelo órgão (ex. SEM ORGAO ou valor como nos rótulos).",
+    ),
+    atividade_agendamento: Optional[str] = Query(
+        None,
+        description="Filtra pela atividade do agendamento criado após a conclusão (rótulo do gráfico 'Por atividade').",
+    ),
+    setor_agendamento: Optional[str] = Query(
+        None,
+        description="Filtra pelo setor de destino do agendamento criado após a conclusão (rótulo do gráfico 'Por setor').",
+    ),
+    status_agendamento: Optional[str] = Query(
+        None,
+        description="Filtra por 'com' ou 'sem' agendamento criado após a conclusão da publicação.",
+    ),
+):
+    """Dashboard de publicações LexFlow (RJ)."""
+    return await _get_dashboard_response(
+        "publicacoes_RJ",
+        from_date,
+        to_date,
+        leitor=leitor,
+        materia=materia,
+        documento=documento,
+        tribunal=tribunal,
+        orgao=orgao,
+        atividade_agendamento=atividade_agendamento,
+        setor_agendamento=setor_agendamento,
+        status_agendamento=status_agendamento,
+    )
+
+
 # V2: dashboard da v1 -> handler da rota e queries que ele busca (para a casca e o aquecedor do cache).
-HANDLERS = {"execucao": get_execucao_dashboard, "execucao_LA": get_execucao_LA_dashboard, "execucao_RJ": get_execucao_rj_dashboard, "execucao_acordos_NG": get_execucao_acordos_ng_dashboard, "execucao_acordos_LA": get_execucao_acordos_la_dashboard, "execucao_acordos_RJ": get_execucao_acordos_rj_dashboard, "recursal_NG": get_recursal_NG_dashboard, "recursal_LA": get_recursal_LA_dashboard, "recursal_RJ": get_recursal_RJ_dashboard, "controle_processo_NG": get_controle_processo_NG_dashboard, "controle_processo_LA": get_controle_processo_LA_dashboard}
-QUERIES_POR_DASHBOARD = {'execucao': ('execucao_LA', 'agendamentos_setor_execucao_NG'), 'execucao_LA': ('execucao_LA', 'agendamentos_setor_execucao_LA'), 'execucao_RJ': ('execucao_RJ', 'agendamentos_setor_execucao_LA_RJ'), 'execucao_acordos_NG': ('execucao_acordos_NG', 'agendamentos_fechamento_acordos_NG', 'agendamentos_setor_execucao_acordos_NG'), 'execucao_acordos_LA': ('execucao_acordos_LA', 'agendamentos_fechamento_acordos_LA', 'agendamentos_setor_execucao_acordos_LA'), 'execucao_acordos_RJ': ('execucao_acordos_RJ', 'agendamentos_fechamento_acordos_RJ', 'agendamentos_setor_execucao_acordos_RJ'), 'recursal_NG': ('setor_recurso_NG', 'agendamentos_setor_recursos_NG', 'atividades_setor_recursos_NG'), 'recursal_LA': ('setor_recurso', 'agendamentos_setor_recursos_LA', 'atividades_setor_recursos_LA'), 'recursal_RJ': ('setor_recurso_RJ', 'agendamentos_setor_recursos_RJ', 'atividades_setor_recursos_RJ', 'controle_processo_todas_situacoes'), 'controle_processo_NG': ('controle_processo', 'log_subfase_processual', 'controle_processo_todas_situacoes'), 'controle_processo_LA': ('controle_processo', 'log_subfase_processual', 'controle_processo_todas_situacoes')}
+HANDLERS = {"execucao": get_execucao_dashboard, "execucao_LA": get_execucao_LA_dashboard, "execucao_RJ": get_execucao_rj_dashboard, "execucao_acordos_NG": get_execucao_acordos_ng_dashboard, "execucao_acordos_LA": get_execucao_acordos_la_dashboard, "execucao_acordos_RJ": get_execucao_acordos_rj_dashboard, "recursal_NG": get_recursal_NG_dashboard, "recursal_LA": get_recursal_LA_dashboard, "recursal_RJ": get_recursal_RJ_dashboard, "controle_processo_NG": get_controle_processo_NG_dashboard, "controle_processo_LA": get_controle_processo_LA_dashboard, "publicacoes_NG": get_publicacoes_NG_dashboard, "publicacoes_LA": get_publicacoes_LA_dashboard, "publicacoes_RJ": get_publicacoes_RJ_dashboard}
+QUERIES_POR_DASHBOARD = {'execucao': ('execucao_LA', 'agendamentos_setor_execucao_NG'), 'execucao_LA': ('execucao_LA', 'agendamentos_setor_execucao_LA'), 'execucao_RJ': ('execucao_RJ', 'agendamentos_setor_execucao_LA_RJ'), 'execucao_acordos_NG': ('execucao_acordos_NG', 'agendamentos_fechamento_acordos_NG', 'agendamentos_setor_execucao_acordos_NG'), 'execucao_acordos_LA': ('execucao_acordos_LA', 'agendamentos_fechamento_acordos_LA', 'agendamentos_setor_execucao_acordos_LA'), 'execucao_acordos_RJ': ('execucao_acordos_RJ', 'agendamentos_fechamento_acordos_RJ', 'agendamentos_setor_execucao_acordos_RJ'), 'recursal_NG': ('setor_recurso_NG', 'agendamentos_setor_recursos_NG', 'atividades_setor_recursos_NG'), 'recursal_LA': ('setor_recurso', 'agendamentos_setor_recursos_LA', 'atividades_setor_recursos_LA'), 'recursal_RJ': ('setor_recurso_RJ', 'agendamentos_setor_recursos_RJ', 'atividades_setor_recursos_RJ', 'controle_processo_todas_situacoes'), 'controle_processo_NG': ('controle_processo', 'log_subfase_processual', 'controle_processo_todas_situacoes'), 'controle_processo_LA': ('controle_processo', 'log_subfase_processual', 'controle_processo_todas_situacoes'), 'publicacoes_NG': ('publicacoes_NG', 'agendamentos_todos_setores_NG'), 'publicacoes_LA': ('publicacoes_LA', 'agendamentos_todos_setores_LA'), 'publicacoes_RJ': ('publicacoes_LA_RJ', 'agendamentos_todos_setores_LA_RJ')}
