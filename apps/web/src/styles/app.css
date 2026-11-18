@@ -1240,6 +1240,30 @@ button.org:hover {
     display: none;
 }
 
+/* Espaço da esquerda: nome da página atual (ex.: dashboard), cortado com "…" quando não cabe. */
+.topbar-start {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+}
+.topbar-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    color: var(--text);
+    font-weight: 600;
+}
+.topbar-title svg {
+    flex: none;
+    color: var(--text-muted);
+}
+.topbar-title-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Faixa logo abaixo da topbar nos dashboards: filtros em uso à esquerda, Filtros e Exportar à direita.
    Encostada na topbar (margem negativa anula o espaço do .content) e presa ao rolar. */
 .dash-bar {

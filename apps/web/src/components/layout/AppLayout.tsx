@@ -24,8 +24,9 @@ export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
     // Barra lateral recolhida (só ícones), lembrada no localStorage. Só vale no computador: no celular é gaveta.
     const { collapsed, setCollapsed } = useSidebarCollapsed()
-    // Espaço da topbar que uma página pode ocupar (ex.: o Período de um dashboard). Ver TopbarSlot.tsx.
-    const [topbarSlot, setTopbarSlot] = useState<HTMLElement | null>(null)
+    // Espaços da topbar que uma página pode ocupar (ex.: nome e Período de um dashboard). Ver TopbarSlot.tsx.
+    const [topbarStart, setTopbarStart] = useState<HTMLElement | null>(null)
+    const [topbarEnd, setTopbarEnd] = useState<HTMLElement | null>(null)
     const menuButton = useRef<HTMLButtonElement>(null)
     const transitionArea = useTransitionArea()
     const { pathname } = useLocation()
@@ -156,12 +157,12 @@ export function AppLayout() {
                     >
                         <Icon name="menu" />
                     </button>
-                    {/* Empurra o resto da topbar para a direita (antes era o breadcrumb). */}
-                    <div className="topbar-spacer" />
+                    {/* Nome da página atual (ex.: dashboard); também empurra o resto da topbar para a direita. */}
+                    <div className="topbar-spacer topbar-start" ref={setTopbarStart} />
                     {/* Só no modo mock: em modo api os dados vêm da API V2. */}
                     {env.dataSource === 'mock' && <span className="badge warn">Dados fictícios</span>}
                     {/* A página atual pode ocupar este espaço (ex.: Período do dashboard). */}
-                    <div className="topbar-slot" ref={setTopbarSlot} />
+                    <div className="topbar-slot" ref={setTopbarEnd} />
                     {/* Busca de dashboards só fora deles (hub, admin...): dentro de um dashboard sai da frente. */}
                     {!dashboardKey && <SearchBox org={org.slug} />}
                     <NotificationsBell staff={user.platform_staff} pending={pending} onNavigate={closeMenu} />
@@ -170,7 +171,7 @@ export function AppLayout() {
                 </header>
 
                 <main className="content">
-                    <TopbarSlotContext value={topbarSlot}>
+                    <TopbarSlotContext value={{ start: topbarStart, end: topbarEnd }}>
                         {/* Páginas carregadas sob demanda (lazy): o "carregando" fica só no miolo. */}
                         <Suspense fallback={<LoadingState />}>
                             <Outlet />
