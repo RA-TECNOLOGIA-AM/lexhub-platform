@@ -52,7 +52,7 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
                 {value ? periodLabel(value) : 'Período padrão'}
             </button>
             {open && (
-                <div className="card popover" role="dialog" aria-label="Escolher período">
+                <div className="card popover period-popover" role="dialog" aria-label="Escolher período">
                     <div className="period-presets">
                         {PRESETS.map((p) => {
                             const range = presetPeriod(p.key)
