@@ -21,8 +21,8 @@ import { FETCH_DELAY_MS, queryFromParams } from '../../lib/dashboardQuery.ts'
 import type { DashboardModule } from './types.ts'
 
 // Módulo: o roteiro comum de todo dashboard. Lê período e filtros da URL, busca os dados da unidade
-// e o catálogo, mostra carregando/erro, Filtros e Período na topbar, a faixa de filtros ativos, o cabeçalho (com
-// Gerar comissão, Exportar e Atualizar) e,
+// e o catálogo, mostra carregando/erro, Filtros, Período e Atualizar na topbar, a faixa de filtros ativos, o
+// cabeçalho (com Gerar comissão e Exportar) e,
 // por fim, o conteúdo próprio do dashboard.
 export function DashboardView<T extends { meta: Meta }>({ module }: { module: DashboardModule<T> }) {
     const { org = '', unit = '' } = useParams()
@@ -84,6 +84,8 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
                 filters={query.filters}
                 onFiltersChange={setFilters}
                 period={<PeriodPicker value={period} onChange={setPeriod} />}
+                refreshing={loading}
+                onRefresh={() => setReload((n) => n + 1)}
             />
             <DashboardHeader
                 org={org}
@@ -112,29 +114,21 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
                             }
                             onExport={exportReport}
                         />
-                        <button
-                            className="btn"
-                            type="button"
-                            disabled={loading}
-                            aria-busy={loading}
-                            onClick={() => setReload((n) => n + 1)}
-                        >
-                            <span className={loading ? 'spin' : undefined}>
-                                <Icon name="refresh" size={16} />
-                            </span>
-                            {loading ? 'Atualizando…' : 'Atualizar'}
-                        </button>
                     </>
                 }
             />
             {notice && <Notice message={notice} onClose={clearNotice} />}
-            {/* Clicar numa barra (matéria, funcionário) liga ou desliga o mesmo filtro da janela Filtros. */}
-            <Content
-                data={data}
-                filters={query.filters}
-                onToggleFilter={(key, value) => setFilters(toggleFilter(query.filters, key, value))}
-                onFiltersChange={setFilters}
-            />
+            {/* Atualizando: cada card ganha um brilho que passa por cima (os números antigos ficam até os novos chegarem).
+                display: contents — o invólucro não muda o layout do conteúdo. */}
+            <div className={loading ? 'dash-content is-refreshing' : 'dash-content'} aria-busy={loading}>
+                {/* Clicar numa barra (matéria, funcionário) liga ou desliga o mesmo filtro da janela Filtros. */}
+                <Content
+                    data={data}
+                    filters={query.filters}
+                    onToggleFilter={(key, value) => setFilters(toggleFilter(query.filters, key, value))}
+                    onFiltersChange={setFilters}
+                />
+            </div>
         </>
     )
 }
