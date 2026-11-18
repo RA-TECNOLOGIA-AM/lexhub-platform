@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
     SELECAO_VAZIA,
@@ -19,12 +18,12 @@ import {
 } from './previsao.ts'
 
 // O bundle real (gerado pelo modelo-machine-learning/, versionado na API): os números da v1 com o mesmo JSON.
-const real = JSON.parse(
-    readFileSync(
-        new URL('../../../../../api/src/app/analyses/GERAL/data/tcc_previsao_individual.json', import.meta.url),
-        'utf8',
-    ),
-) as PrevisaoResponse
+const real = Object.values(
+    import.meta.glob('../../../../../api/src/app/analyses/GERAL/data/tcc_previsao_individual.json', {
+        eager: true,
+        import: 'default',
+    }),
+)[0] as PrevisaoResponse
 
 // O recorte da API (app/dashboards/previsao_individualizada.py): só o escritório da unidade.
 function soDoEscritorio(d: PrevisaoResponse, sigla: string): PrevisaoResponse {
