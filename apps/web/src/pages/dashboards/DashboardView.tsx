@@ -66,7 +66,7 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
         printHtml(
             commissionHtml({
                 ...commission,
-                title: `Comissão — ${summary?.title ?? module.key}`,
+                title: commission.title ?? `Comissão — ${summary?.title ?? module.key}`,
                 unit,
                 from,
                 to,

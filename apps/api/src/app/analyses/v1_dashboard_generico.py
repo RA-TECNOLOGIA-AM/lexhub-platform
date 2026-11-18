@@ -5,13 +5,65 @@ Gerado por scripts/copiar_v1/gerar_generico.py (banco lexflow). Únicas trocas, 
   * fetch_*: buscam pela fonte da V2 (`usar_fonte`), com o recorte de situação do processo da v1;
   * _get_dashboard_response: mesmo início da v1 (fontes, datas, _f/_a), só com os ramos abaixo;
   * fontes de outro banco saem de FETCHES_BY_DASHBOARD (chegam vazias, como na v1 com a fonte fora do ar).
-Dashboards: execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA.
+Dashboards: execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA.
 """
 
 import asyncio
 import logging
 import time
 from contextvars import ContextVar
+from app.analyses.LA.controle_processo_LA import (
+    filter_controle_processo_por_situacao_LA,
+    get_comparativo_media_tempo_dias_fase_execucao_LA,
+    get_comparativo_media_tempo_dias_fase_inicial_LA,
+    get_comparativo_media_tempo_dias_fase_recursal_LA,
+    get_comparativo_mediana_tempo_dias_fase_execucao_LA,
+    get_comparativo_mediana_tempo_dias_fase_inicial_LA,
+    get_comparativo_mediana_tempo_dias_fase_recursal_LA,
+    get_extintos_com_merito_2g_por_tipo_sentenca_LA,
+    get_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_LA,
+    get_extintos_com_merito_por_tipo_sentenca_LA,
+    get_media_tempo_dias_fase_execucao_LA,
+    get_media_tempo_dias_fase_execucao_por_mes_LA,
+    get_media_tempo_dias_fase_inicial_LA,
+    get_media_tempo_dias_fase_inicial_por_mes_LA,
+    get_media_tempo_dias_fase_recursal_LA,
+    get_media_tempo_dias_fase_recursal_por_mes_LA,
+    get_mediana_tempo_dias_fase_execucao_LA,
+    get_mediana_tempo_dias_fase_inicial_LA,
+    get_mediana_tempo_dias_fase_recursal_LA,
+    get_taxa_provimento_2g_LA,
+    get_tempo_medio_dias_por_subfase_LA,
+    get_total_controle_processo_LA,
+    get_total_controle_processo_fase_arquivado_improcedente_LA,
+    get_total_controle_processo_fase_arquivado_procedente_LA,
+    get_total_controle_processo_fase_execucao_LA,
+    get_total_controle_processo_fase_inicial_LA,
+    get_total_controle_processo_fase_recursal_LA,
+    get_total_controle_processo_fase_transito_julgado_LA,
+    get_total_controle_processo_log_inicial_indeferida_LA,
+    get_total_controle_processo_log_recursal_nao_provido_LA,
+    get_total_extintos_com_merito_2g_LA,
+    get_total_extintos_com_merito_LA,
+    get_total_extintos_sem_merito_2g_LA,
+    get_total_extintos_sem_merito_LA,
+    get_valor_causa_acordao_total_extintos_com_merito_2g_LA,
+    get_valor_causa_acordao_total_extintos_sem_merito_2g_LA,
+    get_valor_causa_execucao_total_controle_processo_fase_execucao_LA,
+    get_valor_causa_total_controle_processo_fase_arquivado_improcedente_LA,
+    get_valor_causa_total_controle_processo_fase_arquivado_procedente_LA,
+    get_valor_causa_total_controle_processo_fase_inicial_LA,
+    get_valor_causa_total_controle_processo_fase_recursal_LA,
+    get_valor_causa_total_controle_processo_fase_transito_julgado_LA,
+    get_valor_causa_total_controle_processo_log_inicial_indeferida_LA,
+    get_valor_causa_total_controle_processo_log_recursal_nao_provido_LA,
+    get_valor_causa_total_extintos_com_merito_2g_LA,
+    get_valor_causa_total_extintos_com_merito_LA,
+    get_valor_causa_total_extintos_sem_merito_2g_LA,
+    get_valor_causa_total_extintos_sem_merito_LA,
+    group_controle_processo_por_fase_LA,
+    group_controle_processo_por_subfase_na_fase_LA,
+)
 from app.analyses.LA.execucao_LA import (
     ExecucaoAtividadesFiltros,
     SITUACOES_VALIDAS_EXECUCAO,
@@ -189,6 +241,9 @@ from app.analyses.LA.recurso_LA import (
     RecursalAtividadesRecursosFiltros,
     RecursalLAFiltros,
     _SITUACOES_RECURSOS_VALIDAS,
+    _col_recursal_la,
+    _enriquecer_numero_processo_export_la,
+    _get_numero_processo_recursal_la,
     filtrar_agendamentos_recursos_LA,
     filtrar_recursal_LA,
     filtrar_recursal_LA_por_processo_ids,
@@ -198,6 +253,7 @@ from app.analyses.LA.recurso_LA import (
     get_kpis_atividades_recursos_por_prazo_LA,
     get_media_recursal_resolvidos_por_funcionario_LA,
     get_opcoes_filtros_atividades_lista_LA,
+    get_opcoes_filtros_recursal_LA,
     get_ranking_juizes_recursal_LA,
     get_ranking_relatores_recursal_LA,
     get_recursal_resolvidos_por_dia_por_funcionario_LA,
@@ -227,18 +283,78 @@ from app.analyses.LA.recurso_LA import (
     get_valor_causa_sentenca_sentenca_favoravel_recurso_LA,
     group_decisoes_recursal_LA,
     group_recursal_demandas_por_funcionario_LA,
+    group_recursal_por_competencia_LA,
+    group_recursal_por_materia_LA,
     group_recursal_por_status_1g_LA,
     group_recursal_por_status_2g_LA,
     group_recursal_por_subfase_LA,
+    group_recursal_por_vara_LA,
     group_recursal_processos_por_atividade_LA,
     group_recursal_resolvidos_por_dia_LA,
     group_recursal_resolvidos_por_mes_LA,
     list_recursal_atividades_periodo_LA,
     processo_ids_recursal_de_agendamentos_recursos_LA,
+    rotulo_decisao_recursal_export_LA,
     set_atividades_recursos_LA_catalogo,
 )
 from app.analyses.NG.comercial_geral import (
     filter_comercial_geral_por_area_atuacao,
+)
+from app.analyses.NG.controle_processo_NG import (
+    filter_controle_processo_com_numero_NG,
+    filter_controle_processo_por_situacao_NG,
+    filter_controle_processo_por_uf_NG,
+    get_comparativo_media_tempo_dias_fase_execucao_NG,
+    get_comparativo_media_tempo_dias_fase_inicial_NG,
+    get_comparativo_media_tempo_dias_fase_recursal_NG,
+    get_comparativo_mediana_tempo_dias_fase_execucao_NG,
+    get_comparativo_mediana_tempo_dias_fase_inicial_NG,
+    get_comparativo_mediana_tempo_dias_fase_recursal_NG,
+    get_extintos_com_merito_2g_por_tipo_sentenca_NG,
+    get_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_NG,
+    get_extintos_com_merito_por_tipo_sentenca_NG,
+    get_media_tempo_dias_fase_execucao_NG,
+    get_media_tempo_dias_fase_execucao_por_mes_NG,
+    get_media_tempo_dias_fase_inicial_NG,
+    get_media_tempo_dias_fase_inicial_por_mes_NG,
+    get_media_tempo_dias_fase_recursal_NG,
+    get_media_tempo_dias_fase_recursal_por_mes_NG,
+    get_mediana_tempo_dias_fase_execucao_NG,
+    get_mediana_tempo_dias_fase_inicial_NG,
+    get_mediana_tempo_dias_fase_recursal_NG,
+    get_opcoes_uf_NG,
+    get_taxa_provimento_2g_NG,
+    get_tempo_medio_dias_por_subfase_NG,
+    get_total_controle_processo_NG,
+    get_total_controle_processo_fase_arquivado_improcedente_NG,
+    get_total_controle_processo_fase_arquivado_procedente_NG,
+    get_total_controle_processo_fase_execucao_NG,
+    get_total_controle_processo_fase_inicial_NG,
+    get_total_controle_processo_fase_recursal_NG,
+    get_total_controle_processo_fase_transito_julgado_NG,
+    get_total_controle_processo_log_inicial_indeferida_NG,
+    get_total_controle_processo_log_recursal_nao_provido_NG,
+    get_total_extintos_com_merito_2g_NG,
+    get_total_extintos_com_merito_NG,
+    get_total_extintos_sem_merito_2g_NG,
+    get_total_extintos_sem_merito_NG,
+    get_valor_causa_acordao_total_extintos_com_merito_2g_NG,
+    get_valor_causa_acordao_total_extintos_sem_merito_2g_NG,
+    get_valor_causa_execucao_total_controle_processo_fase_execucao_NG,
+    get_valor_causa_total_controle_processo_NG,
+    get_valor_causa_total_controle_processo_fase_arquivado_improcedente_NG,
+    get_valor_causa_total_controle_processo_fase_arquivado_procedente_NG,
+    get_valor_causa_total_controle_processo_fase_inicial_NG,
+    get_valor_causa_total_controle_processo_fase_recursal_NG,
+    get_valor_causa_total_controle_processo_fase_transito_julgado_NG,
+    get_valor_causa_total_controle_processo_log_inicial_indeferida_NG,
+    get_valor_causa_total_controle_processo_log_recursal_nao_provido_NG,
+    get_valor_causa_total_extintos_com_merito_2g_NG,
+    get_valor_causa_total_extintos_com_merito_NG,
+    get_valor_causa_total_extintos_sem_merito_2g_NG,
+    get_valor_causa_total_extintos_sem_merito_NG,
+    group_controle_processo_por_fase_NG,
+    group_controle_processo_por_subfase_na_fase_NG,
 )
 from app.analyses.NG.execucao import (
     _extrair_duracoes_dias as _duracoes_execucao_ng,
@@ -413,6 +529,9 @@ from app.analyses.NG.execucao_acordos import (
 )
 from app.analyses.NG.recurso_NG import (
     META_PROVIMENTO_MENSAL_NG,
+    _col_recursal_ng,
+    _enriquecer_numero_processo_export_ng,
+    _get_numero_processo_recursal_ng,
     filtrar_agendamentos_recursos_NG,
     filtrar_recursal_NG,
     filtrar_recursal_NG_por_processo_ids,
@@ -422,6 +541,7 @@ from app.analyses.NG.recurso_NG import (
     get_kpis_atividades_recursos_por_prazo_NG,
     get_media_recursal_resolvidos_por_funcionario_NG,
     get_opcoes_filtros_atividades_lista_NG,
+    get_opcoes_filtros_recursal_NG,
     get_ranking_juizes_recursal_NG,
     get_ranking_relatores_recursal_NG,
     get_recursal_resolvidos_por_dia_por_funcionario_NG,
@@ -454,14 +574,18 @@ from app.analyses.NG.recurso_NG import (
     get_valor_causa_sentenca_sentenca_favoravel_recurso_NG,
     group_decisoes_recursal_NG,
     group_recursal_demandas_por_funcionario_NG,
+    group_recursal_por_competencia_NG,
+    group_recursal_por_materia_NG,
     group_recursal_por_status_1g_NG,
     group_recursal_por_status_2g_NG,
     group_recursal_por_subfase_NG,
+    group_recursal_por_vara_NG,
     group_recursal_processos_por_atividade_NG,
     group_recursal_resolvidos_por_dia_NG,
     group_recursal_resolvidos_por_mes_NG,
     list_recursal_atividades_periodo_NG,
     processo_ids_recursal_de_agendamentos_recursos_NG,
+    rotulo_decisao_recursal_export_NG,
     set_atividades_recursos_NG_catalogo,
 )
 from app.analyses.RJ.execucao_RJ import (
@@ -635,6 +759,68 @@ from app.analyses.RJ.execucao_acordos_RJ import (
     list_processos_alvara_expedido_acordos_RJ,
     list_processos_diligencia_expedicao_alvara_cumprida_acordos_RJ,
 )
+from app.analyses.RJ.recurso_RJ import (
+    META_PROVIMENTO_MENSAL_RJ,
+    _col_recursal_rj,
+    _enriquecer_numero_processo_export_rj,
+    _get_numero_processo_recursal_rj,
+    filtrar_agendamentos_recursos_RJ,
+    filtrar_recursal_RJ,
+    filtrar_recursal_RJ_por_processo_ids,
+    get_decisoes_recursal_resumo_RJ,
+    get_entrada_recurso_RJ,
+    get_extintos_2g_recursal_RJ,
+    get_kpis_atividades_recursos_RJ,
+    get_kpis_atividades_recursos_por_prazo_RJ,
+    get_media_recursal_resolvidos_por_funcionario_RJ,
+    get_opcoes_filtros_atividades_lista_RJ,
+    get_opcoes_filtros_recursal_RJ,
+    get_ranking_juizes_recursal_RJ,
+    get_ranking_relatores_recursal_RJ,
+    get_recursal_resolvidos_por_dia_por_funcionario_RJ,
+    get_total_acordao_desfavoravel_recurso_RJ,
+    get_total_acordao_extincao_recurso_RJ,
+    get_total_acordao_favoravel_recurso_RJ,
+    get_total_acordao_parcial_retomada_recurso_RJ,
+    get_total_acordao_parcialmente_favoravel_recurso_RJ,
+    get_total_avr_retorno_recurso_cancelado_RJ,
+    get_total_parcialmente_procedente_recurso_RJ,
+    get_total_procedente_1g_recurso_RJ,
+    get_total_provimento_mensal_RJ,
+    get_total_recurso_RJ,
+    get_total_retorno_cr_recurso_cancelado_RJ,
+    get_total_sentenca_desfavoravel_recurso_RJ,
+    get_total_sentenca_extincao_recurso_RJ,
+    get_total_sentenca_favoravel_recurso_RJ,
+    get_total_sentenca_parcialmente_favoravel_recurso_RJ,
+    get_valor_causa_acordao_desfavoravel_recurso_RJ,
+    get_valor_causa_acordao_extincao_recurso_RJ,
+    get_valor_causa_acordao_favoravel_recurso_RJ,
+    get_valor_causa_acordao_parcial_retomada_recurso_RJ,
+    get_valor_causa_acordao_parcialmente_favoravel_recurso_RJ,
+    get_valor_causa_acordo_recurso_RJ,
+    get_valor_causa_sentenca_parcialmente_favoravel_recurso_RJ,
+    get_valor_causa_sentenca_parcialmente_procedente_recurso_RJ,
+    get_valor_causa_sentenca_procedente_1g_recurso_RJ,
+    get_valor_causa_sentenca_sentenca_desfavoravel_recurso_RJ,
+    get_valor_causa_sentenca_sentenca_extincao_recurso_RJ,
+    get_valor_causa_sentenca_sentenca_favoravel_recurso_RJ,
+    group_decisoes_recursal_RJ,
+    group_recursal_demandas_por_funcionario_RJ,
+    group_recursal_por_competencia_RJ,
+    group_recursal_por_materia_RJ,
+    group_recursal_por_status_1g_RJ,
+    group_recursal_por_status_2g_RJ,
+    group_recursal_por_subfase_RJ,
+    group_recursal_por_vara_RJ,
+    group_recursal_processos_por_atividade_RJ,
+    group_recursal_resolvidos_por_dia_RJ,
+    group_recursal_resolvidos_por_mes_RJ,
+    list_recursal_atividades_periodo_RJ,
+    processo_ids_recursal_de_agendamentos_recursos_RJ,
+    rotulo_decisao_recursal_export_RJ,
+    set_atividades_recursos_RJ_catalogo,
+)
 from app.utils import (
     parse_date_from_db,
 )
@@ -645,7 +831,13 @@ from datetime import (
 from fastapi import (
     HTTPException,
     Query,
+    Request,
 )
+from fastapi.responses import (
+    StreamingResponse,
+)
+import csv
+import io
 from pydantic import (
     BaseModel,
 )
@@ -777,6 +969,41 @@ async def fetch_agendamentos_setor_recursos_LA() -> List[Dict[str, Any]]:
 # V2: v1 dashboard_routes.py:2912 -> fetch_data_with_cache('atividades_setor_recursos_LA', ...)
 async def fetch_atividades_setor_recursos_LA() -> List[Dict[str, Any]]:
     return await _fetch_v2('atividades_setor_recursos_LA')
+
+
+# V2: v1 dashboard_routes.py:2897 -> fetch_data_with_cache('setor_recurso_RJ', ...)
+async def fetch_recursal_RJ() -> List[Dict[str, Any]]:
+    return await _fetch_v2('setor_recurso_RJ')
+
+
+# V2: v1 dashboard_routes.py:2900 -> fetch_data_with_cache('agendamentos_setor_recursos_RJ', ...)
+async def fetch_agendamentos_setor_recursos_RJ() -> List[Dict[str, Any]]:
+    return await _fetch_v2('agendamentos_setor_recursos_RJ')
+
+
+# V2: v1 dashboard_routes.py:2906 -> fetch_data_with_cache('atividades_setor_recursos_RJ', ...)
+async def fetch_atividades_setor_recursos_RJ() -> List[Dict[str, Any]]:
+    return await _fetch_v2('atividades_setor_recursos_RJ')
+
+
+# V2: v1 dashboard_routes.py:3102 -> fetch_data_with_cache('controle_processo_todas_situacoes', ...)
+async def fetch_controle_processo_todas_situacoes() -> List[Dict[str, Any]]:
+    return await _fetch_v2('controle_processo_todas_situacoes')
+
+
+# V2: v1 dashboard_routes.py:3099 -> fetch_data_with_cache('controle_processo', ...)
+async def fetch_controle_processo_NG() -> List[Dict[str, Any]]:
+    return await _fetch_v2('controle_processo')
+
+
+# V2: v1 dashboard_routes.py:3105 -> fetch_data_with_cache('log_subfase_processual', ...)
+async def fetch_log_subfase_processual() -> List[Dict[str, Any]]:
+    return await _fetch_v2('log_subfase_processual')
+
+
+# V2: v1 dashboard_routes.py:3096 -> fetch_data_with_cache('controle_processo', ...)
+async def fetch_controle_processo_LA() -> List[Dict[str, Any]]:
+    return await _fetch_v2('controle_processo')
 
 
 # v1: dashboard_routes.py:2280
@@ -921,6 +1148,27 @@ def _per_func_to_chart(
         for k, v in raw.get("por_funcionario", {}).items()
     }
     return funcionarios, por_funcionario
+
+
+# v1: dashboard_routes.py:3336
+def _dedup_por_processo_id(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Remove linhas duplicadas por ``id`` de processo.
+
+    A query ``controle_processo``/``controle_processo_todas_situacoes`` faz LEFT JOIN em
+    ``adverso_processo`` (parte adversa), que pode ter mais de uma linha por processo —
+    sem dedup, processos com múltiplas partes adversas são contados mais de uma vez.
+    """
+    vistos: set = set()
+    unicos: List[Dict[str, Any]] = []
+    for row in rows:
+        pid = row.get("id")
+        if pid is not None:
+            if pid in vistos:
+                continue
+            vistos.add(pid)
+        unicos.append(row)
+    return unicos
 
 
 # v1: dashboard_routes.py:3930
@@ -6175,6 +6423,54 @@ def _parse_recursal_la_filtros(
     return filtros if filtros.ativo() else None
 
 
+# v1: dashboard_routes.py:9828
+async def _recursal_la_distribuicao_response(
+    *,
+    dashboard_slug: str,
+    chart_field: str,
+    group_fn: Any,
+    from_date: Optional[date],
+    to_date: Optional[date],
+    base: str,
+    filtros: Optional[RecursalLAFiltros],
+    atividades_recursos_filtros: Optional[RecursalAtividadesRecursosFiltros] = None,
+) -> DashboardResponse:
+    """Resposta padrão para gráficos de distribuição (subfase, matéria, UF, operação)."""
+    base_norm = (base or "estoque").strip().lower()
+    if base_norm not in ("estoque", "entrada"):
+        base_norm = "estoque"
+
+    all_rows = await _rows_recursal_la_filtradas(
+        await fetch_recursal_LA(),
+        filtros,
+        atividades_recursos_filtros,
+        from_date,
+        to_date,
+    )
+    chart = [
+        ChartDataPoint(**x)
+        for x in group_fn(
+            all_rows,
+            from_date=from_date,
+            to_date=to_date,
+            base=base_norm,
+        )
+    ]
+
+    if base_norm == "entrada":
+        total_base = get_entrada_recurso_LA(all_rows, from_date, to_date)
+        stats = DashboardStats(entrada_recursal_LA=total_base)
+    else:
+        total_base = get_total_recurso_LA(all_rows)
+        stats = DashboardStats(total_recursal_LA=total_base)
+
+    return DashboardResponse(
+        dashboard=dashboard_slug,
+        stats=stats,
+        **{chart_field: chart},
+    )
+
+
 # v1: dashboard_routes.py:9875
 def _aplicar_filtros_recursal_la_rows(
     rows: List[Dict],
@@ -6220,6 +6516,54 @@ async def _rows_recursal_la_filtradas(
     return _aplicar_filtros_recursal_la_rows(rows, filtros)
 
 
+# v1: dashboard_routes.py:9918
+async def _recursal_ng_distribuicao_response(
+    *,
+    dashboard_slug: str,
+    chart_field: str,
+    group_fn: Any,
+    from_date: Optional[date],
+    to_date: Optional[date],
+    base: str,
+    filtros: Optional[RecursalLAFiltros],
+    atividades_recursos_filtros: Optional[RecursalAtividadesRecursosFiltros] = None,
+) -> DashboardResponse:
+    """Resposta padrão para gráficos de distribuição (subfase, matéria, UF, operação) — NG."""
+    base_norm = (base or "estoque").strip().lower()
+    if base_norm not in ("estoque", "entrada"):
+        base_norm = "estoque"
+
+    all_rows = await _rows_recursal_ng_filtradas(
+        await fetch_recursal_NG(),
+        filtros,
+        atividades_recursos_filtros,
+        from_date,
+        to_date,
+    )
+    chart = [
+        ChartDataPoint(**x)
+        for x in group_fn(
+            all_rows,
+            from_date=from_date,
+            to_date=to_date,
+            base=base_norm,
+        )
+    ]
+
+    if base_norm == "entrada":
+        total_base = get_entrada_recurso_NG(all_rows, from_date, to_date)
+        stats = DashboardStats(entrada_recursal_NG=total_base)
+    else:
+        total_base = get_total_recurso_NG(all_rows)
+        stats = DashboardStats(total_recursal_NG=total_base)
+
+    return DashboardResponse(
+        dashboard=dashboard_slug,
+        stats=stats,
+        **{chart_field: chart},
+    )
+
+
 # v1: dashboard_routes.py:9965
 def _aplicar_filtros_recursal_ng_rows(
     rows: List[Dict],
@@ -6263,6 +6607,110 @@ async def _rows_recursal_ng_filtradas(
         )
         rows = filtrar_recursal_NG_por_processo_ids(rows, processo_ids)
     return _aplicar_filtros_recursal_ng_rows(rows, filtros)
+
+
+# v1: dashboard_routes.py:10008
+async def _recursal_rj_distribuicao_response(
+    *,
+    dashboard_slug: str,
+    chart_field: str,
+    group_fn: Any,
+    from_date: Optional[date],
+    to_date: Optional[date],
+    base: str,
+    filtros: Optional[RecursalLAFiltros],
+    atividades_recursos_filtros: Optional[RecursalAtividadesRecursosFiltros] = None,
+) -> DashboardResponse:
+    """Resposta padrão para gráficos de distribuição (subfase, matéria, UF, operação) — RJ."""
+    base_norm = (base or "estoque").strip().lower()
+    if base_norm not in ("estoque", "entrada"):
+        base_norm = "estoque"
+
+    all_rows = await _rows_recursal_rj_filtradas(
+        await fetch_recursal_RJ(),
+        filtros,
+        atividades_recursos_filtros,
+        from_date,
+        to_date,
+    )
+    chart = [
+        ChartDataPoint(**x)
+        for x in group_fn(
+            all_rows,
+            from_date=from_date,
+            to_date=to_date,
+            base=base_norm,
+        )
+    ]
+
+    if base_norm == "entrada":
+        total_base = get_entrada_recurso_RJ(all_rows, from_date, to_date)
+        stats = DashboardStats(entrada_recursal_RJ=total_base)
+    else:
+        total_base = get_total_recurso_RJ(all_rows)
+        stats = DashboardStats(total_recursal_RJ=total_base)
+
+    return DashboardResponse(
+        dashboard=dashboard_slug,
+        stats=stats,
+        **{chart_field: chart},
+    )
+
+
+# v1: dashboard_routes.py:10055
+def _aplicar_filtros_recursal_rj_rows(
+    rows: List[Dict],
+    filtros: Optional[RecursalLAFiltros],
+) -> List[Dict]:
+    return filtrar_recursal_RJ(rows, filtros)
+
+
+# v1: dashboard_routes.py:10062
+async def _rows_recursal_rj_filtradas(
+    rows: List[Dict],
+    filtros: Optional[RecursalLAFiltros],
+    atividades_recursos_filtros: Optional[RecursalAtividadesRecursosFiltros] = None,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    *,
+    agendamentos: Optional[List[Dict]] = None,
+    atividades_catalogo: Optional[List[Dict]] = None,
+) -> List[Dict]:
+    """
+    Aplica filtros de processo (fase Recursal) e, quando ativos, restringe aos
+    processos vinculados a agendamentos RECURSOS (RJ) filtrados no período.
+
+    Sempre atualiza o catálogo dinâmico de atividades do setor RECURSOS (RJ) antes
+    de filtrar — via ``atividades_catalogo`` (se já disponível no caller) ou
+    buscando (cacheado) quando omitido — pois ``filtrar_recursal_RJ`` já restringe
+    ao escopo do setor RECURSOS internamente.
+    """
+    if atividades_catalogo is None:
+        atividades_catalogo = await fetch_atividades_setor_recursos_RJ()
+    set_atividades_recursos_RJ_catalogo(atividades_catalogo)
+    if atividades_recursos_filtros is not None and atividades_recursos_filtros.ativo():
+        ag_base = agendamentos
+        if ag_base is None:
+            ag_base = await fetch_agendamentos_setor_recursos_RJ()
+        processo_ids = processo_ids_recursal_de_agendamentos_recursos_RJ(
+            ag_base,
+            atividades_recursos_filtros,
+            from_date=from_date,
+            to_date=to_date,
+        )
+        rows = filtrar_recursal_RJ_por_processo_ids(rows, processo_ids)
+    return _aplicar_filtros_recursal_rj_rows(rows, filtros)
+
+
+# v1: dashboard_routes.py:10098
+def _chart_from_decisoes_item(item: Dict[str, Any]) -> ChartDataPoint:
+    return ChartDataPoint(
+        name=str(item.get("name") or ""),
+        value=float(item.get("value") or 0),
+        percent=item.get("percent"),
+        valor_causa=item.get("valor_causa"),
+        tipo=item.get("tipo"),
+    )
 
 
 # v1: dashboard_routes.py:10108
@@ -6753,6 +7201,258 @@ def _build_decisoes_recursal_NG_stats(
         (DECISAO_REVERTIDO_PERDA,   "total_revertido_perda_recurso_NG",   "percent_revertido_perda_recursal_NG",   "valor_causa_revertido_perda_recurso_NG"),
         (DECISAO_EXTINCAO_REAJUIZAR, "total_extincao_reajuizar_recurso_NG", "percent_extincao_reajuizar_recursal_NG", "valor_causa_extincao_reajuizar_recurso_NG"),
         (DECISAO_INSTRUCAO_RETOMADA, "total_instrucao_retomada_recurso_NG", "percent_instrucao_retomada_recursal_NG", "valor_causa_instrucao_retomada_recurso_NG"),
+    ]
+    for tipo, campo_total, campo_percent, campo_valor in _tipos:
+        stats.update(_item(tipo, campo_total, campo_percent, campo_valor))
+    return stats
+
+
+# v1: dashboard_routes.py:10598
+def _build_recursal_RJ_stats(
+    all_recursal: List[Dict],
+    from_date: Optional[date],
+    to_date: Optional[date],
+    agendamentos: Optional[List[Dict]] = None,
+    atividades_recursos_filtros: Optional[RecursalAtividadesRecursosFiltros] = None,
+    atividades_catalogo: Optional[List[Dict]] = None,
+) -> Tuple[Dict, Dict]:
+    """
+    Builder do domínio Fase Recursal RJ — três métricas independentes:
+
+    - ``total_recursal_RJ``: estoque (``ID_FASE`` = 8), sem filtro de data
+    - ``entrada_recursal_RJ``: fase 8 com ``DT_ENTRADA_RECURSAL`` no período
+
+    ``atividades_catalogo`` é o catálogo dinâmico de atividades do setor RECURSOS (RJ)
+    (query ``atividades_setor_recursos_RJ``, cacheada); atualiza a whitelist usada por
+    ``recurso_RJ`` antes de qualquer cálculo desta função.
+    """
+    set_atividades_recursos_RJ_catalogo(atividades_catalogo or [])
+    stats = {
+        "total_recursal_RJ": get_total_recurso_RJ(all_recursal),
+        "entrada_recursal_RJ": get_entrada_recurso_RJ(
+            all_recursal,
+            from_date=from_date,
+            to_date=to_date,
+        ),
+        "valor_causa_acordo_recursal_RJ": get_valor_causa_acordo_recurso_RJ(all_recursal),
+        "total_sentenca_favoravel_recurso_RJ": get_total_sentenca_favoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_sentenca_desfavoravel_recurso_RJ": get_total_sentenca_desfavoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_procedente_1g_recurso_RJ": get_total_procedente_1g_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_parcialmente_procedente_recurso_RJ": get_total_parcialmente_procedente_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_sentenca_extincao_recurso_RJ": get_total_sentenca_extincao_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_sentenca_parcialmente_favoravel_recurso_RJ": (
+            get_total_sentenca_parcialmente_favoravel_recurso_RJ(
+                all_recursal, from_date=from_date, to_date=to_date
+            )
+        ),
+        "valor_causa_sentenca_favoravel_recurso_RJ": get_valor_causa_sentenca_sentenca_favoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_sentenca_desfavoravel_recurso_RJ": get_valor_causa_sentenca_sentenca_desfavoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_sentenca_procedente_1g_recurso_RJ": get_valor_causa_sentenca_procedente_1g_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_sentenca_parcialmente_procedente_recurso_RJ": get_valor_causa_sentenca_parcialmente_procedente_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_sentenca_extincao_recurso_RJ": get_valor_causa_sentenca_sentenca_extincao_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_sentenca_parcialmente_favoravel_recurso_RJ": get_valor_causa_sentenca_parcialmente_favoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_acordao_desfavoravel_recurso_RJ": get_total_acordao_desfavoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_acordao_favoravel_recurso_RJ": get_total_acordao_favoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_acordao_parcialmente_favoravel_recurso_RJ": get_total_acordao_parcialmente_favoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_acordao_parcial_retomada_recurso_RJ": get_total_acordao_parcial_retomada_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "total_acordao_extincao_recurso_RJ": get_total_acordao_extincao_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_acordao_desfavoravel_recurso_RJ": get_valor_causa_acordao_desfavoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_acordao_favoravel_recurso_RJ": get_valor_causa_acordao_favoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_acordao_parcialmente_favoravel_recurso_RJ": get_valor_causa_acordao_parcialmente_favoravel_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_acordao_parcial_retomada_recurso_RJ": get_valor_causa_acordao_parcial_retomada_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        "valor_causa_acordao_extincao_recurso_RJ": get_valor_causa_acordao_extincao_recurso_RJ(
+            all_recursal, from_date=from_date, to_date=to_date
+        ),
+        **_build_decisoes_recursal_RJ_stats(all_recursal, from_date, to_date),
+    }
+    agendamentos_base = agendamentos or []
+    agendamentos_filtrados = filtrar_agendamentos_recursos_RJ(
+        agendamentos_base,
+        atividades_recursos_filtros,
+        from_date=from_date,
+        to_date=to_date,
+    )
+    stats.update(
+        get_kpis_atividades_recursos_RJ(
+            agendamentos_filtrados,
+            from_date=from_date,
+            to_date=to_date,
+        )
+    )
+    stats.update(
+        get_kpis_atividades_recursos_por_prazo_RJ(
+            agendamentos_filtrados,
+            from_date=from_date,
+            to_date=to_date,
+        )
+    )
+    stats["avr_retorno_recurso_cancelado_RJ"] = get_total_avr_retorno_recurso_cancelado_RJ(
+        agendamentos_filtrados, from_date=from_date, to_date=to_date
+    )
+    stats["retorno_cr_recurso_cancelado_RJ"] = get_total_retorno_cr_recurso_cancelado_RJ(
+        agendamentos_filtrados, from_date=from_date, to_date=to_date
+    )
+    stats["provimento_mensal_qtd_RJ"] = get_total_provimento_mensal_RJ(
+        all_recursal, from_date=from_date, to_date=to_date
+    )
+    stats["provimento_mensal_meta_RJ"] = META_PROVIMENTO_MENSAL_RJ
+    funcionarios_producao_recursal_rj, por_dia_por_func_producao_recursal_rj = _per_func_to_chart(
+        get_recursal_resolvidos_por_dia_por_funcionario_RJ(agendamentos_filtrados)
+    )
+    charts = {
+        "recursal_por_subfase_RJ": [
+            ChartDataPoint(**x)
+            for x in group_recursal_por_subfase_RJ(all_recursal)
+        ],
+        "recursal_por_status_1g_RJ": [
+            ChartDataPoint(**x)
+            for x in group_recursal_por_status_1g_RJ(
+                all_recursal, from_date=from_date, to_date=to_date
+            )
+        ],
+        "recursal_por_status_2g_RJ": [
+            ChartDataPoint(**x)
+            for x in group_recursal_por_status_2g_RJ(
+                all_recursal, from_date=from_date, to_date=to_date
+            )
+        ],
+        "recursal_decisoes_RJ": [
+            ChartDataPoint(**x)
+            for x in group_decisoes_recursal_RJ(
+                all_recursal, from_date=from_date, to_date=to_date
+            )
+        ],
+        "ranking_juizes_recursal_RJ": [
+            RecursalRankingMagistradoRow(**x)
+            for x in get_ranking_juizes_recursal_RJ(
+                all_recursal, from_date=from_date, to_date=to_date
+            )
+        ],
+        "ranking_relatores_recursal_RJ": [
+            RecursalRankingMagistradoRow(**x)
+            for x in get_ranking_relatores_recursal_RJ(
+                all_recursal, from_date=from_date, to_date=to_date
+            )
+        ],
+        "recursal_processos_por_atividade_RJ": [
+            ChartDataPoint(**x)
+            for x in group_recursal_processos_por_atividade_RJ(
+                agendamentos_filtrados,
+                from_date=from_date,
+                to_date=to_date,
+            )
+        ],
+        "recursal_demandas_por_funcionario_RJ": group_recursal_demandas_por_funcionario_RJ(
+            agendamentos_filtrados,
+            from_date=from_date,
+            to_date=to_date,
+        ),
+        "recursal_resolvidos_por_dia_RJ": [
+            ChartDataPoint(**x)
+            for x in group_recursal_resolvidos_por_dia_RJ(agendamentos_filtrados)
+        ],
+        "recursal_resolvidos_por_mes_RJ": [
+            ChartDataPoint(**x)
+            for x in group_recursal_resolvidos_por_mes_RJ(agendamentos_filtrados)
+        ],
+        "funcionarios_recursal_RJ": funcionarios_producao_recursal_rj,
+        "recursal_resolvidos_por_dia_por_funcionario_RJ": {
+            k: [ChartDataPoint(**i) for i in v]
+            for k, v in por_dia_por_func_producao_recursal_rj.items()
+        },
+        "recursal_media_resolvidos_por_funcionario_RJ": [
+            ChartDataPoint(**x)
+            for x in get_media_recursal_resolvidos_por_funcionario_RJ(
+                agendamentos_filtrados, from_date=from_date, to_date=to_date
+            )
+        ],
+        "recursal_atividades_lista_RJ": [
+            RecursalAtividadeTarefaRow(**x)
+            for x in list_recursal_atividades_periodo_RJ(
+                agendamentos_filtrados,
+                from_date=from_date,
+                to_date=to_date,
+            )
+        ],
+        "recursal_atividades_lista_filtros_opcoes_RJ": RecursalAtividadesListaFiltrosOpcoes(
+            **get_opcoes_filtros_atividades_lista_RJ(
+                agendamentos_base,
+                from_date=from_date,
+                to_date=to_date,
+            )
+        ),
+    }
+    return stats, charts
+
+
+# v1: dashboard_routes.py:10815
+def _build_decisoes_recursal_RJ_stats(
+    all_recursal: List[Dict],
+    from_date: Optional[date],
+    to_date: Optional[date],
+) -> Dict[str, Any]:
+    """Stats de decisões recursais (cruzamento 1G × 2G, filtro por ``DATA_ACORDAO``)."""
+    resumo = get_decisoes_recursal_resumo_RJ(all_recursal, from_date=from_date, to_date=to_date)
+    por_tipo = {str(item["tipo"]): item for item in resumo.get("itens", [])}
+
+    def _item(tipo: str, campo_total: str, campo_percent: str, campo_valor: str) -> Dict[str, Any]:
+        row = por_tipo.get(tipo, {})
+        return {
+            campo_total: row.get("value", 0),
+            campo_percent: row.get("percent", 0.0),
+            campo_valor: row.get("valor_causa", 0.0),
+        }
+
+    stats: Dict[str, Any] = {"total_decisoes_recursal_RJ": resumo.get("total", 0)}
+    _tipos = [
+        (DECISAO_MANTIDO_GANHO,     "total_mantido_ganho_recurso_RJ",     "percent_mantido_ganho_recursal_RJ",     "valor_causa_mantido_ganho_recurso_RJ"),
+        (DECISAO_GANHO_AMPLIADO,    "total_ganho_ampliado_recurso_RJ",    "percent_ganho_ampliado_recursal_RJ",    "valor_causa_ganho_ampliado_recurso_RJ"),
+        (DECISAO_REVERTIDO_GANHO,   "total_revertido_ganho_recurso_RJ",   "percent_revertido_ganho_recursal_RJ",   "valor_causa_revertido_ganho_recurso_RJ"),
+        (DECISAO_GANHO_REDUZIDO,    "total_ganho_reduzido_recurso_RJ",    "percent_ganho_reduzido_recursal_RJ",    "valor_causa_ganho_reduzido_recurso_RJ"),
+        (DECISAO_MANTIDO_PERDA,     "total_mantido_perda_recurso_RJ",     "percent_mantido_perda_recursal_RJ",     "valor_causa_mantido_perda_recurso_RJ"),
+        (DECISAO_REVERTIDO_PERDA,   "total_revertido_perda_recurso_RJ",   "percent_revertido_perda_recursal_RJ",   "valor_causa_revertido_perda_recurso_RJ"),
+        (DECISAO_EXTINCAO_REAJUIZAR, "total_extincao_reajuizar_recurso_RJ", "percent_extincao_reajuizar_recursal_RJ", "valor_causa_extincao_reajuizar_recurso_RJ"),
+        (DECISAO_INSTRUCAO_RETOMADA, "total_instrucao_retomada_recurso_RJ", "percent_instrucao_retomada_recursal_RJ", "valor_causa_instrucao_retomada_recurso_RJ"),
     ]
     for tipo, campo_total, campo_percent, campo_valor in _tipos:
         stats.update(_item(tipo, campo_total, campo_percent, campo_valor))
@@ -7812,6 +8512,2627 @@ async def _rows_execucao_acordos_rj_atividades_filtradas(
     return itens
 
 
+# v1: dashboard_routes.py:23977
+async def get_recursal_LA_filtros_opcoes():
+    """Listas de status, decisões, juízes e relatores para o painel de filtros."""
+    all_rows = await fetch_recursal_LA()
+    return get_opcoes_filtros_recursal_LA(all_rows)
+
+
+# v1: dashboard_routes.py:24013
+async def get_recursal_LA_por_subfase(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description=(
+            "estoque = todos em fase 8 (sem filtro de data); "
+            "entrada = fase 8 com DT_ENTRADA_RECURSAL no período (from/to obrigatórios)."
+        ),
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por subfase na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_la_distribuicao_response(
+        dashboard_slug="recursal_LA/por_subfase",
+        chart_field="recursal_por_subfase_LA",
+        group_fn=group_recursal_por_subfase_LA,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:24073
+async def get_recursal_LA_por_materia(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description="estoque = fase 8; entrada = DT_ENTRADA_RECURSAL no período.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por matéria na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_la_distribuicao_response(
+        dashboard_slug="recursal_LA/por_materia",
+        chart_field="recursal_por_materia_LA",
+        group_fn=group_recursal_por_materia_LA,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:24130
+async def get_recursal_LA_por_competencia(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description="estoque = fase 8; entrada = DT_ENTRADA_RECURSAL no período.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por competência na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_la_distribuicao_response(
+        dashboard_slug="recursal_LA/por_competencia",
+        chart_field="recursal_por_competencia_LA",
+        group_fn=group_recursal_por_competencia_LA,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:24187
+async def get_recursal_LA_por_vara(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description="estoque = fase 8; entrada = DT_ENTRADA_RECURSAL no período.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por vara na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_la_distribuicao_response(
+        dashboard_slug="recursal_LA/por_vara",
+        chart_field="recursal_por_vara_LA",
+        group_fn=group_recursal_por_vara_LA,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:24244
+async def get_recursal_LA_status_1g(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Totais na fase Recursal por status de 1º grau (``ID_1G``), sem filtro de data.
+
+    Cadastro LexFlow (``status_primeiro_grau``): 4 Favorável, 5 Desfavorável, 6 Procedente,
+    7 Parcialmente procedente, 8 Extinção, 9 Parcialmente favorável, entre outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_la_filtradas(
+        await fetch_recursal_LA(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    chart = [
+        ChartDataPoint(**x)
+        for x in group_recursal_por_status_1g_LA(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_LA",
+        stats=DashboardStats(
+            total_sentenca_favoravel_recurso_LA=get_total_sentenca_favoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_sentenca_desfavoravel_recurso_LA=get_total_sentenca_desfavoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_procedente_1g_recurso_LA=get_total_procedente_1g_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_parcialmente_procedente_recurso_LA=get_total_parcialmente_procedente_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_sentenca_extincao_recurso_LA=get_total_sentenca_extincao_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_sentenca_parcialmente_favoravel_recurso_LA=(
+                get_total_sentenca_parcialmente_favoravel_recurso_LA(
+                    all_rows, from_date=from_date, to_date=to_date
+                )
+            ),
+            valor_causa_sentenca_favoravel_recurso_LA=get_valor_causa_sentenca_sentenca_favoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_desfavoravel_recurso_LA=get_valor_causa_sentenca_sentenca_desfavoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_procedente_1g_recurso_LA=get_valor_causa_sentenca_procedente_1g_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_parcialmente_procedente_recurso_LA=get_valor_causa_sentenca_parcialmente_procedente_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_extincao_recurso_LA=get_valor_causa_sentenca_sentenca_extincao_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_parcialmente_favoravel_recurso_LA=get_valor_causa_sentenca_parcialmente_favoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+        ),
+        recursal_por_status_1g_LA=chart,
+    )
+
+
+# v1: dashboard_routes.py:24483
+async def get_recursal_LA_status_2g(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Totais na fase Recursal por status de 2º grau (``ID_2G``), sem filtro de data.
+
+    Cadastro LexFlow (``status_segundo_grau``): 4 Desfavorável, 5 Favorável, 6 Parcialmente
+    favorável, 7 Parcial (retomada), 8 Extinção, entre outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_la_filtradas(
+        await fetch_recursal_LA(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    chart = [
+        ChartDataPoint(**x)
+        for x in group_recursal_por_status_2g_LA(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_LA",
+        stats=DashboardStats(
+            total_acordao_desfavoravel_recurso_LA=get_total_acordao_desfavoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_favoravel_recurso_LA=get_total_acordao_favoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_parcialmente_favoravel_recurso_LA=get_total_acordao_parcialmente_favoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_parcial_retomada_recurso_LA=get_total_acordao_parcial_retomada_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_extincao_recurso_LA=get_total_acordao_extincao_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_desfavoravel_recurso_LA=get_valor_causa_acordao_desfavoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_favoravel_recurso_LA=get_valor_causa_acordao_favoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_parcialmente_favoravel_recurso_LA=get_valor_causa_acordao_parcialmente_favoravel_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_parcial_retomada_recurso_LA=get_valor_causa_acordao_parcial_retomada_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_extincao_recurso_LA=get_valor_causa_acordao_extincao_recurso_LA(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+        ),
+        recursal_por_status_2g_LA=chart,
+    )
+
+
+# v1: dashboard_routes.py:24690
+async def get_recursal_LA_decisoes(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Decisões recursais (cruzamento 1G × 2G) no período.
+
+    Classifica Mantido/Revertido Ganho/Perda e Extinção (Permite Reajuizar).
+    Filtro de período por ``DATA_ACORDAO``.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_la_filtradas(
+        await fetch_recursal_LA(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    chart = [
+        _chart_from_decisoes_item(x)
+        for x in group_decisoes_recursal_LA(all_rows, from_date=from_date, to_date=to_date)
+    ]
+    return DashboardResponse(
+        dashboard="recursal_LA",
+        stats=DashboardStats(**_build_decisoes_recursal_LA_stats(all_rows, from_date, to_date)),
+        recursal_decisoes_LA=chart,
+    )
+
+
+# v1: dashboard_routes.py:24754
+async def get_recursal_LA_ranking_juizes(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Ranking de juízes por taxa de sucesso nas sentenças (1G).
+
+    Filtro de período por ``DATA_SENTENCA``. Classificação: Fav / Des / Outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_la_filtradas(
+        await fetch_recursal_LA(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    ranking = [
+        RecursalRankingMagistradoRow(**x)
+        for x in get_ranking_juizes_recursal_LA(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_LA",
+        stats=DashboardStats(),
+        ranking_juizes_recursal_LA=ranking,
+    )
+
+
+# v1: dashboard_routes.py:24819
+async def get_recursal_LA_ranking_relatores(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Ranking de relatores por taxa de sucesso nos acórdãos (2G).
+
+    Filtro de período por ``DATA_ACORDAO``. Classificação: Fav / Des / Outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_la_filtradas(
+        await fetch_recursal_LA(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    ranking = [
+        RecursalRankingMagistradoRow(**x)
+        for x in get_ranking_relatores_recursal_LA(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_LA",
+        stats=DashboardStats(),
+        ranking_relatores_recursal_LA=ranking,
+    )
+
+
+# v1: dashboard_routes.py:24970
+async def get_recursal_NG_filtros_opcoes():
+    """Listas de status, decisões, juízes e relatores para o painel de filtros."""
+    all_rows = await fetch_recursal_NG()
+    return get_opcoes_filtros_recursal_NG(all_rows)
+
+
+# v1: dashboard_routes.py:25006
+async def get_recursal_NG_por_subfase(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description=(
+            "estoque = todos em fase 8 (sem filtro de data); "
+            "entrada = fase 8 com DT_ENTRADA_RECURSAL no período (from/to obrigatórios)."
+        ),
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por subfase na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_ng_distribuicao_response(
+        dashboard_slug="recursal_NG/por_subfase",
+        chart_field="recursal_por_subfase_NG",
+        group_fn=group_recursal_por_subfase_NG,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:25066
+async def get_recursal_NG_por_materia(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description="estoque = fase 8; entrada = DT_ENTRADA_RECURSAL no período.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por matéria na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_ng_distribuicao_response(
+        dashboard_slug="recursal_NG/por_materia",
+        chart_field="recursal_por_materia_NG",
+        group_fn=group_recursal_por_materia_NG,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:25123
+async def get_recursal_NG_por_competencia(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description="estoque = fase 8; entrada = DT_ENTRADA_RECURSAL no período.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por competência na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_ng_distribuicao_response(
+        dashboard_slug="recursal_NG/por_competencia",
+        chart_field="recursal_por_competencia_NG",
+        group_fn=group_recursal_por_competencia_NG,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:25180
+async def get_recursal_NG_por_vara(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description="estoque = fase 8; entrada = DT_ENTRADA_RECURSAL no período.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por vara na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_ng_distribuicao_response(
+        dashboard_slug="recursal_NG/por_vara",
+        chart_field="recursal_por_vara_NG",
+        group_fn=group_recursal_por_vara_NG,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:25237
+async def get_recursal_NG_status_1g(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Totais na fase Recursal por status de 1º grau (``ID_1G``), sem filtro de data.
+
+    Cadastro LexFlow (``status_primeiro_grau``): 4 Favorável, 5 Desfavorável, 6 Procedente,
+    7 Parcialmente procedente, 8 Extinção, 9 Parcialmente favorável, entre outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_ng_filtradas(
+        await fetch_recursal_NG(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    chart = [
+        ChartDataPoint(**x)
+        for x in group_recursal_por_status_1g_NG(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_NG",
+        stats=DashboardStats(
+            total_sentenca_favoravel_recurso_NG=get_total_sentenca_favoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_sentenca_desfavoravel_recurso_NG=get_total_sentenca_desfavoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_procedente_1g_recurso_NG=get_total_procedente_1g_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_parcialmente_procedente_recurso_NG=get_total_parcialmente_procedente_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_sentenca_extincao_recurso_NG=get_total_sentenca_extincao_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_sentenca_parcialmente_favoravel_recurso_NG=(
+                get_total_sentenca_parcialmente_favoravel_recurso_NG(
+                    all_rows, from_date=from_date, to_date=to_date
+                )
+            ),
+            valor_causa_sentenca_favoravel_recurso_NG=get_valor_causa_sentenca_sentenca_favoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_desfavoravel_recurso_NG=get_valor_causa_sentenca_sentenca_desfavoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_procedente_1g_recurso_NG=get_valor_causa_sentenca_procedente_1g_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_parcialmente_procedente_recurso_NG=get_valor_causa_sentenca_parcialmente_procedente_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_extincao_recurso_NG=get_valor_causa_sentenca_sentenca_extincao_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_parcialmente_favoravel_recurso_NG=get_valor_causa_sentenca_parcialmente_favoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+        ),
+        recursal_por_status_1g_NG=chart,
+    )
+
+
+# v1: dashboard_routes.py:25476
+async def get_recursal_NG_status_2g(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Totais na fase Recursal por status de 2º grau (``ID_2G``), sem filtro de data.
+
+    Cadastro LexFlow (``status_segundo_grau``): 4 Desfavorável, 5 Favorável, 6 Parcialmente
+    favorável, 7 Parcial (retomada), 8 Extinção, entre outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_ng_filtradas(
+        await fetch_recursal_NG(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    chart = [
+        ChartDataPoint(**x)
+        for x in group_recursal_por_status_2g_NG(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_NG",
+        stats=DashboardStats(
+            total_acordao_desfavoravel_recurso_NG=get_total_acordao_desfavoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_favoravel_recurso_NG=get_total_acordao_favoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_parcialmente_favoravel_recurso_NG=get_total_acordao_parcialmente_favoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_parcial_retomada_recurso_NG=get_total_acordao_parcial_retomada_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_extincao_recurso_NG=get_total_acordao_extincao_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_desfavoravel_recurso_NG=get_valor_causa_acordao_desfavoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_favoravel_recurso_NG=get_valor_causa_acordao_favoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_parcialmente_favoravel_recurso_NG=get_valor_causa_acordao_parcialmente_favoravel_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_parcial_retomada_recurso_NG=get_valor_causa_acordao_parcial_retomada_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_extincao_recurso_NG=get_valor_causa_acordao_extincao_recurso_NG(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+        ),
+        recursal_por_status_2g_NG=chart,
+    )
+
+
+# v1: dashboard_routes.py:25683
+async def get_recursal_NG_decisoes(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Decisões recursais (cruzamento 1G × 2G) no período.
+
+    Classifica Mantido/Revertido Ganho/Perda e Extinção (Permite Reajuizar).
+    Filtro de período por ``DATA_ACORDAO``.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_ng_filtradas(
+        await fetch_recursal_NG(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    chart = [
+        _chart_from_decisoes_item(x)
+        for x in group_decisoes_recursal_NG(all_rows, from_date=from_date, to_date=to_date)
+    ]
+    return DashboardResponse(
+        dashboard="recursal_NG",
+        stats=DashboardStats(**_build_decisoes_recursal_NG_stats(all_rows, from_date, to_date)),
+        recursal_decisoes_NG=chart,
+    )
+
+
+# v1: dashboard_routes.py:25747
+async def get_recursal_NG_ranking_juizes(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Ranking de juízes por taxa de sucesso nas sentenças (1G).
+
+    Filtro de período por ``DATA_SENTENCA``. Classificação: Fav / Des / Outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_ng_filtradas(
+        await fetch_recursal_NG(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    ranking = [
+        RecursalRankingMagistradoRow(**x)
+        for x in get_ranking_juizes_recursal_NG(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_NG",
+        stats=DashboardStats(),
+        ranking_juizes_recursal_NG=ranking,
+    )
+
+
+# v1: dashboard_routes.py:25812
+async def get_recursal_NG_ranking_relatores(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Ranking de relatores por taxa de sucesso nos acórdãos (2G).
+
+    Filtro de período por ``DATA_ACORDAO``. Classificação: Fav / Des / Outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_ng_filtradas(
+        await fetch_recursal_NG(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    ranking = [
+        RecursalRankingMagistradoRow(**x)
+        for x in get_ranking_relatores_recursal_NG(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_NG",
+        stats=DashboardStats(),
+        ranking_relatores_recursal_NG=ranking,
+    )
+
+
+# v1: dashboard_routes.py:25963
+async def get_recursal_RJ_filtros_opcoes():
+    """Listas de status, decisões, juízes e relatores para o painel de filtros."""
+    all_rows = await fetch_recursal_RJ()
+    return get_opcoes_filtros_recursal_RJ(all_rows)
+
+
+# v1: dashboard_routes.py:25999
+async def get_recursal_RJ_por_subfase(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description=(
+            "estoque = todos em fase 8 (sem filtro de data); "
+            "entrada = fase 8 com DT_ENTRADA_RECURSAL no período (from/to obrigatórios)."
+        ),
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por subfase na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_rj_distribuicao_response(
+        dashboard_slug="recursal_RJ/por_subfase",
+        chart_field="recursal_por_subfase_RJ",
+        group_fn=group_recursal_por_subfase_RJ,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:26059
+async def get_recursal_RJ_por_materia(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description="estoque = fase 8; entrada = DT_ENTRADA_RECURSAL no período.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por matéria na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_rj_distribuicao_response(
+        dashboard_slug="recursal_RJ/por_materia",
+        chart_field="recursal_por_materia_RJ",
+        group_fn=group_recursal_por_materia_RJ,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:26116
+async def get_recursal_RJ_por_competencia(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description="estoque = fase 8; entrada = DT_ENTRADA_RECURSAL no período.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por competência na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_rj_distribuicao_response(
+        dashboard_slug="recursal_RJ/por_competencia",
+        chart_field="recursal_por_competencia_RJ",
+        group_fn=group_recursal_por_competencia_RJ,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:26173
+async def get_recursal_RJ_por_vara(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    base: str = Query(
+        "estoque",
+        description="estoque = fase 8; entrada = DT_ENTRADA_RECURSAL no período.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """Distribuição por vara na fase Recursal (estoque ou entrada no período)."""
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _recursal_rj_distribuicao_response(
+        dashboard_slug="recursal_RJ/por_vara",
+        chart_field="recursal_por_vara_RJ",
+        group_fn=group_recursal_por_vara_RJ,
+        from_date=from_date,
+        to_date=to_date,
+        base=base,
+        filtros=filtros,
+        atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:26230
+async def get_recursal_RJ_status_1g(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Totais na fase Recursal por status de 1º grau (``ID_1G``), sem filtro de data.
+
+    Cadastro LexFlow (``status_primeiro_grau``): 4 Favorável, 5 Desfavorável, 6 Procedente,
+    7 Parcialmente procedente, 8 Extinção, 9 Parcialmente favorável, entre outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_rj_filtradas(
+        await fetch_recursal_RJ(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    chart = [
+        ChartDataPoint(**x)
+        for x in group_recursal_por_status_1g_RJ(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_RJ",
+        stats=DashboardStats(
+            total_sentenca_favoravel_recurso_RJ=get_total_sentenca_favoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_sentenca_desfavoravel_recurso_RJ=get_total_sentenca_desfavoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_procedente_1g_recurso_RJ=get_total_procedente_1g_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_parcialmente_procedente_recurso_RJ=get_total_parcialmente_procedente_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_sentenca_extincao_recurso_RJ=get_total_sentenca_extincao_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_sentenca_parcialmente_favoravel_recurso_RJ=(
+                get_total_sentenca_parcialmente_favoravel_recurso_RJ(
+                    all_rows, from_date=from_date, to_date=to_date
+                )
+            ),
+            valor_causa_sentenca_favoravel_recurso_RJ=get_valor_causa_sentenca_sentenca_favoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_desfavoravel_recurso_RJ=get_valor_causa_sentenca_sentenca_desfavoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_procedente_1g_recurso_RJ=get_valor_causa_sentenca_procedente_1g_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_parcialmente_procedente_recurso_RJ=get_valor_causa_sentenca_parcialmente_procedente_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_extincao_recurso_RJ=get_valor_causa_sentenca_sentenca_extincao_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_sentenca_parcialmente_favoravel_recurso_RJ=get_valor_causa_sentenca_parcialmente_favoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+        ),
+        recursal_por_status_1g_RJ=chart,
+    )
+
+
+# v1: dashboard_routes.py:26469
+async def get_recursal_RJ_status_2g(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Totais na fase Recursal por status de 2º grau (``ID_2G``), sem filtro de data.
+
+    Cadastro LexFlow (``status_segundo_grau``): 4 Desfavorável, 5 Favorável, 6 Parcialmente
+    favorável, 7 Parcial (retomada), 8 Extinção, entre outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_rj_filtradas(
+        await fetch_recursal_RJ(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    chart = [
+        ChartDataPoint(**x)
+        for x in group_recursal_por_status_2g_RJ(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_RJ",
+        stats=DashboardStats(
+            total_acordao_desfavoravel_recurso_RJ=get_total_acordao_desfavoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_favoravel_recurso_RJ=get_total_acordao_favoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_parcialmente_favoravel_recurso_RJ=get_total_acordao_parcialmente_favoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_parcial_retomada_recurso_RJ=get_total_acordao_parcial_retomada_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            total_acordao_extincao_recurso_RJ=get_total_acordao_extincao_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_desfavoravel_recurso_RJ=get_valor_causa_acordao_desfavoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_favoravel_recurso_RJ=get_valor_causa_acordao_favoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_parcialmente_favoravel_recurso_RJ=get_valor_causa_acordao_parcialmente_favoravel_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_parcial_retomada_recurso_RJ=get_valor_causa_acordao_parcial_retomada_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+            valor_causa_acordao_extincao_recurso_RJ=get_valor_causa_acordao_extincao_recurso_RJ(
+                all_rows, from_date=from_date, to_date=to_date
+            ),
+        ),
+        recursal_por_status_2g_RJ=chart,
+    )
+
+
+# v1: dashboard_routes.py:26676
+async def get_recursal_RJ_decisoes(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Decisões recursais (cruzamento 1G × 2G) no período.
+
+    Classifica Mantido/Revertido Ganho/Perda e Extinção (Permite Reajuizar).
+    Filtro de período por ``DATA_ACORDAO``.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_rj_filtradas(
+        await fetch_recursal_RJ(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    chart = [
+        _chart_from_decisoes_item(x)
+        for x in group_decisoes_recursal_RJ(all_rows, from_date=from_date, to_date=to_date)
+    ]
+    return DashboardResponse(
+        dashboard="recursal_RJ",
+        stats=DashboardStats(**_build_decisoes_recursal_RJ_stats(all_rows, from_date, to_date)),
+        recursal_decisoes_RJ=chart,
+    )
+
+
+# v1: dashboard_routes.py:26740
+async def get_recursal_RJ_ranking_juizes(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Ranking de juízes por taxa de sucesso nas sentenças (1G).
+
+    Filtro de período por ``DATA_SENTENCA``. Classificação: Fav / Des / Outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_rj_filtradas(
+        await fetch_recursal_RJ(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    ranking = [
+        RecursalRankingMagistradoRow(**x)
+        for x in get_ranking_juizes_recursal_RJ(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_RJ",
+        stats=DashboardStats(),
+        ranking_juizes_recursal_RJ=ranking,
+    )
+
+
+# v1: dashboard_routes.py:26805
+async def get_recursal_RJ_ranking_relatores(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None, description="Filtra por matéria(s)"),
+    competencia: Optional[List[str]] = Query(None, description="Filtra por competência(s)"),
+    vara: Optional[List[str]] = Query(None, description="Filtra por vara(s)"),
+    subfase: Optional[List[str]] = Query(None, description="Filtra por subfase(s)"),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Ranking de relatores por taxa de sucesso nos acórdãos (2G).
+
+    Filtro de período por ``DATA_ACORDAO``. Classificação: Fav / Des / Outros.
+    """
+    from_date, to_date = _resolve_date_range(from_date, to_date)
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    all_rows = await _rows_recursal_rj_filtradas(
+        await fetch_recursal_RJ(),
+        filtros,
+        filtros_atividades,
+        from_date,
+        to_date,
+    )
+    ranking = [
+        RecursalRankingMagistradoRow(**x)
+        for x in get_ranking_relatores_recursal_RJ(
+            all_rows, from_date=from_date, to_date=to_date
+        )
+    ]
+    return DashboardResponse(
+        dashboard="recursal_RJ",
+        stats=DashboardStats(),
+        ranking_relatores_recursal_RJ=ranking,
+    )
+
+
+# v1: dashboard_routes.py:26871
+_CAMPOS_EXPORT_RECURSAL_LA: Dict[str, str] = {
+    "id": "id",
+    "numero_processo": "NUMERO_PROCESSO",
+    "uf": "UF",
+    "materia": "MATERIA",
+    "parte_adversa": "PARTE_ADVERSA",
+    "data_ajuizamento": "DATA_AJUIZAMENTO",
+    "data_ultima_movimentacao": "DATA_ULTIMA_MOVIMENTACAO",
+    "fase": "FASE",
+    "subfase": "SUBFASE",
+    "operacao": "OPERACAO",
+    "vara": "VARA",
+    "competencia": "COMPETENCIA",
+    "valor_causa_sentenca": "VALOR_CAUSA_SENTENCA",
+    "valor_causa_acordo": "VALOR_CAUSA_ACORDO",
+    "dano_moral_sentenca": "DANO_MORAL_SENTENCA",
+    "dano_material_sentenca": "DANO_MATERIAL_SENTENCA",
+    "status_1g": "STATUS_1G",
+    "juiz_1g": "JUIZ_1G",
+    "status_2g": "STATUS_2G",
+    "relator_2g": "RELATOR_2G",
+    "decisao": "__computed_decisao__",
+    "data_sentenca": "DATA_SENTENCA",
+    "data_acordao": "DATA_ACORDAO",
+    "data_transito_julgado": "DATA_TRANSITO_JULGADO",
+    "dt_entrada_recursal": "DT_ENTRADA_RECURSAL",
+    "dt_saida_recursal": "DT_SAIDA_RECURSAL",
+    "atividade_recursos": "ATIVIDADE_RECURSOS",
+    "status_agendamento_recursos": "STATUS_AGENDAMENTO_RECURSOS",
+}
+
+
+# v1: dashboard_routes.py:26902
+_LABELS_EXPORT_RECURSAL_LA: Dict[str, str] = {
+    "id": "ID",
+    "numero_processo": "Número do Processo",
+    "uf": "UF",
+    "materia": "Matéria",
+    "parte_adversa": "Parte Adversa",
+    "data_ajuizamento": "Data de Ajuizamento",
+    "data_ultima_movimentacao": "Última Movimentação",
+    "fase": "Fase",
+    "subfase": "Subfase",
+    "operacao": "Operação",
+    "vara": "Vara",
+    "competencia": "Competência",
+    "valor_causa_sentenca": "Valor da Causa (Sentença)",
+    "valor_causa_acordo": "Valor da Causa (Acordo)",
+    "dano_moral_sentenca": "Dano Moral (Sentença)",
+    "dano_material_sentenca": "Dano Material (Sentença)",
+    "status_1g": "Status 1º Grau",
+    "juiz_1g": "Juiz (1º Grau)",
+    "status_2g": "Status 2º Grau",
+    "relator_2g": "Relator (2º Grau)",
+    "decisao": "Decisão",
+    "data_sentenca": "Data da Sentença",
+    "data_acordao": "Data do Acórdão",
+    "data_transito_julgado": "Data Trânsito em Julgado",
+    "dt_entrada_recursal": "Data Entrada Recursal",
+    "dt_saida_recursal": "Data Saída Recursal",
+    "atividade_recursos": "Atividade em Andamento",
+    "status_agendamento_recursos": "Status da Atividade",
+}
+
+
+# v1: dashboard_routes.py:26934
+_CAMPOS_EXPORT_RECURSAL_NG: Dict[str, str] = {
+    "id": "id",
+    "numero_processo": "NUMERO_PROCESSO",
+    "uf": "UF",
+    "materia": "MATERIA",
+    "parte_adversa": "PARTE_ADVERSA",
+    "data_ajuizamento": "DATA_AJUIZAMENTO",
+    "data_ultima_movimentacao": "DATA_ULTIMA_MOVIMENTACAO",
+    "fase": "FASE",
+    "subfase": "SUBFASE",
+    "operacao": "OPERACAO",
+    "vara": "VARA",
+    "competencia": "COMPETENCIA",
+    "valor_causa_sentenca": "VALOR_CAUSA_SENTENCA",
+    "valor_causa_acordo": "VALOR_CAUSA_ACORDO",
+    "dano_moral_sentenca": "DANO_MORAL_SENTENCA",
+    "dano_material_sentenca": "DANO_MATERIAL_SENTENCA",
+    "status_1g": "STATUS_1G",
+    "juiz_1g": "JUIZ_1G",
+    "status_2g": "STATUS_2G",
+    "relator_2g": "RELATOR_2G",
+    "decisao": "__computed_decisao__",
+    "data_sentenca": "DATA_SENTENCA",
+    "data_acordao": "DATA_ACORDAO",
+    "data_transito_julgado": "DATA_TRANSITO_JULGADO",
+    "dt_entrada_recursal": "DT_ENTRADA_RECURSAL",
+    "dt_saida_recursal": "DT_SAIDA_RECURSAL",
+    "atividade_recursos": "ATIVIDADE_RECURSOS",
+    "status_agendamento_recursos": "STATUS_AGENDAMENTO_RECURSOS",
+}
+
+
+# v1: dashboard_routes.py:26965
+_LABELS_EXPORT_RECURSAL_NG: Dict[str, str] = {
+    "id": "ID",
+    "numero_processo": "Número do Processo",
+    "uf": "UF",
+    "materia": "Matéria",
+    "parte_adversa": "Parte Adversa",
+    "data_ajuizamento": "Data de Ajuizamento",
+    "data_ultima_movimentacao": "Última Movimentação",
+    "fase": "Fase",
+    "subfase": "Subfase",
+    "operacao": "Operação",
+    "vara": "Vara",
+    "competencia": "Competência",
+    "valor_causa_sentenca": "Valor da Causa (Sentença)",
+    "valor_causa_acordo": "Valor da Causa (Acordo)",
+    "dano_moral_sentenca": "Dano Moral (Sentença)",
+    "dano_material_sentenca": "Dano Material (Sentença)",
+    "status_1g": "Status 1º Grau",
+    "juiz_1g": "Juiz (1º Grau)",
+    "status_2g": "Status 2º Grau",
+    "relator_2g": "Relator (2º Grau)",
+    "decisao": "Decisão",
+    "data_sentenca": "Data da Sentença",
+    "data_acordao": "Data do Acórdão",
+    "data_transito_julgado": "Data Trânsito em Julgado",
+    "dt_entrada_recursal": "Data Entrada Recursal",
+    "dt_saida_recursal": "Data Saída Recursal",
+    "atividade_recursos": "Atividade em Andamento",
+    "status_agendamento_recursos": "Status da Atividade",
+}
+
+
+# v1: dashboard_routes.py:26998
+_CAMPOS_EXPORT_RECURSAL_RJ: Dict[str, str] = {
+    "id": "id",
+    "numero_processo": "NUMERO_PROCESSO",
+    "uf": "UF",
+    "materia": "MATERIA",
+    "parte_adversa": "PARTE_ADVERSA",
+    "data_ajuizamento": "DATA_AJUIZAMENTO",
+    "data_ultima_movimentacao": "DATA_ULTIMA_MOVIMENTACAO",
+    "fase": "FASE",
+    "subfase": "SUBFASE",
+    "operacao": "OPERACAO",
+    "vara": "VARA",
+    "competencia": "COMPETENCIA",
+    "valor_causa_sentenca": "VALOR_CAUSA_SENTENCA",
+    "valor_causa_acordo": "VALOR_CAUSA_ACORDO",
+    "dano_moral_sentenca": "DANO_MORAL_SENTENCA",
+    "dano_material_sentenca": "DANO_MATERIAL_SENTENCA",
+    "status_1g": "STATUS_1G",
+    "juiz_1g": "JUIZ_1G",
+    "status_2g": "STATUS_2G",
+    "relator_2g": "RELATOR_2G",
+    "decisao": "__computed_decisao__",
+    "data_sentenca": "DATA_SENTENCA",
+    "data_acordao": "DATA_ACORDAO",
+    "data_transito_julgado": "DATA_TRANSITO_JULGADO",
+    "dt_entrada_recursal": "DT_ENTRADA_RECURSAL",
+    "dt_saida_recursal": "DT_SAIDA_RECURSAL",
+    "atividade_recursos": "ATIVIDADE_RECURSOS",
+    "status_agendamento_recursos": "STATUS_AGENDAMENTO_RECURSOS",
+}
+
+
+# v1: dashboard_routes.py:27029
+_LABELS_EXPORT_RECURSAL_RJ: Dict[str, str] = {
+    "id": "ID",
+    "numero_processo": "Número do Processo",
+    "uf": "UF",
+    "materia": "Matéria",
+    "parte_adversa": "Parte Adversa",
+    "data_ajuizamento": "Data de Ajuizamento",
+    "data_ultima_movimentacao": "Última Movimentação",
+    "fase": "Fase",
+    "subfase": "Subfase",
+    "operacao": "Operação",
+    "vara": "Vara",
+    "competencia": "Competência",
+    "valor_causa_sentenca": "Valor da Causa (Sentença)",
+    "valor_causa_acordo": "Valor da Causa (Acordo)",
+    "dano_moral_sentenca": "Dano Moral (Sentença)",
+    "dano_material_sentenca": "Dano Material (Sentença)",
+    "status_1g": "Status 1º Grau",
+    "juiz_1g": "Juiz (1º Grau)",
+    "status_2g": "Status 2º Grau",
+    "relator_2g": "Relator (2º Grau)",
+    "decisao": "Decisão",
+    "data_sentenca": "Data da Sentença",
+    "data_acordao": "Data do Acórdão",
+    "data_transito_julgado": "Data Trânsito em Julgado",
+    "dt_entrada_recursal": "Data Entrada Recursal",
+    "dt_saida_recursal": "Data Saída Recursal",
+    "atividade_recursos": "Atividade em Andamento",
+    "status_agendamento_recursos": "Status da Atividade",
+}
+
+
+# v1: dashboard_routes.py:27062
+_RELATORIO_DATE_COLUNAS_EXPORT: Dict[str, str] = {
+    "data_ajuizamento": "DATA_AJUIZAMENTO",
+    "data_sentenca": "DATA_SENTENCA",
+    "data_acordao": "DATA_ACORDAO",
+    "data_transito_julgado": "DATA_TRANSITO_JULGADO",
+    "dt_entrada_recursal": "DT_ENTRADA_RECURSAL",
+    "dt_saida_recursal": "DT_SAIDA_RECURSAL",
+    "data_ultima_movimentacao": "DATA_ULTIMA_MOVIMENTACAO",
+}
+
+
+# v1: dashboard_routes.py:27073
+def _parse_intervalos_datas_relatorio_export(
+    query_params: Any,
+) -> Dict[str, Tuple[Optional[date], Optional[date]]]:
+    """Lê ``{slug}_from`` / ``{slug}_to`` dos query params do relatório."""
+    intervalos: Dict[str, Tuple[Optional[date], Optional[date]]] = {}
+    for slug in _RELATORIO_DATE_COLUNAS_EXPORT:
+        raw_de = query_params.get(f"{slug}_from")
+        raw_ate = query_params.get(f"{slug}_to")
+        de = parse_date_from_db(raw_de) if raw_de else None
+        ate = parse_date_from_db(raw_ate) if raw_ate else None
+        if de or ate:
+            intervalos[slug] = (de, ate)
+    return intervalos
+
+
+# v1: dashboard_routes.py:27088
+def _filtrar_rows_intervalos_datas_relatorio(
+    rows: List[Dict[str, Any]],
+    intervalos: Dict[str, Tuple[Optional[date], Optional[date]]],
+) -> List[Dict[str, Any]]:
+    if not intervalos:
+        return rows
+    filtrados: List[Dict[str, Any]] = []
+    for row in rows:
+        incluir = True
+        for slug, (de, ate) in intervalos.items():
+            col = _RELATORIO_DATE_COLUNAS_EXPORT[slug]
+            val = row.get(col) or row.get(col.lower())
+            dt = parse_date_from_db(val)
+            if de is not None and (dt is None or dt < de):
+                incluir = False
+                break
+            if ate is not None and (dt is None or dt > ate):
+                incluir = False
+                break
+        if incluir:
+            filtrados.append(row)
+    return filtrados
+
+
+# v1: dashboard_routes.py:27112
+def _formatar_valor_export_recursal_la(val: Any) -> str:
+    if val is None:
+        return ""
+    if isinstance(val, (date, datetime)):
+        return val.strftime("%d/%m/%Y")
+    return str(val)
+
+
+# v1: dashboard_routes.py:27120
+def _valor_campo_export_recursal_la(row: Dict[str, Any], slug: str) -> Any:
+    if slug == "decisao":
+        return rotulo_decisao_recursal_export_LA(row)
+    if slug == "numero_processo":
+        numero = _get_numero_processo_recursal_la(row)
+        return numero if numero else None
+    col = _CAMPOS_EXPORT_RECURSAL_LA[slug]
+    if col.startswith("__computed_"):
+        return None
+    return _col_recursal_la(row, col, col.lower(), col.upper())
+
+
+# v1: dashboard_routes.py:27132
+def _linhas_export_recursal_la(
+    all_rows: List[Dict[str, Any]],
+    slugs: List[str],
+) -> Tuple[List[str], List[List[str]]]:
+    headers = [_LABELS_EXPORT_RECURSAL_LA[s] for s in slugs]
+    data_rows: List[List[str]] = []
+    for row in all_rows:
+        linha = []
+        for slug in slugs:
+            val = _valor_campo_export_recursal_la(row, slug)
+            linha.append(_formatar_valor_export_recursal_la(val))
+        data_rows.append(linha)
+    return headers, data_rows
+
+
+# v1: dashboard_routes.py:27147
+def _gerar_csv_export_recursal_la(headers: List[str], data_rows: List[List[str]]) -> bytes:
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(headers)
+    for linha in data_rows:
+        writer.writerow(linha)
+    return output.getvalue().encode("utf-8-sig")
+
+
+# v1: dashboard_routes.py:27156
+def _gerar_xlsx_export_recursal_la(
+    headers: List[str],
+    data_rows: List[List[str]],
+    slugs: List[str],
+) -> bytes:
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Relatório"
+    ws.append(headers)
+    for row_idx, linha in enumerate(data_rows, start=2):
+        for col_idx, val in enumerate(linha, start=1):
+            slug = slugs[col_idx - 1] if col_idx - 1 < len(slugs) else ""
+            cell = ws.cell(row=row_idx, column=col_idx)
+            if slug == "numero_processo" and val:
+                cell.value = str(val)
+                cell.number_format = "@"
+            else:
+                cell.value = val
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
+
+
+# v1: dashboard_routes.py:27184
+async def export_recursal_LA(
+    request: Request,
+    format: str = Query(
+        "csv",
+        description="Formato do arquivo: csv ou xlsx.",
+    ),
+    campos: Optional[List[str]] = Query(
+        None,
+        description="Slugs dos campos a incluir no CSV (ex.: numero_processo, materia). "
+                    "Padrão: todos os campos disponíveis.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None),
+    parte_adversa: Optional[List[str]] = Query(None),
+    competencia: Optional[List[str]] = Query(None),
+    vara: Optional[List[str]] = Query(None),
+    subfase: Optional[List[str]] = Query(None),
+    fase: Optional[List[str]] = Query(None),
+    operacao: Optional[List[str]] = Query(None),
+    extinto_2g: Optional[List[str]] = Query(None),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Exporta os processos da fase Recursal (LA) filtrados como CSV ou XLSX.
+
+    O parâmetro ``campos`` define quais colunas aparecem no arquivo; aceita os mesmos
+    slugs listados em ``_CAMPOS_EXPORT_RECURSAL_LA``. Se omitido, exporta todos.
+    Os demais parâmetros espelham os filtros do endpoint ``/recursal_LA``.
+    """
+    formato = (format or "csv").strip().lower()
+    if formato not in ("csv", "xlsx"):
+        raise HTTPException(
+            status_code=400,
+            detail="Formato inválido. Use csv ou xlsx.",
+        )
+
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g, id_2g, juiz, relator, decisao, materia, parte_adversa, competencia,
+        vara, subfase, fase, operacao, extinto_2g,
+        funcionario_recursos, atividade_recursos, status_recursos, situacao_recursos,
+    )
+
+    intervalos_datas = _parse_intervalos_datas_relatorio_export(request.query_params)
+
+    all_rows = await _rows_recursal_la_filtradas(
+        await fetch_recursal_LA(),
+        filtros,
+        filtros_atividades,
+        None,
+        None,
+    )
+    all_rows = _filtrar_rows_intervalos_datas_relatorio(all_rows, intervalos_datas)
+    all_rows = _enriquecer_numero_processo_export_la(all_rows)
+
+    campos_validos = list(_CAMPOS_EXPORT_RECURSAL_LA.keys())
+    if campos:
+        slugs = [c for c in campos if c in _CAMPOS_EXPORT_RECURSAL_LA]
+        if not slugs:
+            slugs = campos_validos
+    else:
+        slugs = campos_validos
+
+    headers, data_rows = _linhas_export_recursal_la(all_rows, slugs)
+
+    if formato == "xlsx":
+        file_bytes = _gerar_xlsx_export_recursal_la(headers, data_rows, slugs)
+        filename = "recursal_LA_relatorio.xlsx"
+        media_type = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    else:
+        file_bytes = _gerar_csv_export_recursal_la(headers, data_rows)
+        filename = "recursal_LA_relatorio.csv"
+        media_type = "text/csv; charset=utf-8"
+
+    return StreamingResponse(
+        iter([file_bytes]),
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# v1: dashboard_routes.py:27273
+def _formatar_valor_export_recursal_ng(val: Any) -> str:
+    if val is None:
+        return ""
+    if isinstance(val, (date, datetime)):
+        return val.strftime("%d/%m/%Y")
+    return str(val)
+
+
+# v1: dashboard_routes.py:27281
+def _valor_campo_export_recursal_ng(row: Dict[str, Any], slug: str) -> Any:
+    if slug == "decisao":
+        return rotulo_decisao_recursal_export_NG(row)
+    if slug == "numero_processo":
+        numero = _get_numero_processo_recursal_ng(row)
+        return numero if numero else None
+    col = _CAMPOS_EXPORT_RECURSAL_NG[slug]
+    if col.startswith("__computed_"):
+        return None
+    return _col_recursal_ng(row, col, col.lower(), col.upper())
+
+
+# v1: dashboard_routes.py:27293
+def _linhas_export_recursal_ng(
+    all_rows: List[Dict[str, Any]],
+    slugs: List[str],
+) -> Tuple[List[str], List[List[str]]]:
+    headers = [_LABELS_EXPORT_RECURSAL_NG[s] for s in slugs]
+    data_rows: List[List[str]] = []
+    for row in all_rows:
+        linha = []
+        for slug in slugs:
+            val = _valor_campo_export_recursal_ng(row, slug)
+            linha.append(_formatar_valor_export_recursal_ng(val))
+        data_rows.append(linha)
+    return headers, data_rows
+
+
+# v1: dashboard_routes.py:27308
+def _gerar_csv_export_recursal_ng(headers: List[str], data_rows: List[List[str]]) -> bytes:
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(headers)
+    for linha in data_rows:
+        writer.writerow(linha)
+    return output.getvalue().encode("utf-8-sig")
+
+
+# v1: dashboard_routes.py:27317
+def _gerar_xlsx_export_recursal_ng(
+    headers: List[str],
+    data_rows: List[List[str]],
+    slugs: List[str],
+) -> bytes:
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Relatório"
+    ws.append(headers)
+    for row_idx, linha in enumerate(data_rows, start=2):
+        for col_idx, val in enumerate(linha, start=1):
+            slug = slugs[col_idx - 1] if col_idx - 1 < len(slugs) else ""
+            cell = ws.cell(row=row_idx, column=col_idx)
+            if slug == "numero_processo" and val:
+                cell.value = str(val)
+                cell.number_format = "@"
+            else:
+                cell.value = val
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
+
+
+# v1: dashboard_routes.py:27345
+async def export_recursal_NG(
+    request: Request,
+    format: str = Query(
+        "csv",
+        description="Formato do arquivo: csv ou xlsx.",
+    ),
+    campos: Optional[List[str]] = Query(
+        None,
+        description="Slugs dos campos a incluir no CSV (ex.: numero_processo, materia). "
+                    "Padrão: todos os campos disponíveis.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None),
+    parte_adversa: Optional[List[str]] = Query(None),
+    competencia: Optional[List[str]] = Query(None),
+    vara: Optional[List[str]] = Query(None),
+    subfase: Optional[List[str]] = Query(None),
+    fase: Optional[List[str]] = Query(None),
+    operacao: Optional[List[str]] = Query(None),
+    extinto_2g: Optional[List[str]] = Query(None),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Exporta os processos da fase Recursal (NG) filtrados como CSV ou XLSX.
+
+    O parâmetro ``campos`` define quais colunas aparecem no arquivo; aceita os mesmos
+    slugs listados em ``_CAMPOS_EXPORT_RECURSAL_NG``. Se omitido, exporta todos.
+    Os demais parâmetros espelham os filtros do endpoint ``/recursal_NG``.
+    """
+    formato = (format or "csv").strip().lower()
+    if formato not in ("csv", "xlsx"):
+        raise HTTPException(
+            status_code=400,
+            detail="Formato inválido. Use csv ou xlsx.",
+        )
+
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g, id_2g, juiz, relator, decisao, materia, parte_adversa, competencia,
+        vara, subfase, fase, operacao, extinto_2g,
+        funcionario_recursos, atividade_recursos, status_recursos, situacao_recursos,
+    )
+
+    intervalos_datas = _parse_intervalos_datas_relatorio_export(request.query_params)
+
+    all_rows = await _rows_recursal_ng_filtradas(
+        await fetch_recursal_NG(),
+        filtros,
+        filtros_atividades,
+        None,
+        None,
+    )
+    all_rows = _filtrar_rows_intervalos_datas_relatorio(all_rows, intervalos_datas)
+    all_rows = _enriquecer_numero_processo_export_ng(all_rows)
+
+    campos_validos = list(_CAMPOS_EXPORT_RECURSAL_NG.keys())
+    if campos:
+        slugs = [c for c in campos if c in _CAMPOS_EXPORT_RECURSAL_NG]
+        if not slugs:
+            slugs = campos_validos
+    else:
+        slugs = campos_validos
+
+    headers, data_rows = _linhas_export_recursal_ng(all_rows, slugs)
+
+    if formato == "xlsx":
+        file_bytes = _gerar_xlsx_export_recursal_ng(headers, data_rows, slugs)
+        filename = "recursal_NG_relatorio.xlsx"
+        media_type = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    else:
+        file_bytes = _gerar_csv_export_recursal_ng(headers, data_rows)
+        filename = "recursal_NG_relatorio.csv"
+        media_type = "text/csv; charset=utf-8"
+
+    return StreamingResponse(
+        iter([file_bytes]),
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# v1: dashboard_routes.py:27435
+def _formatar_valor_export_recursal_rj(val: Any) -> str:
+    if val is None:
+        return ""
+    if isinstance(val, (date, datetime)):
+        return val.strftime("%d/%m/%Y")
+    return str(val)
+
+
+# v1: dashboard_routes.py:27443
+def _valor_campo_export_recursal_rj(row: Dict[str, Any], slug: str) -> Any:
+    if slug == "decisao":
+        return rotulo_decisao_recursal_export_RJ(row)
+    if slug == "numero_processo":
+        numero = _get_numero_processo_recursal_rj(row)
+        return numero if numero else None
+    col = _CAMPOS_EXPORT_RECURSAL_RJ[slug]
+    if col.startswith("__computed_"):
+        return None
+    return _col_recursal_rj(row, col, col.lower(), col.upper())
+
+
+# v1: dashboard_routes.py:27455
+def _linhas_export_recursal_rj(
+    all_rows: List[Dict[str, Any]],
+    slugs: List[str],
+) -> Tuple[List[str], List[List[str]]]:
+    headers = [_LABELS_EXPORT_RECURSAL_RJ[s] for s in slugs]
+    data_rows: List[List[str]] = []
+    for row in all_rows:
+        linha = []
+        for slug in slugs:
+            val = _valor_campo_export_recursal_rj(row, slug)
+            linha.append(_formatar_valor_export_recursal_rj(val))
+        data_rows.append(linha)
+    return headers, data_rows
+
+
+# v1: dashboard_routes.py:27470
+def _gerar_csv_export_recursal_rj(headers: List[str], data_rows: List[List[str]]) -> bytes:
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(headers)
+    for linha in data_rows:
+        writer.writerow(linha)
+    return output.getvalue().encode("utf-8-sig")
+
+
+# v1: dashboard_routes.py:27479
+def _gerar_xlsx_export_recursal_rj(
+    headers: List[str],
+    data_rows: List[List[str]],
+    slugs: List[str],
+) -> bytes:
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Relatório"
+    ws.append(headers)
+    for row_idx, linha in enumerate(data_rows, start=2):
+        for col_idx, val in enumerate(linha, start=1):
+            slug = slugs[col_idx - 1] if col_idx - 1 < len(slugs) else ""
+            cell = ws.cell(row=row_idx, column=col_idx)
+            if slug == "numero_processo" and val:
+                cell.value = str(val)
+                cell.number_format = "@"
+            else:
+                cell.value = val
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
+
+
+# v1: dashboard_routes.py:27507
+async def export_recursal_RJ(
+    request: Request,
+    format: str = Query(
+        "csv",
+        description="Formato do arquivo: csv ou xlsx.",
+    ),
+    campos: Optional[List[str]] = Query(
+        None,
+        description="Slugs dos campos a incluir no CSV (ex.: numero_processo, materia). "
+                    "Padrão: todos os campos disponíveis.",
+    ),
+    id_1g: Optional[List[int]] = Query(None),
+    id_2g: Optional[List[int]] = Query(None),
+    juiz: Optional[List[str]] = Query(None),
+    relator: Optional[List[str]] = Query(None),
+    decisao: Optional[List[str]] = Query(None),
+    materia: Optional[List[str]] = Query(None),
+    parte_adversa: Optional[List[str]] = Query(None),
+    competencia: Optional[List[str]] = Query(None),
+    vara: Optional[List[str]] = Query(None),
+    subfase: Optional[List[str]] = Query(None),
+    fase: Optional[List[str]] = Query(None),
+    operacao: Optional[List[str]] = Query(None),
+    extinto_2g: Optional[List[str]] = Query(None),
+    funcionario_recursos: Optional[List[str]] = Query(None),
+    atividade_recursos: Optional[List[str]] = Query(None),
+    status_recursos: Optional[List[str]] = Query(None),
+    situacao_recursos: Optional[List[str]] = Query(None),
+):
+    """
+    Exporta os processos da fase Recursal (RJ) filtrados como CSV ou XLSX.
+
+    O parâmetro ``campos`` define quais colunas aparecem no arquivo; aceita os mesmos
+    slugs listados em ``_CAMPOS_EXPORT_RECURSAL_RJ``. Se omitido, exporta todos.
+    Os demais parâmetros espelham os filtros do endpoint ``/recursal_RJ``.
+    """
+    formato = (format or "csv").strip().lower()
+    if formato not in ("csv", "xlsx"):
+        raise HTTPException(
+            status_code=400,
+            detail="Formato inválido. Use csv ou xlsx.",
+        )
+
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g, id_2g, juiz, relator, decisao, materia, parte_adversa, competencia,
+        vara, subfase, fase, operacao, extinto_2g,
+        funcionario_recursos, atividade_recursos, status_recursos, situacao_recursos,
+    )
+
+    intervalos_datas = _parse_intervalos_datas_relatorio_export(request.query_params)
+
+    all_rows = await _rows_recursal_rj_filtradas(
+        await fetch_recursal_RJ(),
+        filtros,
+        filtros_atividades,
+        None,
+        None,
+    )
+    all_rows = _filtrar_rows_intervalos_datas_relatorio(all_rows, intervalos_datas)
+    all_rows = _enriquecer_numero_processo_export_rj(all_rows)
+
+    campos_validos = list(_CAMPOS_EXPORT_RECURSAL_RJ.keys())
+    if campos:
+        slugs = [c for c in campos if c in _CAMPOS_EXPORT_RECURSAL_RJ]
+        if not slugs:
+            slugs = campos_validos
+    else:
+        slugs = campos_validos
+
+    headers, data_rows = _linhas_export_recursal_rj(all_rows, slugs)
+
+    if formato == "xlsx":
+        file_bytes = _gerar_xlsx_export_recursal_rj(headers, data_rows, slugs)
+        filename = "recursal_RJ_relatorio.xlsx"
+        media_type = (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+    else:
+        file_bytes = _gerar_csv_export_recursal_rj(headers, data_rows)
+        filename = "recursal_RJ_relatorio.csv"
+        media_type = "text/csv; charset=utf-8"
+
+    return StreamingResponse(
+        iter([file_bytes]),
+        media_type=media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 # v1: dashboard_routes.py:27915
 def _parse_execucao_atividades_filtros(
     funcionario: Optional[List[str]] = None,
@@ -7948,16 +11269,20 @@ FETCHES_BY_DASHBOARD: Dict[str, List[Tuple[str, Any]]] = {
     "execucao_acordos_RJ": [("execucao_acordos_RJ", fetch_execucao_acordos_RJ), ("agendamentos_fechamento_acordos_RJ", fetch_agendamentos_fechamento_acordos_RJ), ("agendamentos_setor_execucao_acordos_RJ", fetch_agendamentos_setor_execucao_acordos_RJ)],
     "recursal_NG": [("recursal_NG", fetch_recursal_NG), ("agendamentos_setor_recursos_NG", fetch_agendamentos_setor_recursos_NG), ("atividades_setor_recursos_NG", fetch_atividades_setor_recursos_NG)],
     "recursal_LA": [("recursal_LA", fetch_recursal_LA), ("agendamentos_setor_recursos_LA", fetch_agendamentos_setor_recursos_LA), ("atividades_setor_recursos_LA", fetch_atividades_setor_recursos_LA)],
+    "recursal_RJ": [("recursal_RJ", fetch_recursal_RJ), ("agendamentos_setor_recursos_RJ", fetch_agendamentos_setor_recursos_RJ), ("atividades_setor_recursos_RJ", fetch_atividades_setor_recursos_RJ), ("controle_processo_todas_situacoes", fetch_controle_processo_todas_situacoes)],
+    "controle_processo_NG": [("controle_processo_NG", fetch_controle_processo_NG), ("log_subfase_processual", fetch_log_subfase_processual), ("controle_processo_todas_situacoes", fetch_controle_processo_todas_situacoes)],
+    "controle_processo_LA": [("controle_processo_LA", fetch_controle_processo_LA), ("log_subfase_processual", fetch_log_subfase_processual), ("controle_processo_todas_situacoes", fetch_controle_processo_todas_situacoes)],
 }
 DASHBOARD_NAMES = set(FETCHES_BY_DASHBOARD)
 
 
-# v1: dashboard_routes.py:11255 — V2: início igual, só os ramos de execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA
+# v1: dashboard_routes.py:11255 — V2: início igual, só os ramos de execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA
 async def _get_dashboard_response(  # V2: só os parâmetros usados por estes dashboards
     dashboard_name: str,
     from_date: Optional[date],
     to_date: Optional[date],
     materia: Optional[Union[str, List[str]]] = None,
+    fase: Optional[str] = None,
     subfase: Optional[Any] = None,
     tipo_acao_execucao_acordos: Optional[str] = None,
     tipo_sentenca_execucao_acordos: Optional[str] = None,
@@ -7980,6 +11305,8 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
     numero_processo_execucao_acordos: Optional[str] = None,
     diligencia_tipo_execucao_acordos: Optional[str] = None,
     diligencia_colaborador_execucao_acordos: Optional[str] = None,
+    situacao: Optional[str] = None,
+    uf_controle_processo_ng: Optional[List[str]] = None,
     recursal_la_filtros: Optional[RecursalLAFiltros] = None,
     recursal_atividades_recursos_filtros: Optional[RecursalAtividadesRecursosFiltros] = None,
     execucao_atividades_filtros: Optional[ExecucaoAtividadesFiltros] = None,
@@ -8822,6 +12149,34 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
         )
         logger.info("Dashboard 'recursal_NG' processado em %.2fs", time.time() - t0)
         return DashboardResponse(dashboard="recursal_NG", stats=DashboardStats(**stats), **charts)
+    if dashboard_name == "recursal_RJ":
+        atividades_catalogo_rj = _a("atividades_setor_recursos_RJ")
+        recursal_rows = await _rows_recursal_rj_filtradas(
+            _a("recursal_RJ"),
+            recursal_la_filtros,
+            recursal_atividades_recursos_filtros,
+            from_date,
+            to_date,
+            agendamentos=_a("agendamentos_setor_recursos_RJ"),
+            atividades_catalogo=atividades_catalogo_rj,
+        )
+        stats, charts = _build_recursal_RJ_stats(
+            all_recursal=recursal_rows,
+            from_date=from_date,
+            to_date=to_date,
+            agendamentos=_a("agendamentos_setor_recursos_RJ"),
+            atividades_recursos_filtros=recursal_atividades_recursos_filtros,
+            atividades_catalogo=atividades_catalogo_rj,
+        )
+        # Extintos · 2º Grau: no NG vêm do controle_processo_NG; o RJ calcula aqui
+        # (todas as situações, inclui arquivado — mesma base do painel NG).
+        stats.update(get_extintos_2g_recursal_RJ(
+            _dedup_por_processo_id(_a("controle_processo_todas_situacoes")),
+            from_date=from_date,
+            to_date=to_date,
+        ))
+        logger.info("Dashboard 'recursal_RJ' processado em %.2fs", time.time() - t0)
+        return DashboardResponse(dashboard="recursal_RJ", stats=DashboardStats(**stats), **charts)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
@@ -8829,9 +12184,184 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
-    # V2: (bloco de outros dashboards da v1 omitido)
-    # V2: (bloco de outros dashboards da v1 omitido)
-    # V2: (bloco de outros dashboards da v1 omitido)
+    if dashboard_name == "controle_processo_LA":
+        base = filter_controle_processo_por_situacao_LA(_f("controle_processo_LA"), situacao)
+        _all_situacao_LA = filter_controle_processo_por_situacao_LA(_a("controle_processo_LA"), situacao)
+        _recursal_base_LA = _dedup_por_processo_id(_a("controle_processo_todas_situacoes"))
+        fase_filtro = str(fase).strip() if fase and str(fase).strip() else None
+        subfase_items = group_controle_processo_por_subfase_na_fase_LA(base, fase_filtro)
+        total_na_fase = int(sum(float(x["value"]) for x in subfase_items)) if fase_filtro else None
+        if fase_filtro:
+            _tempo_medio_por_subfase_LA = {
+                item["name"]: item["value"]
+                for item in get_tempo_medio_dias_por_subfase_LA(
+                    _a("log_subfase_processual"), fase_filtro, situacao
+                )
+            }
+            for _item in subfase_items:
+                _item["tempo_medio_dias"] = _tempo_medio_por_subfase_LA.get(_item["name"])
+        stats = {
+            "total_controle_processo_LA": get_total_controle_processo_LA(base),
+            "controle_processo_situacao_filtro_LA": (situacao or "ambos").strip().lower(),
+            "controle_processo_fase_filtro_LA": fase_filtro,
+            "controle_processo_total_na_fase_LA": total_na_fase,
+            "controle_processo_qtd_subfases_na_fase_LA": (len(subfase_items) if fase_filtro else None),
+            "controle_processo_fase_inicial_qtd_LA": get_total_controle_processo_fase_inicial_LA(base),
+            "controle_processo_fase_inicial_valor_causa_LA": get_valor_causa_total_controle_processo_fase_inicial_LA(base),
+            "controle_processo_fase_recursal_qtd_LA": get_total_controle_processo_fase_recursal_LA(base),
+            "controle_processo_fase_recursal_valor_causa_LA": get_valor_causa_total_controle_processo_fase_recursal_LA(base),
+            "controle_processo_fase_execucao_qtd_LA": get_total_controle_processo_fase_execucao_LA(base),
+            "controle_processo_fase_execucao_valor_causa_execucao_LA": get_valor_causa_execucao_total_controle_processo_fase_execucao_LA(base),
+            "controle_processo_fase_arquivado_procedente_qtd_LA": get_total_controle_processo_fase_arquivado_procedente_LA(base),
+            "controle_processo_fase_arquivado_procedente_valor_causa_LA": get_valor_causa_total_controle_processo_fase_arquivado_procedente_LA(base),
+            "controle_processo_fase_arquivado_improcedente_qtd_LA": get_total_controle_processo_fase_arquivado_improcedente_LA(base),
+            "controle_processo_fase_arquivado_improcedente_valor_causa_LA": get_valor_causa_total_controle_processo_fase_arquivado_improcedente_LA(base),
+            "controle_processo_fase_transito_julgado_qtd_LA": get_total_controle_processo_fase_transito_julgado_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_transito_julgado_valor_causa_LA": get_valor_causa_total_controle_processo_fase_transito_julgado_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_qtd_LA": get_total_extintos_com_merito_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_valor_causa_LA": get_valor_causa_total_extintos_com_merito_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_por_tipo_sentenca_LA": get_extintos_com_merito_por_tipo_sentenca_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_qtd_LA": get_total_extintos_com_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_valor_causa_LA": get_valor_causa_total_extintos_com_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_por_tipo_sentenca_LA": get_extintos_com_merito_2g_por_tipo_sentenca_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_valor_causa_acordao_LA": get_valor_causa_acordao_total_extintos_com_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_LA": get_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_qtd_LA": get_total_extintos_sem_merito_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_valor_causa_LA": get_valor_causa_total_extintos_sem_merito_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_qtd_LA": get_total_extintos_sem_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_valor_causa_LA": get_valor_causa_total_extintos_sem_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_valor_causa_acordao_LA": get_valor_causa_acordao_total_extintos_sem_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_taxa_provimento_2g_LA": get_taxa_provimento_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            # Recursal (painel "Extintos · 2º Grau"): todas as situações (inclui arquivado),
+            # diferente do Controle de Processos, que respeita o filtro de situação (ativo/suspenso).
+            "controle_processo_extintos_com_merito_2g_qtd_recursal_LA": get_total_extintos_com_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_valor_causa_acordao_recursal_LA": get_valor_causa_acordao_total_extintos_com_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_recursal_LA": get_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_qtd_recursal_LA": get_total_extintos_sem_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_valor_causa_acordao_recursal_LA": get_valor_causa_acordao_total_extintos_sem_merito_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_taxa_provimento_2g_recursal_LA": get_taxa_provimento_2g_LA(_recursal_base_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_log_inicial_indeferida_qtd_LA": get_total_controle_processo_log_inicial_indeferida_LA(base),
+            "controle_processo_log_inicial_indeferida_valor_causa_LA": get_valor_causa_total_controle_processo_log_inicial_indeferida_LA(base),
+            "controle_processo_log_recursal_nao_provido_qtd_LA": get_total_controle_processo_log_recursal_nao_provido_LA(base),
+            "controle_processo_log_recursal_nao_provido_valor_causa_LA": get_valor_causa_total_controle_processo_log_recursal_nao_provido_LA(base),
+            "controle_processo_fase_inicial_media_dias_LA": get_media_tempo_dias_fase_inicial_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_recursal_media_dias_LA": get_media_tempo_dias_fase_recursal_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_execucao_media_dias_LA": get_media_tempo_dias_fase_execucao_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_inicial_mediana_dias_LA": get_mediana_tempo_dias_fase_inicial_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_recursal_mediana_dias_LA": get_mediana_tempo_dias_fase_recursal_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_execucao_mediana_dias_LA": get_mediana_tempo_dias_fase_execucao_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_inicial_comparativo_media_dias_LA": get_comparativo_media_tempo_dias_fase_inicial_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_recursal_comparativo_media_dias_LA": get_comparativo_media_tempo_dias_fase_recursal_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_execucao_comparativo_media_dias_LA": get_comparativo_media_tempo_dias_fase_execucao_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_inicial_comparativo_mediana_dias_LA": get_comparativo_mediana_tempo_dias_fase_inicial_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_recursal_comparativo_mediana_dias_LA": get_comparativo_mediana_tempo_dias_fase_recursal_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_execucao_comparativo_mediana_dias_LA": get_comparativo_mediana_tempo_dias_fase_execucao_LA(_all_situacao_LA, from_date=from_date, to_date=to_date),
+        }
+        charts = {
+            "controle_processo_por_fase_LA": [ChartDataPoint(**x) for x in group_controle_processo_por_fase_LA(base)],
+            "controle_processo_por_subfase_LA": [ChartDataPoint(**x) for x in subfase_items],
+            "controle_processo_fase_inicial_media_dias_por_mes_LA": [ChartDataPoint(**x) for x in get_media_tempo_dias_fase_inicial_por_mes_LA(_all_situacao_LA)],
+            "controle_processo_fase_recursal_media_dias_por_mes_LA": [ChartDataPoint(**x) for x in get_media_tempo_dias_fase_recursal_por_mes_LA(_all_situacao_LA)],
+            "controle_processo_fase_execucao_media_dias_por_mes_LA": [ChartDataPoint(**x) for x in get_media_tempo_dias_fase_execucao_por_mes_LA(_all_situacao_LA)],
+        }
+        logger.info("Dashboard 'controle_processo_LA' processado em %.2fs", time.time() - t0)
+        return DashboardResponse(dashboard="controle_processo_LA", stats=DashboardStats(**stats), **charts)
+    if dashboard_name == "controle_processo_NG":
+        uf_filtro_ng = [str(u).strip().upper() for u in uf_controle_processo_ng if str(u).strip()] if uf_controle_processo_ng else None
+        _uf_opcoes_ng = get_opcoes_uf_NG(
+            filter_controle_processo_por_situacao_NG(_a("controle_processo_NG"), situacao)
+        )
+        # Dedup por processo: o LEFT JOIN em adverso_processo gera 1 linha por parte adversa,
+        # o que inflava contagens/valores das fases (ex.: Inicial 6.262 linhas = 5.589 processos).
+        # Processos sem número (cadastro incompleto) ficam fora de tudo.
+        base = _dedup_por_processo_id(filter_controle_processo_com_numero_NG(filter_controle_processo_por_uf_NG(
+            filter_controle_processo_por_situacao_NG(_f("controle_processo_NG"), situacao), uf_filtro_ng
+        )))
+        _all_situacao_NG = _dedup_por_processo_id(filter_controle_processo_com_numero_NG(filter_controle_processo_por_uf_NG(
+            filter_controle_processo_por_situacao_NG(_a("controle_processo_NG"), situacao), uf_filtro_ng
+        )))
+        _recursal_base_NG = _dedup_por_processo_id(_a("controle_processo_todas_situacoes"))
+        fase_filtro = str(fase).strip() if fase and str(fase).strip() else None
+        subfase_items = group_controle_processo_por_subfase_na_fase_NG(base, fase_filtro)
+        total_na_fase = int(sum(float(x["value"]) for x in subfase_items)) if fase_filtro else None
+        if fase_filtro:
+            _tempo_medio_por_subfase_NG = {
+                item["name"]: item["value"]
+                for item in get_tempo_medio_dias_por_subfase_NG(
+                    _a("log_subfase_processual"), fase_filtro, situacao
+                )
+            }
+            for _item in subfase_items:
+                _item["tempo_medio_dias"] = _tempo_medio_por_subfase_NG.get(_item["name"])
+        stats = {
+            "total_controle_processo_NG": get_total_controle_processo_NG(base),
+            "controle_processo_valor_causa_total_NG": get_valor_causa_total_controle_processo_NG(base),
+            "controle_processo_situacao_filtro_NG": (situacao or "ambos").strip().lower(),
+            "controle_processo_uf_filtro_NG": uf_filtro_ng,
+            "controle_processo_uf_opcoes_NG": _uf_opcoes_ng,
+            "controle_processo_fase_filtro_NG": fase_filtro,
+            "controle_processo_total_na_fase_NG": total_na_fase,
+            "controle_processo_qtd_subfases_na_fase_NG": (len(subfase_items) if fase_filtro else None),
+            "controle_processo_fase_inicial_qtd_NG": get_total_controle_processo_fase_inicial_NG(base),
+            "controle_processo_fase_inicial_valor_causa_NG": get_valor_causa_total_controle_processo_fase_inicial_NG(base),
+            "controle_processo_fase_recursal_qtd_NG": get_total_controle_processo_fase_recursal_NG(base),
+            "controle_processo_fase_recursal_valor_causa_NG": get_valor_causa_total_controle_processo_fase_recursal_NG(base),
+            "controle_processo_fase_execucao_qtd_NG": get_total_controle_processo_fase_execucao_NG(base),
+            "controle_processo_fase_execucao_valor_causa_execucao_NG": get_valor_causa_execucao_total_controle_processo_fase_execucao_NG(base),
+            "controle_processo_fase_arquivado_procedente_qtd_NG": get_total_controle_processo_fase_arquivado_procedente_NG(base),
+            "controle_processo_fase_arquivado_procedente_valor_causa_NG": get_valor_causa_total_controle_processo_fase_arquivado_procedente_NG(base),
+            "controle_processo_fase_arquivado_improcedente_qtd_NG": get_total_controle_processo_fase_arquivado_improcedente_NG(base),
+            "controle_processo_fase_arquivado_improcedente_valor_causa_NG": get_valor_causa_total_controle_processo_fase_arquivado_improcedente_NG(base),
+            "controle_processo_fase_transito_julgado_qtd_NG": get_total_controle_processo_fase_transito_julgado_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_transito_julgado_valor_causa_NG": get_valor_causa_total_controle_processo_fase_transito_julgado_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_qtd_NG": get_total_extintos_com_merito_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_valor_causa_NG": get_valor_causa_total_extintos_com_merito_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_por_tipo_sentenca_NG": get_extintos_com_merito_por_tipo_sentenca_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_qtd_NG": get_total_extintos_com_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_valor_causa_NG": get_valor_causa_total_extintos_com_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_por_tipo_sentenca_NG": get_extintos_com_merito_2g_por_tipo_sentenca_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_valor_causa_acordao_NG": get_valor_causa_acordao_total_extintos_com_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_NG": get_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_qtd_NG": get_total_extintos_sem_merito_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_valor_causa_NG": get_valor_causa_total_extintos_sem_merito_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_qtd_NG": get_total_extintos_sem_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_valor_causa_NG": get_valor_causa_total_extintos_sem_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_valor_causa_acordao_NG": get_valor_causa_acordao_total_extintos_sem_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_taxa_provimento_2g_NG": get_taxa_provimento_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            # Recursal (painel "Extintos · 2º Grau"): todas as situações (inclui arquivado),
+            # diferente do Controle de Processos, que respeita o filtro de situação (ativo/suspenso).
+            "controle_processo_extintos_com_merito_2g_qtd_recursal_NG": get_total_extintos_com_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_valor_causa_acordao_recursal_NG": get_valor_causa_acordao_total_extintos_com_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_recursal_NG": get_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_qtd_recursal_NG": get_total_extintos_sem_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_extintos_sem_merito_2g_valor_causa_acordao_recursal_NG": get_valor_causa_acordao_total_extintos_sem_merito_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_taxa_provimento_2g_recursal_NG": get_taxa_provimento_2g_NG(_recursal_base_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_log_inicial_indeferida_qtd_NG": get_total_controle_processo_log_inicial_indeferida_NG(base),
+            "controle_processo_log_inicial_indeferida_valor_causa_NG": get_valor_causa_total_controle_processo_log_inicial_indeferida_NG(base),
+            "controle_processo_log_recursal_nao_provido_qtd_NG": get_total_controle_processo_log_recursal_nao_provido_NG(base),
+            "controle_processo_log_recursal_nao_provido_valor_causa_NG": get_valor_causa_total_controle_processo_log_recursal_nao_provido_NG(base),
+            "controle_processo_fase_inicial_media_dias_NG": get_media_tempo_dias_fase_inicial_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_recursal_media_dias_NG": get_media_tempo_dias_fase_recursal_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_execucao_media_dias_NG": get_media_tempo_dias_fase_execucao_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_inicial_mediana_dias_NG": get_mediana_tempo_dias_fase_inicial_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_recursal_mediana_dias_NG": get_mediana_tempo_dias_fase_recursal_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_execucao_mediana_dias_NG": get_mediana_tempo_dias_fase_execucao_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_inicial_comparativo_media_dias_NG": get_comparativo_media_tempo_dias_fase_inicial_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_recursal_comparativo_media_dias_NG": get_comparativo_media_tempo_dias_fase_recursal_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_execucao_comparativo_media_dias_NG": get_comparativo_media_tempo_dias_fase_execucao_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_inicial_comparativo_mediana_dias_NG": get_comparativo_mediana_tempo_dias_fase_inicial_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_recursal_comparativo_mediana_dias_NG": get_comparativo_mediana_tempo_dias_fase_recursal_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+            "controle_processo_fase_execucao_comparativo_mediana_dias_NG": get_comparativo_mediana_tempo_dias_fase_execucao_NG(_all_situacao_NG, from_date=from_date, to_date=to_date),
+        }
+        charts = {
+            "controle_processo_por_fase_NG": [ChartDataPoint(**x) for x in group_controle_processo_por_fase_NG(base)],
+            "controle_processo_por_subfase_NG": [ChartDataPoint(**x) for x in subfase_items],
+            "controle_processo_fase_inicial_media_dias_por_mes_NG": [ChartDataPoint(**x) for x in get_media_tempo_dias_fase_inicial_por_mes_NG(_all_situacao_NG)],
+            "controle_processo_fase_recursal_media_dias_por_mes_NG": [ChartDataPoint(**x) for x in get_media_tempo_dias_fase_recursal_por_mes_NG(_all_situacao_NG)],
+            "controle_processo_fase_execucao_media_dias_por_mes_NG": [ChartDataPoint(**x) for x in get_media_tempo_dias_fase_execucao_por_mes_NG(_all_situacao_NG)],
+        }
+        logger.info("Dashboard 'controle_processo_NG' processado em %.2fs", time.time() - t0)
+        return DashboardResponse(dashboard="controle_processo_NG", stats=DashboardStats(**stats), **charts)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
@@ -9524,6 +13054,146 @@ async def get_recursal_LA_dashboard(
     )
 
 
+# v1: dashboard_routes.py:25877 (rota sem os decoradores)
+async def get_recursal_RJ_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    id_1g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 1º grau"),
+    id_2g: Optional[List[int]] = Query(None, description="Filtra por ID(s) de status 2º grau"),
+    juiz: Optional[List[str]] = Query(None, description="Filtra por nome(s) de juiz (1G)"),
+    relator: Optional[List[str]] = Query(None, description="Filtra por nome(s) de relator (2G)"),
+    decisao: Optional[List[str]] = Query(
+        None,
+        description="Filtra por tipo(s) de decisão recursal (ex.: mantido_ganho)",
+    ),
+    materia: Optional[List[str]] = Query(
+        None,
+        description="Filtra por matéria(s) (rótulo normalizado do gráfico)",
+    ),
+    competencia: Optional[List[str]] = Query(
+        None,
+        description="Filtra por competência(s) (rótulo do gráfico)",
+    ),
+    vara: Optional[List[str]] = Query(
+        None,
+        description="Filtra por vara(s) (rótulo do gráfico, ex.: 1º vara)",
+    ),
+    subfase: Optional[List[str]] = Query(
+        None,
+        description="Filtra por subfase(s) (rótulo do gráfico)",
+    ),
+    extinto_2g: Optional[List[str]] = Query(
+        None,
+        description="Extintos 2º grau: com_merito (ID_2G 17,19–23) ou sem_merito (ID_2G 18)",
+    ),
+    funcionario_recursos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos RECURSOS por funcionário (seção Atividades)",
+    ),
+    atividade_recursos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos RECURSOS por atividade do catálogo",
+    ),
+    status_recursos: Optional[List[str]] = Query(
+        None,
+        description="Filtra agendamentos RECURSOS por status do agendamento",
+    ),
+    situacao_recursos: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por situação: em_andamento, vencidas, vencem_hoje, concluidas"
+        ),
+    ),
+):
+    """
+    Dashboard da fase Recursal (LA).
+
+    Retorna ``total_recursal_RJ`` (estoque, fase 8) e ``entrada_recursal_RJ`` (fase 8 + entrada no período).
+    Filtros cumulativos opcionais: ``id_1g``, ``id_2g``, ``juiz``, ``relator``, ``decisao``,
+    ``materia``, ``competencia``, ``vara``, ``subfase``, ``extinto_2g``.
+    Filtros da seção Atividades: ``funcionario_recursos``, ``atividade_recursos``,
+    ``status_recursos``, ``situacao_recursos``.
+    """
+    filtros, filtros_atividades = _parse_recursal_la_filtros_completos(
+        id_1g=id_1g,
+        id_2g=id_2g,
+        juiz=juiz,
+        relator=relator,
+        decisao=decisao,
+        materia=materia,
+        competencia=competencia,
+        vara=vara,
+        subfase=subfase,
+        extinto_2g=extinto_2g,
+        funcionario_recursos=funcionario_recursos,
+        atividade_recursos=atividade_recursos,
+        status_recursos=status_recursos,
+        situacao_recursos=situacao_recursos,
+    )
+    return await _get_dashboard_response(
+        "recursal_RJ",
+        from_date,
+        to_date,
+        recursal_la_filtros=filtros,
+        recursal_atividades_recursos_filtros=filtros_atividades,
+    )
+
+
+# v1: dashboard_routes.py:28649 (rota sem os decoradores)
+async def get_controle_processo_NG_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    fase: Optional[str] = Query(
+        None,
+        description=(
+            "Filtra o gráfico de subfases pela fase selecionada (ex.: INICIAL). "
+            "Quando omitido, `controle_processo_por_subfase_NG` vem vazio."
+        ),
+    ),
+    situacao: Optional[str] = Query(
+        None,
+        description=(
+            "Filtra por situação do processo: `ativo`, `suspenso` (ou `sobrestado`) "
+            "ou `ambos`/omitido (padrão — ATIVO e SUSPENSO/SOBRESTADO)."
+        ),
+    ),
+    uf: Optional[List[str]] = Query(
+        None,
+        description=(
+            "Filtra por UF do processo (ex.: `AM`, `PA`, `PB`) — aceita múltiplos "
+            "valores (`?uf=AM&uf=PA`). Omitido/vazio = todas as UFs."
+        ),
+    ),
+):
+    """Dashboard de Controle de Processos LA (LexFlow)."""
+    return await _get_dashboard_response(
+        "controle_processo_NG", from_date, to_date, fase=fase, situacao=situacao, uf_controle_processo_ng=uf
+    )
+
+
+# v1: dashboard_routes.py:28226 (rota sem os decoradores)
+async def get_controle_processo_LA_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    fase: Optional[str] = Query(
+        None,
+        description=(
+            "Filtra o gráfico de subfases pela fase selecionada (ex.: INICIAL). "
+            "Quando omitido, `controle_processo_por_subfase_LA` vem vazio."
+        ),
+    ),
+    situacao: Optional[str] = Query(
+        None,
+        description=(
+            "Filtra por situação do processo: `ativo`, `suspenso` (ou `sobrestado`) "
+            "ou `ambos`/omitido (padrão — ATIVO e SUSPENSO/SOBRESTADO)."
+        ),
+    ),
+):
+    """Dashboard de Controle de Processos LA (LexFlow)."""
+    return await _get_dashboard_response("controle_processo_LA", from_date, to_date, fase=fase, situacao=situacao)
+
+
 # V2: dashboard da v1 -> handler da rota e queries que ele busca (para a casca e o aquecedor do cache).
-HANDLERS = {"execucao": get_execucao_dashboard, "execucao_LA": get_execucao_LA_dashboard, "execucao_RJ": get_execucao_rj_dashboard, "execucao_acordos_NG": get_execucao_acordos_ng_dashboard, "execucao_acordos_LA": get_execucao_acordos_la_dashboard, "execucao_acordos_RJ": get_execucao_acordos_rj_dashboard, "recursal_NG": get_recursal_NG_dashboard, "recursal_LA": get_recursal_LA_dashboard}
-QUERIES_POR_DASHBOARD = {'execucao': ('execucao_LA', 'agendamentos_setor_execucao_NG'), 'execucao_LA': ('execucao_LA', 'agendamentos_setor_execucao_LA'), 'execucao_RJ': ('execucao_RJ', 'agendamentos_setor_execucao_LA_RJ'), 'execucao_acordos_NG': ('execucao_acordos_NG', 'agendamentos_fechamento_acordos_NG', 'agendamentos_setor_execucao_acordos_NG'), 'execucao_acordos_LA': ('execucao_acordos_LA', 'agendamentos_fechamento_acordos_LA', 'agendamentos_setor_execucao_acordos_LA'), 'execucao_acordos_RJ': ('execucao_acordos_RJ', 'agendamentos_fechamento_acordos_RJ', 'agendamentos_setor_execucao_acordos_RJ'), 'recursal_NG': ('setor_recurso_NG', 'agendamentos_setor_recursos_NG', 'atividades_setor_recursos_NG'), 'recursal_LA': ('setor_recurso', 'agendamentos_setor_recursos_LA', 'atividades_setor_recursos_LA')}
+HANDLERS = {"execucao": get_execucao_dashboard, "execucao_LA": get_execucao_LA_dashboard, "execucao_RJ": get_execucao_rj_dashboard, "execucao_acordos_NG": get_execucao_acordos_ng_dashboard, "execucao_acordos_LA": get_execucao_acordos_la_dashboard, "execucao_acordos_RJ": get_execucao_acordos_rj_dashboard, "recursal_NG": get_recursal_NG_dashboard, "recursal_LA": get_recursal_LA_dashboard, "recursal_RJ": get_recursal_RJ_dashboard, "controle_processo_NG": get_controle_processo_NG_dashboard, "controle_processo_LA": get_controle_processo_LA_dashboard}
+QUERIES_POR_DASHBOARD = {'execucao': ('execucao_LA', 'agendamentos_setor_execucao_NG'), 'execucao_LA': ('execucao_LA', 'agendamentos_setor_execucao_LA'), 'execucao_RJ': ('execucao_RJ', 'agendamentos_setor_execucao_LA_RJ'), 'execucao_acordos_NG': ('execucao_acordos_NG', 'agendamentos_fechamento_acordos_NG', 'agendamentos_setor_execucao_acordos_NG'), 'execucao_acordos_LA': ('execucao_acordos_LA', 'agendamentos_fechamento_acordos_LA', 'agendamentos_setor_execucao_acordos_LA'), 'execucao_acordos_RJ': ('execucao_acordos_RJ', 'agendamentos_fechamento_acordos_RJ', 'agendamentos_setor_execucao_acordos_RJ'), 'recursal_NG': ('setor_recurso_NG', 'agendamentos_setor_recursos_NG', 'atividades_setor_recursos_NG'), 'recursal_LA': ('setor_recurso', 'agendamentos_setor_recursos_LA', 'atividades_setor_recursos_LA'), 'recursal_RJ': ('setor_recurso_RJ', 'agendamentos_setor_recursos_RJ', 'atividades_setor_recursos_RJ', 'controle_processo_todas_situacoes'), 'controle_processo_NG': ('controle_processo', 'log_subfase_processual', 'controle_processo_todas_situacoes'), 'controle_processo_LA': ('controle_processo', 'log_subfase_processual', 'controle_processo_todas_situacoes')}

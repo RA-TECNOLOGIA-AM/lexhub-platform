@@ -507,7 +507,8 @@ def test_lexflow_roda_o_calculo_da_v1(client, signer, repo, sources, key):
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["meta"]["source"] == "LexFlow"
-    assert "stats" in body
+    # O Recursal junta as chamadas da página da v1 (blocos periodo, historico...); os outros, a resposta da rota.
+    assert ("periodo" if key == "recursal" else "stats") in body
     assert sources.last.db_name == "lexflow"
 
 
@@ -521,16 +522,16 @@ def test_lexflow_situacao_invalida_422(client, signer, repo, sources):
 
 
 def test_recursal_sem_versao_na_v1_para_a_unidade_501(client, signer, repo, sources):
-    """A v1 não tem Recursal do RJ: módulo existe, cálculo não."""
+    """A v1 tem Recursal na NG, no LA e no RJ: outra ref no LexFlow tem o módulo, mas não o cálculo."""
     repo.grant(USER_ID, "NG", "recursal", "all")
-    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexflow")] = "RJ"
+    repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexflow")] = "SP"
     r = client.get("/orgs/lexgroup/units/NG/dashboards/recursal", headers=auth(signer))
     assert r.status_code == 501
 
 
 def test_lexflow_filtros_seguem_a_rota_da_v1():
     """Lista ou um valor, e int onde a rota da v1 recebe números (id_1g do Recursal)."""
-    assert DASHBOARDS["recursal"].filters["id_1g"] is int
+    assert DASHBOARDS["recursal"].filters["id_1g_recursal"] is int
     assert DASHBOARDS["execucao"].filters["ano_ajuizamento_execucao"] is str
     assert "situacao_processo" in DASHBOARDS["acordos"].filters
 

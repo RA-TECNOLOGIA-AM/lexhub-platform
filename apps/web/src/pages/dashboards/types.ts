@@ -18,7 +18,7 @@ export type DashboardModule<T extends { meta: Meta }> = {
     exportReports?: ExportReport[]
     // Tabela de comissão do período para o "Gerar comissão (PDF)"; sem = o botão não aparece. Vem da resposta,
     // e o botão só aparece para quem vê a comissão de todos (can_see_commission: Gestor/Desenvolvedor, como na v1).
-    commission?: (data: T) => CommissionTable
+    commission?: (data: T) => CommissionTable | undefined // undefined = sem comissão nesta unidade (botão some)
 }
 
 // O que o miolo recebe: os dados e, para gráficos clicáveis, os filtros em uso e como marcar/desmarcar um.

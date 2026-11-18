@@ -87,8 +87,19 @@ class V1:
         return ast.get_source_segment(self.src, node, padded=True)
 
     def seg_def(self, node: ast.stmt) -> str:
-        """Definição do topo do módulo com os decoradores (ex.: @dataclass), linhas inteiras da v1."""
-        inicio = min([node.lineno] + [d.lineno for d in getattr(node, "decorator_list", [])])
+        """Definição do topo do módulo com os decoradores (ex.: @dataclass), linhas inteiras da v1.
+
+        Os de rota (@router.get(...), @_dashboard_endpoint) saem: uma rota pedida com --extra vira função comum.
+        """
+
+        def de_rota(d: ast.expr) -> bool:
+            alvo = d.func if isinstance(d, ast.Call) else d
+            if isinstance(alvo, ast.Attribute) and isinstance(alvo.value, ast.Name):
+                return alvo.value.id == "router"
+            return isinstance(alvo, ast.Name) and alvo.id == "_dashboard_endpoint"
+
+        decoradores = [d for d in getattr(node, "decorator_list", []) if not de_rota(d)]
+        inicio = min([node.lineno] + [d.lineno for d in decoradores])
         return "\n".join(self.src.splitlines()[inicio - 1 : node.end_lineno])
 
     def fetches(self) -> dict[str, list[tuple[str, str]]]:

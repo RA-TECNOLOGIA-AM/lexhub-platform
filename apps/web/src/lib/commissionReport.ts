@@ -17,6 +17,10 @@ export type CommissionTable = {
     columns: CommissionColumn[]
     rows: Record<string, CommissionCell>[]
     sortBy: string // coluna que ordena (maior primeiro), em geral a comissão
+    title?: string // título próprio do relatório (senão, "Comissão — <dashboard>")
+    notes?: string[] // linhas embaixo do período (ex.: a meta de qualidade do Recursal)
+    // Uma segunda tabela, numa página nova, na ordem recebida (ex.: o detalhamento dos descontos do Recursal).
+    details?: { title: string; warning?: string; columns: CommissionColumn[]; rows: Record<string, CommissionCell>[] }
 }
 
 export type CommissionReport = CommissionTable & {
@@ -41,6 +45,20 @@ const num = (v: CommissionCell) => (typeof v === 'number' ? v : 0)
 function cell(col: CommissionColumn, v: CommissionCell): string {
     if (!col.format) return `<td>${esc(String(v ?? ''))}</td>`
     return `<td class="n">${v === null || v === undefined ? '—' : esc(col.format(num(v)))}</td>`
+}
+
+// A segunda tabela (opcional), numa página nova.
+function detalhes(r: CommissionReport): string {
+    const d = r.details
+    if (!d || d.rows.length === 0) return ''
+    const head = d.columns.map((c) => `<th${c.format ? ' class="n"' : ''}>${esc(c.label)}</th>`).join('')
+    const body = d.rows.map((row) => `<tr>${d.columns.map((c) => cell(c, row[c.key])).join('')}</tr>`).join('')
+    return `
+<section class="detalhes">
+<h1>${esc(d.title)}</h1>
+${d.warning ? `<p class="aviso">${esc(d.warning)}</p>` : ''}
+<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+</section>`
 }
 
 export function commissionHtml(r: CommissionReport): string {
@@ -73,14 +91,16 @@ export function commissionHtml(r: CommissionReport): string {
   .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   tfoot td { font-weight: 700; border-top: 2px solid #15181d; border-bottom: 0; }
   .foot { margin-top: 20px; color: #8a93a0; font-size: 10px; }
+  .detalhes { page-break-before: always; }
+  .aviso { color: #92400e; margin: 4px 0 12px; }
 </style></head><body>
 <h1>${esc(r.title)}</h1>
-<div class="meta">${esc(r.unit)} · Período: ${dia(r.from)} a ${dia(r.to)}</div>
+<div class="meta">${esc(r.unit)} · Período: ${dia(r.from)} a ${dia(r.to)}${(r.notes ?? []).map((n) => `<br />${esc(n)}`).join('')}</div>
 <table>
   <thead><tr>${head}</tr></thead>
   <tbody>${body || `<tr><td colspan="${r.columns.length}">Sem comissão no período.</td></tr>`}</tbody>
   <tfoot><tr>${total}</tr></tfoot>
-</table>
+</table>${detalhes(r)}
 <div class="foot">Gerado pelo LexHub em ${esc(gerado)}.</div>
 </body></html>`
 }
