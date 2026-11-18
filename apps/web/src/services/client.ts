@@ -109,6 +109,8 @@ export interface DataClient {
     // O que a pessoa gere na organização (o menu esconde Acesso de quem não gere).
     getMyAdminPermissions(org: string): Promise<AdminPermissions>
     getAudit(org: string): Promise<AuditResponse>
+    // Registra na própria auditoria que ela foi exportada (com o filtro e quantos eventos). Falhou = não baixa.
+    logAuditExport(org: string, filter: { kind: string; actor: string }, rows: number): Promise<void>
     getSources(org: string): Promise<SourcesResponse>
     // Uma fonte vista de uma unidade (o modal). Unidade fora do escopo = 403; fonte que ela não usa = 409.
     getSourceDetail(org: string, unit: string, source: string): Promise<SourceDetail>

@@ -1,5 +1,7 @@
 import type { AuditEvent, AuditKind, RawAuditEvent } from '../types/index.ts'
 import { ROLE_LABEL } from '../pages/admin/members/memberView.ts'
+import { KIND } from '../pages/admin/audit/auditView.ts'
+import { describeUserAgent } from './userAgent.ts'
 
 // Módulo: traduz o evento cru do banco (app.audit_log, via api.list_audit) para a linha da tela de Auditoria.
 // Evento novo = uma entrada em EVENTS. Evento desconhecido aparece como 'Outros', com o nome cru.
@@ -30,6 +32,25 @@ const join = (...parts: (string | null | undefined)[]): string => parts.filter(B
 type Rule = { kind: AuditKind; action: string; detail: (e: RawAuditEvent, m: Meta) => string }
 
 const EVENTS: Record<string, Rule> = {
+    'auth.login': {
+        kind: 'login',
+        action: 'Entrou',
+        detail: (_, m) => join(describeUserAgent(text(m.userAgent)), text(m.ip)),
+    },
+    'audit.export': {
+        kind: 'export',
+        action: 'Exportou a auditoria',
+        detail: (_, m) => {
+            const rows = num(m.rows)
+            const kind = text(m.kind)
+            return join(
+                rows === null ? null : `${nf.format(rows)} eventos`,
+                kind && (KIND[kind as AuditKind]?.label ?? kind),
+                text(m.actor),
+                text(m.format)?.toUpperCase(),
+            )
+        },
+    },
     'dashboard.export': {
         kind: 'export',
         action: 'Exportou dados',

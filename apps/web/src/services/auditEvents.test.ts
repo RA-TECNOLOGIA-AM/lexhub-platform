@@ -15,6 +15,28 @@ const raw = (over: Partial<RawAuditEvent>): RawAuditEvent => ({
 })
 
 describe('toAuditEvent', () => {
+    it('entrada: navegador, sistema e IP', () => {
+        const e = toAuditEvent(
+            raw({
+                action: 'auth.login',
+                metadata: {
+                    ip: '189.10.20.30',
+                    userAgent:
+                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0 Safari/537.36',
+                },
+            }),
+        )
+        expect(e).toMatchObject({ kind: 'login', action: 'Entrou' })
+        expect(e.detail).toBe('Chrome · Windows · 189.10.20.30')
+    })
+
+    it('entrada sem navegador conhecido: só o IP; pela TV: TV (QR)', () => {
+        expect(toAuditEvent(raw({ action: 'auth.login', metadata: { ip: '10.0.0.1' } })).detail).toBe('10.0.0.1')
+        expect(toAuditEvent(raw({ action: 'auth.login', metadata: { userAgent: 'python-httpx/0.27.0' } })).detail).toBe(
+            'TV (QR)',
+        )
+    })
+
     it('exportação: dashboard, unidade, período, linhas e formato', () => {
         const e = toAuditEvent(
             raw({
@@ -73,5 +95,18 @@ describe('toAuditEvent', () => {
     it('metadata estranha não quebra a linha', () => {
         const e = toAuditEvent(raw({ action: 'dashboard.export', metadata: { rows: 'muitas', from: 3 } }))
         expect(e.detail).toBe('')
+    })
+})
+
+describe('exportação da auditoria', () => {
+    it('quantos eventos, filtro e formato', () => {
+        const e = toAuditEvent(
+            raw({
+                action: 'audit.export',
+                metadata: { rows: 1204, kind: 'login', actor: 'Nicolas Gomes', format: 'csv' },
+            }),
+        )
+        expect(e).toMatchObject({ kind: 'export', action: 'Exportou a auditoria' })
+        expect(e.detail).toBe('1.204 eventos · Entradas · Nicolas Gomes · CSV')
     })
 })
