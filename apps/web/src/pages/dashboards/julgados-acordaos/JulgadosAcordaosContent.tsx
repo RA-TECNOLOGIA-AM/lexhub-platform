@@ -9,7 +9,7 @@ import { DeltaPill, HeroStat, InfoTip } from '../../../components/dashboard/Stat
 import { CountUp } from '../../../components/ui/CountUp.tsx'
 import { Segmented } from '../../../components/ui/Segmented.tsx'
 import { topN } from '../../../lib/charts.ts'
-import { fmt, show } from '../../../lib/format.ts'
+import { fmt } from '../../../lib/format.ts'
 import type { ContentProps } from '../types.ts'
 import { AcordaosLista } from './AcordaosLista.tsx'
 import { DadosFaltando } from './DadosFaltando.tsx'
@@ -53,6 +53,16 @@ const ordenados = (itens: PontoJulgados[]) => topN(itens, itens.length)
 // A cor de cada fatia na ordem dada (a mesma paleta da pizza da casa), para a legenda usar a mesma.
 type Fatia = PontoJulgados & { color: string }
 const comCor = (itens: PontoJulgados[]): Fatia[] => itens.map((p, i) => ({ ...p, color: `var(--pie-${(i % 10) + 1})` }))
+
+// Matérias com fatia e rótulo próprios na pizza; as demais somam em "Outras" (com 30+ matérias os rótulos não cabem).
+const MATERIAS_NA_PIZZA = 8
+
+// "Sem data de ajuizamento" é o nome que a API manda (e o valor do filtro); na pizza aparece curto, para o
+// rótulo caber em volta da rosca como nas outras pizzas.
+const SEM_ANO = 'Sem data de ajuizamento'
+const SEM_ANO_CURTO = 'Sem data'
+const anoNaTela = (name: string) => (name.toUpperCase() === SEM_ANO.toUpperCase() ? SEM_ANO_CURTO : name)
+const anoDoFiltro = (name: string) => (name === SEM_ANO_CURTO ? SEM_ANO : name)
 
 const TAXA_TITULO: Record<Categoria, string> = {
     procedente: 'Taxa de procedência mês a mês',
@@ -193,7 +203,9 @@ export function JulgadosAcordaosContent({
     const totalMateria = j.porMateria.reduce((s, p) => s + p.value, 0)
     // Cor fixa por fatia (a da pizza), para a legenda embaixo dizer qual é qual.
     const materias = comCor(ordenados(j.porMateria))
-    const anosAjuizamento = comCor(j.porAnoAjuizamento)
+    const anosAjuizamento = comCor(j.porAnoAjuizamento.map((p) => ({ ...p, name: anoNaTela(p.name) })))
+    const porAnoAjuizamento = filtrar('ano_ajuizamento_julgados')
+    const totalAjuizamento = anosAjuizamento.reduce((s, p) => s + p.value, 0)
     const ng = j.unit === 'NG'
 
     return (
@@ -207,99 +219,106 @@ export function JulgadosAcordaosContent({
                 subtitle="Processos com acórdão proferido no período selecionado."
             >
                 <div className="stack">
-                    <div className="grid grid-stat-3 jl-cards">
-                        <HeroStat
-                            label="Total de Acórdãos"
-                            icon="scale"
-                            tone="accent"
-                            value={valor(n.total, fmt.int)}
-                            below={<DeltaPill value={c.total} suffix={VS} plain />}
-                            hint="Processos com acórdão no período, comparados ao período anterior de mesma duração"
-                        />
-                        {cardCategoria(
-                            'procedente',
+                    {/* Os seis cards (3 × 2) à esquerda e a pizza dos embargos à direita, na altura das duas linhas. */}
+                    <div className="grid jl-topo">
+                        <div className="grid grid-stat-3 jl-cards">
                             <HeroStat
-                                label="Procedentes"
-                                icon="check-circle"
-                                tone="ok"
-                                outline={categorias.includes('procedente')}
-                                value={valor(n.procedentes, fmt.int)}
-                                below={<DeltaPill value={c.procedentes} suffix={VS} plain />}
-                                hint="Status 2G procedente (total ou parcial, com ou sem proveito econômico), comparados ao período anterior de mesma duração. Clique para filtrar a página."
-                            />,
-                        )}
-                        {cardCategoria(
-                            'improcedente',
-                            <HeroStat
-                                label="Improcedentes"
-                                icon="x-circle"
-                                tone="danger"
-                                outline={categorias.includes('improcedente')}
-                                value={valor(n.improcedentes, fmt.int)}
-                                below={<DeltaPill value={c.improcedentes} betterWhenDown suffix={VS} plain />}
-                                hint="Status 2G improcedente, comparados ao período anterior de mesma duração. Clique para filtrar a página."
-                            />,
-                        )}
-                        {cardCategoria(
-                            'extinto',
-                            <HeroStat
-                                label="Extintos"
-                                icon="ban"
-                                tone="warn"
-                                outline={categorias.includes('extinto')}
-                                value={valor(n.extintos, fmt.int)}
-                                below={<DeltaPill value={c.extintos} suffix={VS} plain />}
-                                hint="Status 2G extinto sem mérito, comparados ao período anterior de mesma duração. Clique para filtrar a página."
-                            />,
-                        )}
-                        <HeroStat
-                            label="Não classificados"
-                            icon="info"
-                            tone="neutral"
-                            value={valor(n.naoClassificados, fmt.int)}
-                            below={<DeltaPill value={c.naoClassificados} suffix={VS} plain />}
-                            hint="Status 2G fora de Procedente/Improcedente/Extinto (ex.: sentença anulada, encerrado 1G, ou sem status lançado), comparados ao período anterior de mesma duração."
-                        />
-                        <HeroStat
-                            label="Média sentença → acórdão"
-                            icon="clock"
-                            tone="info"
-                            value={dias(n.tempoMedio)}
-                            below={<DeltaPill value={c.tempoMedio} betterWhenDown suffix={VS} plain />}
-                            hint="Média de dias entre a data da sentença (1G) e a data do acórdão, para os acórdãos do período com as duas datas, comparada ao período anterior de mesma duração."
-                        />
-                    </div>
-
-                    {/* Largura toda, como a Distribuição por rubrica do Comercial (LexPre): rótulos em volta da
-                        rosca (nome, quantidade e %), a fatia sob o cursor no meio e clique para filtrar. */}
-                    <ChartCard
-                        title="Resultado dos embargos"
-                        subtitle={`${fmt.int(totalEmbargos)} acórdão(s) de embargos no período · clique na fatia para filtrar`}
-                        action={
-                            <Acoes info="Acórdãos de embargos com data no período (eixo: data do acórdão de embargos, não do acórdão original), pelo Status Resultante da matriz (mérito antes dos embargos × resultado lançado). Com data e sem resultado lançado: “Sem resultado lançado”. Clique para filtrar." />
-                        }
-                        footer={
-                            <>
-                                Tempo médio entre o acórdão e os embargos:{' '}
-                                <strong className="num">{dias(n.embargosTempoMedio)}</strong>
-                            </>
-                        }
-                    >
-                        {embargos.length > 0 ? (
-                            <PieChart
-                                items={embargos}
-                                centerLabel="embargos"
-                                labels
-                                legendWhenNarrow
-                                sort={false}
-                                selected={filters.resultado_embargos_julgados}
-                                onSelect={filtrar('resultado_embargos_julgados')}
-                                selectLabel="Filtrar pelo resultado dos embargos"
+                                label="Total de Acórdãos"
+                                icon="scale"
+                                tone="accent"
+                                value={valor(n.total, fmt.int)}
+                                below={<DeltaPill value={c.total} suffix={VS} plain />}
+                                hint="Processos com acórdão no período, comparados ao período anterior de mesma duração"
                             />
-                        ) : (
-                            <ChartEmpty>Sem dados para o período selecionado.</ChartEmpty>
-                        )}
-                    </ChartCard>
+                            {cardCategoria(
+                                'procedente',
+                                <HeroStat
+                                    label="Procedentes"
+                                    icon="check-circle"
+                                    tone="ok"
+                                    outline={categorias.includes('procedente')}
+                                    value={valor(n.procedentes, fmt.int)}
+                                    below={<DeltaPill value={c.procedentes} suffix={VS} plain />}
+                                    hint="Status 2G procedente (total ou parcial, com ou sem proveito econômico), comparados ao período anterior de mesma duração. Clique para filtrar a página."
+                                />,
+                            )}
+                            {cardCategoria(
+                                'improcedente',
+                                <HeroStat
+                                    label="Improcedentes"
+                                    icon="x-circle"
+                                    tone="danger"
+                                    outline={categorias.includes('improcedente')}
+                                    value={valor(n.improcedentes, fmt.int)}
+                                    below={<DeltaPill value={c.improcedentes} betterWhenDown suffix={VS} plain />}
+                                    hint="Status 2G improcedente, comparados ao período anterior de mesma duração. Clique para filtrar a página."
+                                />,
+                            )}
+                            {cardCategoria(
+                                'extinto',
+                                <HeroStat
+                                    label="Extintos"
+                                    icon="ban"
+                                    tone="warn"
+                                    outline={categorias.includes('extinto')}
+                                    value={valor(n.extintos, fmt.int)}
+                                    below={<DeltaPill value={c.extintos} suffix={VS} plain />}
+                                    hint="Status 2G extinto sem mérito, comparados ao período anterior de mesma duração. Clique para filtrar a página."
+                                />,
+                            )}
+                            <HeroStat
+                                label="Não classificados"
+                                icon="info"
+                                tone="neutral"
+                                value={valor(n.naoClassificados, fmt.int)}
+                                below={<DeltaPill value={c.naoClassificados} suffix={VS} plain />}
+                                hint="Status 2G fora de Procedente/Improcedente/Extinto (ex.: sentença anulada, encerrado 1G, ou sem status lançado), comparados ao período anterior de mesma duração."
+                            />
+                            <HeroStat
+                                label="Média sentença → acórdão"
+                                icon="clock"
+                                tone="info"
+                                value={dias(n.tempoMedio)}
+                                below={<DeltaPill value={c.tempoMedio} betterWhenDown suffix={VS} plain />}
+                                hint="Média de dias entre a data da sentença (1G) e a data do acórdão, para os acórdãos do período com as duas datas, comparada ao período anterior de mesma duração."
+                            />
+                        </div>
+
+                        {/* Mesmo desenho da Distribuição por rubrica do Comercial (LexPre): rótulos em volta da rosca
+                        (nome, quantidade e %), total no meio, a fatia sob o cursor no meio e clique para filtrar.
+                        Em duas linhas, para os rótulos caberem ao lado dos cards. */}
+                        <ChartCard
+                            className="jl-pie-centro"
+                            title="Resultado dos embargos"
+                            subtitle={`${fmt.int(totalEmbargos)} acórdão(s) de embargos no período · clique na fatia para filtrar`}
+                            action={
+                                <Acoes info="Acórdãos de embargos com data no período (eixo: data do acórdão de embargos, não do acórdão original), pelo Status Resultante da matriz (mérito antes dos embargos × resultado lançado). Com data e sem resultado lançado: “Sem resultado lançado”. Clique para filtrar." />
+                            }
+                            footer={
+                                <>
+                                    Tempo médio entre o acórdão e os embargos:{' '}
+                                    <strong className="num">{dias(n.embargosTempoMedio)}</strong>
+                                </>
+                            }
+                        >
+                            {embargos.length > 0 ? (
+                                <PieChart
+                                    items={embargos}
+                                    size={220}
+                                    centerLabel="embargos"
+                                    labels
+                                    labelsTwoLines
+                                    legendWhenNarrow
+                                    sort={false}
+                                    selected={filters.resultado_embargos_julgados}
+                                    onSelect={filtrar('resultado_embargos_julgados')}
+                                    selectLabel="Filtrar pelo resultado dos embargos"
+                                />
+                            ) : (
+                                <ChartEmpty>Sem dados para o período selecionado.</ChartEmpty>
+                            )}
+                        </ChartCard>
+                    </div>
 
                     <div className="grid jl-linha2">
                         <HeroStat
@@ -328,14 +347,18 @@ export function JulgadosAcordaosContent({
                             </div>
                         </ChartCard>
                         <ChartCard
+                            className="jl-pie-centro"
                             title="Acórdãos por matéria"
                             subtitle={`${fmt.int(totalMateria)} acórdão(s) no período · clique na fatia para filtrar`}
                         >
                             {materias.length > 0 ? (
                                 <PieChart
                                     items={materias}
-                                    size={260}
+                                    max={MATERIAS_NA_PIZZA}
+                                    labelMaxChars={14}
+                                    centerLabel="acórdãos"
                                     labels
+                                    labelsTwoLines
                                     legendWhenNarrow
                                     selected={filters.materia_julgados}
                                     onSelect={filtrar('materia_julgados')}
@@ -346,21 +369,25 @@ export function JulgadosAcordaosContent({
                             )}
                         </ChartCard>
                         <ChartCard
+                            className="jl-pie-centro"
                             title="Ano de Ajuizamento — Total em Acórdãos"
-                            action={
-                                <Acoes info="Total de acórdãos do período (todas as categorias), agrupados pelo ano de ajuizamento (distribuição) do processo, com quantidade e valor de causa somado por ano. Clique para filtrar." />
-                            }
+                            subtitle={`${fmt.int(totalAjuizamento)} acórdão(s) no período · clique na fatia para filtrar`}
                         >
-                            <PieChart
-                                items={anosAjuizamento}
-                                size={220}
-                                sort={false}
-                                labels
-                                selected={filters.ano_ajuizamento_julgados}
-                                onSelect={filtrar('ano_ajuizamento_julgados')}
-                                selectLabel="Filtrar pelo ano de ajuizamento"
-                            />
-                            <AnoAjuizamentoTabela itens={anosAjuizamento} />
+                            {anosAjuizamento.length > 0 ? (
+                                <PieChart
+                                    items={anosAjuizamento}
+                                    centerLabel="acórdãos"
+                                    sort={false}
+                                    labels
+                                    labelsTwoLines
+                                    legendWhenNarrow
+                                    selected={filters.ano_ajuizamento_julgados?.map(anoNaTela)}
+                                    onSelect={porAnoAjuizamento && ((name) => porAnoAjuizamento(anoDoFiltro(name)))}
+                                    selectLabel="Filtrar pelo ano de ajuizamento"
+                                />
+                            ) : (
+                                <ChartEmpty>Sem dados para o período selecionado.</ChartEmpty>
+                            )}
                         </ChartCard>
                     </div>
 
@@ -620,43 +647,5 @@ export function JulgadosAcordaosContent({
                 </div>
             </DashSection>
         </div>
-    )
-}
-
-// O valor de causa de cada ano, embaixo da pizza (na v1 ia no rótulo da fatia: "2023 12 (30,0%) · R$ 1,2 mi").
-function AnoAjuizamentoTabela({ itens }: { itens: Fatia[] }) {
-    if (itens.length === 0) return null
-    const total = itens.reduce((s, p) => s + p.value, 0)
-    return (
-        <table className="tbl jl-mini-tbl">
-            <thead>
-                <tr>
-                    <th scope="col">Ano</th>
-                    <th scope="col" className="num">
-                        Acórdãos
-                    </th>
-                    <th scope="col" className="num">
-                        Valor de causa
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                {itens.map((p) => (
-                    <tr key={p.name}>
-                        <td>
-                            <span className="jl-ano">
-                                <span className="chart-key dot" style={{ background: p.color }} />
-                                {p.name}
-                            </span>
-                        </td>
-                        <td className="num">
-                            {fmt.int(p.value)}{' '}
-                            <span className="muted">({fmt.dec1(total ? (p.value / total) * 100 : 0)}%)</span>
-                        </td>
-                        <td className="num">{show(p.valorCausa, fmt.brlShort)}</td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
     )
 }

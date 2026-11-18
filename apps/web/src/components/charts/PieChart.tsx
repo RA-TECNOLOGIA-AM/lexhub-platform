@@ -17,6 +17,7 @@ type PieChartProps = {
     selectLabel?: string
     labels?: boolean // nome, valor e % de cada fatia em volta da rosca (some quando não há largura)
     labelsTwoLines?: boolean // rótulo em duas linhas (nome; valor e %): cabe em card estreito (meia largura)
+    labelMaxChars?: number // nome do rótulo cortado com "…" passando disso (o nome inteiro aparece no meio, no cursor)
     // Com `labels` e sem largura para eles (ex.: celular): a mesma informação numa legenda embaixo, que também
     // destaca a fatia (cursor/foco) e filtra (clique). Sem isto, no estreito só o meio da rosca diz o nome.
     legendWhenNarrow?: boolean
@@ -49,6 +50,7 @@ export function PieChart({
     selectLabel = 'Filtrar por',
     labels = false,
     labelsTwoLines = false,
+    labelMaxChars,
     legendWhenNarrow = false,
     sort = true,
     innerRatio = 0.62,
@@ -78,27 +80,35 @@ export function PieChart({
     const fill = (name: string, k: number, others: number) => (others ? REST : (fixed.get(name) ?? color(k)))
     // Cabem os rótulos? O mais comprido de cada lado ('NOME 65 (11,8%)') + a folga até a rosca.
     const valorRotulo = (s: (typeof slices)[number]) => `${format(s.value)} (${fmt.dec1(s.share)}%)`
-    const nomeRotulo = (s: (typeof slices)[number]) => `${s.name}${s.others ? ` (${s.others})` : ''}`
+    const nomeRotulo = (s: (typeof slices)[number]) => {
+        const nome = `${s.name}${s.others ? ` (${s.others})` : ''}`
+        return labelMaxChars && nome.length > labelMaxChars ? `${nome.slice(0, labelMaxChars - 1)}…` : nome
+    }
     const rotulo = (s: (typeof slices)[number]) =>
         labelsTwoLines
             ? Math.max(nomeRotulo(s).length, valorRotulo(s).length)
             : `${nomeRotulo(s)} ${valorRotulo(s)}`.length
     const gapRotulo = labelsTwoLines ? 2 * LABEL_GAP : LABEL_GAP
-    const labelRoom = Math.max(0, ...slices.map(rotulo)) * CHAR_W + 40
-    // Em duas linhas, a rosca encolhe (até 150 px) para os rótulos caberem num card estreito, em vez de sumirem.
-    const size = labels && labelsTwoLines ? Math.max(150, Math.min(tamanho, width - 2 * labelRoom)) : tamanho
-    const comRotulos = labels && width >= size + 2 * labelRoom
-    const r = size / 2 - POP - 2
-    const inner = r * innerRatio
-    const comLegenda = labels && legendWhenNarrow && !comRotulos
     // Rótulos de cada lado (direita: metade da direita da volta), espalhados para não se encostarem.
     const angle = (f: number) => f * 2 * Math.PI - Math.PI / 2
     const mids = slices.map((s) => angle((s.start + s.end) / 2))
     const right = mids.map((a) => Math.cos(a) >= 0)
+    // Espaço dos rótulos de cada lado, pelo mais comprido DAQUELE lado (um nome longo só de um lado não encolhe
+    // a rosca pelos dois).
+    const room = (lado: boolean) => Math.max(0, ...slices.filter((_, i) => right[i] === lado).map(rotulo)) * CHAR_W + 40
+    const roomL = room(false)
+    const roomR = room(true)
+    // Em duas linhas, a rosca usa a largura que sobra (até `size`; no mínimo 150 px) em vez de os rótulos sumirem.
+    const size = labels && labelsTwoLines ? Math.max(150, Math.min(tamanho, width - roomL - roomR)) : tamanho
+    const comRotulos = labels && width >= size + roomL + roomR
+    const r = size / 2 - POP - 2
+    const inner = r * innerRatio
+    const comLegenda = labels && legendWhenNarrow && !comRotulos
     const perSide = Math.max(right.filter(Boolean).length, right.filter((x) => !x).length)
     const h = comRotulos ? Math.max(size + 48, perSide * gapRotulo + 24) : size
     const w = comRotulos ? width : size
-    const cx = w / 2
+    // No meio do cartão; se um lado precisar de mais espaço para os rótulos, a rosca desliza para o outro.
+    const cx = comRotulos ? Math.min(Math.max(w / 2, roomL + size / 2), w - roomR - size / 2) : w / 2
     const cy = h / 2
     const rotR = r + 14 // raio onde os rótulos encostam na rosca
     const labelY = new Array<number>(slices.length)
@@ -108,8 +118,9 @@ export function PieChart({
             const ys = spreadColumn(
                 idx.map((i) => cy + rotR * Math.sin(mids[i])),
                 gapRotulo,
-                10,
-                h - 10,
+                // Em duas linhas o texto sobe meia linha e desce uma: mais folga em cima e embaixo para não cortar.
+                labelsTwoLines ? 16 : 10,
+                h - (labelsTwoLines ? 22 : 10),
             )
             idx.forEach((i, k) => (labelY[i] = ys[k]))
         }
@@ -206,7 +217,7 @@ export function PieChart({
                 <span
                     className={(centerFormat ?? format)(total).length > 6 ? 'pie-center longo' : 'pie-center'}
                     aria-live="polite"
-                    style={{ width: inner * 1.6 }}
+                    style={{ width: inner * 1.6, left: comRotulos ? cx : undefined }}
                 >
                     {atual ? (
                         <>

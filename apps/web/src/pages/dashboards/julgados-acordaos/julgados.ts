@@ -210,16 +210,8 @@ export const mapaDaUnidade = (unit: JulgadosUnit): MapaDaUnidade => MAPAS[unit]
 
 // ---------- Lista "Acórdãos no período" ----------
 
-export const ITENS_POR_PAGINA = 15
-
 export type OrdemLista = 'data_recente' | 'data_antiga'
 
-export const ORDENS_LISTA: { value: OrdemLista; label: string }[] = [
-    { value: 'data_recente', label: 'Data: mais recente primeiro' },
-    { value: 'data_antiga', label: 'Data: mais antiga primeiro' },
-]
-
-// Pela data do acórdão; sem data vai para o fim nas duas ordens (como na v1).
 export function ordenarLista(itens: LinhaAcordao[], ordem: OrdemLista): LinhaAcordao[] {
     const sinal = ordem === 'data_recente' ? -1 : 1
     return [...itens].sort((a, b) => {
@@ -228,13 +220,6 @@ export function ordenarLista(itens: LinhaAcordao[], ordem: OrdemLista): LinhaAco
         if (!b.data_acordao) return -1
         return sinal * a.data_acordao.localeCompare(b.data_acordao)
     })
-}
-
-// Os números de página à mostra: até 5 páginas, todas; depois, a primeira, a última e a atual com as vizinhas.
-export function paginas(atual: number, total: number): number[] {
-    if (total <= 5) return Array.from({ length: total }, (_, i) => i + 1)
-    const set = new Set([1, total, atual, atual - 1, atual + 1])
-    return [...set].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b)
 }
 
 // Número do processo no padrão CNJ (NNNNNNN-DD.AAAA.J.TR.OOOO); outro formato fica como veio.

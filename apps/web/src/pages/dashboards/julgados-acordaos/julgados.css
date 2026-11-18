@@ -1,7 +1,31 @@
 /* Julgados Acórdãos: as grades e as peças próprias da página (o resto vem de app.css). Fica com o dashboard e só
    carrega quando ele abre. As grades seguem as da página da v1 (Tailwind lg:grid-cols-*). */
 
-/* 01 · os seis cards (3 × 2); a pizza "Resultado dos embargos" vem embaixo, na largura toda (como no Comercial) */
+/* 01 · os seis cards (3 × 2) à esquerda e a pizza "Resultado dos embargos" à direita, nas duas linhas */
+.jl-topo {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 3fr);
+    align-items: stretch;
+}
+.jl-topo .jl-cards {
+    align-content: stretch;
+}
+/* Cartões de pizza: a rosca fica no meio do cartão, na altura e na largura (o cartão estica até a altura
+   dos vizinhos da linha). */
+.jl-pie-centro .chart-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+}
+.jl-pie-centro .chart-body > .pie {
+    width: 100%;
+}
+@media (max-width: 1280px) {
+    .jl-topo {
+        grid-template-columns: 1fr;
+    }
+}
 /* Valor dos acórdãos procedentes (1 coluna) e a Taxa de procedência (3 colunas) */
 .jl-linha2 {
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -14,6 +38,12 @@
 }
 .jl-dois {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+/* Três por linha só com largura para as roscas; no meio, dois por linha. */
+@media (max-width: 1400px) {
+    .jl-tres {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 @media (max-width: 1100px) {
     .jl-tres,
@@ -255,21 +285,6 @@ button.jl-rank-row:focus-visible {
     font-weight: 600;
 }
 
-/* tabelinha do Ano de Ajuizamento, embaixo da pizza */
-.jl-mini-tbl {
-    margin-top: 12px;
-    font-size: var(--fs-sm);
-}
-.jl-mini-tbl th,
-.jl-mini-tbl td {
-    padding: 6px 10px;
-}
-.jl-ano {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
 /* faixa "Atenção" (dados faltando): letreiro clicável, como na v1 */
 .jl-atencao {
     width: 100%;
@@ -338,82 +353,4 @@ button.jl-rank-row:focus-visible {
     overflow-y: auto;
     border: 1px solid var(--border);
     border-radius: var(--r-md);
-}
-
-/* Lista "Acórdãos no período" */
-.jl-lista {
-    overflow: hidden;
-}
-.jl-lista-head {
-    padding: 16px 18px 12px;
-}
-.jl-lista-titulo {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    margin: 0;
-    font-size: var(--fs-lg);
-    font-weight: 600;
-}
-.jl-lista-titulo svg {
-    color: var(--accent);
-}
-.jl-lista-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin: 0 18px;
-    padding: 12px 0;
-    border-top: 1px solid var(--border);
-}
-.jl-ordenar {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-.jl-tbl {
-    min-width: 1120px;
-    font-size: var(--fs-sm);
-}
-.jl-tbl th {
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-weight: 600;
-}
-.jl-tbl td {
-    padding: 9px 14px;
-    color: var(--text-muted);
-}
-.jl-processo {
-    font-family: var(--num);
-    color: var(--text);
-}
-td.jl-processo {
-    color: var(--text);
-}
-.jl-vazio {
-    padding: 40px 16px;
-    text-align: center;
-}
-.jl-pager {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 12px 18px;
-    border-top: 1px solid var(--divider);
-}
-.jl-pager-btns {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-}
-.jl-pager .btn.on {
-    border-color: var(--accent);
-    background: var(--accent);
-    color: var(--on-accent);
 }
