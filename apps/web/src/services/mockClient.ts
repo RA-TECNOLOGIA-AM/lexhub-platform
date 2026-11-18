@@ -38,6 +38,7 @@ import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
 import { financeiroEstrategicoFor } from './mock/financeiroEstrategico.ts'
 import { acordosFor, execucaoFor } from './mock/execucao.ts'
 import { execucaoEstrategicoFor } from './mock/execucaoEstrategico.ts'
+import { ticketsFor } from './mock/tickets.ts'
 import { julgadosAcordaosFor } from './mock/julgadosAcordaos.ts'
 import { metaAnualFor } from './mock/metaAnual.ts'
 import { preProtocoloFor } from './mock/preProtocolo.ts'
@@ -156,6 +157,7 @@ const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unk
     execucao: execucaoFor,
     acordos: acordosFor,
     'execucao-estrategico': execucaoEstrategicoFor,
+    tickets: ticketsFor,
     'julgados-acordaos': julgadosAcordaosFor,
 }
 

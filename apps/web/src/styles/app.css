@@ -5775,3 +5775,218 @@ body {
     flex-direction: column;
     gap: 6px;
 }
+
+/* ---------- Tickets (banco NG) ---------- */
+/* três cartões lado a lado (servidor · categoria · servidor), como a v1 */
+.tk-tres {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+}
+@media (max-width: 1200px) {
+    .tk-tres {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 760px) {
+    .tk-tres {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+/* a barra da taxa de resolução, com o traço da meta */
+.tk-barra {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 8px;
+    border-radius: var(--r-pill);
+    background: var(--card-muted);
+}
+.tk-barra span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--tone, var(--accent));
+}
+.tk-barra i {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    background: var(--text);
+}
+.tk-aviso {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--warn);
+    font-size: var(--fs-sm);
+}
+/* feed das últimas movimentações */
+.tk-busca {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md, 10px);
+    min-width: min(300px, 100%);
+}
+.tk-busca input {
+    font-size: var(--fs-sm);
+}
+.tk-abas {
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.tk-feed {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.tk-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md, 10px);
+}
+.tk-ico {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--tone) 14%, transparent);
+    color: var(--tone-text);
+}
+.tk-corpo {
+    flex: 1;
+    min-width: 0;
+}
+.tk-selos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.tk-desc {
+    margin: 6px 0 2px;
+    overflow-wrap: anywhere;
+}
+.tk-quem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+}
+.tk-acoes {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.tk-anydesk {
+    font-family: var(--font-mono, ui-monospace, monospace);
+}
+.tk-mais {
+    display: block;
+    margin: 12px auto 0;
+}
+@media (max-width: 640px) {
+    .tk-item {
+        flex-wrap: wrap;
+    }
+    .tk-acoes {
+        padding-left: 50px;
+    }
+}
+.tk-dica {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    text-align: center;
+}
+.tk-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+}
+.tk-legenda span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.tk-tracejado {
+    display: inline-block;
+    width: 18px;
+    border-top: 2px dashed var(--ok-dot);
+}
+/* rankings: posição, iniciais, nome e valor numa linha; a barra embaixo, em toda a largura */
+.tk-ranking {
+    display: grid;
+    gap: 16px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.tk-ranking li {
+    display: grid;
+    grid-template-columns: 28px 30px minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 8px;
+    row-gap: 6px;
+}
+.tk-pos {
+    color: var(--text-muted);
+    font-family: var(--num);
+    font-size: var(--fs-sm);
+}
+.tk-pos.primeiro {
+    color: var(--tone-text);
+    font-weight: 700;
+}
+.tk-ini {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 24px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface-2);
+    font-family: var(--num);
+    font-size: 10px;
+    font-weight: 700;
+}
+.tk-nome {
+    overflow: hidden;
+    font-family: var(--num);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.tk-val {
+    font-size: var(--fs-sm);
+    white-space: nowrap;
+}
+.tk-trilho {
+    grid-column: 1 / -1;
+    height: 8px;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
+    overflow: hidden;
+}
+.tk-trilho span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #ffd34d));
+}
+.tk-trilho.verde span {
+    background: linear-gradient(90deg, var(--ok-dot), color-mix(in srgb, var(--ok-dot) 60%, #2dd4bf));
+}
