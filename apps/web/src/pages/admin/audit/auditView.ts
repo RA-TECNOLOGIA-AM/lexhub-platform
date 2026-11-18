@@ -1,4 +1,5 @@
 import type { AuditEvent, AuditKind } from '../../../types/index.ts'
+import { toCsv, type CsvColumn } from '../../../lib/csv.ts'
 
 // Nome no filtro "Tipo de evento" e cor do selo de cada tipo.
 export const KIND: Record<AuditKind, { label: string; badge: string }> = {
@@ -23,6 +24,45 @@ export function whenLabel(iso: string, timeZone = 'America/Manaus'): string {
     const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
     return `${get('day')}/${get('month')} ${get('hour')}:${get('minute')}`
 }
+
+// --- Exportar CSV: as mesmas linhas da tela, com data completa (o arquivo pode ser lido meses depois) ---
+const fullWhen = (iso: string, timeZone = 'America/Manaus'): string =>
+    new Intl.DateTimeFormat('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+        timeZone,
+    })
+        .format(new Date(iso))
+        .replace(',', '')
+
+const CSV_COLUMNS: CsvColumn[] = [
+    { key: 'when', label: 'Quando' },
+    { key: 'actor', label: 'Quem' },
+    { key: 'kind', label: 'Tipo' },
+    { key: 'action', label: 'O que aconteceu' },
+    { key: 'detail', label: 'Detalhe' },
+]
+
+export const auditCsv = (events: AuditEvent[]): string =>
+    toCsv(
+        CSV_COLUMNS,
+        events.map((e) => ({
+            when: fullWhen(e.at),
+            actor: e.actor,
+            kind: KIND[e.kind].label,
+            action: e.action,
+            detail: e.detail,
+        })),
+    )
+
+// 'lexgroup', 2026-11-18 -> 'auditoria-lexgroup-2026-11-18.csv'
+export const auditFilename = (org: string, today = new Date()): string =>
+    `auditoria-${org}-${today.toLocaleDateString('sv-SE', { timeZone: 'America/Manaus' })}.csv`
 
 // Quem aparece nos eventos, sem repetir e em ordem alfabética (opções do filtro "Pessoa").
 export const actorsOf = (events: AuditEvent[]): string[] =>

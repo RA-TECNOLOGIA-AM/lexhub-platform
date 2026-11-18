@@ -10,7 +10,16 @@ import { useAsync } from '../../../hooks/useAsync.ts'
 import { dataClient } from '../../../services/client.ts'
 import { AUDIT_COLUMNS } from './auditColumns.tsx'
 import { AuditFilters } from './AuditFilters.tsx'
-import { actorsOf, filterEvents, filterFromParams, paramsFromFilter, type AuditFilter } from './auditView.ts'
+import { saveFile } from '../../../lib/download.ts'
+import {
+    actorsOf,
+    auditCsv,
+    auditFilename,
+    filterEvents,
+    filterFromParams,
+    paramsFromFilter,
+    type AuditFilter,
+} from './auditView.ts'
 
 // A página só junta as peças: busca os eventos, aplica o filtro da URL e mostra a tabela.
 export function AuditPage() {
@@ -22,8 +31,26 @@ export function AuditPage() {
     const filter = filterFromParams(params)
     const setFilter = (next: AuditFilter) => setParams(paramsFromFilter(next), { replace: true })
 
+    const [exporting, setExporting] = useState(false)
+
     if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
+
+    const rows = filterEvents(data.events, filter)
+
+    // Exporta o que está na tela (mesmos filtros). Primeiro registra no servidor; se falhar, não baixa.
+    async function exportCsv() {
+        setExporting(true)
+        setNotice(null)
+        try {
+            await dataClient.logAuditExport(org, filter, rows.length)
+            saveFile(new Blob([auditCsv(rows)], { type: 'text/csv;charset=utf-8' }), auditFilename(org))
+        } catch (e) {
+            setNotice(e instanceof Error ? e.message : 'Não foi possível exportar a auditoria.')
+        } finally {
+            setExporting(false)
+        }
+    }
 
     return (
         <>
@@ -31,17 +58,9 @@ export function AuditPage() {
                 title="Auditoria"
                 description="Entradas, exportações, mudanças de acesso e sessões de suporte. Guardado por pelo menos 6 meses."
                 actions={
-                    <button
-                        className="btn"
-                        type="button"
-                        onClick={() =>
-                            setNotice(
-                                'Exportar a auditoria ainda não está disponível: precisa ficar registrado no servidor.',
-                            )
-                        }
-                    >
+                    <button className="btn" type="button" disabled={exporting || rows.length === 0} onClick={exportCsv}>
                         <Icon name="download" size={16} />
-                        Exportar CSV
+                        {exporting ? 'Exportando…' : 'Exportar CSV'}
                     </button>
                 }
             />
@@ -50,7 +69,7 @@ export function AuditPage() {
                 <AuditFilters value={filter} actors={actorsOf(data.events)} onChange={setFilter} />
                 <DataTable
                     columns={AUDIT_COLUMNS}
-                    rows={filterEvents(data.events, filter)}
+                    rows={rows}
                     rowKey={(e) => e.id}
                     rowClassName={(e) => (e.kind === 'support' ? 'row-support' : undefined)}
                     empty="Nenhum evento com esses filtros."

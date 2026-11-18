@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { audit } from '../../../services/mock/audit.ts'
-import { actorsOf, filterEvents, filterFromParams, paramsFromFilter, whenLabel } from './auditView.ts'
+import {
+    actorsOf,
+    auditCsv,
+    auditFilename,
+    filterEvents,
+    filterFromParams,
+    paramsFromFilter,
+    whenLabel,
+} from './auditView.ts'
 
 const events = audit.events
 const all = { kind: '' as const, actor: '' }
@@ -45,5 +53,24 @@ describe('filtro na URL', () => {
     })
     it('tipo inválido na URL vira "todos"', () => {
         expect(filterFromParams(new URLSearchParams('tipo=ataque')).kind).toBe('')
+    })
+})
+
+describe('exportar CSV', () => {
+    const one = {
+        id: '1',
+        at: '2026-11-18T19:29:40Z',
+        actor: 'Ana; Ribeiro',
+        kind: 'login' as const,
+        action: 'Entrou',
+        detail: 'Chrome · Windows · 189.10.20.30',
+    }
+    it('cabeçalho, data completa em Manaus, tipo por extenso e ; escapado', () => {
+        const lines = auditCsv([one]).replace('﻿', '').split('\r\n')
+        expect(lines[0]).toBe('Quando;Quem;Tipo;O que aconteceu;Detalhe')
+        expect(lines[1]).toBe('18/11/2026 15:29:40;"Ana; Ribeiro";Entradas;Entrou;Chrome · Windows · 189.10.20.30')
+    })
+    it('nome do arquivo com a org e o dia em Manaus', () => {
+        expect(auditFilename('lexgroup', new Date('2026-11-19T02:00:00Z'))).toBe('auditoria-lexgroup-2026-11-18.csv')
     })
 })

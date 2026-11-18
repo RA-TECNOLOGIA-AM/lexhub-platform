@@ -371,6 +371,18 @@ export function createMockClient(): DataClient {
             return copy(requireOrg(org) ? audit : onboardingAudit)
         },
 
+        async logAuditExport(org, filter, rows) {
+            await wait()
+            requireSession()
+            if (!requireOrg(org)) throw new DataError(403, 'Só Owner ou Desenvolvedor exportam a auditoria.')
+            addAuditEvent({
+                actor: 'Você',
+                kind: 'export',
+                action: 'Exportou a auditoria',
+                detail: [`${rows} eventos`, filter.kind, filter.actor, 'CSV'].filter(Boolean).join(' · '),
+            })
+        },
+
         async getSources(org) {
             await wait()
             requireSession()
