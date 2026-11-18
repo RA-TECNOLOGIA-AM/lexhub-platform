@@ -204,6 +204,15 @@ export const catalog: DashboardCatalog = {
             syncedMin: 6,
         }),
         entry({
+            key: 'publicacoes',
+            title: 'Publicações',
+            area: 'Jurídico',
+            desc: 'Publicações recebidas, tratadas e pendentes, por leitor, matéria e tribunal, e o agendamento depois.',
+            units: ALL,
+            source: 'LexFlow',
+            syncedMin: 6,
+        }),
+        entry({
             key: 'julgados-acordaos',
             title: 'Julgados Acórdãos',
             area: 'Jurídico',

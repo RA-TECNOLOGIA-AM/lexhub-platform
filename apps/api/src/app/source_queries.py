@@ -3040,3 +3040,234 @@ QUERIES["log_subfase_processual"] = {
         ),
         "params": []
     }
+
+
+# v1: queries.py:4049, "publicacoes_NG" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA, publicacoes_NG, publicacoes_LA, publicacoes_RJ.
+QUERIES["publicacoes_NG"] = {
+        "database": "lexflow",
+        "query": """
+        select
+            p.id,
+            p.id_processo as "ID_PROCESSO",
+            pro.id_situacao as "ID_SITUACAO",
+            sit.description as "SITUACAO",
+            ea.nome_fantasia as "ESCRITORIO",
+            p.data_disponibilizacao as "DATA_DISPONIBILIZACAO",
+            p.nomeclasse as "CLASSE",
+            p.nomeorgao as "ORGAO",
+            c.nome as "COMARCA",
+            p.numero_processo,
+            m.description as "MATERIA",
+            p.siglatribunal as "TRIBUNAL",
+            p."tipoComunicacao" as "COMUNICACAO",
+            p."tipoDocumento" as "DOCUMENTO",
+            p.dias as "DIAS",
+            p.status as "STATUS",
+            ur.nome as "RESPONSAVEL",
+            ul.nome as "LEITOR",
+            p.data_leitura_publicacao as "DATA_LEITURA",
+            p.data_conclusao as "DATA_CONCLUSAO"
+
+        from public.publicacoes p
+        left join public.processo pro on p.id_processo = pro.id
+        left join public.situacao sit on sit.id = pro.id_situacao
+        left join public.materia m on pro.id_materia = m.id
+        left join public.comarca c on pro.id_comarca = c.id
+        left join public.usuario ul on p.id_usuario_leitor = ul.id
+        left join public.usuario ur on p.id_usuario_responsavel = ur.id
+        left join public.escritorio_assinante ea on p.id_escritorio_assinante = ea.id
+
+        where p.id_escritorio_assinante = 20
+        """,
+        "description": "Publicações do LexFlow do escritorio NG",
+        "params": []
+    }
+
+
+# v1: queries.py:4089, "agendamentos_todos_setores_NG" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA, publicacoes_NG, publicacoes_LA, publicacoes_RJ.
+QUERIES["agendamentos_todos_setores_NG"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM 1 FOR POSITION(' - ' IN v.setor_atividade_nome) - 1)
+                ELSE v.setor_atividade_nome
+            END                                             AS "SETOR",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 20
+          AND v.processo_id IS NOT NULL
+        """,
+        "description": "Todos os agendamentos (qualquer setor) do escritório NG, para vincular a publicações via processo_id.",
+        "params": []
+    }
+
+
+# v1: queries.py:355, "publicacoes_LA" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA, publicacoes_NG, publicacoes_LA, publicacoes_RJ.
+QUERIES["publicacoes_LA"] = {
+        "database": "lexflow",
+        "query": """
+        select
+            p.id,
+            p.id_processo as "ID_PROCESSO",
+            pro.id_situacao as "ID_SITUACAO",
+            sit.description as "SITUACAO",
+            ea.nome_fantasia as "ESCRITORIO",
+            p.data_disponibilizacao as "DATA_DISPONIBILIZACAO",
+            --p.meiocompleto,
+            p.nomeclasse as "CLASSE",
+            p.nomeorgao as "ORGAO",
+            c.nome as "COMARCA",
+            p.numero_processo,
+            m.description as "MATERIA",
+            p.siglatribunal as "TRIBUNAL",
+            p."tipoComunicacao" as "COMUNICACAO",
+            p."tipoDocumento" as "DOCUMENTO",
+            p.dias as "DIAS",
+            p.status as "STATUS",
+            --p.id_usuario_responsavel,
+            ur.nome as "RESPONSAVEL",
+            --p.id_usuario_leitor,
+            ul.nome as "LEITOR",
+            p.data_leitura_publicacao as "DATA_LEITURA",
+            p.data_conclusao as "DATA_CONCLUSAO"
+
+        from public.publicacoes p
+        left join public.processo pro on p.id_processo = pro.id
+        left join public.situacao sit on sit.id = pro.id_situacao
+        left join public.materia m on pro.id_materia = m.id
+        left join public.comarca c on pro.id_comarca = c.id
+        left join public.usuario ul on p.id_usuario_leitor = ul.id
+        left join public.usuario ur on p.id_usuario_responsavel = ur.id
+        left join public.escritorio_assinante ea on p.id_escritorio_assinante = ea.id
+
+        where p.id_escritorio_assinante = 21
+        """,
+        "description": "Publicações do LexFlow do escritorio LAADV AM",
+        "params": []
+    }
+
+
+# v1: queries.py:3987, "agendamentos_todos_setores_LA" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA, publicacoes_NG, publicacoes_LA, publicacoes_RJ.
+QUERIES["agendamentos_todos_setores_LA"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM 1 FOR POSITION(' - ' IN v.setor_atividade_nome) - 1)
+                ELSE v.setor_atividade_nome
+            END                                             AS "SETOR",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 21
+          AND v.processo_id IS NOT NULL
+        """,
+        "description": "Todos os agendamentos (qualquer setor) do escritório LAADV AM, para vincular a publicações via processo_id.",
+        "params": []
+    }
+
+
+# v1: queries.py:398, "publicacoes_LA_RJ" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA, publicacoes_NG, publicacoes_LA, publicacoes_RJ.
+QUERIES["publicacoes_LA_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        select
+            p.id,
+            p.id_processo as "ID_PROCESSO",
+            pro.id_situacao as "ID_SITUACAO",
+            sit.description as "SITUACAO",
+            ea.nome_fantasia as "ESCRITORIO",
+            p.data_disponibilizacao as "DATA_DISPONIBILIZACAO",
+            --p.meiocompleto,
+            p.nomeclasse as "CLASSE",
+            p.nomeorgao as "ORGAO",
+            c.nome as "COMARCA",
+            p.numero_processo,
+            m.description as "MATERIA",
+            p.siglatribunal as "TRIBUNAL",
+            p."tipoComunicacao" as "COMUNICACAO",
+            p."tipoDocumento" as "DOCUMENTO",
+            p.dias as "DIAS",
+            p.status as "STATUS",
+            --p.id_usuario_responsavel,
+            ur.nome as "RESPONSAVEL",
+            --p.id_usuario_leitor,
+            ul.nome as "LEITOR",
+            p.data_leitura_publicacao as "DATA_LEITURA",
+            p.data_conclusao as "DATA_CONCLUSAO"
+
+        from public.publicacoes p
+        left join public.processo pro on p.id_processo = pro.id
+        left join public.situacao sit on sit.id = pro.id_situacao
+        left join public.materia m on pro.id_materia = m.id
+        left join public.comarca c on pro.id_comarca = c.id
+        left join public.usuario ul on p.id_usuario_leitor = ul.id
+        left join public.usuario ur on p.id_usuario_responsavel = ur.id
+        left join public.escritorio_assinante ea on p.id_escritorio_assinante = ea.id
+
+        where p.id_escritorio_assinante = 27
+        """,
+        "description": "Publicações do LexFlow do escritorio LAADV RJ",
+        "params": []
+    }
+
+
+# v1: queries.py:4018, "agendamentos_todos_setores_LA_RJ" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA, publicacoes_NG, publicacoes_LA, publicacoes_RJ.
+QUERIES["agendamentos_todos_setores_LA_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM 1 FOR POSITION(' - ' IN v.setor_atividade_nome) - 1)
+                ELSE v.setor_atividade_nome
+            END                                             AS "SETOR",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 27
+          AND v.processo_id IS NOT NULL
+        """,
+        "description": "Todos os agendamentos (qualquer setor) do escritório LAADV RJ, para vincular a publicações via processo_id.",
+        "params": []
+    }

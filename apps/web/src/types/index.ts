@@ -128,6 +128,15 @@ export type DashboardFilters = {
     atividade_recursos?: string[]
     status_recursos?: string[]
     situacao_recursos?: string[]
+    // Publicações (LexFlow): os filtros da v1 com o sufixo _publicacoes (leitor e matéria com vários valores; os outros, um)
+    leitor_publicacoes?: string[]
+    materia_publicacoes?: string[]
+    documento_publicacoes?: string[]
+    tribunal_publicacoes?: string[]
+    orgao_publicacoes?: string[]
+    atividade_agendamento_publicacoes?: string[]
+    setor_agendamento_publicacoes?: string[]
+    status_agendamento_publicacoes?: string[]
     situacao_processo?: string[] // ATIVO | SUSPENSO/SOBRESTADO | ARQUIVADO (sem nenhum = recorte padrão da query)
 }
 
