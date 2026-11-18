@@ -75,6 +75,14 @@ jobs:
             PGDATABASE: postgres
         steps:
             -   uses: actions/checkout@v4
+            # O número no começo do nome é a versão da migration e a ordem de aplicação: não pode repetir.
+            -   name: Versões de migration únicas
+                run: |
+                    dup=$(ls supabase/migrations/*.sql | xargs -n1 basename | cut -d_ -f1 | sort | uniq -d)
+                    if [ -n "$dup" ]; then
+                        echo "::error::Versão repetida em supabase/migrations: $dup (use o próximo número livre)"
+                        exit 1
+                    fi
             -   name: Simular Supabase (auth + papéis)
                 run: psql -v ON_ERROR_STOP=1 -q -f supabase/tests/ci/supabase_stub.sql
             -   name: Aplicar migrations
