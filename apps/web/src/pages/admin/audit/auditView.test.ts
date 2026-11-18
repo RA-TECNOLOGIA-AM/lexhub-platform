@@ -61,14 +61,17 @@ describe('exportar CSV', () => {
         id: '1',
         at: '2026-11-18T19:29:40Z',
         actor: 'Ana; Ribeiro',
+        email: 'ana.ribeiro@lexgroup.com.br',
         kind: 'login' as const,
         action: 'Entrou',
         detail: 'Chrome · Windows · 189.10.20.30',
     }
     it('cabeçalho, data completa em Manaus, tipo por extenso e ; escapado', () => {
         const lines = auditCsv([one]).replace('﻿', '').split('\r\n')
-        expect(lines[0]).toBe('Quando;Quem;Tipo;O que aconteceu;Detalhe')
-        expect(lines[1]).toBe('18/11/2026 15:29:40;"Ana; Ribeiro";Entradas;Entrou;Chrome · Windows · 189.10.20.30')
+        expect(lines[0]).toBe('Quando;Quem;Tipo;O que aconteceu;E-mail;Detalhe')
+        expect(lines[1]).toBe(
+            '18/11/2026 15:29:40;"Ana; Ribeiro";Entradas;Entrou;ana.ribeiro@lexgroup.com.br;Chrome · Windows · 189.10.20.30',
+        )
     })
     it('nome do arquivo com a org e o dia em Manaus', () => {
         expect(auditFilename('lexgroup', new Date('2026-11-19T02:00:00Z'))).toBe('auditoria-lexgroup-2026-11-18.csv')

@@ -168,6 +168,7 @@ export function toAuditEvent(e: RawAuditEvent): AuditEvent {
         id: e.id,
         at: e.at,
         actor: e.actor,
+        email: e.actorEmail ?? null,
         kind: rule?.kind ?? 'other',
         action: rule?.action ?? e.action,
         detail: rule ? rule.detail(e, m) : (e.targetName ?? e.targetId ?? ''),

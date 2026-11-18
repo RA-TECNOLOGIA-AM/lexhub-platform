@@ -51,6 +51,9 @@ begin
         raise exception 'FALHOU: exportação: %', e -> 1;
     end if;
     if e -> 2 ->> 'actor' <> 'Sistema' then raise exception 'FALHOU: evento sem pessoa = Sistema: %', e -> 2; end if;
+    if e -> 0 ->> 'actorEmail' <> 'dev.audit@exemplo.com' or e -> 2 ->> 'actorEmail' is not null then
+        raise exception 'FALHOU: e-mail de quem fez (Sistema = null): % / %', e -> 0, e -> 2;
+    end if;
     if jsonb_array_length(api.list_audit('org-teste-audit', 1) -> 'events') <> 1 then
         raise exception 'FALHOU: limite';
     end if;

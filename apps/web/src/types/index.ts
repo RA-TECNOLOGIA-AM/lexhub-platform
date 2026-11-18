@@ -372,6 +372,7 @@ export type RawAuditEvent = {
     at: string
     action: string // 'dashboard.export', 'member.invited'...
     actor: string // nome na organização, e-mail ou 'Sistema'
+    actorEmail?: string | null // a conta usada (auth.users); null = sistema. Opcional: banco antigo não manda
     targetType: string | null
     targetId: string | null
     targetName: string | null // nome do dashboard, da unidade ou da pessoa, quando dá para achar
@@ -382,6 +383,7 @@ export type AuditEvent = {
     id: string
     at: string // ISO com fuso ('2026-10-30T14:02:00-04:00'); a tela formata
     actor: string // quem fez ("Ana Ribeiro", "Sistema", "Suporte RA Tecnologia")
+    email: string | null // a conta usada por quem fez; null = sistema
     kind: AuditKind
     action: string // "Exportou dados"
     detail: string
