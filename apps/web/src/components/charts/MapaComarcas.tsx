@@ -42,6 +42,8 @@ type Props = {
     selected?: string[]
     onSelect?: (comarca: string) => void
     rotuloItem?: string // "processo(s)" / "acordo(s)"
+    // Sem a soma na legenda (quando o número não soma, ex.: a mediana de dias da Sobrevivência Processual).
+    semTotal?: boolean
 }
 
 // Módulo: o mapa de comarcas da v1 (municípios pintados pela quantidade de processos na comarca de mesmo nome).
@@ -54,6 +56,7 @@ export function MapaComarcas({
     selected = [],
     onSelect,
     rotuloItem = 'processo(s)',
+    semTotal = false,
 }: Props) {
     const ufs = useMemo(() => ufsDoMapa(quantidade), [quantidade])
     const chaveUfs = ufs.join(',')
@@ -185,8 +188,9 @@ export function MapaComarcas({
                         <i className="mapa-key fora_base" /> Sem comarca na base ({resumo.fora})
                     </span>
                     <span className="mapa-legenda-txt">
-                        {fmt.int(resumo.total)} {rotuloItem} nos municípios pintados · máximo {fmt.int(resumo.maximo)} ·
-                        intensidade pela raiz quadrada da quantidade · estado(s): {ufs.join(', ')} · fonte IBGE.
+                        {semTotal ? '' : `${fmt.int(resumo.total)} ${rotuloItem} nos municípios pintados · `}máximo{' '}
+                        {fmt.int(resumo.maximo)} · intensidade pela raiz quadrada do valor · estado(s): {ufs.join(', ')}{' '}
+                        · fonte IBGE.
                     </span>
                 </div>
             )}
