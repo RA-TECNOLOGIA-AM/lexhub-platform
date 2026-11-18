@@ -259,13 +259,24 @@ class CachedSourceFetcher:
         self._inner = inner
         self._db = db_name
         self._fetched: list[float] = []
+        # (query, fetched_at) de cada leitura, na ordem: a memória dos cálculos (app/result_memo.py)
+        # guarda de que versão dos dados cada resultado saiu.
+        self.reads: list[tuple[str, float]] = []
 
     async def fetch(self, query_name: str) -> Rows:
+        return (await self._read(query_name)).data
+
+    async def version(self, query_name: str) -> float:
+        """Quando veio do banco o dado que `fetch` devolveria agora (conta como leitura)."""
+        return (await self._read(query_name)).fetched_at
+
+    async def _read(self, query_name: str) -> Entry:
         entry = await self._cache.get(
             f"{self._db}:{query_name}", lambda: self._inner.fetch(query_name)
         )
         self._fetched.append(entry.fetched_at)
-        return entry.data
+        self.reads.append((query_name, entry.fetched_at))
+        return entry
 
     def synced_at(self) -> float | None:
         """Quando veio do banco o dado MAIS ANTIGO usado nesta requisição (None = nada buscado)."""

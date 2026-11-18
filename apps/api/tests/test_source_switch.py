@@ -90,3 +90,31 @@ def test_religada_volta_sem_pedir_nada():
     switch.invalidate()
     assert asyncio.run(guarded.fetch("A")) == [{"q": "A"}]
     assert guarded.synced_at() == 1.0
+
+
+def test_memoria_dos_calculos_tambem_respeita_o_desligado():
+    """Fonte desligada não devolve nem o resultado guardado do cálculo (app/result_memo.py)."""
+    from app.result_memo import ResultMemo, is_tracked
+
+    repo = FakeRepo()
+    switch = SourceSwitch(repo)
+    cache = SourceCache(MemoryStore())
+    guarded = GuardedSourceFetcher(switch, CachedSourceFetcher(cache, Inner(), "gs_x"), "gs_x")
+    assert is_tracked(guarded)  # repassa as versões: a memória vale para ela
+    assert not is_tracked(GuardedSourceFetcher(switch, Inner(), "gs_x"))
+
+    memo = ResultMemo()
+    calculos = []
+
+    async def calcular():
+        calculos.append(1)
+        return await guarded.fetch("A")
+
+    assert asyncio.run(memo.get_or_compute("k", {"gs_x": guarded}, calcular)) == [{"q": "A"}]
+    assert asyncio.run(memo.get_or_compute("k", {"gs_x": guarded}, calcular)) == [{"q": "A"}]
+    assert calculos == [1]  # a segunda veio guardada
+
+    repo.keys.add("gs_x")  # desligou
+    switch.invalidate()
+    with pytest.raises(SourceDisabled):
+        asyncio.run(memo.get_or_compute("k", {"gs_x": guarded}, calcular))

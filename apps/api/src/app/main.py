@@ -17,6 +17,7 @@ from app.logs import configure_logging, seconds
 from app.platform_db import install_error_handlers, keep_warm, open_platform_pool
 from app.registered_sources import PgRegisteredRepo, RegisteredSources
 from app.request_log import RequestLogMiddleware
+from app.result_memo import ResultMemo
 from app.routes import (
     catalog,
     dashboards,
@@ -112,6 +113,10 @@ def create_app() -> FastAPI:
             shared=app.state.cache,
             shared_ttl=ttl_by_query(settings.CACHE_TTL_HEAVY, settings.CACHE_TTL_DEFAULT),
             stale_while_revalidate=settings.SOURCE_CACHE_STALE_WHILE_REVALIDATE,
+        )
+        # Resultado dos cálculos por pedido, enquanto os dados lidos não mudam.
+        app.state.result_memo = ResultMemo(
+            settings.DASHBOARD_MEMO_MAX_ENTRIES, max_age=settings.SOURCE_CACHE_TTL
         )
         warmer = None
         keeper = None

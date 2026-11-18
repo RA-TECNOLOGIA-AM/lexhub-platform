@@ -77,5 +77,17 @@ class GuardedSourceFetcher:
             raise SourceDisabled(self._db)
         return await self._inner.fetch(query_name)
 
+    # Memória dos cálculos (app/result_memo.py): repassa o que a fonte de dentro leu e em que versão.
+    # Sem isso, todo pedido desta fonte calcula. A versão também confere o liga/desliga: fonte desligada
+    # não devolve nem o resultado guardado.
+    @property
+    def reads(self) -> list[tuple[str, float]]:
+        return self._inner.reads  # type: ignore[attr-defined]  (sem `reads` = memória não usa)
+
+    async def version(self, query_name: str) -> float:
+        if await self._switch.is_disabled(self._db):
+            raise SourceDisabled(self._db)
+        return await self._inner.version(query_name)  # type: ignore[attr-defined]
+
     def synced_at(self) -> float | None:
         return self._inner.synced_at()

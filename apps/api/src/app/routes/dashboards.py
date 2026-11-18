@@ -1,7 +1,7 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Hashable
 from dataclasses import replace
 from datetime import UTC, date, datetime
-from typing import Annotated
+from typing import Annotated, Any
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -13,11 +13,13 @@ from app.dashboards.base import (
     DashboardInputError,
     DashboardModule,
     NotReady,
+    Remember,
     parse_filters,
     resolve_period,
     shape_response,
 )
 from app.database import SourceDisabled
+from app.result_memo import Compute, ResultMemo, filters_key, run_now
 from app.sources import (
     SourceFactory,
     SourceRefsRepo,
@@ -99,8 +101,9 @@ async def _prepare(
     if access.scope != "all":
         await _deny(request, audit, access, "own_sem_vinculo", "Sem acesso")
 
+    day = today(access.timezone)
     try:
-        period = resolve_period(start, end, today(access.timezone))
+        period = resolve_period(start, end, day)
         query = request.query_params
         filters = parse_filters(module.filters, {k: query.getlist(k) for k in module.filters})
     except DashboardInputError as exc:
@@ -118,24 +121,54 @@ async def _prepare(
     if module.own_rows_only and not access.can_see_commission:
         own_ref = await refs.member_ref(access.user.user_id, access.org_id, source_db)
 
+    extra_refs = {
+        db: ref for db in module.extra_queries if (ref := access.source_refs.get(db)) is not None
+    }
+    source = sources(source_db)
+    extra_sources = {db: sources(db) for db in extra_refs}
     ctx = DashboardContext(
-        source=sources(source_db),
+        source=source,
         source_db=source_db,
         unit_ref=unit_ref,
         period=period,
         filters=filters,
         can_see_commission=access.can_see_commission,
         own_ref=own_ref,
-        extra_sources={
-            db: sources(db) for db in module.extra_queries if access.source_refs.get(db) is not None
-        },
-        extra_refs={
-            db: ref
-            for db in module.extra_queries
-            if (ref := access.source_refs.get(db)) is not None
-        },
+        extra_sources=extra_sources,
+        extra_refs=extra_refs,
+        remember=_remember(
+            get_result_memo(request),
+            # Tudo que muda o cálculo além do que o módulo põe na chave (período, filtros...). O dia
+            # entra porque a cópia da v1 usa "hoje" (vencidas, vencem hoje).
+            base=(
+                module.key,
+                source_db,
+                unit_ref,
+                tuple(sorted(extra_refs.items())),
+                access.can_see_commission,
+                own_ref,
+                day,
+            ),
+            fetchers={source_db: source, **extra_sources},
+        ),
     )
     return module, ctx
+
+
+def get_result_memo(request: Request) -> ResultMemo | None:
+    """A memória dos cálculos criada no lifespan (None = a app subiu sem ela, como nos testes)."""
+    return getattr(request.app.state, "result_memo", None)
+
+
+def _remember(memo: ResultMemo | None, base: tuple, fetchers: dict) -> Remember:
+    """ctx.remember deste pedido: a chave do módulo + `base`, lendo as versões nas fontes do pedido."""
+    if memo is None:
+        return run_now
+
+    async def remember(key: Hashable, compute: Compute) -> Any:
+        return await memo.get_or_compute((base, key), fetchers, compute)
+
+    return remember
 
 
 async def _run[T](module: DashboardModule, work: Awaitable[T]) -> T:
@@ -177,7 +210,12 @@ async def dashboard_data(
     # cancelou esta busca), não calcula: a requisição que vale não fica esperando na fila.
     if await request.is_disconnected():
         return Response(status_code=CLIENT_CLOSED_REQUEST)
-    data = await _run(module, module.build(ctx))
+    # Mesmo período e filtros sobre os mesmos dados (ex.: voltar a um filtro, outra pessoa na mesma tela):
+    # o resultado guardado, sem calcular de novo (app/result_memo.py).
+    data = await _run(
+        module,
+        ctx.remember(("resposta", ctx.period, filters_key(ctx.filters)), lambda: module.build(ctx)),
+    )
 
     meta = {
         "unit": access.unit_code,
