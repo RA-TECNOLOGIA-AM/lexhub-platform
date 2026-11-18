@@ -28,6 +28,16 @@ create table auth.identities (
   provider      text not null
 );
 
+-- Sessões de login: a auditoria de entradas tem um trigger nesta tabela.
+create table auth.sessions (
+  id         uuid primary key,
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  created_at timestamptz,
+  updated_at timestamptz,
+  ip         inet,
+  user_agent text
+);
+
 create function auth.uid() returns uuid
 language sql stable
 as $$
