@@ -74,7 +74,9 @@ export type Composicao = {
 }
 
 // Como o card "Taxa de procedência (2G)" da v1: campo que falta conta 0.
-export function composicao(n: JulgadosAcordaos['n']): Composicao {
+export function composicao(
+    n: Pick<JulgadosAcordaos['n'], 'total' | 'procedentes' | 'improcedentes' | 'extintos'>,
+): Composicao {
     const total = n.total ?? 0
     const procedentes = n.procedentes ?? 0
     const improcedentes = n.improcedentes ?? 0

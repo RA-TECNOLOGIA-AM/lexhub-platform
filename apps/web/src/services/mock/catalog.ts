@@ -195,6 +195,15 @@ export const catalog: DashboardCatalog = {
             syncedMin: 6,
         }),
         entry({
+            key: 'julgados-sentencas',
+            title: 'Julgados Sentenças',
+            area: 'Jurídico',
+            desc: 'Resultados de sentença (1º grau) no período.',
+            units: ALL,
+            source: 'LexFlow',
+            syncedMin: 6,
+        }),
+        entry({
             key: 'julgados-acordaos',
             title: 'Julgados Acórdãos',
             area: 'Jurídico',

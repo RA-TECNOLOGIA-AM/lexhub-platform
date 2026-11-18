@@ -1,4 +1,4 @@
-"""Exportação dos Julgados Acórdãos da v1 — cópia SEM mudança.
+"""Exportação dos Julgados Acórdãos e Sentenças da v1 — cópia SEM mudança.
 
 Origem: api_dashboards/src/app/dashboard_routes.py (cópia de 17/11/2026; linha na v1 ao lado de cada bloco).
 O gerar_generico.py copia só as rotas do dashboard; as rotas /export da v1 usam também estes campos,
@@ -7,6 +7,50 @@ rótulos e funções. Quem monta o arquivo na V2 é app/dashboards/export.py (CS
 
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
+
+# v1: dashboard_routes.py:32137 (sentenças: cópia de 18/11/2026)
+_CAMPOS_EXPORT_JULGADOS_SENTENCA_NG: Dict[str, str] = {
+    "numero_processo": "NUMERO_PROCESSO",
+    "materia": "MATERIA",
+    "competencia": "COMPETENCIA",
+    "comarca": "COMARCA",
+    "uf": "UF",
+    "fase": "FASE",
+    "subfase": "SUBFASE",
+    "juiz_1g": "JUIZ_1G",
+    "merito_1g": "MERITO_SENTENCA_1G",
+    "motivo_extincao": "MOTIVO_STATUS_1G",
+    "data_ajuizamento": "DATA_AJUIZAMENTO",
+    "data_sentenca": "DATA_SENTENCA",
+    "valor_sentenca": "VALOR_SENTENCA",
+    "data_sentenca_embargos": "SENTENCA_EMBARGOS",
+    "status_sentenca_embargos": "STATUS_SENTENCA_EMBARGOS",
+    "resultado_embargos_estimado": "RESULTADO_EMBARGOS_ESTIMADO",
+}
+# v1: dashboard_routes.py:32155
+_LABELS_EXPORT_JULGADOS_SENTENCA_NG: Dict[str, str] = {
+    "numero_processo": "Número do Processo",
+    "materia": "Matéria",
+    "competencia": "Competência",
+    "comarca": "Comarca",
+    "uf": "UF",
+    "fase": "Fase",
+    "subfase": "Subfase",
+    "juiz_1g": "Juiz (1G)",
+    "merito_1g": "Sentença de Mérito",
+    "motivo_extincao": "Motivo da Extinção",
+    "data_ajuizamento": "Data de Distribuição",
+    "data_sentenca": "Data da Sentença",
+    "valor_sentenca": "Valor da Sentença",
+    "data_sentenca_embargos": "Data da Sentença de Embargos",
+    "status_sentenca_embargos": "Status da Sentença de Embargos",
+    "resultado_embargos_estimado": "Status Resultante dos Embargos",
+}
+# v1: dashboard_routes.py:32173 (LA e RJ: os mesmos campos do NG)
+_CAMPOS_EXPORT_JULGADOS_SENTENCA_LA: Dict[str, str] = dict(_CAMPOS_EXPORT_JULGADOS_SENTENCA_NG)
+_LABELS_EXPORT_JULGADOS_SENTENCA_LA: Dict[str, str] = dict(_LABELS_EXPORT_JULGADOS_SENTENCA_NG)
+_CAMPOS_EXPORT_JULGADOS_SENTENCA_RJ: Dict[str, str] = dict(_CAMPOS_EXPORT_JULGADOS_SENTENCA_NG)
+_LABELS_EXPORT_JULGADOS_SENTENCA_RJ: Dict[str, str] = dict(_LABELS_EXPORT_JULGADOS_SENTENCA_NG)
 
 # v1: dashboard_routes.py:32178
 _CAMPOS_EXPORT_JULGADOS_ACORDAO_NG: Dict[str, str] = {

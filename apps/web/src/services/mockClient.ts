@@ -39,6 +39,7 @@ import { financeiroEstrategicoFor } from './mock/financeiroEstrategico.ts'
 import { acordosFor, execucaoFor } from './mock/execucao.ts'
 import { execucaoEstrategicoFor } from './mock/execucaoEstrategico.ts'
 import { julgadosAcordaosFor } from './mock/julgadosAcordaos.ts'
+import { julgadosSentencasFor } from './mock/julgadosSentencas.ts'
 import { metaAnualFor } from './mock/metaAnual.ts'
 import { preProtocoloFor } from './mock/preProtocolo.ts'
 import { peticionamentoLegadoFor } from './mock/peticionamentoLegado.ts'
@@ -154,6 +155,7 @@ const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unk
     acordos: acordosFor,
     'execucao-estrategico': execucaoEstrategicoFor,
     'julgados-acordaos': julgadosAcordaosFor,
+    'julgados-sentencas': julgadosSentencasFor,
 }
 
 export function createMockClient(): DataClient {
