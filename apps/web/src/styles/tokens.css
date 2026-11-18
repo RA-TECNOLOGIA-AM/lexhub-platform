@@ -204,12 +204,12 @@ h1, h2, h3, p { margin: 0; }
 .content { padding: 24px 28px 48px; display: flex; flex-direction: column; gap: 20px; max-width: 1400px; width: 100%; }
 
 /* Tela cheia pelo botão do app: só o conteúdo, sem a barra lateral.
-   :root:fullscreen = Fullscreen API em documentElement (lib/fullscreen.ts); sair da tela cheia traz a barra de volta.
-   Não usar (display-mode: fullscreen): ela também vale no F11, no botão verde do Mac e em navegadores de TV/quiosque,
-   e aí a barra sumia sem nenhum jeito de voltar pelo app (monitores grandes).
+   data-app-fullscreen = marca posta por lib/fullscreen.ts só quando o botão do app pede a tela cheia; sair tira.
+   Não usar :fullscreen nem (display-mode: fullscreen): valem também no F11, no botão verde do Mac e em
+   navegadores de TV/quiosque, e aí a barra sumia sem nenhum jeito de voltar pelo app.
    Só no desktop: no celular a barra já é uma gaveta escondida. */
 @media (min-width: 861px) {
-  :root:fullscreen .side { display: none; }
+  :root[data-app-fullscreen="true"] .side { display: none; }
 }
 
 @media (max-width: 860px) {
