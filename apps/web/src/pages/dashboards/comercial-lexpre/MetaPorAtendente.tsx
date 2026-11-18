@@ -5,6 +5,8 @@ import { InfoTip, Pill } from '../../../components/dashboard/StatCard.tsx'
 import { CountUp } from '../../../components/ui/CountUp.tsx'
 import { Icon } from '../../../components/ui/Icon.tsx'
 import { useAsync } from '../../../hooks/useAsync.ts'
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue.ts'
+import { FETCH_DELAY_MS } from '../../../lib/dashboardQuery.ts'
 import { fmt } from '../../../lib/format.ts'
 import { dataClient } from '../../../services/client.ts'
 import type { DashboardFilters } from '../../../types/index.ts'
@@ -33,10 +35,19 @@ export function MetaPorAtendente({ referencia, filters }: MetaPorAtendenteProps)
     const ano = Number(referencia.slice(0, 4))
     const { from, to } = datasDoPeriodo(periodo, ano)
     const meta = metaDoPeriodo(periodo)
-    const chave = JSON.stringify(filters)
+    // Os filtros da página depois de pararem de mudar (como a busca da página: um clique não é uma busca).
+    // Em texto: o objeto de filtros é novo a cada render da página, o texto só muda quando eles mudam.
+    const chave = useDebouncedValue(JSON.stringify(filters), FETCH_DELAY_MS)
     const { data, error, loading } = useAsync(
-        () =>
-            dataClient.getDashboardData<ComercialLexpreResponse>('comercial-lexpre', { org, unit, from, to, filters }),
+        (signal) =>
+            dataClient.getDashboardData<ComercialLexpreResponse>('comercial-lexpre', {
+                org,
+                unit,
+                from,
+                to,
+                filters: JSON.parse(chave) as DashboardFilters,
+                signal,
+            }),
         [org, unit, from, to, chave],
     )
     // Como na v1: LexPre + banco legado, pelo primeiro nome.

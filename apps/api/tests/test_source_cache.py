@@ -4,7 +4,7 @@ import logging
 import asyncpg
 import pytest
 
-from app.cache_warmer import warm_once, warm_targets
+from app.cache_warmer import MIN_PAUSE, pause_after, warm_loop, warm_once, warm_targets
 from app.dashboards.base import AltSource, DashboardModule
 from app.database import SourceUnavailable
 from app.source_cache import CachedSourceFetcher, Entry, MemoryStore, SourceCache
@@ -61,18 +61,117 @@ def test_dentro_dos_5_min_nao_vai_ao_banco():
     assert b is a
 
 
-def test_vencido_busca_de_novo():
+def test_vencido_ha_pouco_vai_para_a_tela_na_hora_e_renova_em_segundo_plano():
+    cache, clock, origin = make()
+    origin.delay = 0.05  # a busca demora: a tela não pode esperar por ela
+
+    async def go():
+        first = await cache.get("k", lambda: origin.fetch("q"))
+        clock.now += 300
+        served = await asyncio.wait_for(cache.get("k", lambda: origin.fetch("q")), 0.01)
+        await cache.wait_renewals()
+        after = await cache.get("k", lambda: origin.fetch("q"))
+        return first, served, after
+
+    first, served, after = run(go())
+    assert served is first  # o atual, sem esperar o banco
+    assert origin.calls == 2  # renovou uma vez
+    assert after.data[0]["busca"] == 2  # quem pede depois já recebe o novo
+    assert after.fetched_at == clock.now
+
+
+def test_vencido_ha_muito_tempo_espera_a_busca():
     cache, clock, origin = make()
 
     async def go():
         await cache.get("k", lambda: origin.fetch("q"))
-        clock.now += 300
+        clock.now += 300 + 600  # ttl + stale_while_revalidate
         return await cache.get("k", lambda: origin.fetch("q"))
 
     entry = run(go())
     assert origin.calls == 2
     assert entry.data[0]["busca"] == 2
     assert entry.fetched_at == clock.now
+
+
+def test_sem_stale_while_revalidate_vencido_espera_a_busca():
+    clock, origin = Clock(), Origin()
+    cache = SourceCache(MemoryStore(), ttl=300, clock=clock, stale_while_revalidate=0)
+
+    async def go():
+        await cache.get("k", lambda: origin.fetch("q"))
+        clock.now += 300
+        return await cache.get("k", lambda: origin.fetch("q"))
+
+    assert run(go()).data[0]["busca"] == 2
+
+
+def test_varias_pessoas_no_vencido_geram_uma_renovacao_so():
+    cache, clock, origin = make()
+    origin.delay = 0.05
+
+    async def go():
+        first = await cache.get("k", lambda: origin.fetch("q"))
+        clock.now += 301
+        served = await asyncio.gather(
+            *(cache.get("k", lambda: origin.fetch("q")) for _ in range(10))
+        )
+        await cache.wait_renewals()
+        return first, served
+
+    first, served = run(go())
+    assert all(e is first for e in served)
+    assert origin.calls == 2
+
+
+def test_renovacao_em_segundo_plano_que_falha_mantem_o_dado_e_nao_levanta():
+    cache, clock, origin = make()
+
+    async def go():
+        first = await cache.get("k", lambda: origin.fetch("q"))
+        origin.fail = True
+        clock.now += 301
+        served = await cache.get("k", lambda: origin.fetch("q"))
+        await cache.wait_renewals()
+        again = await cache.get("k", lambda: origin.fetch("q"))  # tenta renovar de novo
+        await cache.wait_renewals()
+        return first, served, again
+
+    first, served, again = run(go())
+    assert served is first and again is first
+    assert origin.calls == 3
+
+
+def test_aquecedor_espera_a_renovacao_em_andamento_em_vez_de_buscar_de_novo():
+    cache, clock, origin = make()
+    origin.delay = 0.05
+
+    async def go():
+        await cache.get("k", lambda: origin.fetch("q"))
+        clock.now += 301
+        await cache.get("k", lambda: origin.fetch("q"))  # dispara a renovação
+        return await cache.refresh("k", lambda: origin.fetch("q"))
+
+    entry = run(go())
+    assert origin.calls == 2
+    assert entry.data[0]["busca"] == 2
+
+
+def test_requisicao_cancelada_nao_cancela_a_busca_dos_outros():
+    cache, _clock, origin = make()
+    origin.delay = 0.05
+
+    async def go():
+        desistiu = asyncio.create_task(cache.get("k", lambda: origin.fetch("q")))
+        await asyncio.sleep(0.01)
+        desistiu.cancel()
+        entry = await cache.get("k", lambda: origin.fetch("q"))
+        return desistiu, entry
+
+    desistiu, entry = run(go())
+    assert desistiu.cancelled()
+    assert origin.calls == 1
+    assert entry.data[0]["busca"] == 1
 
 
 def test_varias_pessoas_juntas_geram_uma_busca_so():
@@ -241,3 +340,44 @@ def test_aquecedor_registra_fonte_indisponivel_numa_linha_sem_traceback(caplog):
     falha = next(r for r in linhas if "q1" in r.getMessage())
     assert falha.getMessage() == "'lexflow:q1' não renovou: SourceUnavailable (QueryCanceledError)"
     assert falha.exc_info is None  # sem traceback: o motivo já está no log de app.database
+
+
+def test_intervalo_do_aquecedor_conta_do_inicio_do_ciclo():
+    assert pause_after(98, 240) == 142  # próximo ciclo começa 240 s depois do início deste
+    assert pause_after(239, 240) == MIN_PAUSE  # ciclo quase do tamanho do intervalo: folga mínima
+    assert pause_after(500, 240) == MIN_PAUSE  # ciclo maior que o intervalo: folga mínima
+
+
+def test_aquecedor_desconta_a_duracao_do_ciclo_da_pausa():
+    cache, _clock, _origin = make()
+    now = [0.0]
+    pauses: list[float] = []
+
+    class Stop(Exception):
+        pass
+
+    class SlowOrigin(Origin):
+        async def fetch(self, query_name):
+            now[0] += 98  # o ciclo leva 98 s
+            return await super().fetch(query_name)
+
+    async def fake_sleep(seconds):
+        pauses.append(seconds)
+        if len(pauses) == 3:
+            raise Stop
+
+    with pytest.raises(Stop):
+        run(
+            warm_loop(
+                cache,
+                lambda _db: SlowOrigin(),
+                [("lexflow", "q")],
+                lambda _db: True,
+                interval=240,
+                initial_delay=30,
+                sleep=fake_sleep,
+                clock=lambda: now[0],
+            )
+        )
+
+    assert pauses == [30, 142, 142]  # espera inicial, depois intervalo - duração do ciclo

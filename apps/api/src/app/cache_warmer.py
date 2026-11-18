@@ -7,7 +7,7 @@ pulando bancos desligados ou fora do ar; falha de uma não interrompe as outras.
 import asyncio
 import logging
 import time
-from collections.abc import Callable, Iterable
+from collections.abc import Awaitable, Callable, Iterable
 
 from app.dashboards.base import DashboardModule, SourceFetcher
 from app.database import SourceUnavailable
@@ -72,6 +72,20 @@ async def warm_once(
     return ok
 
 
+# Pausa mínima entre dois ciclos, quando um ciclo demora mais que o intervalo: a origem respira.
+MIN_PAUSE = 30.0
+
+
+def pause_after(cycle: float, interval: float) -> float:
+    """Quanto esperar depois de um ciclo que durou `cycle` s para o próximo começar `interval` s depois
+    do início deste.
+
+    Antes a pausa era o intervalo inteiro, depois do ciclo: com ciclo de 1 min 38 s e intervalo de 4 min,
+    cada query era renovada a cada ~5 min 40 s e ficava ~40 s vencida (TTL de 5 min).
+    """
+    return max(MIN_PAUSE, interval - cycle)
+
+
 async def warm_loop(
     cache: SourceCache,
     fetcher_for: Callable[[str], SourceFetcher],
@@ -79,8 +93,10 @@ async def warm_loop(
     is_up: Callable[[str], bool],
     interval: float,
     initial_delay: float = 30,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    clock: Callable[[], float] = time.monotonic,
 ) -> None:
-    """Tarefa de fundo: espera a API subir, aquece e repete a cada `interval` segundos."""
+    """Tarefa de fundo: espera a API subir, aquece e começa um ciclo a cada `interval` segundos."""
     if not targets:
         return
     logger.info(
@@ -89,7 +105,8 @@ async def warm_loop(
         seconds(interval),
         seconds(initial_delay),
     )
-    await asyncio.sleep(initial_delay)
+    await sleep(initial_delay)
     while True:
+        started = clock()
         await warm_once(cache, fetcher_for, targets, is_up)
-        await asyncio.sleep(interval)
+        await sleep(pause_after(clock() - started, interval))

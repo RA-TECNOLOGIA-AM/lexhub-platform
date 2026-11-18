@@ -110,8 +110,12 @@ class Settings(BaseSettings):
     # aquecedor um pouco antes de vencer). Ver app/source_cache.py e app/cache_warmer.py.
     SOURCE_CACHE_TTL: int = Field(default=300, ge=0)
     SOURCE_CACHE_STALE_MAX_AGE: int = Field(default=3600, ge=0)
+    # Vencido há até isto (s): a tela recebe o dado atual na hora e ele é renovado em segundo
+    # plano. 0 = desligado (quem pedir depois de vencer espera a query no banco).
+    SOURCE_CACHE_STALE_WHILE_REVALIDATE: int = Field(default=600, ge=0)
     SOURCE_CACHE_MAX_ENTRIES: int = Field(default=64, ge=1)
     SOURCE_CACHE_WARM_ENABLED: bool = True
+    # De quanto em quanto tempo (s) começa um ciclo do aquecedor, contado do início do anterior.
     SOURCE_CACHE_WARM_INTERVAL: int = Field(default=240, ge=30)
 
     # Redis: cache compartilhado (L2) atrás do cache em memória (L1). Mesmos nomes e padrões da v1

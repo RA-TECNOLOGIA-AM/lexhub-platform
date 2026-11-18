@@ -111,6 +111,7 @@ def create_app() -> FastAPI:
             stale_max_age=settings.SOURCE_CACHE_STALE_MAX_AGE,
             shared=app.state.cache,
             shared_ttl=ttl_by_query(settings.CACHE_TTL_HEAVY, settings.CACHE_TTL_DEFAULT),
+            stale_while_revalidate=settings.SOURCE_CACHE_STALE_WHILE_REVALIDATE,
         )
         warmer = None
         keeper = None
@@ -127,8 +128,10 @@ def create_app() -> FastAPI:
             await _log_cache(app.state.cache, settings)
             app.state.databases.start()  # não espera: cada banco conecta numa tarefa de fundo
             logger.info(
-                "Cache: dados valem %s; se o banco cair, serve o último dado bom por até %s",
+                "Cache: dados valem %s (vencidos há até %s vão para a tela e renovam em segundo "
+                "plano); se o banco cair, serve o último dado bom por até %s",
                 seconds(settings.SOURCE_CACHE_TTL),
+                seconds(settings.SOURCE_CACHE_STALE_WHILE_REVALIDATE),
                 seconds(settings.SOURCE_CACHE_STALE_MAX_AGE),
             )
             if settings.SOURCE_CACHE_WARM_ENABLED:

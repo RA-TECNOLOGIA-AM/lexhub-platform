@@ -35,8 +35,8 @@ export function createApiClient({
 }): DataClient {
     const dashboard =
         <T>(key: string) =>
-        (q: { org: string; unit: string; from?: string; to?: string; filters?: object }) =>
-            http.get<T>(`/orgs/${q.org}/units/${q.unit}/dashboards/${key}${toSearch(q)}`)
+        (q: DashboardQuery) =>
+            http.get<T>(`/orgs/${q.org}/units/${q.unit}/dashboards/${key}${toSearch(q)}`, q.signal)
 
     return {
         // Pedidos de acesso: direto no Supabase (schema api), não pela API em Python.
