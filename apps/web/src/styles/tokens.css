@@ -203,15 +203,13 @@ h1, h2, h3, p { margin: 0; }
 .topbar .menu-btn { display: none; }
 .content { padding: 24px 28px 48px; display: flex; flex-direction: column; gap: 20px; max-width: 1400px; width: 100%; }
 
-/* Tela cheia: só o conteúdo, sem a barra lateral.
-   :root:fullscreen = o botão do app (Fullscreen API em documentElement, lib/fullscreen.ts);
-   display-mode: fullscreen = o F11 do navegador (Chrome/Edge), que não passa pela API.
+/* Tela cheia pelo botão do app: só o conteúdo, sem a barra lateral.
+   :root:fullscreen = Fullscreen API em documentElement (lib/fullscreen.ts); sair da tela cheia traz a barra de volta.
+   Não usar (display-mode: fullscreen): ela também vale no F11, no botão verde do Mac e em navegadores de TV/quiosque,
+   e aí a barra sumia sem nenhum jeito de voltar pelo app (monitores grandes).
    Só no desktop: no celular a barra já é uma gaveta escondida. */
 @media (min-width: 861px) {
   :root:fullscreen .side { display: none; }
-}
-@media (min-width: 861px) and (display-mode: fullscreen) {
-  .side { display: none; }
 }
 
 @media (max-width: 860px) {
