@@ -6474,3 +6474,659 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+/* ---------- Sobrevivência Processual (TCC) ---------- */
+.sv-topo {
+    display: grid;
+    gap: 10px;
+    padding: 14px 16px;
+}
+.sv-topo p {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin: 0;
+}
+.sv-topo-linha {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 16px;
+}
+.sv-alerta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 var(--gap);
+    color: var(--warn);
+    font-size: var(--fs-sm);
+}
+.sv-topo .sv-alerta {
+    margin: 0;
+}
+.sv-etapa {
+    display: inline-block;
+    margin-bottom: 10px;
+    padding: 4px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+}
+.sv-instancia {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+}
+.sv-inst-rot {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.sv-desf {
+    display: grid;
+    gap: 6px;
+    width: 100%;
+}
+.sv-desf-barra {
+    display: flex;
+    height: 6px;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
+    overflow: hidden;
+}
+.sv-desf-barra .fav {
+    background: var(--ok-dot);
+}
+.sv-desf-barra .imp {
+    background: var(--text-muted);
+}
+.sv-desf-barra .ext {
+    background: color-mix(in srgb, var(--text-muted) 55%, black);
+}
+.sv-desf-leg {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 8px;
+    font-size: 11px;
+}
+.sv-e2 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 16px;
+    padding: 14px 16px;
+}
+.sv-e2 > div {
+    display: grid;
+    gap: 2px;
+}
+.sv-e2-v {
+    font-size: 28px;
+}
+.sv-e2-barra {
+    grid-column: 1 / -1;
+    height: 8px;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
+    overflow: hidden;
+}
+.sv-e2-barra span {
+    display: block;
+    height: 100%;
+    background: var(--ok-dot);
+}
+.sv-notas summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+.sv-notas ul {
+    display: grid;
+    gap: 6px;
+    margin: 10px 0 0;
+    padding-left: 18px;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+}
+.sv-series {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.sv-series button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+.sv-series button[aria-pressed='false'] {
+    opacity: 0.45;
+    text-decoration: line-through;
+}
+.sv-series i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+}
+.sv-logrank {
+    margin: 0;
+}
+/* Sobrevivência Processual — o diagrama de fluxo da seção 01 (como a v1) */
+.flx {
+    --flx-info: var(--c-info);
+    --flx-violeta: var(--chart-5);
+    --flx-warn: var(--warn-dot);
+    --flx-ok: var(--ok-dot);
+    display: grid;
+    justify-items: center;
+}
+.flx-ponto {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--flx-info);
+}
+.flx-ponto.ok {
+    background: var(--flx-ok);
+}
+.flx-sep {
+    display: inline-block;
+    width: 1px;
+    height: 14px;
+    margin: 0 10px;
+    vertical-align: middle;
+    background: var(--border-strong);
+}
+.flx-inicio {
+    padding: 8px 18px;
+    border: 1px solid color-mix(in srgb, var(--flx-info) 45%, transparent);
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--flx-info) 8%, transparent);
+    font-size: var(--fs-sm);
+}
+.flx-inicio strong {
+    color: var(--flx-info);
+}
+.flx-seta {
+    margin: 4px 0;
+    font-size: 12px;
+    line-height: 1;
+}
+.flx-bloco {
+    width: 100%;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+}
+.flx-bloco header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-bottom: 14px;
+}
+.flx-e1 {
+    border-color: color-mix(in srgb, var(--flx-info) 45%, transparent);
+}
+.flx-e1 header {
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+.flx-badge {
+    padding: 3px 9px;
+    border: 1px solid color-mix(in srgb, var(--flx-info) 50%, transparent);
+    border-radius: 6px;
+    color: var(--flx-info);
+    font-family: var(--num);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.flx-badge.ok {
+    border-color: color-mix(in srgb, var(--flx-ok) 50%, transparent);
+    color: var(--flx-ok);
+}
+.flx-titulo {
+    color: var(--flx-info);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.flx-dir {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.flx-kpis {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+.flx-kpi {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+.flx-kpi > div,
+.flx-linha > div {
+    display: grid;
+    gap: 2px;
+}
+.flx-kpi-v {
+    font-size: 30px;
+    line-height: 1.1;
+}
+.flx-un {
+    color: var(--text-muted);
+    font-size: 0.55em;
+    font-weight: 500;
+}
+.flx-ico {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+    color: var(--flx-info);
+    background: color-mix(in srgb, var(--flx-info) 8%, transparent);
+}
+.flx-kpi.t-violeta .flx-ico {
+    color: var(--flx-violeta);
+    background: color-mix(in srgb, var(--flx-violeta) 10%, transparent);
+}
+.flx-kpi.t-ok .flx-ico {
+    color: var(--flx-ok);
+    background: color-mix(in srgb, var(--flx-ok) 10%, transparent);
+}
+/* conectores tracejados */
+.flx-ramos,
+.flx-converge {
+    position: relative;
+    width: 100%;
+    height: 84px;
+}
+.flx-converge {
+    height: 56px;
+}
+.flx-linhas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+.flx-linhas path {
+    fill: none;
+    stroke-width: 1.6;
+    stroke-dasharray: 5 5;
+    vector-effect: non-scaling-stroke;
+}
+.flx-linhas .l-info {
+    stroke: var(--flx-info);
+}
+.flx-linhas .l-violeta {
+    stroke: var(--flx-violeta);
+}
+.flx-linhas .l-warn {
+    stroke: var(--flx-warn);
+}
+.flx-linhas .l-ok {
+    stroke: var(--flx-ok);
+}
+.flx-legenda {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 7px 16px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    background: var(--bg);
+    box-shadow: 0 0 0 6px var(--bg);
+    font-size: var(--fs-sm);
+    white-space: nowrap;
+}
+.flx-violeta {
+    color: var(--flx-violeta);
+}
+/* as duas instâncias */
+.flx-instancias {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: stretch;
+    gap: 14px;
+    width: 100%;
+}
+.flx-1g header .flx-ponto {
+    background: var(--flx-info);
+}
+.flx-2g {
+    border-color: color-mix(in srgb, var(--flx-violeta) 45%, transparent);
+}
+.flx-2g header .flx-ponto {
+    background: var(--flx-violeta);
+}
+.flx-tag {
+    margin-left: auto;
+    padding: 3px 9px;
+    border: 1px solid color-mix(in srgb, var(--flx-info) 45%, transparent);
+    border-radius: 6px;
+    color: var(--flx-info);
+    font-family: var(--num);
+    font-size: 11px;
+}
+.flx-2g .flx-tag {
+    border-color: color-mix(in srgb, var(--flx-violeta) 45%, transparent);
+    color: var(--flx-violeta);
+}
+.flx-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.flx-card {
+    --cor: var(--flx-info);
+    display: grid;
+    align-content: start;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--cor) 45%, transparent);
+    border-radius: 10px;
+}
+.flx-c-warn {
+    --cor: var(--flx-warn);
+}
+.flx-c-violeta {
+    --cor: var(--flx-violeta);
+}
+.flx-card-topo {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+.flx-card-topo strong {
+    color: var(--cor);
+    font-size: var(--fs-sm);
+    text-transform: uppercase;
+}
+.flx-mini {
+    flex: none;
+    padding: 2px 7px;
+    border: 1px solid color-mix(in srgb, var(--cor) 45%, transparent);
+    border-radius: 5px;
+    color: var(--cor);
+    font-size: 10px;
+    font-weight: 600;
+}
+.flx-linha {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.flx-linha .flx-ico {
+    width: 34px;
+    height: 34px;
+    color: var(--cor);
+    background: color-mix(in srgb, var(--cor) 8%, transparent);
+}
+.flx-linha .flx-ico.warn {
+    color: var(--flx-warn);
+}
+.flx-linha strong {
+    font-size: 20px;
+}
+.flx-barra {
+    display: flex;
+    gap: 2px;
+    height: 6px;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
+    overflow: hidden;
+}
+.flx-barra .fav {
+    background: var(--flx-ok);
+}
+.flx-barra .imp {
+    background: var(--danger);
+}
+.flx-barra .ext {
+    background: color-mix(in srgb, var(--text-muted) 55%, black);
+}
+.flx-desf {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+.flx-desf > span {
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 10px;
+}
+.flx-desf strong {
+    color: var(--text);
+    font-size: 12px;
+}
+.flx-desf > .fav {
+    border-color: color-mix(in srgb, var(--flx-ok) 50%, transparent);
+    background: color-mix(in srgb, var(--flx-ok) 10%, transparent);
+    color: var(--flx-ok);
+}
+.flx-desf .fav strong {
+    color: var(--flx-ok);
+}
+.flx-desf > .imp {
+    border-color: color-mix(in srgb, var(--danger) 50%, transparent);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
+    color: var(--danger);
+}
+.flx-desf .imp strong {
+    color: var(--danger);
+}
+/* animações: as barras e o anel crescem até o valor (e acompanham a troca de filtro); os tracejados "correm" no
+   sentido do caminho e as setas pulsam. Quem pediu menos movimento no sistema vê tudo parado. */
+.flx-barra span {
+    transition: width 0.7s ease;
+    animation: flx-cresce 0.9s ease both;
+    transform-origin: left;
+}
+@keyframes flx-cresce {
+    from {
+        transform: scaleX(0);
+    }
+}
+.flx-anel .valor {
+    transition: stroke-dasharray 0.7s ease;
+    animation: flx-anel 1s ease both;
+}
+@keyframes flx-anel {
+    from {
+        stroke-dasharray: 0 999;
+    }
+}
+.flx-linhas path {
+    animation: flx-fluxo 1.1s linear infinite;
+}
+@keyframes flx-fluxo {
+    to {
+        stroke-dashoffset: -20;
+    }
+}
+.flx-seta {
+    animation: flx-pulso 1.4s ease-in-out infinite;
+}
+@keyframes flx-pulso {
+    50% {
+        transform: translateY(3px);
+        opacity: 0.55;
+    }
+}
+.flx-seq strong {
+    display: inline-block;
+    animation: flx-anda 1.4s ease-in-out infinite;
+}
+@keyframes flx-anda {
+    50% {
+        transform: translateX(4px);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .flx-barra span,
+    .flx-anel .valor,
+    .flx-linhas path,
+    .flx-seta,
+    .flx-seq strong {
+        animation: none;
+        transition: none;
+    }
+}
+.flx-rodape {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+}
+.flx-seq {
+    align-self: center;
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--flx-violeta) 45%, transparent);
+    border-radius: 10px;
+    color: var(--flx-violeta);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-align: center;
+}
+.flx-seq strong {
+    font-size: 18px;
+}
+.flx-pilula {
+    position: relative;
+    padding: 8px 18px;
+    border: 1px solid color-mix(in srgb, var(--flx-ok) 50%, transparent);
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--flx-ok) 8%, transparent);
+    font-size: var(--fs-sm);
+    text-align: center;
+}
+.flx-e2 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    border-color: color-mix(in srgb, var(--flx-ok) 45%, transparent);
+}
+.flx-e2 header {
+    margin-bottom: 8px;
+}
+.flx-e2 .flx-titulo {
+    color: var(--flx-ok);
+}
+.flx-e2 p {
+    margin: 0;
+    max-width: 62ch;
+}
+.flx-taxa {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+}
+.flx-taxa > div {
+    display: grid;
+    gap: 2px;
+}
+.flx-taxa-v {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 30px;
+}
+.flx-conv {
+    padding: 2px 9px;
+    border: 1px solid color-mix(in srgb, var(--flx-ok) 50%, transparent);
+    border-radius: var(--r-pill);
+    color: var(--flx-ok);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+}
+.flx-anel {
+    width: 72px;
+    height: 72px;
+}
+.flx-anel circle {
+    fill: none;
+    stroke-width: 7;
+}
+.flx-anel .fundo {
+    stroke: color-mix(in srgb, var(--flx-ok) 15%, transparent);
+}
+.flx-anel .valor {
+    stroke: var(--flx-ok);
+    stroke-linecap: round;
+}
+.flx-anel-ico {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--flx-ok);
+}
+@media (max-width: 1100px) {
+    .flx-kpis,
+    .flx-instancias,
+    .flx-e2 {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .flx-seq,
+    .flx-ramos svg,
+    .flx-converge {
+        display: none;
+    }
+    .flx-ramos {
+        height: auto;
+        margin: 10px 0;
+    }
+    .flx-legenda {
+        position: static;
+        transform: none;
+        white-space: normal;
+    }
+}
+@media (max-width: 640px) {
+    .flx-cards {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

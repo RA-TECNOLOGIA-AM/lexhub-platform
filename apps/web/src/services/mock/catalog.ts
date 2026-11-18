@@ -264,6 +264,15 @@ export const catalog: DashboardCatalog = {
             syncedMin: 6,
         }),
         entry({
+            key: 'sobrevivencia-processual',
+            title: 'Sobrevivência Processual',
+            area: 'Estratégico',
+            desc: 'Tempo até mérito, acordo e pagamento (Kaplan-Meier) e os gargalos por matéria, comarca e competência.',
+            units: NG_AM,
+            source: 'LexFlow',
+            syncedMin: 6,
+        }),
+        entry({
             key: 'financeiro-estrategico',
             title: 'Financeiro Estratégico',
             area: 'Financeiro',

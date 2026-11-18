@@ -3271,3 +3271,211 @@ QUERIES["agendamentos_todos_setores_LA_RJ"] = {
         "description": "Todos os agendamentos (qualquer setor) do escritório LAADV RJ, para vincular a publicações via processo_id.",
         "params": []
     }
+
+
+# v1: queries.py:4431, "tcc_sobrevivencia_processual" (copiada em 18/11/2026). Sobrevivência Processual (TCC).
+QUERIES["tcc_sobrevivencia_processual"] = {
+    "database": "lexflow",
+    # Cópia da coorte do TCC (`TCC - Luiz/coorte_sobrevivencia_2_estagios.sql`), só com
+    # as colunas que o dashboard usa. Mudou a definição da coorte lá? Replicar aqui.
+    "query": """
+    with base as (
+      select
+        p.id,
+        p.numero_processo,
+        p.id_escritorio_assinante,   -- 20=NG, 21=LA (AM), 27=RJ
+        -- Marco zero (t=0) da sobrevivencia e a DISTRIBUICAO do processo (data real
+        -- de inicio da tramitacao judicial), nao a contratacao (relacao com o
+        -- escritorio, que pode ser bem antes ou depois da distribuicao - mediana
+        -- da diferenca = 0 dias, mas com cauda grande pros dois lados). Trocado
+        -- em 03/11/2026: distribuicao tambem cobre mais processos (88k vs 70k
+        -- com contratacao preenchida, no universo sem segredo de justica).
+        case when (p.distribuicao at time zone 'America/Manaus')::date
+               between '1971-01-01' and current_date + 730
+             then (p.distribuicao at time zone 'America/Manaus')::date end as distribuicao_d,
+        case when (p.sentenca at time zone 'America/Manaus')::date
+               between '1971-01-01' and current_date + 730
+             then (p.sentenca at time zone 'America/Manaus')::date end as sentenca_d,
+        case when p.acordao_data between '1971-01-01' and current_date + 730
+             then p.acordao_data end as acordao_d,
+        case when (p.acordo_fechado at time zone 'America/Manaus')::date
+               between '1971-01-01' and current_date + 730
+             then (p.acordo_fechado at time zone 'America/Manaus')::date end as acordo_d,
+        case when (p.ultima_movimentacao at time zone 'America/Manaus')::date
+               between '1971-01-01' and current_date + 730
+             then (p.ultima_movimentacao at time zone 'America/Manaus')::date end as ultima_mov_d,
+        case when p.data_compensacao_alvara between '1971-01-01' and current_date + 730
+             then p.data_compensacao_alvara end as compensacao_alvara_d,
+        case when p.data_compensacao_alvara_incontroverso between '1971-01-01' and current_date + 730
+             then p.data_compensacao_alvara_incontroverso end as compensacao_incontroverso_d,
+        case when (p.pagamento_acordo at time zone 'America/Manaus')::date
+               between '1971-01-01' and current_date + 730
+             then (p.pagamento_acordo at time zone 'America/Manaus')::date end as pagamento_acordo_d,
+        p.id_sentenca_merito_grau1,
+        p.id_acordao_merito_grau2,
+        p.id_tipo_acao, ta.description as tipo_acao,
+        p.id_materia, m.description as materia,
+        p.valor_causa,
+        p.id_comarca,
+        co.nome as comarca,
+        p.uf,
+        p.juiz_1g,       -- texto livre e a fonte real nos dashboards do projeto, nao a FK juiz_primeiro_grau
+        p.relator_2g,    -- idem juiz_1g: texto livre, so preenchido quando ha acordao (2G)
+        c.nome as competencia,
+        f.description as fase,
+        sp.description as subfase    -- public.status_processual - e isso que o resto do sistema chama de "subfase"
+      from processo p
+      left join tipo_acao ta on ta.id = p.id_tipo_acao
+      left join materia m on m.id = p.id_materia
+      left join comarca co on co.id = p.id_comarca
+      left join competencias c on c.id = p.id_competencia
+      left join fase f on f.id = p.id_fase
+      left join status_processual sp on sp.id = p.id_status_processual
+      where p.distribuicao is not null
+        and coalesce(p.segredo_justica, false) = false
+        -- 09/11/2026: so NG (20) e LA/AM (21), igual a coorte do TCC - RJ (27) saiu
+        -- do estudo e do dashboard; id 3 e escritorio de teste.
+        and p.id_escritorio_assinante in (20, 21)
+    ),
+    base_valida as (
+      select * from base
+      where distribuicao_d is not null   -- descarta quem tem distribuicao corrompida (sem ancora t=0)
+    ),
+    merito as (
+      select *,
+        case when acordao_d is not null then greatest(sentenca_d, acordao_d) else sentenca_d end as fim_merito_d,
+        -- id_acordao_merito_grau2 = 8 ("SENTENCA ANULADA"): 2G anulou e devolveu
+        -- pro 1G, que profere NOVA sentenca depois (sobrescrita no mesmo campo
+        -- `sentenca`) - o desfecho valido e o da sentenca, nao o do acordao.
+        -- Replicado de coorte_sobrevivencia_2_estagios.sql (fix de 20/10/2026).
+        case when acordao_d is not null and id_acordao_merito_grau2 = 8 then
+               (case when sentenca_d is not null then 'SENTENCA_MERITO_1G' end)
+             when acordao_d is not null then 'ACORDAO_MERITO_2G'
+             when sentenca_d is not null then 'SENTENCA_MERITO_1G'
+             else null end as tipo_merito,
+        case
+          when acordao_d is not null and id_acordao_merito_grau2 = 8 then
+            (case when sentenca_d is not null then (id_sentenca_merito_grau1 in (1, 3)) end)
+          when acordao_d is not null then (id_acordao_merito_grau2 in (1, 3))
+          when sentenca_d is not null then (id_sentenca_merito_grau1 in (1, 3))
+          else null
+        end as merito_favoravel_com_proveito
+      from base_valida
+    ),
+    estagio1 as (
+      select *,
+        case
+          when acordo_d is not null and (fim_merito_d is null or acordo_d <= fim_merito_d)
+            then 'ACORDO'
+          when fim_merito_d is not null and merito_favoravel_com_proveito
+            then 'MERITO_FAVORAVEL_COM_PROVEITO'
+          when fim_merito_d is not null and not merito_favoravel_com_proveito
+            then 'MERITO_SEM_PROVEITO_OU_DESFAVORAVEL'
+          else 'CENSURADO'
+        end as tipo_evento_e1,
+        case
+          when acordo_d is not null and (fim_merito_d is null or acordo_d <= fim_merito_d)
+            then acordo_d
+          when fim_merito_d is not null then fim_merito_d
+          else ultima_mov_d
+        end as data_evento_e1,
+        -- Classificacao do acordo para os cards Pre x Pos-Sentenca, INDEPENDENTE do
+        -- evento do Estagio 1 (11/11/2026). Antes so valia quando o acordo era o
+        -- primeiro desfecho (antes de fim_merito_d): sem acordao, fim_merito_d = a
+        -- propria sentenca, entao todo acordo pos-sentenca sem acordao sumia (NG: 323
+        -- de 378 nao contados). Regra atual (decisao do usuario): PRE = antes da
+        -- primeira decisao de merito (sentenca; ou o acordao quando nao ha sentenca);
+        -- POS = qualquer acordo depois dela, inclusive na execucao (apos o acordao).
+        -- Fonte: so a data de acordo fechado (etiquetas nao entram).
+        case
+          when acordo_d is null then null
+          when least(sentenca_d, acordao_d) is null or acordo_d <= least(sentenca_d, acordao_d)
+            then 'PRE_SENTENCA'
+          else 'POS_SENTENCA'
+        end as tipo_acordo,
+        -- Estagio 1 quebrado em 2 sub-marcos (mesmo t=0 = distribuicao), pra nao
+        -- misturar quem so teve sentenca (1G, sem recurso) com quem foi ate
+        -- acordao (2G). A MEDIANA/curva conta QUALQUER sentenca/acordao como
+        -- evento (procedente ou nao) - so a TAXA (% favoravel) e restrita a
+        -- procedente/parcialmente procedente com proveito economico (campos
+        -- sentenca_favoravel/acordao_favoravel abaixo, mesmo criterio do
+        -- Estagio 1 geral). ACORDO antes do marco em questao conta como
+        -- censura (mesma simplificacao ja documentada nas Fases 3-5 do TCC:
+        -- sem riscos competitivos nativos) - nao e um "nao-evento", so nao e
+        -- ESSE evento.
+        case when sentenca_d is not null then 'SENTENCA' else 'CENSURADO' end as tipo_evento_sentenca,
+        case when sentenca_d is not null then (id_sentenca_merito_grau1 in (1, 3)) else false end as sentenca_favoravel,
+        -- 11/11/2026: improcedencia e extincao, mesma regra dos Julgados
+        -- (matriz_julgamento: improcedente = 5 e 6/prescricao-decadencia; extinto = 7)
+        case when sentenca_d is not null then (id_sentenca_merito_grau1 in (5, 6)) else false end as sentenca_improcedente,
+        case when sentenca_d is not null then (id_sentenca_merito_grau1 = 7) else false end as sentenca_extinta,
+        -- acordao_d entra no fallback pq alguns processos tem acordao registrado
+        -- mas nao tem a data da sentenca que o precedeu capturada (so o campo
+        -- `sentenca` ficou vazio) - sem isso a censura ficava sem data nenhuma.
+        coalesce(sentenca_d, acordo_d, acordao_d, ultima_mov_d) as data_evento_sentenca,
+        case when tipo_merito = 'ACORDAO_MERITO_2G' then 'ACORDAO_MERITO' else 'CENSURADO' end as tipo_evento_acordao,
+        case when tipo_merito = 'ACORDAO_MERITO_2G' then merito_favoravel_com_proveito else false end as acordao_favoravel,
+        case when tipo_merito = 'ACORDAO_MERITO_2G' then (id_acordao_merito_grau2 in (5, 6)) else false end as acordao_improcedente,
+        case when tipo_merito = 'ACORDAO_MERITO_2G' then (id_acordao_merito_grau2 = 7) else false end as acordao_extinto,
+        -- idem, na outra direcao: sentenca_d entra no fallback pra quem so
+        -- chegou ao 1G (sem recurso) e nao tem acordo nem ultima_movimentacao
+        -- capturados - a propria sentenca vira a censura (ultimo marco certo).
+        case
+          when tipo_merito = 'ACORDAO_MERITO_2G' then acordao_d
+          when acordo_d is not null then acordo_d
+          when sentenca_d is not null then sentenca_d
+          else ultima_mov_d
+        end as data_evento_acordao
+      from merito
+    ),
+    estagio2 as (
+      select *,
+        case when tipo_evento_e1 in ('ACORDO', 'MERITO_FAVORAVEL_COM_PROVEITO')
+          then least(compensacao_alvara_d, compensacao_incontroverso_d, pagamento_acordo_d)
+        end as data_pagamento,
+        case
+          when tipo_evento_e1 not in ('ACORDO', 'MERITO_FAVORAVEL_COM_PROVEITO') then null
+          when least(compensacao_alvara_d, compensacao_incontroverso_d, pagamento_acordo_d) is not null
+            then 'PAGO'
+          else 'CENSURADO_PAGAMENTO'
+        end as tipo_evento_e2
+      from estagio1
+    )
+
+    select
+      id_escritorio_assinante,
+      tipo_evento_e1,
+      tipo_acordo,
+      case when acordo_d is not null and acordo_d >= distribuicao_d
+        then (acordo_d - distribuicao_d) end as duracao_dias_acordo,
+      (data_evento_e1 - distribuicao_d) as duracao_dias_e1,
+      tipo_evento_e2,
+      case when tipo_evento_e2 is not null then
+        (greatest(coalesce(data_pagamento, ultima_mov_d), data_evento_e1) - data_evento_e1)
+      end as duracao_dias_e2,
+      tipo_evento_sentenca,
+      sentenca_favoravel,
+      sentenca_improcedente,
+      sentenca_extinta,
+      case when (data_evento_sentenca - distribuicao_d) >= 0
+        then (data_evento_sentenca - distribuicao_d) end as duracao_dias_sentenca,
+      tipo_evento_acordao,
+      acordao_favoravel,
+      acordao_improcedente,
+      acordao_extinto,
+      case when (data_evento_acordao - distribuicao_d) >= 0
+        then (data_evento_acordao - distribuicao_d) end as duracao_dias_acordao,
+      tipo_acao, materia, comarca, competencia,
+      fase, subfase, juiz_1g, relator_2g
+    from estagio2
+    where data_evento_e1 is not null
+      and (data_evento_e1 - distribuicao_d) >= 0
+    """,
+    "description": (
+        "Coorte de sobrevivência processual em 2 estágios (contratação -> mérito/acordo -> "
+        "pagamento) + 2 sub-marcos do Estágio 1 (contratação -> sentença 1G, contratação -> "
+        "acórdão de mérito 2G), 1 linha por processo. Usado pelo dashboard Sobrevivência "
+        "Processual (TCC)."
+    ),
+    "params": []
+}
