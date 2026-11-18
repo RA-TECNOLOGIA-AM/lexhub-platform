@@ -5208,7 +5208,7 @@ button.at-name:hover {
 /* ---------- Visualização da tela (17/11): menu recolhível, rolagem sem barra, tela cheia ---------- */
 
 /* Ao entrar na tela cheia pelo app, libera toda a largura para o conteúdo. */
-:fullscreen .app > .side {
+:root[data-app-fullscreen='true'] .app > .side {
     display: none;
 }
 

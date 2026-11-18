@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fullscreenSupported, isFullscreen, toggleFullscreen, type FullscreenResult } from '../lib/fullscreen.ts'
+import { fullscreenSupported, isFullscreen, syncAppFullscreen, toggleFullscreen, type FullscreenResult } from '../lib/fullscreen.ts'
 
 // Hook: estado da tela cheia (acompanha o Esc do navegador) e a troca pelo botão.
 export function useFullscreen(): {
@@ -13,7 +13,10 @@ export function useFullscreen(): {
     const supported = fullscreenSupported()
 
     useEffect(() => {
-        const onChange = () => setActive(isFullscreen())
+        const onChange = () => {
+            syncAppFullscreen()
+            setActive(isFullscreen())
+        }
         document.addEventListener('fullscreenchange', onChange)
         return () => document.removeEventListener('fullscreenchange', onChange)
     }, [])
