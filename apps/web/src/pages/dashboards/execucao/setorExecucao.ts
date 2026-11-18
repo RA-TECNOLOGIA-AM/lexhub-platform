@@ -162,7 +162,7 @@ export function numeroCnj(raw: string | null | undefined): string {
     return `${d.slice(0, 7)}-${d.slice(7, 9)}.${d.slice(9, 13)}.${d.slice(13, 14)}.${d.slice(14, 16)}.${d.slice(16, 20)}`
 }
 
-function tarefas(v: unknown): Tarefa[] {
+export function tarefas(v: unknown): Tarefa[] {
     return objetos(v).map((r, i) => {
         const responsavel = texto(r.funcionario_atribuido) || texto(r.funcionario)
         const encerrou = texto(r.funcionario_encerramento)
@@ -185,7 +185,7 @@ function tarefas(v: unknown): Tarefa[] {
     })
 }
 
-function opcoesLista(v: unknown): OpcoesLista {
+export function opcoesLista(v: unknown): OpcoesLista {
     const o = typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {}
     return {
         funcionarios: textos(o.funcionarios),

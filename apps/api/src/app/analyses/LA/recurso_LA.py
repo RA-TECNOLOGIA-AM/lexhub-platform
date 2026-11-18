@@ -1625,8 +1625,9 @@ def filtrar_recursal_LA(
         if filtros.decisoes is not None:
             if id_1g is None or id_2g is None:
                 continue
-            status_2g_text = str(item.get(_COL_STATUS_2G) or "").strip()
-            decisao = _classificar_decisao_recursal(id_1g, id_2g, status_2g_text)
+            # V2: a v1 chamava _classificar_decisao_recursal com 3 argumentos (TypeError: o filtro de decisão
+            # sempre dava erro 500). Agora classifica pelo mérito 1G × 2G, como os cards de Decisões contam.
+            decisao = _classificar_decisao_recursal(_get_id_merito_1g(item), _get_id_merito_2g(item))
             if decisao is None or decisao not in filtros.decisoes:
                 continue
         if filtros.materias is not None:

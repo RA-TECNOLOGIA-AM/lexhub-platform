@@ -6079,3 +6079,174 @@ body {
 .tk-trilho.verde span {
     background: linear-gradient(90deg, var(--ok-dot), color-mix(in srgb, var(--ok-dot) 60%, #2dd4bf));
 }
+
+/* ---------- Recursal (LexFlow) ---------- */
+.rc-kpis-6 {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+@media (max-width: 1200px) {
+    .rc-kpis-6 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+/* meta de provimento · por atividade · demandas por funcionário */
+.rc-ativ {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.2fr);
+}
+@media (max-width: 1200px) {
+    .rc-ativ {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+.rc-portipo {
+    display: grid;
+    gap: 8px;
+    margin-top: var(--gap);
+}
+.rc-portipo ul {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.rc-portipo li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: var(--fs-sm);
+}
+.rc-legenda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+}
+.rc-legenda span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.rc-legenda i {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+}
+.rc-fav {
+    background: var(--ok-dot);
+}
+.rc-des {
+    background: var(--danger);
+}
+.rc-out {
+    background: var(--text-muted);
+}
+.rc-warn {
+    background: var(--warn-dot);
+}
+.rc-info {
+    background: var(--c-info);
+}
+/* rankings de juízes e relatores */
+.rc-ranking {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.rc-ranking li.dim {
+    opacity: 0.45;
+}
+.rc-ranking button {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.rc-ranking button:disabled {
+    cursor: default;
+}
+.rc-ranking button[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.rc-nome {
+    display: grid;
+    min-width: 0;
+}
+.rc-nome strong {
+    overflow: hidden;
+    font-size: var(--fs-sm);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rc-barra {
+    display: flex;
+    grid-column: 1 / -1;
+    height: 7px;
+    border-radius: var(--r-pill);
+    background: var(--surface-2);
+    overflow: hidden;
+}
+/* matriz 1º grau × 2º grau */
+.rc-matriz-modal {
+    width: min(1180px, calc(100vw - 32px));
+}
+.rc-matriz-wrap {
+    overflow-x: auto;
+}
+.rc-matriz {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 4px;
+    font-size: 12px;
+}
+.rc-matriz th {
+    padding: 6px;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-align: center;
+}
+.rc-matriz tbody th {
+    text-align: left;
+    white-space: nowrap;
+}
+.rc-celula {
+    width: 100%;
+    min-height: 44px;
+    padding: 6px;
+    border: 1px solid color-mix(in srgb, var(--tone) 45%, transparent);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--tone) 14%, transparent);
+    color: var(--tone-text);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+.rc-celula.on {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+.rc-celula:disabled {
+    cursor: default;
+}
+/* matéria e vara: só o número no meio da rosca, menor */
+.rc-pizza .pie-center strong,
+.rc-pizza .pie-center.longo strong {
+    font-size: 20px;
+}

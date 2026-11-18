@@ -113,6 +113,21 @@ export type DashboardFilters = {
     motivo_extincao_julgados?: string[]
     ano_ajuizamento_julgados?: string[]
     resultado_embargos_julgados?: string[] // Status Resultante dos embargos ('Revertido Ganho', 'Status Mantido'...)
+    // Recursal (LexFlow): os filtros da página da v1 (os dos processos com o sufixo _recursal) e os da seção Atividades
+    id_1g_recursal?: string[]
+    id_2g_recursal?: string[]
+    decisao_recursal?: string[]
+    juiz_recursal?: string[]
+    relator_recursal?: string[]
+    materia_recursal?: string[]
+    competencia_recursal?: string[]
+    vara_recursal?: string[]
+    subfase_recursal?: string[]
+    extinto_2g_recursal?: string[]
+    funcionario_recursos?: string[]
+    atividade_recursos?: string[]
+    status_recursos?: string[]
+    situacao_recursos?: string[]
     situacao_processo?: string[] // ATIVO | SUSPENSO/SOBRESTADO | ARQUIVADO (sem nenhum = recorte padrão da query)
 }
 

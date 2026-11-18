@@ -2423,3 +2423,620 @@ QUERIES["tickets"] = {
     "description": "Log de tickets do Discord do banco NG",
     "params": [],
 }
+
+
+# v1: queries.py:3041, "setor_recurso_RJ" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ.
+QUERIES["setor_recurso_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        WITH fases_log AS (
+            SELECT
+                id_processo,
+
+                -- RECURSAL (datas inválidas no log viram NULL — evita falha no asyncpg)
+                MAX(
+                    CASE
+                        WHEN id_fase = 8
+                            AND tipo_movimentacao = 'entrada'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_entrada_recursal,
+                MAX(
+                    CASE
+                        WHEN id_fase = 8
+                            AND tipo_movimentacao = 'saida'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_saida_recursal
+            FROM public.log_fase_processual
+            GROUP BY id_processo
+        ),
+        agendamento_recursos_aberto AS (
+            SELECT DISTINCT ON (ag.processo_id)
+                ag.processo_id,
+                sa.id AS id_setor_atividade,
+                a.id AS id_atividade,
+                a.description AS atividade,
+                ag.status AS status_agendamento
+            FROM public.agendamento ag
+            JOIN public.setor_atividade sa ON sa.id = ag.id_setor_atividade_destino
+            JOIN public.setor s ON s.id = sa.id_setor
+            JOIN public.atividade a ON a.id = sa.id_atividade
+            WHERE sa.id_setor = 198
+              AND s.id_escritorio_assinante = 27
+              AND sa.ativo = TRUE
+              AND ag.status IN ('Recebido', 'Visualizado')
+            ORDER BY ag.processo_id, ag.data_hora_criacao DESC NULLS LAST
+        )
+
+            SELECT
+            p.id,
+            p.id_escritorio_assinante                    AS "ID_ESCRITORIO",
+            p.id_situacao                                AS "ID_SITUACAO",
+            sit.description                              AS "SITUACAO",
+            ea.razao_social                              AS "ESCRITORIO",
+            p.uf                                         AS "UF",
+            CASE
+                WHEN p.distribuicao IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.distribuicao) BETWEEN 1900 AND 2100
+                THEN p.distribuicao
+            END                                          AS "DATA_AJUIZAMENTO",
+            p.numero_processo                            AS "NUMERO_PROCESSO",
+            m.description                                AS "MATERIA",
+            pp.razaosocial                               AS "PARTE_ADVERSA",
+            CASE
+                WHEN p.ultima_movimentacao IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.ultima_movimentacao) BETWEEN 1900 AND 2100
+                THEN p.ultima_movimentacao
+            END                                          AS "DATA_ULTIMA_MOVIMENTACAO",
+            p.id_fase                                    AS "ID_FASE",
+            f.description                                AS "FASE",
+            sp.description                               AS "SUBFASE",
+            o.descricao                                  AS "OPERACAO",
+            p.id_vara                                    AS "VARA",
+            p.dano_moral_vs                              AS "DANO_MORAL_SENTENCA",
+            p.dano_material_vs                           AS "DANO_MATERIAL_SENTENCA",
+            p.valor_causa_vs                             AS "VALOR_CAUSA_SENTENCA",
+            p.valor_causa_va                             AS "VALOR_CAUSA_ACORDO",
+            p.id_status_grau1                            AS "ID_1G",
+            spg.nome                                     AS "STATUS_1G",
+            p.juiz_1g                                     AS "JUIZ_1G",
+            p.id_status_grau2                            AS "ID_2G",
+            ssg.nome                                     AS "STATUS_2G",
+            p.id_sentenca_merito_grau1                   AS "ID_SENTENCA_MERITO_1G",
+            p.id_acordao_merito_grau2                    AS "ID_ACORDAO_MERITO_2G",
+            p.relator_2g                                  AS "RELATOR_2G",
+            c.nome                                       AS "COMPETENCIA",
+            CASE
+                WHEN p.transito_julgado IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.transito_julgado) BETWEEN 1900 AND 2100
+                THEN p.transito_julgado
+            END                                          AS "DATA_TRANSITO_JULGADO",
+            CASE
+                WHEN p.sentenca IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.sentenca) BETWEEN 1900 AND 2100
+                THEN p.sentenca
+            END                                          AS "DATA_SENTENCA",
+            CASE
+                WHEN p.acordao_data IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.acordao_data) BETWEEN 1900 AND 2100
+                THEN p.acordao_data
+            END                                          AS "DATA_ACORDAO",
+            CASE
+                WHEN p.acordao_embargos IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.acordao_embargos) BETWEEN 1900 AND 2100
+                THEN p.acordao_embargos
+            END                                          AS "DATA_ACORDAO_EMBARGOS",
+
+            -- Logs de entrada/saída por fase
+            fl.dt_entrada_recursal                       AS "DT_ENTRADA_RECURSAL",
+            fl.dt_saida_recursal                         AS "DT_SAIDA_RECURSAL",
+
+            -- Agendamento aberto no setor RECURSOS (escritório RJ, id 27)
+            ara.id_setor_atividade                       AS "ID_SETOR_ATIVIDADE_RECURSOS",
+            ara.id_atividade                             AS "ID_ATIVIDADE_RECURSOS",
+            ara.atividade                                AS "ATIVIDADE_RECURSOS",
+            ara.status_agendamento                       AS "STATUS_AGENDAMENTO_RECURSOS"
+
+        FROM public.processo p
+        LEFT JOIN public.escritorio_assinante ea    ON p.id_escritorio_assinante = ea.id
+        LEFT JOIN public.materia m                  ON p.id_materia = m.id
+        LEFT JOIN public.fase f                     ON p.id_fase = f.id
+        LEFT JOIN public.status_processual sp       ON p.id_status_processual = sp.id
+        LEFT JOIN public.operacao o                 ON p.id_operacao = o.id
+        LEFT JOIN public.status_primeiro_grau spg   ON p.id_status_grau1 = spg.id
+        LEFT JOIN public.status_segundo_grau ssg    ON p.id_status_grau2 = ssg.id
+        LEFT JOIN public.sentenca_merito_primeiro_grau smpg ON p.id_sentenca_merito_grau1 = smpg.id
+        LEFT JOIN public.acordao_merito_segundo_grau ampg   ON p.id_acordao_merito_grau2 = ampg.id
+        LEFT JOIN public.adverso_processo ap        ON p.id = ap.id_processo
+        LEFT JOIN public.pessoa pp                  ON ap.id_pessoa = pp.id
+        LEFT JOIN fases_log fl                      ON p.id = fl.id_processo
+        LEFT JOIN public.competencias c             ON p.id_competencia = c.id
+        LEFT JOIN agendamento_recursos_aberto ara   ON p.id = ara.processo_id
+        LEFT JOIN public.situacao sit               ON sit.id = p.id_situacao
+
+        where p.id_situacao IN (1, 2, 6)
+        """,
+        "description": (
+            "Processos ATIVO + ARQUIVADO + SUSPENSO (padrão sem filtro: só ATIVO, ver app/situacao_processo.py) com agendamento aberto do setor RECURSOS (RJ); "
+            "filtros de fase, data e atividades em recurso_RJ."
+        ),
+        "params": []
+    }
+
+
+# v1: queries.py:3183, "agendamentos_setor_recursos_RJ" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ.
+QUERIES["agendamentos_setor_recursos_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.data_hora_cancelamento                        AS "DATA_HORA_CANCELAMENTO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            v.id_setor_atividade                            AS "ID_SETOR_ATIVIDADE",
+            SUBSTRING(v.setor_atividade_nome FROM 12)       AS "ATIVIDADE",
+            'RECURSOS'                                      AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            v.numero_processo                               AS "NUMERO_PROCESSO",
+            v.motivo                                        AS "MOTIVO",
+            ag.motivo_encaminhamento::text                  AS "MOTIVO_ENCAMINHAMENTO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        LEFT JOIN public.agendamento ag ON ag.id = v.agendamento_id
+        WHERE v.id_escritorio_assinante = 27
+          AND v.setor_atividade_nome LIKE 'RECURSOS - %'
+        """,
+        "description": (
+            "Agendamentos do setor RECURSOS (RJ, escritório 27) via vw_dashboard_agendamentos_detalhados, "
+            "com motivo_encaminhamento (join direto em agendamento) para identificar "
+            "encaminhamentos como 'RECURSO CANCELADO' (AVR - RETORNO / RETORNO - CR)."
+        ),
+        "params": []
+    }
+
+
+# v1: queries.py:3223, "atividades_setor_recursos_RJ" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ.
+QUERIES["atividades_setor_recursos_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            a.id AS id_atividade,
+            a.description AS "ATIVIDADE"
+        FROM public.setor_atividade sa
+        JOIN public.atividade a ON a.id = sa.id_atividade
+        WHERE sa.id_setor = 198
+          AND sa.ativo = TRUE
+        ORDER BY a.description
+        """,
+        "description": (
+            "Catálogo dinâmico de atividades ativas do setor RECURSOS (RJ); "
+            "usado como whitelist e como opções do filtro de atividade."
+        ),
+        "params": []
+    }
+
+
+# v1: queries.py:2188, "controle_processo_todas_situacoes" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ.
+QUERIES["controle_processo_todas_situacoes"] = {
+        "database": "lexflow",
+        "query": """
+        WITH fases_log AS (
+            SELECT
+                id_processo,
+
+                -- INICIAL (datas inválidas no log viram NULL — evita falha no asyncpg)
+                MAX(
+                    CASE
+                        WHEN id_fase = 25
+                            AND tipo_movimentacao = 'entrada'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_entrada_inicial,
+                MAX(
+                    CASE
+                        WHEN id_fase = 25
+                            AND tipo_movimentacao = 'saida'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_saida_inicial,
+
+                -- RECURSAL
+                MAX(
+                    CASE
+                        WHEN id_fase = 8
+                            AND tipo_movimentacao = 'entrada'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_entrada_recursal,
+                MAX(
+                    CASE
+                        WHEN id_fase = 8
+                            AND tipo_movimentacao = 'saida'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_saida_recursal,
+
+                -- EXECUÇÃO
+                MAX(
+                    CASE
+                        WHEN id_fase = 12
+                            AND tipo_movimentacao = 'entrada'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_entrada_execucao,
+                MAX(
+                    CASE
+                        WHEN id_fase = 12
+                            AND tipo_movimentacao = 'saida'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_saida_execucao,
+
+                -- Histórico de subfase em log_fase_processual (id_status_processual por linha)
+                -- INICIAL INDEFERIDA: public.status_processual 189 (somente na fase inicial = 25)
+                BOOL_OR(
+                    id_fase = 25
+                    AND id_status_processual = 189
+                ) AS log_teve_subfase_inicial_indeferida,
+                -- RECURSO NÃO PROVIDO: public.status_processual 190 (somente na fase recursal = 8)
+                BOOL_OR(
+                    id_fase = 8
+                    AND id_status_processual = 190
+                ) AS log_teve_subfase_recursal_nao_provido
+
+            FROM public.log_fase_processual
+            GROUP BY id_processo
+            )
+
+            SELECT
+            p.id,
+            p.id_escritorio_assinante                    AS "ID_ESCRITORIO",
+            ea.razao_social                              AS "ESCRITORIO",
+            p.uf                                         AS "UF",
+            CASE
+                WHEN p.distribuicao IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.distribuicao) BETWEEN 1900 AND 2100
+                THEN p.distribuicao
+            END                                          AS "DATA_AJUIZAMENTO",
+            p.numero_processo                            AS "NUMERO_PROCESSO",
+            m.description                                AS "MATERIA",
+            aa.description                               AS "AREA_ATUACAO",
+            pp.razaosocial                               AS "PARTE_ADVERSA",
+            CASE
+                WHEN p.ultima_movimentacao IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.ultima_movimentacao) BETWEEN 1900 AND 2100
+                THEN p.ultima_movimentacao
+            END                                          AS "DATA_ULTIMA_MOVIMENTACAO",
+            p.id_fase                                    AS "ID_FASE",
+            f.description                                AS "FASE",
+            sp.description                               AS "SUBFASE",
+            c.nome                                        AS "COMARCA",
+            p.valor_causa                                AS "VALOR_DE_CAUSA",
+            o.descricao                                  AS "OPERACAO",
+            p.dano_moral_vs                              AS "DANO_MORAL_SENTENCA",
+            p.dano_material_vs                           AS "DANO_MATERIAL_SENTENCA",
+            p.valor_causa_vs                             AS "VALOR_CAUSA_SENTENCA",
+            p.valor_causa_va                             AS "VALOR_CAUSA_ACORDO",
+            p.dano_moral_ve                              AS "DANO_MORAL_EXECUCAO",
+            p.dano_material_ve                           AS "DANO_MATERIAL_EXECUCAO",
+            p.valor_causa_ve                             AS "VALOR_CAUSA_EXECUCAO",
+            p.valor_alcada_final                         AS "VALOR_ALCADA_FINAL",
+            p.id_status_grau1                            AS "ID_1G",
+            spg.nome                                     AS "STATUS_1G",
+            p.id_status_grau2                            AS "ID_2G",
+            ssg.nome                                     AS "STATUS_2G",
+            p.id_sentenca_merito_grau1                   AS "ID_SENTENCA_MERITO_1G",
+            p.id_acordao_merito_grau2                    AS "ID_ACORDAO_MERITO_2G",
+            p.id_situacao                                AS "ID_SITUACAO",
+            CASE
+                WHEN p.transito_julgado IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.transito_julgado) BETWEEN 1900 AND 2100
+                THEN p.transito_julgado
+            END                                          AS "DATA_TRANSITO_JULGADO",
+            CASE
+                WHEN p.sentenca IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.sentenca) BETWEEN 1900 AND 2100
+                THEN p.sentenca
+            END                                          AS "DATA_SENTENCA",
+            CASE
+                WHEN p.execucao IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.execucao) BETWEEN 1900 AND 2100
+                THEN p.execucao
+            END                                          AS "DATA_EXECUCAO",
+            CASE
+                WHEN p.acordao_data IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.acordao_data) BETWEEN 1900 AND 2100
+                THEN p.acordao_data
+            END                                          AS "DATA_ACORDAO",
+
+            -- Logs de entrada/saída por fase
+            fl.dt_entrada_inicial                        AS "DT_ENTRADA_INICIAL",
+            fl.dt_saida_inicial                          AS "DT_SAIDA_INICIAL",
+            fl.dt_entrada_recursal                       AS "DT_ENTRADA_RECURSAL",
+            fl.dt_saida_recursal                         AS "DT_SAIDA_RECURSAL",
+            fl.dt_entrada_execucao                       AS "DT_ENTRADA_EXECUCAO",
+            fl.dt_saida_execucao                         AS "DT_SAIDA_EXECUCAO",
+
+            COALESCE(fl.log_teve_subfase_inicial_indeferida, FALSE)    AS "LOG_TEVE_SUBFASE_INICIAL_INDEFERIDA",
+            COALESCE(fl.log_teve_subfase_recursal_nao_provido, FALSE)  AS "LOG_TEVE_SUBFASE_RECURSO_NAO_PROVIDO",
+
+            EXISTS (
+                SELECT 1
+                FROM public.processo_etiqueta pe
+                JOIN public.etiquetas et ON et.id = pe.id_etiqueta
+                WHERE pe.id_processo = p.id
+                    AND et.nome ILIKE 'acordo'
+            ) AS "TEM_ETIQUETA_ACORDO"
+
+    FROM public.processo p
+    LEFT JOIN public.escritorio_assinante ea    ON p.id_escritorio_assinante = ea.id
+    LEFT JOIN public.materia m                  ON p.id_materia = m.id
+    LEFT JOIN public.area_atuacao aa           ON p.id_area_atuacao = aa.id
+    LEFT JOIN public.fase f                     ON p.id_fase = f.id
+    LEFT JOIN public.status_processual sp       ON p.id_status_processual = sp.id
+    LEFT JOIN public.operacao o                 ON p.id_operacao = o.id
+    LEFT JOIN public.status_primeiro_grau spg   ON p.id_status_grau1 = spg.id
+    LEFT JOIN public.status_segundo_grau ssg    ON p.id_status_grau2 = ssg.id
+    LEFT JOIN public.sentenca_merito_primeiro_grau smpg ON p.id_sentenca_merito_grau1 = smpg.id
+    LEFT JOIN public.acordao_merito_segundo_grau ampg   ON p.id_acordao_merito_grau2 = ampg.id
+    LEFT JOIN public.adverso_processo ap        ON p.id = ap.id_processo
+    LEFT JOIN public.pessoa pp                  ON ap.id_pessoa = pp.id
+    LEFT JOIN public.comarca c                  ON p.id_comarca = c.id
+    LEFT JOIN fases_log fl                      ON p.id = fl.id_processo
+
+    where p.id_situacao IN (1, 2, 6)
+        """,
+        "description": (
+            "Igual a `controle_processo`, mas inclui também ARQUIVADO (situação 2) — usado "
+            "só pelo painel 'Extintos · 2º Grau' do Recursal, que não deve ficar restrito a "
+            "ativo/suspenso como o Controle de Processos."
+        ),
+        "params": []
+    }
+
+
+# v1: queries.py:2003, "controle_processo" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA.
+QUERIES["controle_processo"] = {
+        "database": "lexflow",
+        "query": """
+        WITH fases_log AS (
+            SELECT
+                id_processo,
+
+                -- INICIAL (datas inválidas no log viram NULL — evita falha no asyncpg)
+                MAX(
+                    CASE
+                        WHEN id_fase = 25
+                            AND tipo_movimentacao = 'entrada'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_entrada_inicial,
+                MAX(
+                    CASE
+                        WHEN id_fase = 25
+                            AND tipo_movimentacao = 'saida'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_saida_inicial,
+
+                -- RECURSAL
+                MAX(
+                    CASE
+                        WHEN id_fase = 8
+                            AND tipo_movimentacao = 'entrada'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_entrada_recursal,
+                MAX(
+                    CASE
+                        WHEN id_fase = 8
+                            AND tipo_movimentacao = 'saida'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_saida_recursal,
+
+                -- EXECUÇÃO
+                MAX(
+                    CASE
+                        WHEN id_fase = 12
+                            AND tipo_movimentacao = 'entrada'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_entrada_execucao,
+                MAX(
+                    CASE
+                        WHEN id_fase = 12
+                            AND tipo_movimentacao = 'saida'
+                            AND data IS NOT NULL
+                            AND EXTRACT(YEAR FROM data) BETWEEN 1900 AND 2100
+                        THEN data
+                    END
+                ) AS dt_saida_execucao,
+
+                -- Histórico de subfase em log_fase_processual (id_status_processual por linha)
+                -- INICIAL INDEFERIDA: public.status_processual 189 (somente na fase inicial = 25)
+                BOOL_OR(
+                    id_fase = 25
+                    AND id_status_processual = 189
+                ) AS log_teve_subfase_inicial_indeferida,
+                -- RECURSO NÃO PROVIDO: public.status_processual 190 (somente na fase recursal = 8)
+                BOOL_OR(
+                    id_fase = 8
+                    AND id_status_processual = 190
+                ) AS log_teve_subfase_recursal_nao_provido
+
+            FROM public.log_fase_processual
+            GROUP BY id_processo
+            )
+
+            SELECT
+            p.id,
+            p.id_escritorio_assinante                    AS "ID_ESCRITORIO",
+            ea.razao_social                              AS "ESCRITORIO",
+            p.uf                                         AS "UF",
+            CASE
+                WHEN p.distribuicao IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.distribuicao) BETWEEN 1900 AND 2100
+                THEN p.distribuicao
+            END                                          AS "DATA_AJUIZAMENTO",
+            p.numero_processo                            AS "NUMERO_PROCESSO",
+            m.description                                AS "MATERIA",
+            aa.description                               AS "AREA_ATUACAO",
+            pp.razaosocial                               AS "PARTE_ADVERSA",
+            CASE
+                WHEN p.ultima_movimentacao IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.ultima_movimentacao) BETWEEN 1900 AND 2100
+                THEN p.ultima_movimentacao
+            END                                          AS "DATA_ULTIMA_MOVIMENTACAO",
+            p.id_fase                                    AS "ID_FASE",
+            f.description                                AS "FASE",
+            sp.description                               AS "SUBFASE",
+            c.nome                                        AS "COMARCA",
+            p.valor_causa                                AS "VALOR_DE_CAUSA",
+            o.descricao                                  AS "OPERACAO",
+            p.dano_moral_vs                              AS "DANO_MORAL_SENTENCA",
+            p.dano_material_vs                           AS "DANO_MATERIAL_SENTENCA",
+            p.valor_causa_vs                             AS "VALOR_CAUSA_SENTENCA",
+            p.valor_causa_va                             AS "VALOR_CAUSA_ACORDO",
+            p.dano_moral_ve                              AS "DANO_MORAL_EXECUCAO",
+            p.dano_material_ve                           AS "DANO_MATERIAL_EXECUCAO",
+            p.valor_causa_ve                             AS "VALOR_CAUSA_EXECUCAO",
+            p.valor_alcada_final                         AS "VALOR_ALCADA_FINAL",
+            p.id_status_grau1                            AS "ID_1G",
+            spg.nome                                     AS "STATUS_1G",
+            p.id_status_grau2                            AS "ID_2G",
+            ssg.nome                                     AS "STATUS_2G",
+            p.id_sentenca_merito_grau1                   AS "ID_SENTENCA_MERITO_1G",
+            p.id_acordao_merito_grau2                    AS "ID_ACORDAO_MERITO_2G",
+            p.id_situacao                                AS "ID_SITUACAO",
+            CASE
+                WHEN p.transito_julgado IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.transito_julgado) BETWEEN 1900 AND 2100
+                THEN p.transito_julgado
+            END                                          AS "DATA_TRANSITO_JULGADO",
+            CASE
+                WHEN p.sentenca IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.sentenca) BETWEEN 1900 AND 2100
+                THEN p.sentenca
+            END                                          AS "DATA_SENTENCA",
+            CASE
+                WHEN p.execucao IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.execucao) BETWEEN 1900 AND 2100
+                THEN p.execucao
+            END                                          AS "DATA_EXECUCAO",
+            CASE
+                WHEN p.acordao_data IS NOT NULL
+                    AND EXTRACT(YEAR FROM p.acordao_data) BETWEEN 1900 AND 2100
+                THEN p.acordao_data
+            END                                          AS "DATA_ACORDAO",
+
+            -- Logs de entrada/saída por fase
+            fl.dt_entrada_inicial                        AS "DT_ENTRADA_INICIAL",
+            fl.dt_saida_inicial                          AS "DT_SAIDA_INICIAL",
+            fl.dt_entrada_recursal                       AS "DT_ENTRADA_RECURSAL",
+            fl.dt_saida_recursal                         AS "DT_SAIDA_RECURSAL",
+            fl.dt_entrada_execucao                       AS "DT_ENTRADA_EXECUCAO",
+            fl.dt_saida_execucao                         AS "DT_SAIDA_EXECUCAO",
+
+            COALESCE(fl.log_teve_subfase_inicial_indeferida, FALSE)    AS "LOG_TEVE_SUBFASE_INICIAL_INDEFERIDA",
+            COALESCE(fl.log_teve_subfase_recursal_nao_provido, FALSE)  AS "LOG_TEVE_SUBFASE_RECURSO_NAO_PROVIDO",
+
+            EXISTS (
+                SELECT 1
+                FROM public.processo_etiqueta pe
+                JOIN public.etiquetas et ON et.id = pe.id_etiqueta
+                WHERE pe.id_processo = p.id
+                    AND et.nome ILIKE 'acordo'
+            ) AS "TEM_ETIQUETA_ACORDO"
+
+    FROM public.processo p
+    LEFT JOIN public.escritorio_assinante ea    ON p.id_escritorio_assinante = ea.id
+    LEFT JOIN public.materia m                  ON p.id_materia = m.id
+    LEFT JOIN public.area_atuacao aa           ON p.id_area_atuacao = aa.id
+    LEFT JOIN public.fase f                     ON p.id_fase = f.id
+    LEFT JOIN public.status_processual sp       ON p.id_status_processual = sp.id
+    LEFT JOIN public.operacao o                 ON p.id_operacao = o.id
+    LEFT JOIN public.status_primeiro_grau spg   ON p.id_status_grau1 = spg.id
+    LEFT JOIN public.status_segundo_grau ssg    ON p.id_status_grau2 = ssg.id
+    LEFT JOIN public.sentenca_merito_primeiro_grau smpg ON p.id_sentenca_merito_grau1 = smpg.id
+    LEFT JOIN public.acordao_merito_segundo_grau ampg   ON p.id_acordao_merito_grau2 = ampg.id
+    LEFT JOIN public.adverso_processo ap        ON p.id = ap.id_processo
+    LEFT JOIN public.pessoa pp                  ON ap.id_pessoa = pp.id
+    LEFT JOIN public.comarca c                  ON p.id_comarca = c.id
+    LEFT JOIN fases_log fl                      ON p.id = fl.id_processo
+
+    where p.id_situacao IN (1, 6)
+        """,
+        "description": "Controle de processos do escritorio Luis Albert AM — situação ATIVO (1) e SUSPENSO/SOBRESTADO (6)",
+        "params": []
+    }
+
+
+# v1: queries.py:2377, "log_subfase_processual" (copiada em 18/11/2026). execucao, execucao_LA, execucao_RJ, execucao_acordos_NG, execucao_acordos_LA, execucao_acordos_RJ, recursal_NG, recursal_LA, recursal_RJ, controle_processo_NG, controle_processo_LA.
+QUERIES["log_subfase_processual"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            lfp.id_processo                        AS "ID_PROCESSO",
+            p.id_escritorio_assinante               AS "ID_ESCRITORIO",
+            p.id_situacao                           AS "ID_SITUACAO",
+            lfp.id_fase                             AS "ID_FASE",
+            f.description                           AS "FASE",
+            lfp.id_status_processual                AS "ID_SUBFASE",
+            sp.description                          AS "SUBFASE",
+            lfp.tipo_movimentacao                   AS "TIPO_MOVIMENTACAO",
+            lfp.data                                AS "DATA"
+        FROM public.log_fase_processual lfp
+        JOIN public.processo p                  ON p.id = lfp.id_processo
+        LEFT JOIN public.fase f                 ON lfp.id_fase = f.id
+        LEFT JOIN public.status_processual sp   ON lfp.id_status_processual = sp.id
+        WHERE p.id_escritorio_assinante IN (20, 21)
+          AND p.id_situacao IN (1, 6)
+          AND lfp.id_status_processual IS NOT NULL
+        ORDER BY lfp.id_processo, lfp.data
+        """,
+        "description": (
+            "Histórico de movimentação de fase/subfase (log_fase_processual) dos escritórios "
+            "NG (20) e LA (21) — usado para estimar o tempo médio de permanência por subfase "
+            "no dashboard Controle de Processos. Situação ATIVO (1) e SUSPENSO/SOBRESTADO (6)."
+        ),
+        "params": []
+    }

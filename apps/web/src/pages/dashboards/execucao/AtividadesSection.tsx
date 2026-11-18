@@ -280,7 +280,7 @@ export function AtividadesSection({ index, setor, dados, filters, setFilters }: 
 
 // Produção diária da v1: as cumpridas mês a mês (histórico todo); clicar num mês mostra os dias dele. Segue os
 // filtros da seção: com um funcionário escolhido (em "Demandas por funcionário"), é a produção só dele.
-function ProducaoDiaria({
+export function ProducaoDiaria({
     dias,
     porPrazo,
     setorNome,
@@ -356,7 +356,7 @@ const POR_PAGINA: Record<ModoLista, number> = { expandida: 5, compacta: 10 }
 
 // A lista de tarefas da v1, em dois modos: compacta (uma linha por tarefa, 10 por página; abre assim) e
 // expandida (descrição e quem encerrou, 5 por página). Processo e valor aparecem quando a atividade tem.
-function ListaTarefas({ tarefas, filtrada }: { tarefas: Tarefa[]; filtrada: boolean }) {
+export function ListaTarefas({ tarefas, filtrada }: { tarefas: Tarefa[]; filtrada: boolean }) {
     const [modo, setModo] = useState<ModoLista>('compacta')
     const p = usePagina(tarefas, POR_PAGINA[modo])
     const compacta = modo === 'compacta'
