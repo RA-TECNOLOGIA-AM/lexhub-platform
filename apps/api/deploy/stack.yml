@@ -1,24 +1,8 @@
 version: '3.8'
 
-# LexHub API V2 — stack do Docker Swarm (Portainer). Mesmo padrão do lex-chat:
-# Traefik v3 na rede network_swarm_public, imagem no GHCR e Redis interno.
-#
-# Variáveis da stack (no Portainer, em "Environment variables"):
-#   obrigatórias  SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_SECRET_KEY, DATABASE_URL,
-#                 DB_NG_*, DB_LAADV_*, DB_LEXFLOW_* (HOST, NAME, USER, PASSWORD)
-#   opcionais     APP_VERSION (padrão latest), DB_*_PORT (padrão 5432), DB_LEXPRE_*,
-#                 SOURCE_SECRET_KEY (sem ela, Conectar fonte fica só com LexPre/LexFlow e as planilhas
-#                 não abrem), SOURCE_EGRESS_IP, LOG_LEVEL, WEB_BASE_URL, CORS_ORIGINS
-#
-# Validar antes de subir: docker stack config -c apps/api/deploy/stack.yml (com as variáveis defini das).
-
 services:
-  # Nome com prefixo de propósito: a API também está na network_swarm_public, e um "redis"
-  # de outra stack nessa rede poderia responder pelo mesmo nome.
   lexhub-redis:
     image: redis:8-alpine
-    # Só cache (nada aqui é a única cópia de um dado): sem disco, teto de 1 GB e, cheio,
-    # descarta a chave usada há mais tempo. Fora do ar, a API segue só com o cache em memória.
     command:
       [
         'redis-server',
@@ -43,24 +27,18 @@ services:
     deploy:
       replicas: 1
       resources:
-        # maxmemory (1 GB) + folga para o próprio processo
         limits: { cpus: '0.50', memory: 1280M }
       restart_policy:
         condition: any
 
   lexhub-api:
-    # A cada push na main que mexe na API, o GitHub Actions publica a :latest (e a :0.1.N).
-    # Para fixar uma versão, defina APP_VERSION.
     image: ghcr.io/ra-tecnologia-am/lexhub-api:${APP_VERSION:-latest}
     environment:
       TZ: America/Manaus
       PORT: '8000'
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      # Front: link do QR Code do login por TV e origens liberadas no CORS
       WEB_BASE_URL: ${WEB_BASE_URL:-https://hub.lexgroup.com.br}
       CORS_ORIGINS: ${CORS_ORIGINS:-https://hub.lexgroup.com.br,https://lexhub-platform.vercel.app}
-      # Confia no X-Forwarded-For do Traefik (IP real na auditoria e no limite do login por TV);
-      # a porta não é publicada, só o Traefik alcança o container
       FORWARDED_ALLOW_IPS: '*'
       SUPABASE_URL: ${SUPABASE_URL:?}
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:?}
@@ -74,11 +52,13 @@ services:
       DB_NG_NAME: ${DB_NG_NAME:?}
       DB_NG_USER: ${DB_NG_USER:?}
       DB_NG_PASSWORD: ${DB_NG_PASSWORD:?}
+
       DB_LAADV_HOST: ${DB_LAADV_HOST:?}
       DB_LAADV_PORT: ${DB_LAADV_PORT:-5432}
       DB_LAADV_NAME: ${DB_LAADV_NAME:?}
       DB_LAADV_USER: ${DB_LAADV_USER:?}
       DB_LAADV_PASSWORD: ${DB_LAADV_PASSWORD:?}
+
       DB_LEXFLOW_HOST: ${DB_LEXFLOW_HOST:?}
       DB_LEXFLOW_PORT: ${DB_LEXFLOW_PORT:-5432}
       DB_LEXFLOW_NAME: ${DB_LEXFLOW_NAME:?}
@@ -94,32 +74,22 @@ services:
       # planilhas guardados cifrados no Supabase (inclusive Meta anual e Financeiro estratégico). A mesma
       # chave que cifrou; trocar obriga a salvar tudo de novo. Vazia = planilhas e bancos da tela sem dados
       SOURCE_SECRET_KEY: ${SOURCE_SECRET_KEY:-}
-      # IP de saída da API (o do worker1, onde ela está fixa): a operação libera no firewall do banco
       SOURCE_EGRESS_IP: ${SOURCE_EGRESS_IP:-}
       # Redis desta stack (L2 do cache, sobrevive a deploy e restart da API)
       CACHE_ENABLED: 'true'
       REDIS_URL: redis://lexhub-redis:6379/0
     networks: [backend, network_swarm_public]
-    # Healthcheck vem da imagem (/health). No SIGTERM o uvicorn espera até 25 s pelas
-    # requisições em andamento; o default de 10 s do Swarm cortaria no meio.
+    
     stop_grace_period: 30s
     logging:
       driver: json-file
       options: { max-size: '10m', max-file: '3' }
     deploy:
-      # Uma réplica só: cada réplica tem o próprio aquecedor, que repetiria as 37 consultas
-      # nos bancos de origem
       replicas: 1
       placement:
-        # Fixa no worker1 (46.224.164.226), o IP liberado no firewall do NG: a saída para os
-        # bancos usa o IP do nó onde o container roda, e em outro nó o NG fica inalcançável.
-        # Custo: se o worker1 cair, a API não muda de nó. Para tirar isto, libere antes o IP do
-        # manager1 (167.233.234.255) no NG.
         constraints: [node.hostname == worker1]
       labels:
         - 'traefik.enable=true'
-        # Só as rotas usadas pelo front saem para a internet; /health, /health/sources e
-        # /docs ficam só dentro do cluster
         - 'traefik.http.routers.lexhub-api.rule=Host(`api.hub.lexgroup.com.br`) && (PathPrefix(`/me`) || PathPrefix(`/orgs`) || PathPrefix(`/auth`) || PathPrefix(`/sources`))'
         - 'traefik.http.routers.lexhub-api.entrypoints=websecure'
         - 'traefik.http.routers.lexhub-api.tls.certresolver=letsencryptresolver'
@@ -128,13 +98,8 @@ services:
         - 'traefik.http.services.lexhub-api.loadbalancer.healthcheck.interval=15s'
         - 'traefik.swarm.network=network_swarm_public'
       resources:
-        # Com o cache cheio a API usa cerca de 1,8 GB; o aquecedor recalcula as consultas a
-        # cada 4 min, daí o teto de CPU para não estrangular o resto do nó
         limits: { cpus: '3', memory: 6144M }
       update_config:
-        # Sobe a réplica nova antes de derrubar a antiga; por alguns segundos as duas rodam
-        # juntas no worker1, então ele precisa de RAM para as duas. Se a nova não ficar
-        # saudável em 60 s, volta para a versão anterior.
         order: start-first
         monitor: 60s
         failure_action: rollback

@@ -191,6 +191,8 @@ const PATHS = {
     download: <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
     chevrons: <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />,
     close: <path d="M6 6l12 12M18 6L6 18" />,
+    // Três pontos (menu de mais ações). Traço grosso e redondo: cada ponto é um traço de comprimento zero.
+    more: <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth={3} />,
     flow: (
         <>
             <path d="M20 11a8 8 0 0 0-14.5-4.5L4 8" />

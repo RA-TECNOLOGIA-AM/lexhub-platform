@@ -140,6 +140,9 @@ class FakeCatalogRepo:
     def __init__(self):
         self.rows: dict[tuple[str, str], list] = {}
         self.upcoming: list = []
+        self.switched: list[tuple] = []  # ligar/desligar pedidos
+        self.allowed = True  # False = quem pediu não é Desenvolvedor
+        self.missing = False  # True = dashboard não existe na unidade
 
     def add(self, user_id: str, org_id: str, row) -> None:
         self.rows.setdefault((user_id, org_id), []).append(row)
@@ -149,6 +152,16 @@ class FakeCatalogRepo:
 
     async def list_upcoming(self):
         return list(self.upcoming)
+
+    async def set_enabled(self, user_id, org_slug, unit_code, dashboard_key, enabled):
+        from app.catalog import DashboardMissing, ToggleNotAllowed
+
+        if not self.allowed:
+            raise ToggleNotAllowed("Só o Desenvolvedor liga e desliga dashboards.")
+        if self.missing:
+            raise DashboardMissing("Este dashboard não existe nesta unidade.")
+        self.switched.append((user_id, org_slug, unit_code, dashboard_key, enabled))
+        return enabled
 
 
 @pytest.fixture

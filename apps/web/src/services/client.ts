@@ -88,6 +88,8 @@ export interface DataClient {
     // Organização de que a pessoa não faz parte: rejeita com 403.
     getMe(org?: string): Promise<Me>
     listDashboards(org: string): Promise<DashboardCatalog>
+    // Liga/desliga um dashboard numa unidade (só o Desenvolvedor; a API nega os outros com 403).
+    setDashboardEnabled(org: string, unit: string, dashboardKey: string, enabled: boolean): Promise<void>
     listFavorites(org: string): Promise<string[]>
     // Membros (schema api no Supabase): o servidor só devolve e aceita o que quem chama gere.
     listMembers(org: string): Promise<MembersResponse>

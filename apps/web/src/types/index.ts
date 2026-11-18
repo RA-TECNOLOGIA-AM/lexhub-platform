@@ -31,6 +31,10 @@ export type DashboardSummary = {
     // Com várias unidades, só vale true se valer em todas (o botão nunca aparece onde a API negaria).
     can_export: boolean
     can_see_commission: boolean
+    // Só para o Desenvolvedor: unidades em que o dashboard está desligado (some para os outros) e o menu de
+    // ligar/desligar no card. Quem não é Dev não recebe as unidades desligadas.
+    disabled_units?: string[]
+    can_toggle?: boolean
 }
 
 export type DashboardCatalog = {
