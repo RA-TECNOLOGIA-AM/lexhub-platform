@@ -47,6 +47,8 @@ def test_formato_do_card(client, signer, repo, catalog_repo):
                 "max_delay_min": 60,
                 "can_export": True,
                 "can_see_commission": True,
+                "disabled_units": [],
+                "can_toggle": False,
             }
         ],
         "upcoming": [],
@@ -136,6 +138,61 @@ def test_membro_nao_audita(client, signer, repo):
 
 def test_slug_invalido_422(client, signer):
     assert client.get("/orgs/Org_X/dashboards", headers=auth(signer)).status_code == 422
+
+
+def test_dev_ve_as_unidades_desligadas(client, signer, repo, catalog_repo):
+    """Desligado numa unidade: o card do Dev mostra a unidade e a marca em disabled_units."""
+    repo.join(USER_ID)
+    catalog_repo.add(USER_ID, repo.org_id, row(unit="NG", can_toggle=True))
+    catalog_repo.add(USER_ID, repo.org_id, row(unit="LA", enabled=False, can_toggle=True))
+
+    card = client.get("/orgs/lexgroup/dashboards", headers=auth(signer)).json()["available"][0]
+
+    assert card["units"] == ["NG", "LA"]
+    assert card["disabled_units"] == ["LA"]
+    assert card["can_toggle"] is True
+
+
+def test_ligar_desligar_dashboard(client, signer, repo, catalog_repo):
+    repo.join(USER_ID)
+    r = client.put(
+        "/orgs/lexgroup/units/LA/dashboards/protocolo-lexpre/enabled",
+        json={"enabled": False},
+        headers=auth(signer),
+    )
+    assert r.status_code == 200
+    assert r.json() == {"unit": "LA", "dashboard": "protocolo-lexpre", "enabled": False}
+    assert catalog_repo.switched == [(USER_ID, "lexgroup", "LA", "protocolo-lexpre", False)]
+
+
+def test_ligar_desligar_sem_permissao_403(client, signer, repo, catalog_repo):
+    repo.join(USER_ID)
+    catalog_repo.allowed = False
+    r = client.put(
+        "/orgs/lexgroup/units/LA/dashboards/protocolo-lexpre/enabled",
+        json={"enabled": False},
+        headers=auth(signer),
+    )
+    assert r.status_code == 403
+    assert r.json() == {"detail": "Só o Desenvolvedor liga e desliga dashboards."}
+
+
+def test_ligar_desligar_dashboard_inexistente_404(client, signer, repo, catalog_repo):
+    repo.join(USER_ID)
+    catalog_repo.missing = True
+    r = client.put(
+        "/orgs/lexgroup/units/LA/dashboards/nao-existe/enabled",
+        json={"enabled": True},
+        headers=auth(signer),
+    )
+    assert r.status_code == 404
+
+
+def test_ligar_desligar_sem_login_401(client):
+    r = client.put(
+        "/orgs/lexgroup/units/LA/dashboards/protocolo-lexpre/enabled", json={"enabled": False}
+    )
+    assert r.status_code == 401
 
 
 def test_card_mostra_quando_o_dado_veio_do_banco(client, signer, repo, catalog_repo):

@@ -1,5 +1,6 @@
 import type { DataClient } from './client.ts'
 import type { DashboardCatalog, DashboardQuery, Meta } from '../types/index.ts'
+import { withEnabled } from '../lib/dashboardSwitch.ts'
 
 type Entry<T> = { at: number; value: Promise<T> }
 
@@ -81,6 +82,12 @@ export function withSessionCache(client: DataClient, ttlMs = 5 * 60_000, now: ()
             if (!current) return
             const others = (await current).filter((k) => k !== dashboardKey)
             favorites.set(org, favorite ? [...others, dashboardKey] : others)
+        },
+
+        async setDashboardEnabled(org, unit, dashboardKey, enabled) {
+            await client.setDashboardEnabled(org, unit, dashboardKey, enabled)
+            const current = catalog.peek(org)
+            if (current) catalog.set(org, withEnabled(await current, dashboardKey, unit, enabled))
         },
 
         async setHubOrder(org, keys) {

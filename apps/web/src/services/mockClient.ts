@@ -31,7 +31,7 @@ import {
     sources,
     testUsers,
 } from './mock/index.ts'
-import type { DashboardQuery, Meta } from '../types/index.ts'
+import type { DashboardCatalog, DashboardQuery, Meta } from '../types/index.ts'
 import { metaFor } from './mock/helpers.ts'
 import { orgDocumentosLegadoFor } from './mock/orgDocumentosLegado.ts'
 import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
@@ -75,6 +75,28 @@ const FAVORITES_KEY = 'lexhub.mock.favorites'
 
 // Ordem do hub: no localStorage, uma por organização (cada org tem o seu catálogo).
 const hubOrderKey = (org: string) => `lexhub.mock.hubOrder.${org}`
+
+// Dashboards desligados por unidade (o usuário do mock é Desenvolvedor): no localStorage, como "key:unidade".
+const DASHBOARDS_OFF_KEY = 'lexhub.mock.dashboardsOff'
+function dashboardsOff(): string[] {
+    try {
+        return JSON.parse(localStorage.getItem(DASHBOARDS_OFF_KEY) ?? '[]') as string[]
+    } catch {
+        return []
+    }
+}
+// O catálogo como a API manda para o Dev: as unidades desligadas marcadas e o menu de ligar/desligar.
+function catalogForDev(): DashboardCatalog {
+    const off = dashboardsOff()
+    return {
+        ...catalog,
+        available: catalog.available.map((d) => ({
+            ...d,
+            disabled_units: d.units.filter((u) => off.includes(`${d.key}:${u}`)),
+            can_toggle: true,
+        })),
+    }
+}
 
 // Membros do mock: a lista muda com os convites (volta ao original no F5).
 const memberStore = createMembersStore({ name: me.user.name, email: '' })
@@ -231,7 +253,19 @@ export function createMockClient(): DataClient {
         async listDashboards(org) {
             await wait()
             requireSession()
-            return copy(requireOrg(org) ? catalog : emptyCatalog)
+            return copy(requireOrg(org) ? catalogForDev() : emptyCatalog)
+        },
+
+        async setDashboardEnabled(org, unit, dashboardKey, enabled) {
+            await wait()
+            requireSession()
+            const dash = catalog.available.find((d) => d.key === dashboardKey)
+            if (!requireOrg(org) || !dash?.units.includes(unit)) {
+                throw new DataError(404, 'Este dashboard não existe nesta unidade.')
+            }
+            const id = `${dashboardKey}:${unit}`
+            const others = dashboardsOff().filter((x) => x !== id)
+            localStorage.setItem(DASHBOARDS_OFF_KEY, JSON.stringify(enabled ? others : [...others, id]))
         },
 
         async listMembers(org) {

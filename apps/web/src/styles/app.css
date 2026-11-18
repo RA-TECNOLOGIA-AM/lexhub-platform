@@ -66,6 +66,71 @@
 .fav-btn:hover {
     background: var(--surface-3);
 }
+/* Estrela e menu ⋯ (Dev) lado a lado, por cima do link do card. */
+.dcard-actions {
+    display: inline-flex;
+    gap: 2px;
+}
+/* Menu ⋯ do card (só Desenvolvedor): liga/desliga o dashboard por unidade. */
+.dswitch {
+    position: relative;
+}
+/* Cada card é uma camada própria (view-transition-name): com o menu aberto, ele sobe acima dos vizinhos. */
+.sortable-card:has(.dswitch-panel),
+.dcard:has(.dswitch-panel) {
+    position: relative;
+    z-index: 5;
+}
+.dswitch-panel {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 220px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+    cursor: default;
+}
+.dswitch-title {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+.dswitch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.dswitch-error {
+    color: var(--danger);
+}
+/* Card desligado (o Dev ainda vê): tracejado e apagado, como a fonte desligada. */
+.dcard.is-off {
+    border-style: dashed;
+}
+/* Só o conteúdo fica apagado: o menu ⋯ aberto continua opaco por cima. */
+.dcard.is-off .dcard-link,
+.dcard.is-off .desc,
+.dcard.is-off .tags,
+.dcard.is-off .dcard-off {
+    opacity: 0.6;
+}
+.dcard-off {
+    align-self: flex-start;
+}
+.tag.off {
+    text-decoration: line-through;
+    opacity: 0.7;
+}
 .fav-btn[aria-pressed='true'] {
     color: var(--fav);
 }

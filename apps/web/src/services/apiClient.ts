@@ -129,6 +129,9 @@ export function createApiClient({
 
         getMe: (org) => http.get<Me>(org ? `/me?org=${encodeURIComponent(org)}` : '/me'),
         listDashboards: (org) => http.get<DashboardCatalog>(`/orgs/${org}/dashboards`),
+        async setDashboardEnabled(org, unit, dashboardKey, enabled) {
+            await http.put(`/orgs/${org}/units/${unit}/dashboards/${dashboardKey}/enabled`, { enabled })
+        },
         listFavorites: (org) => http.get<string[]>(`/orgs/${org}/favorites`),
         async setFavorite(org, dashboardKey, favorite) {
             const path = `/orgs/${org}/favorites/${dashboardKey}`

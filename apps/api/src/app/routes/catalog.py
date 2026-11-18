@@ -2,10 +2,18 @@ import asyncio
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 
-from app.access import OrgAccess, require_org
-from app.catalog import CatalogRepo, DashboardCatalogOut, build_catalog, get_catalog_repo
+from app.access import DashboardKey, OrgAccess, UnitCode, require_org
+from app.catalog import (
+    CatalogRepo,
+    DashboardCatalogOut,
+    DashboardMissing,
+    ToggleNotAllowed,
+    build_catalog,
+    get_catalog_repo,
+)
 from app.dashboards import DASHBOARDS
 from app.source_cache import SourceCache
 from app.sources import get_source_cache
@@ -25,6 +33,37 @@ async def list_dashboards(
         repo.list_available(access.user.user_id, access.org_id), repo.list_upcoming()
     )
     return build_catalog(rows, upcoming, synced_from_cache(cache, {r.key for r in rows}))
+
+
+class EnabledIn(BaseModel):
+    enabled: bool
+
+
+class EnabledOut(BaseModel):
+    unit: str
+    dashboard: str
+    enabled: bool
+
+
+@router.put("/units/{unit_code}/dashboards/{dashboard_key}/enabled", response_model=EnabledOut)
+async def set_dashboard_enabled(
+    unit_code: UnitCode,
+    dashboard_key: DashboardKey,
+    body: EnabledIn,
+    access: Annotated[OrgAccess, Depends(require_org)],
+    repo: Annotated[CatalogRepo, Depends(get_catalog_repo)],
+) -> EnabledOut:
+    """Liga/desliga o dashboard numa unidade (só o Desenvolvedor). Desligado some do hub e da API para todos;
+    o Desenvolvedor continua vendo. O banco confere a permissão e grava na auditoria."""
+    try:
+        enabled = await repo.set_enabled(
+            access.user.user_id, access.org_slug, unit_code, dashboard_key, body.enabled
+        )
+    except ToggleNotAllowed as exc:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=str(exc)) from None
+    except DashboardMissing as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from None
+    return EnabledOut(unit=unit_code, dashboard=dashboard_key, enabled=enabled)
 
 
 def synced_from_cache(cache: SourceCache, keys: set[str]) -> dict[str, datetime]:

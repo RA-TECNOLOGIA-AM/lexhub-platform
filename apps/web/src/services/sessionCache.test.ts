@@ -51,6 +51,9 @@ function fakeClient() {
         async setHubOrder(_org: string, keys: string[]) {
             state.order = keys
         },
+        async setDashboardEnabled() {
+            if (state.failWrite) throw new Error('falhou')
+        },
         async getDashboardData(key: string) {
             return { meta: { synced_at: '2026-11-12T15:00:00Z', key } }
         },
@@ -73,6 +76,24 @@ describe('withSessionCache', () => {
             await cached.getHubOrder('lexgroup')
         }
         expect(state.calls).toEqual({ catalog: 1, favorites: 1, order: 1 })
+    })
+
+    it('desligar um dashboard marca a unidade no catálogo guardado, sem buscar de novo', async () => {
+        const { client, state } = fakeClient()
+        const cached = withSessionCache(client, 1000, () => 0)
+        const key = (await cached.listDashboards('lexgroup')).available[0].key
+        await cached.setDashboardEnabled('lexgroup', 'NG', key, false)
+        expect((await cached.listDashboards('lexgroup')).available[0].disabled_units).toEqual(['NG'])
+        expect(state.calls.catalog).toBe(1)
+    })
+
+    it('desligar que falhou não mexe no catálogo guardado', async () => {
+        const { client, state } = fakeClient()
+        const cached = withSessionCache(client, 1000, () => 0)
+        const key = (await cached.listDashboards('lexgroup')).available[0].key
+        state.failWrite = true
+        await expect(cached.setDashboardEnabled('lexgroup', 'NG', key, false)).rejects.toThrow('falhou')
+        expect((await cached.listDashboards('lexgroup')).available[0].disabled_units).toBeUndefined()
     })
 
     it('cada organização tem o seu', async () => {

@@ -8,7 +8,8 @@ import { SortableSection } from '../../components/dashboard/SortableSection.tsx'
 import { BoardColumn } from '../../components/dashboard/BoardColumn.tsx'
 import { Segmented } from '../../components/ui/Segmented.tsx'
 import { storedHubView, storeHubView, type HubView } from '../../lib/hubView.ts'
-import type { DashboardSummary } from '../../types/index.ts'
+import type { DashboardCatalog, DashboardSummary } from '../../types/index.ts'
+import { withEnabled } from '../../lib/dashboardSwitch.ts'
 import { hubUnit, rememberedUnit } from '../../lib/activeUnit.ts'
 import { dataClient } from '../../services/client.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
@@ -33,7 +34,10 @@ const FAV_HINT = 'Arraste um card para cá ou toque na estrela para favoritar.'
 export function HubPage() {
     const { org = '' } = useParams()
     const { me } = useAuth()
-    const { data: catalog, error } = useAsync(() => dataClient.listDashboards(org), [org])
+    const { data: loaded, error } = useAsync(() => dataClient.listDashboards(org), [org])
+    // Depois de o Dev ligar/desligar um dashboard: o catálogo com a mudança (vale só para esta org).
+    const [changed, setChanged] = useState<{ org: string; catalog: DashboardCatalog } | null>(null)
+    const catalog = changed?.org === org ? changed.catalog : loaded
     const [searchParams] = useSearchParams()
     // A unidade do seletor da barra lateral: a da URL, ou a lembrada na sessão (null = todas as unidades).
     const unit = hubUnit(searchParams.get('unidade'), rememberedUnit(org), me?.units ?? [])
@@ -87,6 +91,15 @@ export function HubPage() {
             )
     }
 
+    // Só o Desenvolvedor (o menu do card só aparece com can_toggle; a API confere de novo).
+    async function setEnabled(key: string, unitCode: string, enabled: boolean) {
+        await dataClient.setDashboardEnabled(org, unitCode, key, enabled)
+        setChanged((prev) => {
+            const base = prev?.org === org ? prev.catalog : catalog
+            return base ? { org, catalog: withEnabled(base, key, unitCode, enabled) } : prev
+        })
+    }
+
     // Um card do hub, arrastável dentro da sua seção.
     const card = (section: string) => (d: DashboardSummary) => (
         <SortableCard key={d.key} id={d.key} section={section}>
@@ -97,6 +110,7 @@ export function HubPage() {
                 favorite={favorites.isFavorite(d.key)}
                 onToggleFavorite={() => favorites.toggle(d.key)}
                 showUnits={!unit}
+                onSetEnabled={(unitCode, enabled) => setEnabled(d.key, unitCode, enabled)}
             />
         </SortableCard>
     )
