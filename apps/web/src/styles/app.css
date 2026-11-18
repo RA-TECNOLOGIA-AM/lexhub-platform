@@ -3038,12 +3038,7 @@ button.barlist-hit[aria-pressed='true'] .barlist-name {
     border-radius: inherit;
     pointer-events: none;
     background:
-        linear-gradient(
-            100deg,
-            transparent 30%,
-            color-mix(in srgb, var(--text) 14%, transparent) 50%,
-            transparent 70%
-        ),
+        linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--text) 14%, transparent) 50%, transparent 70%),
         color-mix(in srgb, var(--surface) 50%, transparent);
     background-size:
         250% 100%,
@@ -3067,8 +3062,8 @@ button.barlist-hit[aria-pressed='true'] .barlist-name {
         animation: none;
     }
 }
-@media (max-width: 860px) {I
-    .dhead-side {
+@media (max-width: 860px) {
+    I .dhead-side {
         align-items: flex-start;
     }
     .dhead-actions {

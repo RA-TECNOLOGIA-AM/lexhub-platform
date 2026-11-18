@@ -6,6 +6,8 @@
 create role anon nologin;
 create role authenticated nologin;
 create role service_role nologin bypassrls;
+-- Papel que o Supabase Auth usa para chamar os Auth Hooks.
+create role supabase_auth_admin nologin;
 grant anon, authenticated, service_role to current_user;
 
 create schema auth;

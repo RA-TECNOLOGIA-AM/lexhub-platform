@@ -6,6 +6,7 @@ import { Icon } from '../components/ui/Icon.tsx'
 import { PasswordInput } from '../components/ui/PasswordInput.tsx'
 import { DataError } from '../services/errors.ts'
 import { NoAccessCard } from './login/NoAccessCard.tsx'
+import { oauthErrorMessage } from './login/oauthError.ts'
 import { usePageTransition } from '../components/page_transition/usePageTransition.ts'
 import { LoadingState } from '../components/states/LoadingState.tsx'
 
@@ -34,8 +35,11 @@ export function LoginPage() {
     const [submitting, setSubmitting] = useState(false)
     const [googleSignInStarted, setGoogleSignInStarted] = useState(false)
     const transitionStarted = useRef(false)
+    // Volta do Google com erro (ex.: e-mail sem convite, barrado pelo hook do Supabase): mensagem fixa.
     const [error, setError] = useState(
-        params.get('estado') === 'sessao-expirada' ? 'Sua sessão expirou. Entre de novo para continuar.' : '',
+        () =>
+            oauthErrorMessage(location.search, location.hash) ??
+            (params.get('estado') === 'sessao-expirada' ? 'Sua sessão expirou. Entre de novo para continuar.' : ''),
     )
 
     const from =
@@ -183,13 +187,8 @@ export function LoginPage() {
                             </button>
                         </form>
 
-                        {/* Solicitar acesso começa pelo Google: o pedido precisa de uma conta já identificada. */}
-                        <p className="muted small auth-foot">
-                            Ainda não tem acesso?{' '}
-                            <button className="linkbtn" type="button" onClick={handleGoogle} disabled={submitting}>
-                                Solicitar acesso
-                            </button>
-                        </p>
+                        {/* Entrada só por convite: conta nova sem convite é barrada no Supabase (hook). */}
+                        <p className="muted small auth-foot">Ainda não tem acesso? Peça um convite ao administrador.</p>
                     </>
                 )}
             </div>
