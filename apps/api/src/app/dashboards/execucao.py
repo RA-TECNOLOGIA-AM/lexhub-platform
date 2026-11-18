@@ -12,7 +12,8 @@ como `total_em_execucao_historico`. Os nomes são os da NG; os de LA e RJ saem p
 
 from dataclasses import replace
 
-from app.dashboards import execucao_export, generico_v1
+from app.dashboards import execucao_campos, execucao_export, generico_v1
+from app.dashboards.base import DashboardContext
 
 _MODULO = generico_v1.modulo(
     key="execucao",
@@ -41,8 +42,21 @@ _MODULO = generico_v1.modulo(
     ),
 )
 
-# A exportação da v1 (execucao_export.py).
+
+async def build(ctx: DashboardContext) -> dict:
+    """O cálculo da v1 + os processos em execução com campo em branco (V2: a faixa "Atenção" dos Julgados)."""
+    body = await _MODULO.build(ctx)
+    body[execucao_campos.CHAVE] = await execucao_campos.lista(ctx)
+    return body
+
+
+# A exportação da v1 (execucao_export.py) e, na V2, o relatório dos campos em branco (uma aba por campo).
 MODULE = replace(
     _MODULO,
+    build=build,
     export=execucao_export.EXECUCAO,
+    export_reports={
+        **_MODULO.export_reports,
+        execucao_campos.RELATORIO: execucao_campos.RELATORIO_SPEC,
+    },
 )

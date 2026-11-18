@@ -379,7 +379,23 @@ function naUnidade(base: V1GenericoResponse, u: Unidade, dashboard: string, unit
 export function execucaoFor(unit: string): V1GenericoResponse {
     const u = ESCRITORIO[unit]
     if (!u) return { meta: metaFor(unit, 'LexFlow'), stats: {} }
-    return u === 'NG' ? execucaoNG() : naUnidade(execucaoNG(), u, `execucao_${u}`, unit)
+    const base = u === 'NG' ? execucaoNG() : naUnidade(execucaoNG(), u, `execucao_${u}`, unit)
+    // V2 (dashboards/execucao_campos.py): o mesmo nome nas três unidades, fora da regra _NG -> _LA/_RJ.
+    return { ...base, campos_faltando: camposFaltando() } as V1GenericoResponse
+}
+
+// Processos em execução com campo em branco (fictícios): um item por (processo, campo).
+function camposFaltando() {
+    const campos: [string, number][] = [
+        ['Data do trânsito em julgado', 14],
+        ['Data da execução', 9],
+        ['Valor da execução', 3],
+        ['Matéria', 2],
+        ['Comarca', 1],
+    ]
+    return campos.flatMap(([campo, n], c) =>
+        Array.from({ length: n }, (_, i) => ({ numero_processo: processo(200 + c * 20 + i), campo })),
+    )
 }
 
 export function acordosFor(unit: string): V1GenericoResponse {

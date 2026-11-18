@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { lerExecucao } from './execucao.ts'
+import { avisosCamposFaltando, lerExecucao } from './execucao.ts'
 
 const meta = { unit: 'NG', from: '2026-11-01', to: '2026-11-17', source: 'LexFlow', synced_at: null, timezone: 'x' }
 
@@ -84,5 +84,35 @@ describe('lerExecucaoNG', () => {
         expect(rj.unidade).toBe('RJ')
         expect(rj.setor.diligencias.total).toBe(5)
         expect(rj.setor.diligencias.porColaborador).toEqual([{ name: 'Ana', value: 3 }])
+    })
+})
+
+describe('campos em branco (faixa "Atenção")', () => {
+    it('lê os itens da API e ignora os incompletos', () => {
+        const e = lerExecucao({
+            meta: {} as never,
+            stats: {},
+            campos_faltando: [
+                { numero_processo: '1', campo: 'UF' },
+                { numero_processo: '', campo: 'UF' },
+                { numero_processo: '2' },
+            ],
+        } as never)
+        expect(e.camposFaltando).toEqual([{ numero_processo: '1', campo: 'UF' }])
+    })
+
+    it('um aviso por campo, do mais comum ao menos', () => {
+        const itens = [
+            { numero_processo: '1', campo: 'Comarca' },
+            { numero_processo: '2', campo: 'Data da execução' },
+            { numero_processo: '3', campo: 'Data da execução' },
+            { numero_processo: '4', campo: 'Outro' },
+        ]
+        expect(avisosCamposFaltando(itens)).toEqual([
+            'Existem 2 processo(s) em execução sem a data da execução!',
+            'Existem 1 processo(s) em execução sem a comarca!',
+            'Existem 1 processo(s) em execução sem o campo "Outro"!',
+        ])
+        expect(avisosCamposFaltando([])).toEqual([])
     })
 })

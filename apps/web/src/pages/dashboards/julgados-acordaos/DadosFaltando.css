@@ -1,0 +1,77 @@
+/* A faixa "Atenção" e o modal dos dados faltando (DadosFaltando.tsx): Julgados Acórdãos, Julgados Sentenças e
+   Execução. Junto do componente para valer em qualquer página que o use. */
+/* faixa "Atenção" (dados faltando): letreiro clicável, como na v1 */
+.jl-atencao {
+    width: 100%;
+    overflow: hidden;
+    padding: 9px 0;
+    border: 1px solid var(--warn-line);
+    border-radius: var(--r-lg);
+    background: var(--warn-bg);
+    color: var(--warn);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.jl-atencao:hover {
+    background: color-mix(in srgb, var(--warn-dot) 18%, var(--warn-bg));
+}
+.jl-atencao:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.jl-letreiro {
+    display: inline-flex;
+    width: max-content;
+    padding-left: 100%;
+    white-space: nowrap;
+    animation: jl-letreiro var(--dur, 14s) linear infinite;
+}
+.jl-letreiro > span {
+    padding: 0 32px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.jl-atencao:hover .jl-letreiro,
+.jl-atencao:focus-visible .jl-letreiro {
+    animation-play-state: paused;
+}
+@keyframes jl-letreiro {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-100%);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .jl-letreiro {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: auto;
+        padding: 0 16px;
+        white-space: normal;
+        animation: none;
+    }
+    .jl-letreiro > span {
+        padding: 0;
+    }
+}
+.jl-modal {
+    width: min(720px, calc(100vw - 32px));
+}
+.jl-modal-tbl {
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+.jl-modal .export-foot {
+    align-items: center;
+}
+.jl-erro {
+    margin-right: auto;
+}

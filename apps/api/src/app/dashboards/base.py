@@ -83,6 +83,12 @@ class ExportSpec:
     title: str = ""
     # Nome da aba por unidade, quando a v1 mudava (ex.: "Execução LA"); sem a unidade, vale sheet_name.
     sheet_name_por_unidade: dict[str, str] = field(default_factory=dict)
+    # XLSX com uma aba por valor desta coluna (ex.: a informação faltando), na ordem de `sheet_order` (o que não
+    # estiver nela vai depois, na ordem em que aparece); a coluna sai das abas. Vazio = uma aba só (sheet_name).
+    sheet_by: str = ""
+    sheet_order: tuple[str, ...] = ()
+    # Nome da aba para um valor longo (o Excel corta em 31 caracteres), ex.: "Data do acórdão (mérito lançado)".
+    sheet_titles: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

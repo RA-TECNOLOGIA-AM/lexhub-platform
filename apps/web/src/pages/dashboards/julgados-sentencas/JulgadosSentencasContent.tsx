@@ -215,7 +215,13 @@ export function JulgadosSentencasContent({
 
     return (
         <div className="dsecs jl">
-            <DadosFaltando avisos={avisosSentencas(n)} itens={j.dadosFaltando} base="sentenças" />
+            <DadosFaltando
+                avisos={avisosSentencas(n)}
+                itens={j.dadosFaltando}
+                base="sentenças"
+                relatorio="campos-faltando"
+                filters={filters}
+            />
 
             <DashSection
                 index={1}
