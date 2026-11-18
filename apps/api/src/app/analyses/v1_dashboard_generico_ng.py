@@ -5,7 +5,7 @@ Gerado por scripts/copiar_v1/gerar_generico.py (banco ng). Únicas trocas, marca
   * fetch_*: buscam pela fonte da V2 (`usar_fonte`), com o recorte de situação do processo da v1;
   * _get_dashboard_response: mesmo início da v1 (fontes, datas, _f/_a), só com os ramos abaixo;
   * fontes de outro banco saem de FETCHES_BY_DASHBOARD (chegam vazias, como na v1 com a fonte fora do ar).
-Dashboards: protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG, nps_NG.
+Dashboards: protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG, nps_NG, tickets.
 """
 
 import asyncio
@@ -524,8 +524,24 @@ from app.analyses.NG.protocolo import (
     group_valor_causa_protocolados_por_mes,
     list_ufs_protocolo,
 )
+from app.analyses.NG.tickets import (
+    apply_ticket_selection_filter,
+    contar_tickets_validos_no_periodo,
+    get_tickets_stats,
+    group_tickets_abertos_por_servidor,
+    group_tickets_by_category,
+    group_tickets_by_month,
+    group_tickets_by_status,
+    group_tickets_by_subcategory,
+    group_tickets_encerrados_por_servidor,
+    group_tickets_media_encerrados_por_colaborador,
+    group_tickets_ranking_abertura,
+    group_tickets_ranking_fechados,
+    tickets_to_activities,
+)
 from app.utils import (
     parse_date_from_db,
+    resolver_periodo_comparativo,
 )
 from collections import (
     defaultdict,
@@ -569,71 +585,76 @@ async def _fetch_v2(query_name: str) -> List[Dict[str, Any]]:
     return aplicar_filtro_situacao_processo(query_name, await _fonte_ctx.get().fetch(query_name))
 
 
-# V2: v1 dashboard_routes.py:2659 -> fetch_data_with_cache('setor_protocolo', ...)
+# V2: v1 dashboard_routes.py:2821 -> fetch_data_with_cache('setor_protocolo', ...)
 async def fetch_protocolos() -> List[Dict[str, Any]]:
     return await _fetch_v2('setor_protocolo')
 
 
-# V2: v1 dashboard_routes.py:2636 -> fetch_data_with_cache('comercial_geral_NG', ...)
+# V2: v1 dashboard_routes.py:2798 -> fetch_data_with_cache('comercial_geral_NG', ...)
 async def fetch_comercial_geral() -> List[Dict[str, Any]]:
     return await _fetch_v2('comercial_geral_NG')
 
 
-# V2: v1 dashboard_routes.py:2662 -> fetch_data_with_cache('setor_confeccao', ...)
+# V2: v1 dashboard_routes.py:2824 -> fetch_data_with_cache('setor_confeccao', ...)
 async def fetch_peticionamento() -> List[Dict[str, Any]]:
     return await _fetch_v2('setor_confeccao')
 
 
-# V2: v1 dashboard_routes.py:2665 -> fetch_data_with_cache('setor_org_doc', ...)
+# V2: v1 dashboard_routes.py:2827 -> fetch_data_with_cache('setor_org_doc', ...)
 async def fetch_org_doc() -> List[Dict[str, Any]]:
     return await _fetch_v2('setor_org_doc')
 
 
-# V2: v1 dashboard_routes.py:2668 -> fetch_data_with_cache('setor_pendencias', ...)
+# V2: v1 dashboard_routes.py:2830 -> fetch_data_with_cache('setor_pendencias', ...)
 async def fetch_pendencias() -> List[Dict[str, Any]]:
     return await _fetch_v2('setor_pendencias')
 
 
-# V2: v1 dashboard_routes.py:2656 -> fetch_data_with_cache('actions_NG_2', ...)
+# V2: v1 dashboard_routes.py:2818 -> fetch_data_with_cache('actions_NG_2', ...)
 async def fetch_actions() -> List[Dict[str, Any]]:
     return await _fetch_v2('actions_NG_2')
 
 
-# V2: v1 dashboard_routes.py:2671 -> fetch_data_with_cache('rubrica_count_por_processo', ...)
+# V2: v1 dashboard_routes.py:2833 -> fetch_data_with_cache('rubrica_count_por_processo', ...)
 async def fetch_rubrica_count_por_processo() -> List[Dict[str, Any]]:
     return await _fetch_v2('rubrica_count_por_processo')
 
 
-# V2: v1 dashboard_routes.py:2957 -> fetch_data_with_cache('perfil_clientes_NG', ...)
+# V2: v1 dashboard_routes.py:3134 -> fetch_data_with_cache('perfil_clientes_NG', ...)
 async def fetch_marketing_NG() -> List[Dict[str, Any]]:
     return await _fetch_v2('perfil_clientes_NG')
 
 
-# V2: v1 dashboard_routes.py:2963 -> fetch_data_with_cache('facebook_ads', ...)
+# V2: v1 dashboard_routes.py:3140 -> fetch_data_with_cache('facebook_ads', ...)
 async def fetch_facebook_ads() -> List[Dict[str, Any]]:
     return await _fetch_v2('facebook_ads')
 
 
-# V2: v1 dashboard_routes.py:2966 -> fetch_data_with_cache('Analise_thiago', ...)
+# V2: v1 dashboard_routes.py:3143 -> fetch_data_with_cache('Analise_thiago', ...)
 async def fetch_analise_thiago() -> List[Dict[str, Any]]:
     return await _fetch_v2('Analise_thiago')
 
 
-# V2: v1 dashboard_routes.py:2969 -> fetch_data_with_cache('trackeamento_NG_2', ...)
+# V2: v1 dashboard_routes.py:3146 -> fetch_data_with_cache('trackeamento_NG_2', ...)
 async def fetch_trackeamento_ng_2() -> List[Dict[str, Any]]:
     return await _fetch_v2('trackeamento_NG_2')
 
 
-# V2: v1 dashboard_routes.py:2951 -> fetch_data_with_cache('nps_NG', ...)
+# V2: v1 dashboard_routes.py:3128 -> fetch_data_with_cache('nps_NG', ...)
 async def fetch_nps_NG() -> List[Dict[str, Any]]:
     return await _fetch_v2('nps_NG')
 
 
-# v1: dashboard_routes.py:2121
+# V2: v1 dashboard_routes.py:2792 -> fetch_data_with_cache('tickets', ...)
+async def fetch_tickets() -> List[Dict[str, Any]]:
+    return await _fetch_v2('tickets')
+
+
+# v1: dashboard_routes.py:2280
 logger = logging.getLogger(__name__)
 
 
-# v1: dashboard_routes.py:2974
+# v1: dashboard_routes.py:3151
 def _resolve_date_range(
     from_date: Optional[date],
     to_date: Optional[date],
@@ -644,7 +665,7 @@ def _resolve_date_range(
     return from_date, to_date
 
 
-# v1: dashboard_routes.py:2984
+# v1: dashboard_routes.py:3161
 def _to_date(value: Any) -> Optional[date]:
     """Converte valor do banco para date, descartando None e tipos inválidos."""
     if value is None:
@@ -657,7 +678,7 @@ def _to_date(value: Any) -> Optional[date]:
     return None
 
 
-# v1: dashboard_routes.py:2996
+# v1: dashboard_routes.py:3173
 def _in_range(d: date, from_date: Optional[date], to_date: Optional[date]) -> bool:
     if from_date and to_date:
         return from_date <= d <= to_date
@@ -668,7 +689,7 @@ def _in_range(d: date, from_date: Optional[date], to_date: Optional[date]) -> bo
     return True
 
 
-# v1: dashboard_routes.py:3006
+# v1: dashboard_routes.py:3183
 def _filter_by_columns(
     data: List[Dict[str, Any]],
     columns: List[str],
@@ -698,7 +719,7 @@ def _filter_by_columns(
     return filtered
 
 
-# v1: dashboard_routes.py:3036
+# v1: dashboard_routes.py:3213
 _FILTER_COLUMNS: Dict[str, List[str]] = {
     "tickets":              ["data_criacao"],
     "andamento_processual": ["ENTRADA"],
@@ -743,7 +764,7 @@ _FILTER_COLUMNS: Dict[str, List[str]] = {
 }
 
 
-# v1: dashboard_routes.py:3080
+# v1: dashboard_routes.py:3257
 def filter_data(
     key: str,
     data: List[Dict[str, Any]],
@@ -757,7 +778,7 @@ def filter_data(
     return _filter_by_columns(data, columns, from_date, to_date)
 
 
-# v1: dashboard_routes.py:3093
+# v1: dashboard_routes.py:3270
 def dict_to_chart_data(
     d: Dict[str, Any],
     *,
@@ -771,7 +792,7 @@ def dict_to_chart_data(
     return [{"name": k, "value": int(v) if cast_int else v} for k, v in items]
 
 
-# v1: dashboard_routes.py:3106
+# v1: dashboard_routes.py:3283
 def _per_func_to_chart(
     raw: Dict[str, Any],
 ) -> Tuple[List[str], Dict[str, List[Dict[str, Any]]]]:
@@ -787,23 +808,23 @@ def _per_func_to_chart(
     return funcionarios, por_funcionario
 
 
-# v1: dashboard_routes.py:3180
+# v1: dashboard_routes.py:3357
 _ATENDENTE_COMERCIAL_KEYS_NG = frozenset({
     "comercial_geral", "actions", "protocolos", "peticionamento", "org_doc", "pendencias",
 })
 
 
-# v1: dashboard_routes.py:3183
+# v1: dashboard_routes.py:3360
 _ATENDENTE_COMERCIAL_KEYS_LA = frozenset({
     "comercial_LA", "actions_LA", "protocolo_LA", "peticionamento_LA", "org_doc_LA", "pendencias_LA",
 })
 
 
-# v1: dashboard_routes.py:3186
+# v1: dashboard_routes.py:3363
 _ATENDENTE_COMERCIAL_KEYS = _ATENDENTE_COMERCIAL_KEYS_NG | _ATENDENTE_COMERCIAL_KEYS_LA
 
 
-# v1: dashboard_routes.py:3235
+# v1: dashboard_routes.py:3412
 def _expandir_valores_query_lista(valores: Optional[List[str]]) -> List[str]:
     """Expande parâmetros repetidos e valores separados por vírgula."""
     if not valores:
@@ -819,7 +840,7 @@ def _expandir_valores_query_lista(valores: Optional[List[str]]) -> List[str]:
     return saida
 
 
-# v1: dashboard_routes.py:3250
+# v1: dashboard_routes.py:3427
 def _brutos_atendentes_comercial_query(
     atendente_comercial: Optional[List[str]] = None,
     funcionario: Optional[List[str]] = None,
@@ -835,7 +856,7 @@ def _brutos_atendentes_comercial_query(
     return saida
 
 
-# v1: dashboard_routes.py:3265
+# v1: dashboard_routes.py:3442
 def _normalizar_atendentes_comercial_query(
     atendentes: Optional[List[str]],
     *,
@@ -856,11 +877,11 @@ def _normalizar_atendentes_comercial_query(
     return saida
 
 
-# v1: dashboard_routes.py:3298
+# v1: dashboard_routes.py:3475
 _NG_UF_FILTER_KEYS = frozenset({"comercial_geral", "protocolos", "pendencias", "peticionamento", "org_doc", "actions", "andamento_processual"})
 
 
-# v1: dashboard_routes.py:3300
+# v1: dashboard_routes.py:3477
 def _filtrar_dados_ng_por_uf(data: Dict[str, List], uf: str, *, excluir: bool = False) -> Dict[str, List]:
     """Filtra (ou exclui) uma UF nos datasets NG que têm coluna UF."""
     uf_norm = str(uf).strip().upper()
@@ -876,7 +897,7 @@ def _filtrar_dados_ng_por_uf(data: Dict[str, List], uf: str, *, excluir: bool = 
     return result
 
 
-# v1: dashboard_routes.py:3315
+# v1: dashboard_routes.py:3492
 def _aplicar_filtros_comercial_dashboard(
     filtered_data: Dict[str, List],
     all_data: Dict[str, List],
@@ -920,7 +941,7 @@ def _aplicar_filtros_comercial_dashboard(
     return filtered_data, all_data, ac_brutos
 
 
-# v1: dashboard_routes.py:3358
+# v1: dashboard_routes.py:3535
 def _linha_bate_atendentes_comercial(
     row: Dict[str, Any],
     atendentes_fmt: frozenset[str],
@@ -937,7 +958,7 @@ def _linha_bate_atendentes_comercial(
     return False
 
 
-# v1: dashboard_routes.py:3374
+# v1: dashboard_routes.py:3551
 def _filtrar_lista_por_atendentes_comercial(
     rows: List[Dict[str, Any]],
     atendentes_fmt: frozenset[str],
@@ -952,7 +973,7 @@ def _filtrar_lista_por_atendentes_comercial(
     ]
 
 
-# v1: dashboard_routes.py:3388
+# v1: dashboard_routes.py:3565
 def _aplicar_filtro_atendentes_comercial(
     datasets: Dict[str, List],
     atendentes: List[str],
@@ -976,7 +997,7 @@ def _aplicar_filtro_atendentes_comercial(
     }
 
 
-# v1: dashboard_routes.py:3411
+# v1: dashboard_routes.py:3588
 def _normalizar_funcionarios_query(funcionarios: Optional[List[str]]) -> List[str]:
     """Lista única de nomes de funcionário vindos da query (trim, sem vazios)."""
     vistos: set[str] = set()
@@ -988,7 +1009,7 @@ def _normalizar_funcionarios_query(funcionarios: Optional[List[str]]) -> List[st
     return saida
 
 
-# v1: dashboard_routes.py:3725
+# v1: dashboard_routes.py:3912
 @dataclass
 class ComercialLAContext:
     """Agrupa as fontes de dados necessárias para o builder comercial LA."""
@@ -1007,7 +1028,7 @@ class ComercialLAContext:
     to_date: Optional[date]
 
 
-# v1: dashboard_routes.py:3743
+# v1: dashboard_routes.py:3930
 class ChartDataPoint(BaseModel):
     name: str
     value: float
@@ -1024,7 +1045,7 @@ class ChartDataPoint(BaseModel):
     abertas: Optional[float] = None
 
 
-# v1: dashboard_routes.py:3759
+# v1: dashboard_routes.py:3946
 class ProcessoDadoFaltando(BaseModel):
     """Um processo com um campo faltando (alimenta o alerta clicável "Atenção" dos
     dashboards de Execução/Execução Acordos/Julgados — número do processo + qual
@@ -1034,7 +1055,7 @@ class ProcessoDadoFaltando(BaseModel):
     campo: str
 
 
-# v1: dashboard_routes.py:3768
+# v1: dashboard_routes.py:3955
 class InvestimentoCliquesLeadsPoint(BaseModel):
     name: str
     investimento: float
@@ -1042,14 +1063,14 @@ class InvestimentoCliquesLeadsPoint(BaseModel):
     leads: int
 
 
-# v1: dashboard_routes.py:3775
+# v1: dashboard_routes.py:3962
 class RubricaCampanhaPoint(BaseModel):
     name: str
     ra: int
     ng: int
 
 
-# v1: dashboard_routes.py:3781
+# v1: dashboard_routes.py:3968
 class NpsRespostaRow(BaseModel):
     id: int
     cliente: str
@@ -1066,7 +1087,7 @@ class NpsRespostaRow(BaseModel):
     comentario: str
 
 
-# v1: dashboard_routes.py:3797
+# v1: dashboard_routes.py:3984
 class NpsFeedbackMelhoriaRow(BaseModel):
     id: int
     cliente: str
@@ -1077,7 +1098,7 @@ class NpsFeedbackMelhoriaRow(BaseModel):
     feedback_melhoria: str
 
 
-# v1: dashboard_routes.py:3807
+# v1: dashboard_routes.py:3994
 class NpsFeedbackPositivoRow(BaseModel):
     id: int
     cliente: str
@@ -1088,7 +1109,7 @@ class NpsFeedbackPositivoRow(BaseModel):
     feedback_positivo: str
 
 
-# v1: dashboard_routes.py:3817
+# v1: dashboard_routes.py:4004
 class NpsComentarioRow(BaseModel):
     id: int
     cliente: str
@@ -1099,7 +1120,7 @@ class NpsComentarioRow(BaseModel):
     comentario: str
 
 
-# v1: dashboard_routes.py:3827
+# v1: dashboard_routes.py:4014
 class RecursalRankingMagistradoRow(BaseModel):
     name: str
     initials: str
@@ -1113,7 +1134,7 @@ class RecursalRankingMagistradoRow(BaseModel):
     percent_outros: float
 
 
-# v1: dashboard_routes.py:3840
+# v1: dashboard_routes.py:4027
 class JulgadosSentencaListaRow(BaseModel):
     id: Optional[int] = None
     numero_processo: str
@@ -1127,7 +1148,7 @@ class JulgadosSentencaListaRow(BaseModel):
     data_sentenca_embargos: Optional[str] = None
 
 
-# v1: dashboard_routes.py:3853
+# v1: dashboard_routes.py:4040
 class JulgadosAcordaoListaRow(BaseModel):
     id: Optional[int] = None
     numero_processo: str
@@ -1141,7 +1162,7 @@ class JulgadosAcordaoListaRow(BaseModel):
     data_acordao_embargos: Optional[str] = None
 
 
-# v1: dashboard_routes.py:3866
+# v1: dashboard_routes.py:4053
 class ExecucaoAcordosListaRow(BaseModel):
     id: Optional[int] = None
     numero_processo: str
@@ -1151,7 +1172,7 @@ class ExecucaoAcordosListaRow(BaseModel):
     subfase: str
 
 
-# v1: dashboard_routes.py:3875
+# v1: dashboard_routes.py:4062
 class RecursalAtividadeTarefaRow(BaseModel):
     id: int
     status: str
@@ -1176,7 +1197,7 @@ class RecursalAtividadeTarefaRow(BaseModel):
     valor_acordao: Optional[float] = None
 
 
-# v1: dashboard_routes.py:3899
+# v1: dashboard_routes.py:4086
 class DilacaoPorFuncionarioRow(BaseModel):
     funcionario: str
     qtd_dilacoes: int
@@ -1185,7 +1206,7 @@ class DilacaoPorFuncionarioRow(BaseModel):
     taxa_dilacao: float
 
 
-# v1: dashboard_routes.py:3907
+# v1: dashboard_routes.py:4094
 class EmendasManifestacoesResolvidosPorUfRow(BaseModel):
     uf: str
     qtd_manifestacao: int
@@ -1193,7 +1214,7 @@ class EmendasManifestacoesResolvidosPorUfRow(BaseModel):
     qtd_total: int
 
 
-# v1: dashboard_routes.py:3914
+# v1: dashboard_routes.py:4101
 class EmendasManifestacoesComissaoRow(BaseModel):
     funcionario: str
     agenda_finalizada: int
@@ -1211,7 +1232,7 @@ class EmendasManifestacoesComissaoRow(BaseModel):
     resolvidos_por_uf: Optional[List[EmendasManifestacoesResolvidosPorUfRow]] = None
 
 
-# v1: dashboard_routes.py:3931
+# v1: dashboard_routes.py:4118
 class RecursalAtividadesListaFiltrosOpcoes(BaseModel):
     funcionarios: List[str]
     atividades: List[str]
@@ -1219,7 +1240,7 @@ class RecursalAtividadesListaFiltrosOpcoes(BaseModel):
     situacoes: List[Dict[str, str]]
 
 
-# v1: dashboard_routes.py:3938
+# v1: dashboard_routes.py:4125
 class ExecucaoAtrasoBucket(BaseModel):
     dias: int
     label: str
@@ -1228,13 +1249,13 @@ class ExecucaoAtrasoBucket(BaseModel):
     pct: float
 
 
-# v1: dashboard_routes.py:3946
+# v1: dashboard_routes.py:4133
 class ExecucaoAtrasosDetalhamento(BaseModel):
     total: int
     buckets: List[ExecucaoAtrasoBucket]
 
 
-# v1: dashboard_routes.py:3951
+# v1: dashboard_routes.py:4138
 class RubricaTotalRow(BaseModel):
     rubrica: str
     acoes: int
@@ -1242,7 +1263,7 @@ class RubricaTotalRow(BaseModel):
     total: float
 
 
-# v1: dashboard_routes.py:3958
+# v1: dashboard_routes.py:4145
 class ComissionamentoOrgDocRow(BaseModel):
     funcionario: str
     qtd_resolvidos: int
@@ -1250,7 +1271,7 @@ class ComissionamentoOrgDocRow(BaseModel):
     valor_comissao: float
 
 
-# v1: dashboard_routes.py:3965
+# v1: dashboard_routes.py:4152
 class ComissionamentoProtocoloRow(BaseModel):
     funcionario: str
     qtd_protocolados: int
@@ -1258,7 +1279,7 @@ class ComissionamentoProtocoloRow(BaseModel):
     valor_comissao: float
 
 
-# v1: dashboard_routes.py:3972
+# v1: dashboard_routes.py:4159
 class ComissionamentoPeticionamentoRow(BaseModel):
     funcionario: str
     qtd_acoes_massa: int
@@ -1271,7 +1292,7 @@ class ComissionamentoPeticionamentoRow(BaseModel):
     valor_comissao: float
 
 
-# v1: dashboard_routes.py:3984
+# v1: dashboard_routes.py:4171
 class ComissionamentoPendenciaRow(BaseModel):
     funcionario: str
     taxa_resolvido: Optional[float] = None
@@ -1282,7 +1303,7 @@ class ComissionamentoPendenciaRow(BaseModel):
     comissao: float
 
 
-# v1: dashboard_routes.py:3994
+# v1: dashboard_routes.py:4181
 class ComissionamentoPublicacaoRow(BaseModel):
     funcionario: str
     qtd_lidas: int
@@ -1293,7 +1314,7 @@ class ComissionamentoPublicacaoRow(BaseModel):
     comissao: float
 
 
-# v1: dashboard_routes.py:4004
+# v1: dashboard_routes.py:4191
 class ComissionamentoAndamentoRow(BaseModel):
     funcionario: str
     media_avaliacao: Optional[float] = None
@@ -1302,7 +1323,7 @@ class ComissionamentoAndamentoRow(BaseModel):
     valor_comissao: float
 
 
-# v1: dashboard_routes.py:4012
+# v1: dashboard_routes.py:4199
 class ComissionamentoComercialRow(BaseModel):
     atendente: str
     acoes: int
@@ -1313,7 +1334,7 @@ class ComissionamentoComercialRow(BaseModel):
     comissao_com_fm: float
 
 
-# v1: dashboard_routes.py:4022
+# v1: dashboard_routes.py:4209
 class ComissionamentoComercialLARow(BaseModel):
     atendente: str
     acoes: int
@@ -1322,151 +1343,151 @@ class ComissionamentoComercialLARow(BaseModel):
     comissao_com_fm: float
 
 
-# v1: dashboard_routes.py:4030
+# v1: dashboard_routes.py:4217
 class TotalLeadsPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4035
+# v1: dashboard_routes.py:4222
 class TotalClientesFechadosPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4040
+# v1: dashboard_routes.py:4227
 class TaxaFechamentoGeralPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4045
+# v1: dashboard_routes.py:4232
 class TotalLeadsCampanhaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4050
+# v1: dashboard_routes.py:4237
 class TotalClientesFechadosCampanhaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4055
+# v1: dashboard_routes.py:4242
 class TaxaFechamentoCampanhaPorCliente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4060
+# v1: dashboard_routes.py:4247
 class TotalLeadsIndicacaoAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4065
+# v1: dashboard_routes.py:4252
 class TaxaFechamentoIndicacaoAtivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4070
+# v1: dashboard_routes.py:4257
 class TotalClientesFechadosIndicacaoAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4075
+# v1: dashboard_routes.py:4262
 class TotalLeadsIndicacaoPassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4080
+# v1: dashboard_routes.py:4267
 class TotalClientesFechadosIndicacaoPassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4085
+# v1: dashboard_routes.py:4272
 class TaxaFechamentoIndicacaoPassivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4090
+# v1: dashboard_routes.py:4277
 class TotalLeadsRetornoAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4095
+# v1: dashboard_routes.py:4282
 class TotalClientesFechadosRetornoAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4100
+# v1: dashboard_routes.py:4287
 class TaxaFechamentoRetornoAtivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4105
+# v1: dashboard_routes.py:4292
 class TotalLeadsRetornoPassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4110
+# v1: dashboard_routes.py:4297
 class TotalClientesFechadosRetornoPassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4115
+# v1: dashboard_routes.py:4302
 class TaxaFechamentoRetornoPassivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4120
+# v1: dashboard_routes.py:4307
 class TotalLeadsResgateAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4125
+# v1: dashboard_routes.py:4312
 class TotalClientesFechadosResgateAtivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4130
+# v1: dashboard_routes.py:4317
 class TaxaFechamentoResgateAtivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4135
+# v1: dashboard_routes.py:4322
 class TotalLeadsResgatePassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4140
+# v1: dashboard_routes.py:4327
 class TotalClientesFechadosResgatePassivaPorAtendente(BaseModel):
     total: int
     por_atendente: Dict[str, int]
 
 
-# v1: dashboard_routes.py:4145
+# v1: dashboard_routes.py:4332
 class TaxaFechamentoResgatePassivaPorAtendente(BaseModel):
     total: float
     por_atendente: Dict[str, float]
 
 
-# v1: dashboard_routes.py:4184
+# v1: dashboard_routes.py:4371
 class DashboardStats(BaseModel):
     # Tickets
     total_tickets: Optional[int] = None
@@ -1477,6 +1498,7 @@ class DashboardStats(BaseModel):
     tickets_reprovados: Optional[int] = None
     duracao_atendimento: Optional[float] = None
     taxa_resolucao: Optional[float] = None
+    total_tickets_periodo_anterior: Optional[int] = None
     tickets_abertos: Optional[int] = None
     tickets_resolvidos: Optional[int] = None
     tickets_hoje: Optional[int] = None
@@ -1695,6 +1717,8 @@ class DashboardStats(BaseModel):
     valor_ted_saida_execucao_periodo: Optional[float] = None
     taxa_recuperacao_execucao: Optional[float] = None
     media_tempo_execucao: Optional[float] = None
+    taxa_atualizacao_execucao_NG: Optional[Dict[str, Any]] = None
+    duracoes_tempo_execucao_NG: Optional[List[float]] = None
     mediana_tempo_execucao: Optional[float] = None
     execucao_materia_filtro: Optional[Union[str, List[str]]] = None
     execucao_subfase_filtro: Optional[Union[str, List[str]]] = None
@@ -1713,6 +1737,7 @@ class DashboardStats(BaseModel):
     valor_saida_execucao_acordos_periodo_NG: Optional[float] = None
     valor_ted_saida_execucao_acordos_periodo_NG: Optional[float] = None
     media_tempo_execucao_acordos_NG: Optional[float] = None
+    duracoes_tempo_execucao_acordos_NG: Optional[List[float]] = None
     mediana_tempo_execucao_acordos_NG: Optional[float] = None
     total_atividades_execucao_acordos_NG: Optional[int] = None
     atividades_execucao_em_andamento_acordos_NG: Optional[int] = None
@@ -1756,6 +1781,7 @@ class DashboardStats(BaseModel):
     valor_saida_execucao_acordos_periodo_LA: Optional[float] = None
     valor_ted_saida_execucao_acordos_periodo_LA: Optional[float] = None
     media_tempo_execucao_acordos_LA: Optional[float] = None
+    duracoes_tempo_execucao_acordos_LA: Optional[List[float]] = None
     mediana_tempo_execucao_acordos_LA: Optional[float] = None
     total_atividades_execucao_acordos_LA: Optional[int] = None
     atividades_execucao_em_andamento_acordos_LA: Optional[int] = None
@@ -1799,6 +1825,7 @@ class DashboardStats(BaseModel):
     valor_saida_execucao_acordos_periodo_RJ: Optional[float] = None
     valor_ted_saida_execucao_acordos_periodo_RJ: Optional[float] = None
     media_tempo_execucao_acordos_RJ: Optional[float] = None
+    duracoes_tempo_execucao_acordos_RJ: Optional[List[float]] = None
     mediana_tempo_execucao_acordos_RJ: Optional[float] = None
     total_atividades_execucao_acordos_RJ: Optional[int] = None
     atividades_execucao_em_andamento_acordos_RJ: Optional[int] = None
@@ -1875,6 +1902,8 @@ class DashboardStats(BaseModel):
     valor_ted_saida_execucao_periodo_RJ: Optional[float] = None
     taxa_recuperacao_execucao_RJ: Optional[float] = None
     media_tempo_execucao_RJ: Optional[float] = None
+    taxa_atualizacao_execucao_RJ: Optional[Dict[str, Any]] = None
+    duracoes_tempo_execucao_RJ: Optional[List[float]] = None
     mediana_tempo_execucao_RJ: Optional[float] = None
     execucao_materia_filtro_RJ: Optional[Union[str, List[str]]] = None
     execucao_subfase_filtro_RJ: Optional[Union[str, List[str]]] = None
@@ -2021,6 +2050,8 @@ class DashboardStats(BaseModel):
     valor_ted_saida_execucao_periodo_LA: Optional[float] = None
     taxa_recuperacao_execucao_LA: Optional[float] = None
     media_tempo_execucao_LA: Optional[float] = None
+    taxa_atualizacao_execucao_LA: Optional[Dict[str, Any]] = None
+    duracoes_tempo_execucao_LA: Optional[List[float]] = None
     mediana_tempo_execucao_LA: Optional[float] = None
     execucao_materia_filtro_LA: Optional[Union[str, List[str]]] = None
     execucao_subfase_filtro_LA: Optional[Union[str, List[str]]] = None
@@ -2180,6 +2211,83 @@ class DashboardStats(BaseModel):
     # Meta de Provimento Mensal — processos providos (ID_2G) no período.
     provimento_mensal_qtd_NG: Optional[int] = None
     provimento_mensal_meta_NG: Optional[int] = None
+    # Recursal RJ
+    total_recursal_RJ: Optional[int] = None
+    entrada_recursal_RJ: Optional[int] = None
+    valor_causa_acordo_recursal_RJ: Optional[float] = None
+    total_sentenca_favoravel_recurso_RJ: Optional[int] = None
+    total_sentenca_desfavoravel_recurso_RJ: Optional[int] = None
+    total_procedente_1g_recurso_RJ: Optional[int] = None
+    total_parcialmente_procedente_recurso_RJ: Optional[int] = None
+    total_sentenca_extincao_recurso_RJ: Optional[int] = None
+    total_sentenca_parcialmente_favoravel_recurso_RJ: Optional[int] = None
+    valor_causa_sentenca_favoravel_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_desfavoravel_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_procedente_1g_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_parcialmente_procedente_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_extincao_recurso_RJ: Optional[float] = None
+    valor_causa_sentenca_parcialmente_favoravel_recurso_RJ: Optional[float] = None
+    total_acordao_desfavoravel_recurso_RJ: Optional[int] = None
+    total_acordao_favoravel_recurso_RJ: Optional[int] = None
+    total_acordao_parcialmente_favoravel_recurso_RJ: Optional[int] = None
+    total_acordao_parcial_retomada_recurso_RJ: Optional[int] = None
+    total_acordao_extincao_recurso_RJ: Optional[int] = None
+    valor_causa_acordao_desfavoravel_recurso_RJ: Optional[float] = None
+    valor_causa_acordao_favoravel_recurso_RJ: Optional[float] = None
+    valor_causa_acordao_parcialmente_favoravel_recurso_RJ: Optional[float] = None
+    valor_causa_acordao_parcial_retomada_recurso_RJ: Optional[float] = None
+    valor_causa_acordao_extincao_recurso_RJ: Optional[float] = None
+    total_decisoes_recursal_RJ: Optional[int] = None
+    # Decisões recursais — Matriz de Julgamento (mérito 1G × 2G), 8 buckets
+    total_mantido_ganho_recurso_RJ: Optional[int] = None
+    total_ganho_ampliado_recurso_RJ: Optional[int] = None
+    total_revertido_ganho_recurso_RJ: Optional[int] = None
+    total_ganho_reduzido_recurso_RJ: Optional[int] = None
+    total_mantido_perda_recurso_RJ: Optional[int] = None
+    total_revertido_perda_recurso_RJ: Optional[int] = None
+    total_extincao_reajuizar_recurso_RJ: Optional[int] = None
+    total_instrucao_retomada_recurso_RJ: Optional[int] = None
+    percent_mantido_ganho_recursal_RJ: Optional[float] = None
+    percent_ganho_ampliado_recursal_RJ: Optional[float] = None
+    percent_revertido_ganho_recursal_RJ: Optional[float] = None
+    percent_ganho_reduzido_recursal_RJ: Optional[float] = None
+    percent_mantido_perda_recursal_RJ: Optional[float] = None
+    percent_revertido_perda_recursal_RJ: Optional[float] = None
+    percent_extincao_reajuizar_recursal_RJ: Optional[float] = None
+    percent_instrucao_retomada_recursal_RJ: Optional[float] = None
+    valor_causa_mantido_ganho_recurso_RJ: Optional[float] = None
+    valor_causa_ganho_ampliado_recurso_RJ: Optional[float] = None
+    valor_causa_revertido_ganho_recurso_RJ: Optional[float] = None
+    valor_causa_ganho_reduzido_recurso_RJ: Optional[float] = None
+    valor_causa_mantido_perda_recurso_RJ: Optional[float] = None
+    valor_causa_revertido_perda_recurso_RJ: Optional[float] = None
+    valor_causa_extincao_reajuizar_recurso_RJ: Optional[float] = None
+    valor_causa_instrucao_retomada_recurso_RJ: Optional[float] = None
+    total_atividades_recursos_RJ: Optional[int] = None
+    atividades_recursos_em_andamento_RJ: Optional[int] = None
+    atividades_recursos_vencidas_RJ: Optional[int] = None
+    atividades_recursos_vencem_hoje_RJ: Optional[int] = None
+    atividades_recursos_concluidas_RJ: Optional[int] = None
+    # Mesmos KPIs de atividades, usando PRAZO como eixo temporal (toggle "Por prazo").
+    total_por_prazo_atividades_recursos_RJ: Optional[int] = None
+    por_prazo_em_andamento_atividades_recursos_RJ: Optional[int] = None
+    por_prazo_vencidas_atividades_recursos_RJ: Optional[int] = None
+    por_prazo_vencem_hoje_atividades_recursos_RJ: Optional[int] = None
+    por_prazo_concluidas_atividades_recursos_RJ: Optional[int] = None
+    # Cumprido e encaminhado como "RECURSO CANCELADO" — análise de viabilidade equivocada.
+    avr_retorno_recurso_cancelado_RJ: Optional[int] = None
+    # Cumprido e encaminhado como "RECURSO CANCELADO" — perda de prazo.
+    retorno_cr_recurso_cancelado_RJ: Optional[int] = None
+    # Meta de Provimento Mensal — processos providos (ID_2G) no período.
+    provimento_mensal_qtd_RJ: Optional[int] = None
+    provimento_mensal_meta_RJ: Optional[int] = None
+    # Extintos · 2º Grau (painel do Recursal RJ) — no NG vêm do controle_processo_NG.
+    controle_processo_extintos_com_merito_2g_qtd_recursal_RJ: Optional[int] = None
+    controle_processo_extintos_com_merito_2g_valor_causa_acordao_recursal_RJ: Optional[float] = None
+    controle_processo_extintos_com_merito_2g_por_tipo_sentenca_valor_acordao_recursal_RJ: Optional[List[Dict[str, Any]]] = None
+    controle_processo_extintos_sem_merito_2g_qtd_recursal_RJ: Optional[int] = None
+    controle_processo_extintos_sem_merito_2g_valor_causa_acordao_recursal_RJ: Optional[float] = None
+    controle_processo_taxa_provimento_2g_recursal_RJ: Optional[float] = None
 
     # Pendências Intermediárias LA (LexFlow)
     total_atividades_intermediarias_LA: Optional[int] = None
@@ -2601,6 +2709,8 @@ class DashboardStats(BaseModel):
     julgados_sentenca_sem_competencia_NG: Optional[int] = None
     julgados_sentenca_sem_uf_NG: Optional[int] = None
     julgados_sentenca_sem_valor_pe_NG: Optional[int] = None
+    julgados_sentenca_merito_sem_data_NG: Optional[int] = None
+    julgados_sentenca_data_sem_merito_NG: Optional[int] = None
     julgados_sentenca_dados_faltando_NG: Optional[List[ProcessoDadoFaltando]] = None
     # Julgados Sentenças NG — Estudos de Extinção
     julgados_extincao_valor_NG: Optional[float] = None
@@ -2610,6 +2720,12 @@ class DashboardStats(BaseModel):
     julgados_sentenca_total_estoque_NG: Optional[int] = None
     julgados_extincao_revertida_2g_NG: Optional[int] = None
     julgados_extincao_revertida_2g_estoque_NG: Optional[int] = None
+    # Julgados Sentenças NG — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_valor_NG: Optional[float] = None
+    julgados_improcedencia_total_estoque_NG: Optional[int] = None
+    julgados_improcedencia_valor_estoque_NG: Optional[float] = None
+    julgados_improcedencia_revertida_2g_NG: Optional[int] = None
+    julgados_improcedencia_revertida_2g_estoque_NG: Optional[int] = None
     # Julgados Acórdãos NG
     julgados_acordao_total_NG: Optional[int] = None
     julgados_acordao_procedentes_NG: Optional[int] = None
@@ -2639,7 +2755,18 @@ class DashboardStats(BaseModel):
     julgados_acordao_sem_competencia_NG: Optional[int] = None
     julgados_acordao_sem_uf_NG: Optional[int] = None
     julgados_acordao_sem_valor_pe_NG: Optional[int] = None
+    julgados_acordao_merito_sem_data_NG: Optional[int] = None
+    julgados_acordao_data_sem_merito_NG: Optional[int] = None
     julgados_acordao_dados_faltando_NG: Optional[List[ProcessoDadoFaltando]] = None
+    # Julgados Acórdãos NG — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_valor_NG: Optional[float] = None
+    julgados_acordao_improcedencia_total_estoque_NG: Optional[int] = None
+    julgados_acordao_improcedencia_valor_estoque_NG: Optional[float] = None
+    julgados_acordao_improcedencia_stj_NG: Optional[int] = None
+    julgados_acordao_improcedencia_stf_NG: Optional[int] = None
+    julgados_acordao_improcedencia_stj_estoque_NG: Optional[int] = None
+    julgados_acordao_improcedencia_stf_estoque_NG: Optional[int] = None
+    julgados_acordao_total_estoque_NG: Optional[int] = None
     # Julgados Sentenças LA
     julgados_sentenca_total_LA: Optional[int] = None
     julgados_sentenca_procedentes_LA: Optional[int] = None
@@ -2665,6 +2792,8 @@ class DashboardStats(BaseModel):
     julgados_sentenca_sem_competencia_LA: Optional[int] = None
     julgados_sentenca_sem_uf_LA: Optional[int] = None
     julgados_sentenca_sem_valor_pe_LA: Optional[int] = None
+    julgados_sentenca_merito_sem_data_LA: Optional[int] = None
+    julgados_sentenca_data_sem_merito_LA: Optional[int] = None
     julgados_sentenca_dados_faltando_LA: Optional[List[ProcessoDadoFaltando]] = None
     # Julgados Sentenças LA — Estudos de Extinção
     julgados_extincao_valor_LA: Optional[float] = None
@@ -2674,6 +2803,54 @@ class DashboardStats(BaseModel):
     julgados_sentenca_total_estoque_LA: Optional[int] = None
     julgados_extincao_revertida_2g_LA: Optional[int] = None
     julgados_extincao_revertida_2g_estoque_LA: Optional[int] = None
+    # Julgados Sentenças LA — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_valor_LA: Optional[float] = None
+    julgados_improcedencia_total_estoque_LA: Optional[int] = None
+    julgados_improcedencia_valor_estoque_LA: Optional[float] = None
+    julgados_improcedencia_revertida_2g_LA: Optional[int] = None
+    julgados_improcedencia_revertida_2g_estoque_LA: Optional[int] = None
+    # Julgados Sentenças RJ
+    julgados_sentenca_total_RJ: Optional[int] = None
+    julgados_sentenca_procedentes_RJ: Optional[int] = None
+    julgados_sentenca_improcedentes_RJ: Optional[int] = None
+    julgados_sentenca_extintos_RJ: Optional[int] = None
+    julgados_sentenca_tempo_medio_dias_RJ: Optional[float] = None
+    julgados_sentenca_embargos_tempo_medio_dias_RJ: Optional[float] = None
+    julgados_sentenca_valor_procedentes_RJ: Optional[float] = None
+    julgados_sentenca_embargados_RJ: Optional[int] = None
+    julgados_sentenca_revertidos_RJ: Optional[int] = None
+    comparativo_julgados_sentenca_total_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_improcedentes_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_extintos_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_tempo_medio_dias_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_valor_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_embargados_RJ: Optional[float] = None
+    comparativo_julgados_sentenca_revertidos_RJ: Optional[float] = None
+    julgados_uf_opcoes_RJ: Optional[List[str]] = None
+    julgados_sentenca_sem_juiz_RJ: Optional[int] = None
+    julgados_sentenca_sem_materia_RJ: Optional[int] = None
+    julgados_sentenca_sem_comarca_RJ: Optional[int] = None
+    julgados_sentenca_sem_competencia_RJ: Optional[int] = None
+    julgados_sentenca_sem_uf_RJ: Optional[int] = None
+    julgados_sentenca_sem_valor_pe_RJ: Optional[int] = None
+    julgados_sentenca_merito_sem_data_RJ: Optional[int] = None
+    julgados_sentenca_data_sem_merito_RJ: Optional[int] = None
+    julgados_sentenca_dados_faltando_RJ: Optional[List[ProcessoDadoFaltando]] = None
+    # Julgados Sentenças RJ — Estudos de Extinção
+    julgados_extincao_valor_RJ: Optional[float] = None
+    julgados_extincao_total_estoque_RJ: Optional[int] = None
+    julgados_extincao_valor_estoque_RJ: Optional[float] = None
+    julgados_comarca_opcoes_RJ: Optional[List[str]] = None
+    julgados_sentenca_total_estoque_RJ: Optional[int] = None
+    julgados_extincao_revertida_2g_RJ: Optional[int] = None
+    julgados_extincao_revertida_2g_estoque_RJ: Optional[int] = None
+    # Julgados Sentenças RJ — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_valor_RJ: Optional[float] = None
+    julgados_improcedencia_total_estoque_RJ: Optional[int] = None
+    julgados_improcedencia_valor_estoque_RJ: Optional[float] = None
+    julgados_improcedencia_revertida_2g_RJ: Optional[int] = None
+    julgados_improcedencia_revertida_2g_estoque_RJ: Optional[int] = None
     # Julgados Acórdãos LA
     julgados_acordao_total_LA: Optional[int] = None
     julgados_acordao_procedentes_LA: Optional[int] = None
@@ -2703,10 +2880,54 @@ class DashboardStats(BaseModel):
     julgados_acordao_sem_competencia_LA: Optional[int] = None
     julgados_acordao_sem_uf_LA: Optional[int] = None
     julgados_acordao_sem_valor_pe_LA: Optional[int] = None
+    julgados_acordao_merito_sem_data_LA: Optional[int] = None
+    julgados_acordao_data_sem_merito_LA: Optional[int] = None
     julgados_acordao_dados_faltando_LA: Optional[List[ProcessoDadoFaltando]] = None
+    # Julgados Acórdãos LA — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_valor_LA: Optional[float] = None
+    julgados_acordao_improcedencia_total_estoque_LA: Optional[int] = None
+    julgados_acordao_improcedencia_valor_estoque_LA: Optional[float] = None
+    julgados_acordao_total_estoque_LA: Optional[int] = None
+    # Julgados Acórdãos RJ
+    julgados_acordao_total_RJ: Optional[int] = None
+    julgados_acordao_procedentes_RJ: Optional[int] = None
+    julgados_acordao_improcedentes_RJ: Optional[int] = None
+    julgados_acordao_extintos_RJ: Optional[int] = None
+    julgados_acordao_nao_classificados_RJ: Optional[int] = None
+    julgados_acordao_tempo_medio_dias_RJ: Optional[float] = None
+    julgados_acordao_embargos_tempo_medio_dias_RJ: Optional[float] = None
+    julgados_acordao_valor_procedentes_RJ: Optional[float] = None
+    julgados_acordao_valor_fixado_procedentes_RJ: Optional[float] = None
+    julgados_acordao_embargados_RJ: Optional[int] = None
+    julgados_acordao_revertidos_RJ: Optional[int] = None
+    comparativo_julgados_acordao_total_RJ: Optional[float] = None
+    comparativo_julgados_acordao_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_acordao_improcedentes_RJ: Optional[float] = None
+    comparativo_julgados_acordao_extintos_RJ: Optional[float] = None
+    comparativo_julgados_acordao_nao_classificados_RJ: Optional[float] = None
+    comparativo_julgados_acordao_tempo_medio_dias_RJ: Optional[float] = None
+    comparativo_julgados_acordao_valor_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_acordao_valor_fixado_procedentes_RJ: Optional[float] = None
+    comparativo_julgados_acordao_embargados_RJ: Optional[float] = None
+    comparativo_julgados_acordao_revertidos_RJ: Optional[float] = None
+    julgados_acordao_uf_opcoes_RJ: Optional[List[str]] = None
+    julgados_acordao_sem_relator_RJ: Optional[int] = None
+    julgados_acordao_sem_materia_RJ: Optional[int] = None
+    julgados_acordao_sem_comarca_RJ: Optional[int] = None
+    julgados_acordao_sem_competencia_RJ: Optional[int] = None
+    julgados_acordao_sem_uf_RJ: Optional[int] = None
+    julgados_acordao_sem_valor_pe_RJ: Optional[int] = None
+    julgados_acordao_merito_sem_data_RJ: Optional[int] = None
+    julgados_acordao_data_sem_merito_RJ: Optional[int] = None
+    julgados_acordao_dados_faltando_RJ: Optional[List[ProcessoDadoFaltando]] = None
+    # Julgados Acórdãos RJ — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_valor_RJ: Optional[float] = None
+    julgados_acordao_improcedencia_total_estoque_RJ: Optional[int] = None
+    julgados_acordao_improcedencia_valor_estoque_RJ: Optional[float] = None
+    julgados_acordao_total_estoque_RJ: Optional[int] = None
 
 
-# v1: dashboard_routes.py:5423
+# v1: dashboard_routes.py:5810
 class Activity(BaseModel):
     id: str
     type: str
@@ -2714,9 +2935,17 @@ class Activity(BaseModel):
     description: str
     time: str
     user: str
+    # Tickets: campos extraídos do log do Discord (opcionais para os demais usos)
+    categoria: Optional[str] = None
+    status: Optional[str] = None
+    servidor: Optional[str] = None
+    ticket_numero: Optional[str] = None
+    anydesk: Optional[str] = None
+    url: Optional[str] = None
+    minutos_atras: Optional[int] = None
 
 
-# v1: dashboard_routes.py:5432
+# v1: dashboard_routes.py:5827
 class DashboardResponse(BaseModel):
     dashboard: str
     stats: DashboardStats
@@ -3289,6 +3518,25 @@ class DashboardResponse(BaseModel):
     recursal_atividades_lista_filtros_opcoes_NG: Optional[RecursalAtividadesListaFiltrosOpcoes] = None
     ranking_juizes_recursal_NG: Optional[List[RecursalRankingMagistradoRow]] = None
     ranking_relatores_recursal_NG: Optional[List[RecursalRankingMagistradoRow]] = None
+    # Recursal RJ
+    recursal_por_status_1g_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_status_2g_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_subfase_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_materia_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_competencia_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_por_vara_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_decisoes_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_processos_por_atividade_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_demandas_por_funcionario_RJ: Optional[List[Dict[str, Any]]] = None
+    recursal_resolvidos_por_dia_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_resolvidos_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    funcionarios_recursal_RJ: Optional[List[str]] = None
+    recursal_resolvidos_por_dia_por_funcionario_RJ: Optional[Dict[str, List[ChartDataPoint]]] = None
+    recursal_media_resolvidos_por_funcionario_RJ: Optional[List[ChartDataPoint]] = None
+    recursal_atividades_lista_RJ: Optional[List[RecursalAtividadeTarefaRow]] = None
+    recursal_atividades_lista_filtros_opcoes_RJ: Optional[RecursalAtividadesListaFiltrosOpcoes] = None
+    ranking_juizes_recursal_RJ: Optional[List[RecursalRankingMagistradoRow]] = None
+    ranking_relatores_recursal_RJ: Optional[List[RecursalRankingMagistradoRow]] = None
     # Julgados NG
     ranking_juizes_sentenca_julgados_NG: Optional[List[RecursalRankingMagistradoRow]] = None
     julgados_por_materia_NG: Optional[List[ChartDataPoint]] = None
@@ -3300,6 +3548,13 @@ class DashboardResponse(BaseModel):
     julgados_extincao_por_motivo_estoque_NG: Optional[List[ChartDataPoint]] = None
     julgados_extincao_por_juiz_NG: Optional[List[ChartDataPoint]] = None
     julgados_extincao_por_juiz_estoque_NG: Optional[List[ChartDataPoint]] = None
+    # Julgados Sentenças NG — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_por_comarca_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_comarca_estoque_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_estoque_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_NG: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_estoque_NG: Optional[List[ChartDataPoint]] = None
     julgados_por_ano_ajuizamento_NG: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_embargos_resultado_NG: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_procedentes_por_mes_NG: Optional[List[ChartDataPoint]] = None
@@ -3318,6 +3573,13 @@ class DashboardResponse(BaseModel):
     julgados_acordao_improcedentes_por_mes_NG: Optional[List[ChartDataPoint]] = None
     julgados_acordao_extintos_por_mes_NG: Optional[List[ChartDataPoint]] = None
     julgados_acordao_lista_NG: Optional[List[JulgadosAcordaoListaRow]] = None
+    # Julgados Acórdãos NG — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_por_comarca_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_comarca_estoque_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_estoque_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_NG: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_estoque_NG: Optional[List[ChartDataPoint]] = None
     # Julgados Sentenças LA
     ranking_juizes_sentenca_julgados_LA: Optional[List[RecursalRankingMagistradoRow]] = None
     julgados_por_materia_LA: Optional[List[ChartDataPoint]] = None
@@ -3329,12 +3591,43 @@ class DashboardResponse(BaseModel):
     julgados_extincao_por_motivo_estoque_LA: Optional[List[ChartDataPoint]] = None
     julgados_extincao_por_juiz_LA: Optional[List[ChartDataPoint]] = None
     julgados_extincao_por_juiz_estoque_LA: Optional[List[ChartDataPoint]] = None
+    # Julgados Sentenças LA — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_por_comarca_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_comarca_estoque_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_estoque_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_LA: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_estoque_LA: Optional[List[ChartDataPoint]] = None
     julgados_por_ano_ajuizamento_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_embargos_resultado_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_procedentes_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_improcedentes_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_extintos_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_sentenca_lista_LA: Optional[List[JulgadosSentencaListaRow]] = None
+    # Julgados Sentenças RJ
+    ranking_juizes_sentenca_julgados_RJ: Optional[List[RecursalRankingMagistradoRow]] = None
+    julgados_por_materia_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_por_competencia_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_por_motivo_extincao_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_comarca_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_motivo_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_juiz_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_extincao_por_juiz_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    # Julgados Sentenças RJ — Estudo das Improcedências (11/11/2026)
+    julgados_improcedencia_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_comarca_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_motivo_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_improcedencia_por_juiz_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_por_ano_ajuizamento_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_embargos_resultado_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_procedentes_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_improcedentes_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_extintos_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_sentenca_lista_RJ: Optional[List[JulgadosSentencaListaRow]] = None
     # Julgados Acórdãos LA
     ranking_relatores_acordao_julgados_LA: Optional[List[RecursalRankingMagistradoRow]] = None
     julgados_acordao_por_materia_LA: Optional[List[ChartDataPoint]] = None
@@ -3347,6 +3640,32 @@ class DashboardResponse(BaseModel):
     julgados_acordao_improcedentes_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_acordao_extintos_por_mes_LA: Optional[List[ChartDataPoint]] = None
     julgados_acordao_lista_LA: Optional[List[JulgadosAcordaoListaRow]] = None
+    # Julgados Acórdãos LA — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_por_comarca_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_comarca_estoque_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_estoque_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_LA: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_estoque_LA: Optional[List[ChartDataPoint]] = None
+    # Julgados Acórdãos RJ
+    ranking_relatores_acordao_julgados_RJ: Optional[List[RecursalRankingMagistradoRow]] = None
+    julgados_acordao_por_materia_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_por_competencia_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_por_motivo_extincao_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_por_ano_ajuizamento_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_embargos_resultado_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_procedentes_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedentes_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_extintos_por_mes_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_lista_RJ: Optional[List[JulgadosAcordaoListaRow]] = None
+    # Julgados Acórdãos RJ — Estudo das Improcedências (11/11/2026)
+    julgados_acordao_improcedencia_por_comarca_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_comarca_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_motivo_estoque_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_RJ: Optional[List[ChartDataPoint]] = None
+    julgados_acordao_improcedencia_por_relator_estoque_RJ: Optional[List[ChartDataPoint]] = None
     # Pendências Intermediárias LA
     intermediarias_processos_por_atividade_LA: Optional[List[ChartDataPoint]] = None
     intermediarias_demandas_por_funcionario_LA: Optional[List[Dict[str, Any]]] = None
@@ -3629,7 +3948,38 @@ class DashboardResponse(BaseModel):
     marketing_lexpre_ng_org_rubricas_google: Optional[List[ChartDataPoint]] = None
 
 
-# v1: dashboard_routes.py:6404
+# v1: dashboard_routes.py:6830
+def _build_tickets_stats(
+    tickets: List[Dict],
+    all_tickets: List[Dict],
+    from_date: Optional[date],
+    to_date: Optional[date],
+) -> Tuple[Dict, Dict]:
+    stats = get_tickets_stats(tickets)
+    # Comparativo do card "Total de Tickets": mesmo recorte de dias um mês antes.
+    _, _, inicio_anterior, fim_anterior = resolver_periodo_comparativo(from_date, to_date)
+    stats["total_tickets_periodo_anterior"] = contar_tickets_validos_no_periodo(
+        all_tickets, inicio_anterior, fim_anterior
+    )
+    charts = {
+        "tickets_por_categoria": [ChartDataPoint(**x) for x in group_tickets_by_category(tickets)],
+        "tickets_por_subcategoria": [ChartDataPoint(**x) for x in group_tickets_by_subcategory(tickets)],
+        "tickets_por_abertura": [ChartDataPoint(**x) for x in group_tickets_ranking_abertura(tickets)],
+        "tickets_por_fechamento": [ChartDataPoint(**x) for x in group_tickets_ranking_fechados(tickets)],
+        "tickets_por_mes": [ChartDataPoint(**x) for x in group_tickets_by_month(all_tickets)],
+        "tickets_por_status": [ChartDataPoint(**x) for x in group_tickets_by_status(tickets)],
+        "tickets_abertos_por_servidor": [ChartDataPoint(**x) for x in group_tickets_abertos_por_servidor(tickets)],
+        "tickets_encerrados_por_servidor": [ChartDataPoint(**x) for x in group_tickets_encerrados_por_servidor(tickets)],
+        "recent_activities": [Activity(**x) for x in tickets_to_activities(tickets)],
+        "tickets_media_encerrados_por_colaborador": [
+            ChartDataPoint(**x)
+            for x in group_tickets_media_encerrados_por_colaborador(tickets, from_date, to_date)
+        ],
+    }
+    return stats, charts
+
+
+# v1: dashboard_routes.py:6894
 def _build_comercial_stats(
     comercial: List[Dict],
     all_comercial: List[Dict],
@@ -3733,7 +4083,7 @@ def _build_comercial_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:6507
+# v1: dashboard_routes.py:6997
 def _build_protocolo_stats(
     protocolos: List[Dict],
     all_protocolos: List[Dict],
@@ -3797,7 +4147,7 @@ def _build_protocolo_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:6751
+# v1: dashboard_routes.py:7241
 def _build_peticionamento_stats(
     peticionamento: List[Dict],
     all_peticionamento: List[Dict],
@@ -3856,7 +4206,7 @@ def _build_peticionamento_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:6809
+# v1: dashboard_routes.py:7299
 def _build_org_doc_stats(
     org_doc: List[Dict],
     all_org_doc: List[Dict],
@@ -3903,7 +4253,7 @@ def _build_org_doc_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:6855
+# v1: dashboard_routes.py:7345
 def _build_pendencias_stats(
     pendencias: List[Dict],
     all_pendencias: List[Dict],
@@ -3945,7 +4295,7 @@ def _build_pendencias_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:6896
+# v1: dashboard_routes.py:7386
 def _build_comercial_LA_stats(ctx: ComercialLAContext) -> Tuple[Dict, Dict]:
     stats = {
         "clientes_campanha_LA": get_clientes_campanha(ctx.comercial),
@@ -4017,7 +4367,7 @@ def _build_comercial_LA_stats(ctx: ComercialLAContext) -> Tuple[Dict, Dict]:
     return stats, charts
 
 
-# v1: dashboard_routes.py:9979
+# v1: dashboard_routes.py:10848
 def _build_org_doc_LA_stats(
     org_doc_LA: List[Dict],
     all_org_doc_LA: List[Dict],
@@ -4060,7 +4410,7 @@ def _build_org_doc_LA_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:10021
+# v1: dashboard_routes.py:10890
 def _build_protocolo_LA_stats(
     protocolo_LA: List[Dict],
     all_protocolo_LA: List[Dict],
@@ -4122,7 +4472,7 @@ def _build_protocolo_LA_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:10082
+# v1: dashboard_routes.py:10951
 def _build_peticionamento_LA_stats(
     peticionamento_LA: List[Dict],
     all_peticionamento_LA: List[Dict],
@@ -4178,7 +4528,7 @@ def _build_peticionamento_LA_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:10137
+# v1: dashboard_routes.py:11006
 def _build_andamento_LA_stats(
     andamento_LA: List[Dict],
     all_andamento_LA: List[Dict],
@@ -4213,7 +4563,7 @@ def _build_andamento_LA_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:10171
+# v1: dashboard_routes.py:11040
 def _build_pendencias_LA_stats(
     pendencias_LA: List[Dict],
     all_pendencias_LA: List[Dict],
@@ -4252,14 +4602,14 @@ def _build_pendencias_LA_stats(
     return stats, charts
 
 
-# v1: dashboard_routes.py:13666
+# v1: dashboard_routes.py:15047
 def _build_rubrica_count_by_processo(rubrica_count_data: List[Dict]) -> Dict:
     """Retorna {ID_PROCESSO: N_RUBRICAS} a partir da query rubrica_count_por_processo.
     Processos sem entrada no mapa são normais (N=1 por padrão no lookup)."""
     return {row["ID_PROCESSO"]: row["N_RUBRICAS"] for row in rubrica_count_data if row.get("ID_PROCESSO") is not None}
 
 
-# v1: dashboard_routes.py:13672
+# v1: dashboard_routes.py:15053
 def _agrupar_expandido_por_atendente(
     rows: List[Dict],
     filter_fn,
@@ -4278,7 +4628,7 @@ def _agrupar_expandido_por_atendente(
     return {name: int(v) for name, v in counts.items()}
 
 
-# v1: dashboard_routes.py:13690
+# v1: dashboard_routes.py:15071
 async def _build_dashboard_comercial_completo(
     dashboard_name: str,
     _f, _a,
@@ -4423,11 +4773,12 @@ FETCHES_BY_DASHBOARD: Dict[str, List[Tuple[str, Any]]] = {
     "comercial_RJ": [("comercial_geral", fetch_comercial_geral), ("actions", fetch_actions), ("protocolos", fetch_protocolos), ("peticionamento", fetch_peticionamento), ("org_doc", fetch_org_doc), ("pendencias", fetch_pendencias), ("rubrica_count_por_processo", fetch_rubrica_count_por_processo)],
     "marketing_NG": [("marketing_NG", fetch_marketing_NG), ("facebook_ads", fetch_facebook_ads), ("actions", fetch_actions), ("protocolos", fetch_protocolos), ("comercial_geral", fetch_comercial_geral), ("analise_thiago", fetch_analise_thiago), ("trackeamento_ng_2", fetch_trackeamento_ng_2)],
     "nps_NG": [("nps_NG", fetch_nps_NG)],
+    "tickets": [("tickets", fetch_tickets)],
 }
 DASHBOARD_NAMES = set(FETCHES_BY_DASHBOARD)
 
 
-# v1: dashboard_routes.py:10386 — V2: início igual, só os ramos de protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG, nps_NG
+# v1: dashboard_routes.py:11255 — V2: início igual, só os ramos de protocolo, protocolo_RJ, peticionamento, peticionamento_RJ, org-documentos, org_doc_RJ, pendencias, pendencias_RJ, comercial, comercial_RJ, marketing_NG, nps_NG, tickets
 async def _get_dashboard_response(  # V2: só os parâmetros usados por estes dashboards
     dashboard_name: str,
     from_date: Optional[date],
@@ -4588,7 +4939,16 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
         return filtered_data.get(key, [])
     def _a(key: str) -> List:
         return all_data.get(key, [])
-    # V2: (bloco de outros dashboards da v1 omitido)
+    if dashboard_name == "tickets":
+        ticket_selection_pairs = list(zip(selection_dim or [], selection_value or []))
+        tickets = _f("tickets")
+        all_tickets = _a("tickets")
+        for _dim, _value in ticket_selection_pairs:
+            tickets = apply_ticket_selection_filter(tickets, selection_dim=_dim, selection_value=_value)
+            all_tickets = apply_ticket_selection_filter(all_tickets, selection_dim=_dim, selection_value=_value)
+        stats, charts = _build_tickets_stats(tickets, all_tickets, from_date, to_date)
+        logger.info("Dashboard 'tickets' processado em %.2fs", time.time() - t0)
+        return DashboardResponse(dashboard="tickets", stats=DashboardStats(**stats), **charts)
     # V2: (bloco de outros dashboards da v1 omitido)
     if dashboard_name in ("protocolo", "protocolo_RJ"):
         funcs_proto = _normalizar_funcionarios_query(funcionario)
@@ -4711,6 +5071,9 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
         stats["funcionario_filtro"] = ", ".join(funcs_pend) if funcs_pend else None
         logger.info("Dashboard '%s' processado em %.2fs", dashboard_name, time.time() - t0)
         return DashboardResponse(dashboard=dashboard_name, stats=DashboardStats(**stats), **charts)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
+    # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
     # V2: (bloco de outros dashboards da v1 omitido)
@@ -5061,7 +5424,7 @@ async def _get_dashboard_response(  # V2: só os parâmetros usados por estes da
     raise HTTPException(status_code=404, detail=f"Dashboard '{dashboard_name}' não encontrado.")
 
 
-# v1: dashboard_routes.py:18131 (rota sem os decoradores)
+# v1: dashboard_routes.py:19512 (rota sem os decoradores)
 async def get_protocolo_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5099,7 +5462,7 @@ async def get_protocolo_dashboard(
     )
 
 
-# v1: dashboard_routes.py:18107 (rota sem os decoradores)
+# v1: dashboard_routes.py:19488 (rota sem os decoradores)
 async def get_protocolo_rj_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5122,7 +5485,7 @@ async def get_protocolo_rj_dashboard(
     )
 
 
-# v1: dashboard_routes.py:18421 (rota sem os decoradores)
+# v1: dashboard_routes.py:19802 (rota sem os decoradores)
 async def get_peticionamento_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5152,7 +5515,7 @@ async def get_peticionamento_dashboard(
     )
 
 
-# v1: dashboard_routes.py:18399 (rota sem os decoradores)
+# v1: dashboard_routes.py:19780 (rota sem os decoradores)
 async def get_peticionamento_rj_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5173,7 +5536,7 @@ async def get_peticionamento_rj_dashboard(
     )
 
 
-# v1: dashboard_routes.py:18699 (rota sem os decoradores)
+# v1: dashboard_routes.py:20080 (rota sem os decoradores)
 async def get_org_documentos_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5203,7 +5566,7 @@ async def get_org_documentos_dashboard(
     )
 
 
-# v1: dashboard_routes.py:18677 (rota sem os decoradores)
+# v1: dashboard_routes.py:20058 (rota sem os decoradores)
 async def get_org_doc_rj_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5224,7 +5587,7 @@ async def get_org_doc_rj_dashboard(
     )
 
 
-# v1: dashboard_routes.py:19043 (rota sem os decoradores)
+# v1: dashboard_routes.py:20424 (rota sem os decoradores)
 async def get_pendencias_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5249,7 +5612,7 @@ async def get_pendencias_dashboard(
     )
 
 
-# v1: dashboard_routes.py:19023 (rota sem os decoradores)
+# v1: dashboard_routes.py:20404 (rota sem os decoradores)
 async def get_pendencias_rj_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5268,7 +5631,7 @@ async def get_pendencias_rj_dashboard(
     )
 
 
-# v1: dashboard_routes.py:14108 (rota sem os decoradores)
+# v1: dashboard_routes.py:15489 (rota sem os decoradores)
 async def get_comercial_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5311,7 +5674,7 @@ async def get_comercial_dashboard(
     )
 
 
-# v1: dashboard_routes.py:14466 (rota sem os decoradores)
+# v1: dashboard_routes.py:15847 (rota sem os decoradores)
 async def get_comercial_rj_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5338,7 +5701,7 @@ async def get_comercial_rj_dashboard(
     )
 
 
-# v1: dashboard_routes.py:29701 (rota sem os decoradores)
+# v1: dashboard_routes.py:32638 (rota sem os decoradores)
 async def get_marketing_NG_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5359,7 +5722,7 @@ async def get_marketing_NG_dashboard(
     )
 
 
-# v1: dashboard_routes.py:29671 (rota sem os decoradores)
+# v1: dashboard_routes.py:32608 (rota sem os decoradores)
 async def get_nps_NG_dashboard(
     from_date: Optional[date] = Query(None, alias="from"),
     to_date: Optional[date] = Query(None, alias="to"),
@@ -5373,6 +5736,17 @@ async def get_nps_NG_dashboard(
     return await _get_dashboard_response("nps_NG", from_date, to_date)
 
 
+# v1: dashboard_routes.py:15252 (rota sem os decoradores)
+async def get_tickets_dashboard(
+    from_date: Optional[date] = Query(None, alias="from"),
+    to_date: Optional[date] = Query(None, alias="to"),
+    selection_dim: Optional[List[str]] = Query(None, alias="selection_dim"),
+    selection_value: Optional[List[str]] = Query(None, alias="selection_value"),
+):
+    """Dashboard de Tickets."""
+    return await _get_dashboard_response("tickets", from_date, to_date, selection_dim, selection_value)
+
+
 # V2: dashboard da v1 -> handler da rota e queries que ele busca (para a casca e o aquecedor do cache).
-HANDLERS = {"protocolo": get_protocolo_dashboard, "protocolo_RJ": get_protocolo_rj_dashboard, "peticionamento": get_peticionamento_dashboard, "peticionamento_RJ": get_peticionamento_rj_dashboard, "org-documentos": get_org_documentos_dashboard, "org_doc_RJ": get_org_doc_rj_dashboard, "pendencias": get_pendencias_dashboard, "pendencias_RJ": get_pendencias_rj_dashboard, "comercial": get_comercial_dashboard, "comercial_RJ": get_comercial_rj_dashboard, "marketing_NG": get_marketing_NG_dashboard, "nps_NG": get_nps_NG_dashboard}
-QUERIES_POR_DASHBOARD = {'protocolo': ('setor_protocolo', 'comercial_geral_NG'), 'protocolo_RJ': ('setor_protocolo', 'comercial_geral_NG'), 'peticionamento': ('setor_confeccao',), 'peticionamento_RJ': ('setor_confeccao',), 'org-documentos': ('setor_org_doc',), 'org_doc_RJ': ('setor_org_doc',), 'pendencias': ('setor_pendencias',), 'pendencias_RJ': ('setor_pendencias',), 'comercial': ('comercial_geral_NG', 'actions_NG_2', 'setor_protocolo', 'setor_confeccao', 'setor_org_doc', 'setor_pendencias', 'rubrica_count_por_processo'), 'comercial_RJ': ('comercial_geral_NG', 'actions_NG_2', 'setor_protocolo', 'setor_confeccao', 'setor_org_doc', 'setor_pendencias', 'rubrica_count_por_processo'), 'marketing_NG': ('perfil_clientes_NG', 'facebook_ads', 'actions_NG_2', 'setor_protocolo', 'comercial_geral_NG', 'Analise_thiago', 'trackeamento_NG_2'), 'nps_NG': ('nps_NG',)}
+HANDLERS = {"protocolo": get_protocolo_dashboard, "protocolo_RJ": get_protocolo_rj_dashboard, "peticionamento": get_peticionamento_dashboard, "peticionamento_RJ": get_peticionamento_rj_dashboard, "org-documentos": get_org_documentos_dashboard, "org_doc_RJ": get_org_doc_rj_dashboard, "pendencias": get_pendencias_dashboard, "pendencias_RJ": get_pendencias_rj_dashboard, "comercial": get_comercial_dashboard, "comercial_RJ": get_comercial_rj_dashboard, "marketing_NG": get_marketing_NG_dashboard, "nps_NG": get_nps_NG_dashboard, "tickets": get_tickets_dashboard}
+QUERIES_POR_DASHBOARD = {'protocolo': ('setor_protocolo', 'comercial_geral_NG'), 'protocolo_RJ': ('setor_protocolo', 'comercial_geral_NG'), 'peticionamento': ('setor_confeccao',), 'peticionamento_RJ': ('setor_confeccao',), 'org-documentos': ('setor_org_doc',), 'org_doc_RJ': ('setor_org_doc',), 'pendencias': ('setor_pendencias',), 'pendencias_RJ': ('setor_pendencias',), 'comercial': ('comercial_geral_NG', 'actions_NG_2', 'setor_protocolo', 'setor_confeccao', 'setor_org_doc', 'setor_pendencias', 'rubrica_count_por_processo'), 'comercial_RJ': ('comercial_geral_NG', 'actions_NG_2', 'setor_protocolo', 'setor_confeccao', 'setor_org_doc', 'setor_pendencias', 'rubrica_count_por_processo'), 'marketing_NG': ('perfil_clientes_NG', 'facebook_ads', 'actions_NG_2', 'setor_protocolo', 'comercial_geral_NG', 'Analise_thiago', 'trackeamento_NG_2'), 'nps_NG': ('nps_NG',), 'tickets': ('tickets',)}

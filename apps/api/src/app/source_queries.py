@@ -2411,3 +2411,15 @@ QUERIES["julgados"] = {
     ),
     "params": []
 }
+
+
+# v1: queries.py:511, "tickets" (copiada em 18/11/2026). Tickets (Log_tickets_discord, banco NG).
+QUERIES["tickets"] = {
+    "database": "ng",
+    "query": """
+        SELECT *
+        FROM "public"."Log_tickets_discord"
+        """,
+    "description": "Log de tickets do Discord do banco NG",
+    "params": [],
+}

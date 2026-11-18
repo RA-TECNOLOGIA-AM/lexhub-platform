@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { niceScale, spreadLabels } from '../../lib/charts.ts'
 import { fmt } from '../../lib/format.ts'
 import { ChartEmpty } from './ChartCard.tsx'
@@ -20,6 +20,10 @@ type ColumnChartProps = {
     // coluna, na cor da parte.
     partValues?: boolean
     tooltip?: boolean // caixa com o valor de cada parte ao passar o cursor (ou focar) numa coluna
+    colorOf?: (index: number) => string | undefined // cor própria de uma coluna (só com uma série; ex.: acima da média)
+    reference?: { value: number; label: string } // linha tracejada horizontal (ex.: média da equipe), como a do LineChart
+    gradient?: boolean // colunas em degradê (mais escuro embaixo)
+    axis?: boolean // números do eixo vertical (padrão: sim)
 }
 
 const PAD = { top: 26, right: 12, bottom: 44, left: 40 }
@@ -40,7 +44,12 @@ export function ColumnChart({
     className,
     partValues = false,
     tooltip = false,
+    colorOf,
+    reference,
+    gradient = false,
+    axis = true,
 }: ColumnChartProps) {
+    const gradId = useId().replace(/:/g, '')
     const [ref, width] = useWidth<HTMLDivElement>()
     const [hover, setHover] = useState<number | null>(null)
     const totals = categories.map((_, i) => series.reduce((sum, s) => sum + (s.values[i] ?? 0), 0))
@@ -52,9 +61,17 @@ export function ColumnChart({
         )
     }
 
-    const { max, ticks } = niceScale(Math.max(...totals))
+    const { max, ticks } = niceScale(Math.max(...totals, reference?.value ?? 0))
     // Margem do eixo do tamanho do maior rótulo (ex.: '800 mil'), para não cortar.
-    const padLeft = Math.max(PAD.left, Math.max(...ticks.map((t) => fmt.eixo(t).length)) * 7 + 16)
+    const padLeft = axis ? Math.max(PAD.left, Math.max(...ticks.map((t) => fmt.eixo(t).length)) * 7 + 16) : PAD.right
+    // Cores em uso (para os degradês): as das séries e as próprias das colunas.
+    const cores = [
+        ...new Set([
+            ...series.map((s) => s.color),
+            ...categories.map((_, i) => colorOf?.(i)).filter((c): c is string => !!c),
+        ]),
+    ]
+    const fill = (cor: string) => (gradient ? `url(#${gradId}-${cores.indexOf(cor)})` : cor)
     const plotW = Math.max(width - padLeft - PAD.right, 40)
     const plotH = height - PAD.top - PAD.bottom
     const band = plotW / categories.length
@@ -71,12 +88,24 @@ export function ColumnChart({
     return (
         <div ref={ref} className={`chart-svg col-wrap${className ? ` ${className}` : ''}`}>
             <svg width={width} height={height} role="img" aria-label={describe(categories, series, format)}>
+                {gradient && (
+                    <defs>
+                        {cores.map((cor, k) => (
+                            <linearGradient key={cor} id={`${gradId}-${k}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" style={{ stopColor: cor }} />
+                                <stop offset="100%" style={{ stopColor: `color-mix(in srgb, ${cor} 72%, black)` }} />
+                            </linearGradient>
+                        ))}
+                    </defs>
+                )}
                 {ticks.map((t) => (
                     <g key={t}>
                         <line className="chart-grid" x1={padLeft} x2={padLeft + plotW} y1={y(t)} y2={y(t)} />
-                        <text className="chart-axis" x={padLeft - 8} y={y(t)} dy="0.32em" textAnchor="end">
-                            {fmt.eixo(t)}
-                        </text>
+                        {axis && (
+                            <text className="chart-axis" x={padLeft - 8} y={y(t)} dy="0.32em" textAnchor="end">
+                                {fmt.eixo(t)}
+                            </text>
+                        )}
                     </g>
                 ))}
                 {categories.map((cat, i) => {
@@ -103,7 +132,7 @@ export function ColumnChart({
                                             width={barW}
                                             height={y0 - y1}
                                             rx={6}
-                                            style={{ fill: s.color }}
+                                            style={{ fill: fill((series.length === 1 && colorOf?.(i)) || s.color) }}
                                         />
                                         {/* Como na v1: o valor da primeira série dentro da barra (o total vai em cima). */}
                                         {(partValues || (series.length > 1 && k === 0)) && y0 - y1 >= MIN_IN && (
@@ -166,6 +195,14 @@ export function ColumnChart({
                         </g>
                     )
                 })}
+                {reference && (
+                    <g className="chart-ref">
+                        <line x1={padLeft} x2={padLeft + plotW} y1={y(reference.value)} y2={y(reference.value)} />
+                        <text x={padLeft + plotW - 4} y={y(reference.value) - 6} textAnchor="end">
+                            {reference.label}
+                        </text>
+                    </g>
+                )}
             </svg>
             {tooltip && hover !== null && (
                 <ColumnTip
