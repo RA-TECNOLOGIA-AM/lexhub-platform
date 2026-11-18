@@ -14,5 +14,6 @@ export const AUDIT_COLUMNS: Column<AuditEvent>[] = [
     },
     { header: 'Quem', render: (e) => <span className="nowrap">{e.actor}</span> },
     { header: 'O que aconteceu', render: (e) => <span className={KIND[e.kind].badge}>{e.action}</span> },
+    { header: 'E-mail', render: (e) => <span className="muted small nowrap">{e.email ?? '—'}</span> },
     { header: 'Detalhe', render: (e) => <span className="muted small">{e.detail}</span> },
 ]

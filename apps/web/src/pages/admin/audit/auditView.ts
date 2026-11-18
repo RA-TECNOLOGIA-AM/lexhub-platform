@@ -45,6 +45,7 @@ const CSV_COLUMNS: CsvColumn[] = [
     { key: 'actor', label: 'Quem' },
     { key: 'kind', label: 'Tipo' },
     { key: 'action', label: 'O que aconteceu' },
+    { key: 'email', label: 'E-mail' },
     { key: 'detail', label: 'Detalhe' },
 ]
 
@@ -56,6 +57,7 @@ export const auditCsv = (events: AuditEvent[]): string =>
             actor: e.actor,
             kind: KIND[e.kind].label,
             action: e.action,
+            email: e.email,
             detail: e.detail,
         })),
     )

@@ -377,6 +377,7 @@ export function createMockClient(): DataClient {
             if (!requireOrg(org)) throw new DataError(403, 'Só Owner ou Desenvolvedor exportam a auditoria.')
             addAuditEvent({
                 actor: 'Você',
+                email: sessionStorage.getItem(SESSION_KEY) || null,
                 kind: 'export',
                 action: 'Exportou a auditoria',
                 detail: [`${rows} eventos`, filter.kind, filter.actor, 'CSV'].filter(Boolean).join(' · '),
@@ -545,6 +546,7 @@ export function createMockClient(): DataClient {
             const period = from && to ? periodLabel({ from, to }) : 'período padrão'
             addAuditEvent({
                 actor: me.user.name,
+                email: sessionStorage.getItem(SESSION_KEY) || null,
                 kind: 'export',
                 action: 'Exportou dados',
                 detail: `${summary.title} · ${unit} · ${period} · ${rows.length} linhas · ${format.toUpperCase()}`,

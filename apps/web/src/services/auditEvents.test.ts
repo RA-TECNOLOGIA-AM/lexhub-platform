@@ -27,6 +27,8 @@ describe('toAuditEvent', () => {
             }),
         )
         expect(e).toMatchObject({ kind: 'login', action: 'Entrou' })
+        expect(toAuditEvent(raw({ actorEmail: 'ana@lexgroup.com.br' })).email).toBe('ana@lexgroup.com.br')
+        expect(toAuditEvent(raw({})).email).toBeNull()
         expect(e.detail).toBe('Chrome · Windows · 189.10.20.30')
     })
 
