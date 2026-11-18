@@ -1,4 +1,7 @@
+import { fmt } from '../../../lib/format.ts'
 import type { Point } from '../../../types/index.ts'
+import { contarPorCampo } from '../julgados-acordaos/julgados.ts'
+import type { DadoFaltando } from '../julgados-acordaos/types.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
 import { nomeNaUnidade, unidadeExecucao, type Unidade } from './unidade.ts'
 import { comarcas, lerSetor, numero, pontos, type Comarcas, type SetorExecucao } from './setorExecucao.ts'
@@ -28,6 +31,9 @@ export type Execucao = {
     estoqueInicial: number | null
     tre: number | null
     semValor: { total: number; processos: string[] } // processos sem valor da execução (o aviso da v1)
+    // V2: os processos em execução agora com campo do cadastro em branco (sem o filtro de período), um item por
+    // campo: a faixa "Atenção" dos Julgados (app/dashboards/execucao_campos.py).
+    camposFaltando: DadoFaltando[]
     // Seção 02: distribuições (histórico todo)
     valorPorSubfase: Point[]
     porSubfase: Point[]
@@ -58,6 +64,39 @@ function semValorProcessos(v: unknown): string[] {
         .filter(Boolean)
 }
 
+// Os itens {numero_processo, campo} da API; o que vier sem número ou sem campo fica de fora.
+function camposFaltando(v: unknown): DadoFaltando[] {
+    if (!Array.isArray(v)) return []
+    return v.flatMap((x) => {
+        const r = (x ?? {}) as Record<string, unknown>
+        const numero = String(r.numero_processo ?? '').trim()
+        const campo = String(r.campo ?? '').trim()
+        return numero && campo ? [{ numero_processo: numero, campo }] : []
+    })
+}
+
+// Como cada campo aparece na frase do aviso ("sem a data da execução").
+const NO_AVISO: Record<string, string> = {
+    'Valor da execução': 'o valor da execução',
+    'Data da execução': 'a data da execução',
+    'Data do trânsito em julgado': 'a data do trânsito em julgado',
+    'Data de distribuição': 'a data de distribuição',
+    'Valor da causa': 'o valor da causa',
+    Matéria: 'a matéria',
+    Comarca: 'a comarca',
+    Competência: 'a competência',
+    Vara: 'a vara',
+    UF: 'a UF',
+    Subfase: 'a subfase',
+}
+
+// Os avisos da faixa "Atenção", do campo com mais processos ao com menos (o mesmo padrão dos Julgados).
+export function avisosCamposFaltando(itens: DadoFaltando[]): string[] {
+    return contarPorCampo(itens).map(
+        ([campo, n]) => `Existem ${fmt.int(n)} processo(s) em execução sem ${NO_AVISO[campo] ?? `o campo "${campo}"`}!`,
+    )
+}
+
 export function lerExecucao(data: V1GenericoResponse): Execucao {
     const u = unidadeExecucao(data) ?? 'NG'
     const dados = data as V1GenericoResponse & Record<string, unknown>
@@ -85,6 +124,7 @@ export function lerExecucao(data: V1GenericoResponse): Execucao {
             total: n('total_valor_execucao_vazio') ?? 0,
             processos: semValorProcessos(s('total_valor_execucao_vazio_detalhe')),
         },
+        camposFaltando: camposFaltando(dados.campos_faltando),
         valorPorSubfase: pontos(d('valor_execucao_por_subfase')),
         porSubfase: pontos(d('execucao_por_subfase')),
         porMateria: pontos(d('execucao_por_materia')),

@@ -22,7 +22,7 @@ from app.analyses.LA import julgados_acordao_LA as la
 from app.analyses.NG import julgados_acordao as ng
 from app.analyses.RJ import julgados_acordao_RJ as rj
 from app.analyses.situacao_processo import _situacoes_processo_ctx, parse_situacoes_processo
-from app.dashboards import generico_v1
+from app.dashboards import dados_faltando, generico_v1
 from app.dashboards.base import DashboardContext, DashboardInputError, ExportSpec, NotReady
 
 _FALTA = "Julgados Acórdãos não existe na v1 para esta unidade (só NG, LA e RJ)"
@@ -65,11 +65,11 @@ _FILTROS = (
 )
 
 
-async def export_rows(ctx: DashboardContext) -> list[dict[str, Any]]:
-    """As linhas de /julgados_acordaos_<unidade>/export da v1, com os filtros e o período da página."""
+async def _processos(ctx: DashboardContext) -> list[dict[str, Any]]:
+    """A query `julgados` da unidade, com o recorte de situação do processo dos filtros (como a v1)."""
     if ctx.unit_ref not in _POR_UNIDADE:
         raise NotReady(_FALTA)
-    buscar, base, filtrar, resultado_embargos = _POR_UNIDADE[ctx.unit_ref]
+    buscar = _POR_UNIDADE[ctx.unit_ref][0]
     try:
         situacao = parse_situacoes_processo(ctx.filters.get(generico_v1.FILTRO_SITUACAO, []))
     except ValueError as exc:
@@ -83,7 +83,19 @@ async def export_rows(ctx: DashboardContext) -> list[dict[str, Any]]:
         _situacoes_processo_ctx.reset(token_situacao)
         copia._fonte_ctx.reset(token_fonte)
 
-    filtros = copia._parse_julgados_acordao_filtros(*(ctx.filters.get(n) or None for n in _FILTROS))
+    return processos
+
+
+def _filtros(ctx: DashboardContext) -> Any:
+    """Os filtros interativos da página no formato da v1."""
+    return copia._parse_julgados_acordao_filtros(*(ctx.filters.get(n) or None for n in _FILTROS))
+
+
+async def export_rows(ctx: DashboardContext) -> list[dict[str, Any]]:
+    """As linhas de /julgados_acordaos_<unidade>/export da v1, com os filtros e o período da página."""
+    processos = await _processos(ctx)
+    _, base, filtrar, resultado_embargos = _POR_UNIDADE[ctx.unit_ref]
+    filtros = _filtros(ctx)
     rows = filtrar(base(processos), filtros)
     rows = v1_export._filtrar_rows_julgados_por_data(
         rows, "DATA_ACORDAO", ctx.period.start, ctx.period.end
@@ -99,6 +111,24 @@ async def export_rows(ctx: DashboardContext) -> list[dict[str, Any]]:
         }
         for row in rows
     ]
+
+
+# A faixa "Atenção" da v1 por unidade (histórico todo: a v1 passa from_date=None e to_date=None).
+_DADOS_FALTANDO = {
+    "NG": ng.get_julgados_acordao_dados_faltando_NG,
+    "LA": la.get_julgados_acordao_dados_faltando_LA,
+    "RJ": rj.get_julgados_acordao_dados_faltando_RJ,
+}
+
+
+async def campos_faltando_rows(ctx: DashboardContext) -> list[dict[str, Any]]:
+    """V2: o relatório da faixa "Atenção" (uma aba por campo): os mesmos itens do modal, como a v1 os monta
+    (filtros interativos da página, sem o período), com matéria, comarca e UF do processo."""
+    processos = await _processos(ctx)
+    filtrar = _POR_UNIDADE[ctx.unit_ref][2]
+    filtrados = filtrar(processos, _filtros(ctx))
+    itens = _DADOS_FALTANDO[ctx.unit_ref](filtrados, from_date=None, to_date=None)
+    return dados_faltando.enriquecer(itens, filtrados)
 
 
 MODULE = replace(
@@ -126,4 +156,19 @@ MODULE = replace(
         sheet_name="Julgados Acórdãos",
         rows=export_rows,
     ),
+    export_reports={
+        dados_faltando.RELATORIO: dados_faltando.relatorio(
+            (
+                "Relator",
+                "Matéria",
+                "Comarca",
+                "Competência",
+                "UF",
+                "Valor do acórdão",
+                "Data do acórdão (mérito lançado)",
+                "Mérito do acórdão (data lançada)",
+            ),
+            campos_faltando_rows,
+        ),
+    },
 )

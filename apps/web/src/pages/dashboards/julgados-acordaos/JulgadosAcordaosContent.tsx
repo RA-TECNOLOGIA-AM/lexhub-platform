@@ -210,7 +210,12 @@ export function JulgadosAcordaosContent({
 
     return (
         <div className="dsecs jl">
-            <DadosFaltando avisos={avisosDadosFaltando(n)} itens={j.dadosFaltando} />
+            <DadosFaltando
+                avisos={avisosDadosFaltando(n)}
+                itens={j.dadosFaltando}
+                relatorio="campos-faltando"
+                filters={filters}
+            />
 
             <DashSection
                 index={1}

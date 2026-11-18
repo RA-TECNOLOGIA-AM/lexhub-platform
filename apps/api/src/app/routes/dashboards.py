@@ -271,7 +271,11 @@ async def dashboard_export(
     headers, data = export.table(spec, slugs, rows)
     if fmt == "xlsx":
         aba = spec.sheet_name_por_unidade.get(ctx.unit_ref, spec.sheet_name)
-        body = export.to_xlsx(headers, data, aba)
+        body = (
+            export.to_xlsx_por_aba(spec, slugs, rows, aba)
+            if spec.sheet_by
+            else export.to_xlsx(headers, data, aba)
+        )
     else:
         body = export.to_csv(headers, data)
 

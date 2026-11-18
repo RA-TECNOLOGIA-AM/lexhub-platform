@@ -15,8 +15,9 @@ import type { V1GenericoResponse } from '../v1Stats.ts'
 import { mesNome } from '../setor/datas.ts'
 import { AtividadesSection } from './AtividadesSection.tsx'
 import { DiligenciasSection } from './DiligenciasSection.tsx'
-import { lerExecucao } from './execucao.ts'
-import { ComarcaCard, MesAMes, SemValorAviso, TreCard } from './partes.tsx'
+import { avisosCamposFaltando, lerExecucao } from './execucao.ts'
+import { DadosFaltando } from '../julgados-acordaos/DadosFaltando.tsx'
+import { ComarcaCard, MesAMes, TreCard } from './partes.tsx'
 
 // Número que pode faltar na resposta ('—'), com a contagem animada quando vem.
 const valor = (v: number | null, format: (n: number) => string) =>
@@ -47,7 +48,15 @@ export function ExecucaoPagina({ data, filters = {}, onFiltersChange }: ContentP
 
     return (
         <div className="dsecs">
-            <SemValorAviso total={e.semValor.total} processos={e.semValor.processos} campo="valor da execução" />
+            {/* A faixa "Atenção" dos Julgados: o estoque em execução de agora (sem o período) com campo em branco;
+                o modal baixa o relatório para preencher, uma aba por campo. Inclui o "valor da execução" da v1. */}
+            <DadosFaltando
+                avisos={avisosCamposFaltando(e.camposFaltando)}
+                itens={e.camposFaltando}
+                base="processos em execução"
+                relatorio="campos-faltando"
+                filters={filters}
+            />
 
             <DashSection
                 index={1}

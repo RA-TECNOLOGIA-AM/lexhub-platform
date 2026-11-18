@@ -99,6 +99,35 @@ def to_xlsx(headers: list[str], data: list[list[str]], sheet_name: str) -> bytes
     return buffer.getvalue()
 
 
+def to_xlsx_por_aba(
+    spec: ExportSpec, slugs: list[str], rows: list[dict[str, Any]], sheet_name: str
+) -> bytes:
+    """Uma aba por valor de `spec.sheet_by` (sem essa coluna dentro da aba). Sem linhas: uma aba só, vazia."""
+    colunas = [s for s in slugs if spec.fields[s] != spec.sheet_by]
+    grupos: dict[str, list[dict[str, Any]]] = {nome: [] for nome in spec.sheet_order}
+    for row in rows:
+        grupos.setdefault(format_value(row.get(spec.sheet_by)) or "—", []).append(row)
+    abas = [(nome, linhas) for nome, linhas in grupos.items() if linhas]
+    wb = Workbook()
+    wb.remove(wb.active)
+    for nome, linhas in abas or [(sheet_name, [])]:
+        headers, data = table(spec, colunas, linhas)
+        ws = wb.create_sheet(_nome_aba(spec.sheet_titles.get(nome, nome)))
+        ws.append(headers)
+        for line in data:
+            ws.append(line)
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
+
+
+def _nome_aba(nome: str) -> str:
+    """O Excel não aceita : \\ / ? * [ ] no nome da aba, nem mais de 31 caracteres."""
+    for c in ":\\/?*[]":
+        nome = nome.replace(c, "-")
+    return nome[:31] or "Aba"
+
+
 def filename(dashboard_key: str, unit_code: str, fmt: str, partes: list[str] | None = None) -> str:
     """protocolo_lexpre_NG_relatorio.xlsx (padrão da v1: <dashboard>_<unidade>_relatorio). Com o relatório e as
     opções escolhidas no meio, como a v1: execucao_NG_saida_relatorio.csv, acordos_NG_atividades_por_prazo_..."""
