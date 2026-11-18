@@ -95,8 +95,11 @@ export function FilterDialog({ fields, value, onApply, onClose }: FilterDialogPr
     )
 }
 
+// Um seletor solto (fora da janela Filtros), ex.: o formulário da Previsão Individualizada: o mesmo botão + menu.
+export type PickerField = Pick<FilterField, 'label' | 'options'> & { key?: keyof DashboardFilters; icon?: IconName }
+
 type FilterPickerProps = {
-    field: FilterField
+    field: PickerField
     chosen: string[]
     open: boolean
     onOpenChange: (open: boolean) => void
@@ -108,7 +111,7 @@ const MENU_W = 240
 
 // Um filtro: o botão e, aberto, o menu flutuante. O menu usa position: fixed (calculada a partir do botão)
 // para passar por cima da borda da janela, como na v1. Fecha com Esc (só o menu, não a janela) ou clique fora.
-function FilterPicker({ field, chosen, open, onOpenChange, onToggle, onClear }: FilterPickerProps) {
+export function FilterPicker({ field, chosen, open, onOpenChange, onToggle, onClear }: FilterPickerProps) {
     const button = useRef<HTMLButtonElement>(null)
     const menu = useRef<HTMLDivElement>(null)
     const [query, setQuery] = useState('')
@@ -161,7 +164,7 @@ function FilterPicker({ field, chosen, open, onOpenChange, onToggle, onClear }: 
                     onOpenChange(!open)
                 }}
             >
-                <Icon name={ICONS[field.key] ?? 'filter'} size={16} />
+                <Icon name={field.icon ?? (field.key && ICONS[field.key]) ?? 'filter'} size={16} />
                 <span className="fpick-text">{pickerLabel(field, chosen)}</span>
                 <Icon name="chevron-down" size={14} />
             </button>

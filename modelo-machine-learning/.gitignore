@@ -1,0 +1,12 @@
+# Dados do estudo: a coorte tem um processo por linha (dado real do LexFlow) — nunca versionar.
+dados/
+backups*/
+*.parquet
+*.csv
+# Saídas geradas pelo pipeline (logs e os capítulos em PDF)
+logs/
+*.pdf
+*.png
+# Ambiente
+.venv/
+__pycache__/

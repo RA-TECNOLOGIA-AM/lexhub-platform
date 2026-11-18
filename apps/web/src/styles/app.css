@@ -7130,3 +7130,198 @@ body {
         grid-template-columns: minmax(0, 1fr);
     }
 }
+/* Previsão Individualizada (TCC, Fase 6): formulário à esquerda (fixo ao rolar), resultado à direita, como a v1 */
+.pv-grade {
+    display: grid;
+    grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+    gap: var(--gap);
+    align-items: start;
+}
+@media (max-width: 1100px) {
+    .pv-grade {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+.pv-form {
+    position: sticky;
+    top: 16px;
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+}
+.pv-form-h {
+    display: grid;
+    gap: 2px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+.pv-eyebrow,
+.pv-selo {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.pv-selo {
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    letter-spacing: 0.04em;
+}
+.pv-campo {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+.pv-rot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+}
+.pv-rot .muted {
+    font-size: 11px;
+    font-weight: 400;
+}
+.pv-campo .fpick {
+    justify-content: flex-start;
+    min-height: 40px;
+}
+.pv-campo .fpick-text {
+    flex: 1;
+    text-align: left;
+}
+.pv-chips {
+    margin: 0;
+}
+.pv-pilulas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.pv-pilulas button {
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+.pv-pilulas button:hover {
+    background: var(--surface-2);
+}
+.pv-pilulas button[aria-pressed='true'] {
+    border-color: color-mix(in srgb, var(--c-info) 55%, transparent);
+    background: color-mix(in srgb, var(--c-info) 12%, var(--surface));
+    color: var(--c-info);
+}
+.pv-1g {
+    padding: 12px;
+    border: 1px solid color-mix(in srgb, var(--c-info) 30%, transparent);
+    border-radius: var(--r-md, 10px);
+}
+.pv-nota {
+    margin: 0;
+    font-size: 11px;
+}
+.pv-res {
+    min-width: 0;
+}
+.pv-res .sv-alerta {
+    align-items: flex-start;
+}
+.pv-base {
+    margin: 0 0 12px;
+}
+.pv-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (min-width: 1500px) {
+    .pv-kpis {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+@media (max-width: 640px) {
+    .pv-kpis {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+.pv-kpis .hero-foot {
+    display: grid;
+    gap: 6px;
+}
+.pv-faixa {
+    display: grid;
+    gap: 3px;
+    width: 100%;
+}
+.pv-faixa-trilho {
+    position: relative;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--surface-2);
+}
+.pv-faixa-seg {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 3px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--chart-1) 70%, transparent), var(--chart-1));
+}
+.pv-faixa-p50 {
+    position: absolute;
+    top: -3px;
+    bottom: -3px;
+    width: 2px;
+    background: var(--text);
+    transform: translateX(-1px);
+}
+.pv-faixa-leg {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-muted);
+    font-size: 9px;
+    font-family: var(--font-mono, monospace);
+}
+.pv-faixa-m {
+    position: absolute;
+    color: var(--chart-1);
+    transform: translateX(-50%);
+}
+.pv-prob {
+    display: flex;
+    gap: 2px;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--surface-2);
+}
+.pv-prob > span {
+    border-radius: 3px;
+}
+.pv-prob-ac {
+    background: var(--warn-dot);
+}
+.pv-sig {
+    align-items: flex-start;
+    margin-top: var(--gap);
+    color: var(--text);
+}
+.pv-sig svg {
+    flex: none;
+    margin-top: 2px;
+    color: var(--c-info);
+}
+.pv-sub {
+    margin: var(--gap) 0 2px;
+    font-size: var(--fs-md, 15px);
+}
+.pv-rodape {
+    text-align: center;
+}
