@@ -14,6 +14,7 @@ const SOURCE_STATUS: Record<SourceStatus, { label: string; badge: string }> = {
     pending: { label: 'Autorizar', badge: 'badge info' },
     waiting: { label: 'Aguardando sync', badge: 'badge neutral' },
     no_dashboards: { label: 'Aguardando dashboards', badge: 'badge info' },
+    disabled: { label: 'Desligada', badge: 'badge off' },
 }
 
 export const statusOf = (status: SourceStatus) => SOURCE_STATUS[status]

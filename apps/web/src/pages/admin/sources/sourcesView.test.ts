@@ -122,7 +122,9 @@ describe('sourcesView', () => {
             owner,
             config: {},
             writerAck: false,
+            enabled: true,
             canManage: false,
+            technical: null,
             dashboards: [],
             runs: [],
         })

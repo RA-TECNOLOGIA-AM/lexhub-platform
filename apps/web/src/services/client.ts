@@ -21,6 +21,7 @@ import type {
     MemberAccessUpdate,
     AuditResponse,
     ClientsResponse,
+    DataSource,
     SourceDetail,
     SourcesResponse,
     UnitInput,
@@ -123,6 +124,8 @@ export interface DataClient {
     retestSource(org: string, source: string): Promise<SourceTestResult>
     changeSourceSecret(org: string, source: string, input: SecretInput): Promise<ConnectResult>
     disconnectSource(org: string, source: string): Promise<void>
+    // Ligar/desligar (pausa reversível; a API limpa o cache na hora). Devolve a fonte com o status novo.
+    setSourceEnabled(org: string, source: string, enabled: boolean): Promise<DataSource>
     // Plataforma: todas as organizações. Só Owner/Desenvolvedor da LexGroup e equipe RA; os outros recebem 403.
     listClients(): Promise<ClientsResponse>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>

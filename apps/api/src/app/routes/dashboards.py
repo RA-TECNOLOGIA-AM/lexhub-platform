@@ -17,6 +17,7 @@ from app.dashboards.base import (
     resolve_period,
     shape_response,
 )
+from app.database import SourceDisabled
 from app.sources import (
     SourceFactory,
     SourceRefsRepo,
@@ -135,13 +136,20 @@ async def _prepare(
 
 
 async def _run[T](module: DashboardModule, work: Awaitable[T]) -> T:
-    """Roda o cálculo do módulo: 501 se ainda não ligado, 503 se a fonte estiver fora do ar."""
+    """Roda o cálculo do módulo: 501 se ainda não ligado, 423 se a fonte foi desligada na tela,
+    503 se a fonte estiver fora do ar."""
     try:
         return await work
     except NotReady as exc:
         raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED, detail=str(exc)) from None
     except DashboardInputError as exc:  # filtro que só o cálculo valida (ex.: situacao_processo)
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from None
+    except SourceDisabled:
+        # Não é falha de integração: a TI da LexGroup desligou a fonte (a tela mostra "Fonte desligada").
+        raise HTTPException(
+            status.HTTP_423_LOCKED,
+            detail=f"A fonte {module.source_label} está desligada",
+        ) from None
     except SourceUnavailable:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,

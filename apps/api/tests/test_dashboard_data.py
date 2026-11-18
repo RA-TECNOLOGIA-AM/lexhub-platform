@@ -229,6 +229,22 @@ def test_fonte_fora_do_ar_503(client, signer, ready, monkeypatch):
     assert r.json() == {"detail": "A fonte LexPre está indisponível no momento"}
 
 
+def test_fonte_desligada_423_e_nao_503(client, signer, ready, monkeypatch):
+    from app.database import SourceDisabled
+
+    async def build(ctx):
+        raise SourceDisabled("lexpre")
+
+    monkeypatch.setitem(
+        DASHBOARDS,
+        "protocolo-lexpre",
+        DashboardModule("protocolo-lexpre", "lexpre", "LexPre", build),
+    )
+    r = client.get(URL, headers=auth(signer))
+    assert r.status_code == 423
+    assert r.json() == {"detail": "A fonte LexPre está desligada"}
+
+
 def test_protocolo_real_com_linhas_do_log(client, signer, ready, sources, repo):
     """O cálculo copiado da v1 roda na casca: 1 protocolada na NG; a demanda do escritório 2 fica fora."""
     repo.commission.add(USER_ID)

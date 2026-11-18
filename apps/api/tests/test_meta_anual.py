@@ -85,12 +85,16 @@ def test_xlsx_vira_linhas_como_na_v1():
 
 
 def test_planilha_e_fonte_da_v2_e_fetch_sheet_le_a_fonte_do_dashboard():
+    from app.registered_sources import RegisteredSourceFetcher
     from app.sources import (
         source_fetcher,
     )  # depois do app carregado (ciclo app.sources <-> cópias da v1)
 
     assert sheets.is_sheet("sheets_financeiro_ng") and not sheets.is_sheet("ng")
-    assert isinstance(source_fetcher(None, "sheets_financeiro_ng"), sheets.SheetSourceFetcher)
+    # O link da planilha antiga está cifrado no banco (PR 3): lida como as fontes da tela.
+    assert isinstance(
+        source_fetcher(None, "sheets_financeiro_ng", object()), RegisteredSourceFetcher
+    )
 
     class Fonte:
         async def fetch(self, aba):

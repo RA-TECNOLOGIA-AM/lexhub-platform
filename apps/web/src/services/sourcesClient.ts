@@ -5,6 +5,7 @@ import { createRpc } from './rpc.ts'
 import type {
     ConnectInfo,
     ConnectResult,
+    DataSource,
     ProductOffices,
     SheetTab,
     SourceDetail,
@@ -28,6 +29,7 @@ type SourcesClient = Pick<
     | 'retestSource'
     | 'changeSourceSecret'
     | 'disconnectSource'
+    | 'setSourceEnabled'
 >
 
 // Os parâmetros que create_unit e update_unit recebem (mesmos nomes do banco).
@@ -61,5 +63,7 @@ export function createSourcesClient(supabase: SupabaseClient, http: Http): Sourc
         changeSourceSecret: (org, source, input) =>
             http.put<ConnectResult>(`/orgs/${enc(org)}/sources/${enc(source)}/secret`, input),
         disconnectSource: (org, source) => http.delete<void>(`/orgs/${enc(org)}/sources/${enc(source)}`),
+        setSourceEnabled: (org, source, enabled) =>
+            http.put<DataSource>(`/orgs/${enc(org)}/sources/${enc(source)}/enabled`, { enabled }),
     }
 }

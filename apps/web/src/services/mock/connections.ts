@@ -21,12 +21,64 @@ const TABS: SheetTab[] = [
     { name: 'METAS', rows: 12 },
 ]
 
-// Fonte conectada pela tela: guardamos a config (sem segredo) e um segredo fictício só para o mock.
-type Stored = { config: Record<string, unknown>; secret: string; writerAck: boolean }
-const stored = new Map<string, Stored>()
+// Fonte com o segredo no banco: guardamos a config (sem segredo), um segredo fictício só para o mock,
+// se está ligada, o status de antes de desligar e a estrutura salva no teste (detalhe técnico).
+type Stored = {
+    config: Record<string, unknown>
+    secret: string
+    writerAck: boolean
+    enabled: boolean
+    statusBefore: DataSource['status'] | null
+    schema: Record<string, [string, string][]> | null
+}
+const LEGACY_SCHEMA: Record<string, [string, string][]> = {
+    'REPASSES CLIENTES': [
+        ['DATA DO TED', ''],
+        ['CLIENTE', ''],
+        ['HONO', ''],
+    ],
+}
+// As planilhas antigas (link levado do .env para o banco pelo script do PR 3): planilha inteira (config {}).
+const stored = new Map<string, Stored>(
+    ['sheets_financeiro_ng', 'sheets_financeiro_la'].map((id) => [
+        id,
+        {
+            config: {},
+            secret: 'https://docs.google.com/spreadsheets/d/e/exemplo/pub?output=xlsx',
+            writerAck: false,
+            enabled: true,
+            statusBefore: null,
+            schema: LEGACY_SCHEMA,
+        },
+    ]),
+)
 
 export const isManaged = (sourceId: string) => stored.has(sourceId)
+export const isDisabled = (sourceId: string) => stored.get(sourceId)?.enabled === false
+
+// Dashboards do mock que leem uma planilha antiga (como na API: Meta anual e Financeiro estratégico).
+const SHEET_OF_UNIT: Record<string, string> = { NG: 'sheets_financeiro_ng', LA_AM: 'sheets_financeiro_la' }
+const SHEET_DASHBOARDS = new Set(['meta-anual', 'financeiro-estrategico'])
+
+// Como a casca da API: fonte desligada pela TI = 423 "Fonte desligada" (não é erro de integração).
+export function requireSourceOn(dashboardKey: string, unit: string): void {
+    const sheet = SHEET_DASHBOARDS.has(dashboardKey) ? SHEET_OF_UNIT[unit] : undefined
+    if (sheet && isDisabled(sheet)) throw new DataError(423, 'A fonte Planilha do financeiro está desligada')
+}
 export const managedConfig = (sourceId: string) => stored.get(sourceId)
+
+const DB_SCHEMA: Record<string, [string, string][]> = {
+    'public.processo': [
+        ['id', 'integer'],
+        ['numero', 'text'],
+        ['cliente_id', 'integer'],
+        ['criado_em', 'timestamp with time zone'],
+    ],
+    'public.cliente': [
+        ['id', 'integer'],
+        ['nome', 'text'],
+    ],
+}
 
 const check = (
     key: SourceCheck['key'],
@@ -174,6 +226,20 @@ export function connectIn(data: SourcesResponse, unitCode: string, input: Connec
                   },
         secret: input.connector === 'sheets' ? input.url : input.password,
         writerAck: canWrite,
+        enabled: true,
+        statusBefore: null,
+        schema:
+            input.connector === 'sheets'
+                ? Object.fromEntries(
+                      TABS.map((t) => [
+                          t.name,
+                          [
+                              ['DATA', ''],
+                              ['VALOR', ''],
+                          ],
+                      ]),
+                  )
+                : DB_SCHEMA,
     })
     unit.sources.push(source)
     return { saved: true, needsWriterAck: false, checks, source }
@@ -181,17 +247,15 @@ export function connectIn(data: SourcesResponse, unitCode: string, input: Connec
 
 function managed(sourceId: string): Stored {
     const s = stored.get(sourceId)
-    if (!s)
-        throw new DataError(
-            409,
-            'Esta fonte não é gerenciada pela tela (produto Lex, banco interno ou planilha antiga).',
-        )
+    if (!s) throw new DataError(409, 'Esta fonte não é gerenciada pela tela (produto Lex ou banco interno).')
     return s
 }
 
+const isSheetConfig = (c: Record<string, unknown>) => 'tab' in c || Object.keys(c).length === 0
+
 function runChecks(s: Stored, secret: string) {
     const c = s.config
-    if ('tab' in c) return { checks: sheetChecks(secret, String(c.tab)), canWrite: false }
+    if (isSheetConfig(c)) return { checks: sheetChecks(secret, 'tab' in c ? String(c.tab) : null), canWrite: false }
     return dbChecks(String(c.host), Number(c.port), String(c.database), String(c.user), secret, Boolean(c.ssl))
 }
 
@@ -203,7 +267,7 @@ export function retestIn(sourceId: string): SourceTestResult {
 
 export function changeSecretIn(data: SourcesResponse, sourceId: string, input: SecretInput): ConnectResult {
     const s = managed(sourceId)
-    const secret = 'tab' in s.config ? input.url : input.password
+    const secret = isSheetConfig(s.config) ? input.url : input.password
     if (!secret) throw new DataError(422, 'Informe a nova senha (ou o novo link).')
     const { checks, canWrite } = runChecks(s, secret)
     if (!okOf(checks)) return { saved: false, needsWriterAck: false, checks, source: null }
@@ -215,7 +279,23 @@ export function changeSecretIn(data: SourcesResponse, sourceId: string, input: S
 }
 
 export function disconnectIn(data: SourcesResponse, sourceId: string): void {
-    managed(sourceId)
+    const s = managed(sourceId)
+    if (Object.keys(s.config).length === 0) {
+        throw new DataError(409, 'Esta planilha é usada pelo código dos dashboards: desligue em vez de desconectar.')
+    }
     stored.delete(sourceId)
-    for (const u of data.units) u.sources = u.sources.filter((s) => s.id !== sourceId)
+    for (const u of data.units) u.sources = u.sources.filter((x) => x.id !== sourceId)
+}
+
+// Ligar/desligar (pausa): o segredo fica; desligada = status 'disabled' em todas as unidades que a usam.
+export function setEnabledIn(data: SourcesResponse, sourceId: string, enabled: boolean): DataSource {
+    const s = managed(sourceId)
+    const rows = data.units.flatMap((u) => u.sources).filter((x) => x.id === sourceId)
+    if (rows.length === 0) throw new DataError(404, 'Fonte não encontrada')
+    if (s.enabled !== enabled) {
+        if (!enabled) s.statusBefore = rows[0].status
+        for (const row of rows) row.status = enabled ? (s.statusBefore ?? 'waiting') : 'disabled'
+        s.enabled = enabled
+    }
+    return rows[0]
 }

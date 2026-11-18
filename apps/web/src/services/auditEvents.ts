@@ -114,6 +114,16 @@ const EVENTS: Record<string, Rule> = {
         action: 'Desconectou fonte',
         detail: (_, m) => join(text(m.name), connectorLabel(m.connector)),
     },
+    'source.disabled': {
+        kind: 'source',
+        action: 'Desligou fonte',
+        detail: (_, m) => join(text(m.name), connectorLabel(m.connector), 'ligada → desligada'),
+    },
+    'source.enabled': {
+        kind: 'source',
+        action: 'Religou fonte',
+        detail: (_, m) => join(text(m.name), connectorLabel(m.connector), 'desligada → ligada'),
+    },
     'source.office_unlinked': {
         kind: 'source',
         action: 'Desligou escritório',
