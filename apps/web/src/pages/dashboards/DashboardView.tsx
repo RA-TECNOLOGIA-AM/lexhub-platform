@@ -14,11 +14,15 @@ import { DataError } from '../../services/errors.ts'
 import type { Meta } from '../../types/index.ts'
 import { toggleFilter } from '../../lib/filters.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
+import { useAutoRefresh } from '../../hooks/useAutoRefresh.ts'
 import { useDashboardExport } from '../../hooks/useDashboardExport.ts'
 import { useDashboardQuery } from '../../hooks/useDashboardQuery.ts'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.ts'
 import { FETCH_DELAY_MS, queryFromParams } from '../../lib/dashboardQuery.ts'
 import type { DashboardModule } from './types.ts'
+
+// Mesmo prazo do cache das fontes na API (source_cache.py).
+const AUTO_REFRESH_MS = 5 * 60_000
 
 // Módulo: o roteiro comum de todo dashboard. Lê período e filtros da URL, busca os dados da unidade
 // e o catálogo, mostra carregando/erro, Filtros, Período e Atualizar na topbar, a faixa de filtros ativos, o
@@ -47,6 +51,9 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
     )
     // Esperando a URL parar de mudar também conta como "atualizando".
     const loading = fetching || settled !== search
+    // A API renova o cache das fontes a cada 5 min; a tela aberta busca de novo no mesmo ritmo,
+    // para os números e a "Última atualização" do cabeçalho acompanharem sem clicar em Atualizar.
+    useAutoRefresh(AUTO_REFRESH_MS, () => setReload((n) => n + 1), result)
 
     if (error) return <ErrorState error={error} backTo={hub} />
     if (!result) return <LoadingState variant="dashboard" />
