@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toDataError } from '../../../services/errors.ts'
-import type { AccessOverview, Member, MemberAccessUpdate } from '../../../types/index.ts'
+import { Segmented } from '../../../components/ui/Segmented.tsx'
+import type { AccessOverview, Member, MemberAccessUpdate, OrgRoleKey } from '../../../types/index.ts'
 import { ROLE_LABEL } from '../members/memberView.ts'
 import {
     draftFromMember,
@@ -21,6 +22,18 @@ type PersonEditorProps = {
     isSelf: boolean
     onSave: (update: MemberAccessUpdate) => Promise<void>
     onDirtyChange: (dirty: boolean) => void // a página pergunta antes de trocar de pessoa ou de aba
+}
+
+const ORG_ROLE_OPTIONS: { value: OrgRoleKey; label: string }[] = [
+    { value: 'member', label: 'Membro' },
+    { value: 'admin', label: 'Desenvolvedor' },
+    { value: 'owner', label: 'Owner' },
+]
+
+const ORG_ROLE_HINT: Record<OrgRoleKey, string> = {
+    member: 'Vê o que os cargos nas unidades liberam.',
+    admin: 'Vê e gere todas as unidades.',
+    owner: 'Vê e gere tudo. Depois de salvo, só um Owner tira o papel de Owner.',
 }
 
 const initials = (name: string) =>
@@ -105,19 +118,26 @@ export function PersonEditor({ member, overview, isSelf, onSave, onDirtyChange }
 
             {overview.can_set_org_role && member.org_role !== 'owner' && (
                 <div className="acc-dev">
-                    <label className="acc-dev-label">
-                        <input
-                            type="checkbox"
-                            role="switch"
-                            className="acc-switch"
-                            checked={draft.orgRole === 'admin'}
-                            disabled={isSelf || readOnly}
-                            onChange={(e) => setDraft({ ...draft, orgRole: e.target.checked ? 'admin' : 'member' })}
-                        />
-                        Desenvolvedor — vê e gere todas as unidades
-                    </label>
-                    {isSelf && <span className="muted small">Você não muda o próprio papel.</span>}
-                    {isDev && !isSelf && <span className="badge info">Acesso total em todo o LexHub</span>}
+                    <div className="acc-dev-label">
+                        <span>Papel na organização</span>
+                        {isSelf || readOnly ? (
+                            <span className="badge">{ORG_ROLE_OPTIONS.find((o) => o.value === draft.orgRole)?.label}</span>
+                        ) : (
+                            <Segmented
+                                label="Papel na organização"
+                                options={ORG_ROLE_OPTIONS}
+                                value={draft.orgRole}
+                                onChange={(orgRole) => setDraft({ ...draft, orgRole })}
+                            />
+                        )}
+                    </div>
+                    {isSelf ? (
+                        <span className="muted small">Você não muda o próprio papel.</span>
+                    ) : draft.orgRole === 'owner' ? (
+                        <span className="small acc-dev-warn">{ORG_ROLE_HINT.owner}</span>
+                    ) : (
+                        <span className="muted small">{ORG_ROLE_HINT[draft.orgRole]}</span>
+                    )}
                 </div>
             )}
 
@@ -144,8 +164,8 @@ export function PersonEditor({ member, overview, isSelf, onSave, onDirtyChange }
             <div className="acc-body" role="tabpanel" aria-label={unitName(unit)}>
                 {isDev && (
                     <p className="acc-note muted small">
-                        Como Desenvolvedor, {member.name} já vê tudo em todas as unidades. O que está abaixo só vale se
-                        o papel de Desenvolvedor for tirado.
+                        Como {draft.orgRole === 'owner' ? 'Owner' : 'Desenvolvedor'}, {member.name} já vê tudo em todas
+                        as unidades. O que está abaixo só vale se o papel for tirado.
                     </p>
                 )}
                 <div className={isDev ? 'acc-panels is-muted' : 'acc-panels'}>

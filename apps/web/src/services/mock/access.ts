@@ -87,6 +87,9 @@ export function createAccessStore(members: ReturnType<typeof createMembersStore>
             if (update.org_role && update.org_role !== member.org_role) {
                 if (member.org_role === 'owner') throw new DataError(409, 'O Owner não muda de papel por aqui.')
                 if (member.email === selfEmail) throw new DataError(409, 'Você não pode mudar o seu próprio papel.')
+                if (!['owner', 'admin', 'member'].includes(update.org_role)) {
+                    throw new DataError(409, 'Papel na organização inválido.')
+                }
             }
             if (update.units.some((u) => !UNIT_ROLES.includes(u.role as UnitRoleKey))) {
                 throw new DataError(409, 'Cargo inválido.')

@@ -109,6 +109,12 @@ describe('toUpdate e isDirty', () => {
         expect(toUpdate(draft, original, true).org_role).toBe('admin')
         expect(toUpdate(draft, original, false).org_role).toBeNull()
     })
+    it('dar Owner manda org_role; Owner salvo nunca muda por aqui', () => {
+        const original = draftFromMember(person('carla'), overview)
+        expect(toUpdate({ ...original, orgRole: 'owner' }, original, true).org_role).toBe('owner')
+        const owner = { ...original, orgRole: 'owner' as const }
+        expect(toUpdate({ ...owner, orgRole: 'member' }, owner, true).org_role).toBeNull()
+    })
     it('sem mudança não está sujo', () => {
         const original = draftFromMember(person('carla'), overview)
         expect(isDirty(original, { ...original, teams: [...original.teams] })).toBe(false)

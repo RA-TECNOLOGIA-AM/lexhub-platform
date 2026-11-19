@@ -184,11 +184,7 @@ begin
     begin perform api.update_member_access('org-teste-acesso', '40000000-0000-4000-8000-0000000000c1', '[]', '{}', 'member');
     exception when sqlstate '42501' or sqlstate 'P0001' then ok := true; end;
     if not ok then raise exception 'FALHOU: rebaixou o Owner'; end if;
-
-    ok := false;
-    begin perform api.update_member_access('org-teste-acesso', '40000000-0000-4000-8000-0000000000c4', '[]', '{}', 'owner');
-    exception when sqlstate 'P0001' then ok := true; end;
-    if not ok then raise exception 'FALHOU: promoveu a Owner'; end if;
+    -- Dar Owner passou a valer em 20261119190000_dev_da_owner.sql: testado em dev_da_owner_test.sql.
 end $$;
 
 -- ---------- conferências como dono do banco ----------

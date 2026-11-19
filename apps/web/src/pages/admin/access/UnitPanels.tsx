@@ -41,7 +41,8 @@ function PanelHead({ title, hint, tag }: { title: string; hint: string; tag?: st
 // Por que as exceções não fazem diferença nesta unidade (null = fazem).
 function exceptionsBlocked(overview: AccessOverview, draft: AccessDraft, unit: string): string | null {
     const role = draft.units[unit] ?? ''
-    if (draft.orgRole === 'owner' || draft.orgRole === 'admin') return 'Já vê tudo como Desenvolvedor.'
+    if (draft.orgRole === 'owner') return 'Já vê tudo como Owner.'
+    if (draft.orgRole === 'admin') return 'Já vê tudo como Desenvolvedor.'
     if (!role) return 'Escolha um cargo nesta unidade para liberar exceções.'
     if (roleSeesAll(overview, role)) return `Já vê tudo nesta unidade como ${ROLE_LABEL[role]}.`
     if (sectorCoverage(overview, draft, unit).all) return 'Um setor marcado já vê tudo nesta unidade.'

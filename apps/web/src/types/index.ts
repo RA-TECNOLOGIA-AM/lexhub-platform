@@ -388,7 +388,7 @@ export type AdminPermissions = {
 export type MemberAccessUpdate = {
     units: { code: string; role: UnitRoleKey }[]
     teams: string[] // ids
-    org_role: 'admin' | 'member' | null // null = não muda
+    org_role: OrgRoleKey | null // null = não muda; Owner/Dev dão Owner, ninguém tira por aqui
     extra_groups: { unit: string; slug: string }[] // estado desejado nas unidades geridas
     extra_dashboards: { unit: string; key: string }[]
 }

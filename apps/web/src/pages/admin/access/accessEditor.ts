@@ -111,14 +111,14 @@ export function isDirty(original: AccessDraft, draft: AccessDraft): boolean {
 // O que vai para api.update_member_access. org_role só quando mudou e quem salva pode mudar.
 // Exceções só das unidades com cargo (as outras o banco recusa e, sem cargo, apaga).
 export function toUpdate(draft: AccessDraft, original: AccessDraft, canSetOrgRole: boolean): MemberAccessUpdate {
-    const changedRole = canSetOrgRole && draft.orgRole !== original.orgRole && draft.orgRole !== 'owner'
+    const changedRole = canSetOrgRole && draft.orgRole !== original.orgRole && original.orgRole !== 'owner'
     const withRole = Object.keys(draft.units).filter((u) => draft.units[u] !== '')
     return {
         units: Object.entries(draft.units)
             .filter((entry): entry is [string, UnitRoleKey] => entry[1] !== '')
             .map(([code, role]) => ({ code, role })),
         teams: draft.teams,
-        org_role: changedRole ? (draft.orgRole as 'admin' | 'member') : null,
+        org_role: changedRole ? draft.orgRole : null,
         extra_groups: withRole.flatMap((unit) => (draft.extraGroups[unit] ?? []).map((slug) => ({ unit, slug }))),
         extra_dashboards: withRole.flatMap((unit) => (draft.extraDashboards[unit] ?? []).map((key) => ({ unit, key }))),
     }
