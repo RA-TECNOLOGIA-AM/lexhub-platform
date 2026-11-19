@@ -11,7 +11,12 @@ import {
     rowsOf,
     scopeOf,
     statusOf,
-    summaryOf,
+    sectorsText,
+    storedMembersLayout,
+    storeMembersLayout,
+    MEMBERS_LAYOUT_KEY,
+    lastSeenText,
+    unitsText,
     unitViewOf,
     firstUnitOf,
     hasUnitAccess,
@@ -22,7 +27,7 @@ const rows = rowsOf(members)
 const emailOf = (row: MemberRow) => (row.kind === 'member' ? row.member.email : row.invitation.email)
 const names = (list: MemberRow[]) => list.map((r) => emailOf(r).split('@')[0])
 const row = (name: string) => rows.find((r) => emailOf(r).startsWith(name))!
-const none = { q: '', unit: '', role: '' as const }
+const none = { q: '', unit: '', role: '' as const, status: '' as const }
 
 describe('rowsOf', () => {
     it('membros na ordem do servidor e depois os convites pendentes', () => {
@@ -111,24 +116,41 @@ describe('activeCount', () => {
 
 describe('filtro na URL', () => {
     it('vai e volta', () => {
-        const f = { q: 'ana', unit: 'NG', role: 'controller' as const }
+        const f = { q: 'ana', unit: 'NG', role: 'controller' as const, status: 'disabled' as const }
         expect(filterFromParams(paramsFromFilter(f))).toEqual(f)
-        expect(paramsFromFilter(f).toString()).toBe('busca=ana&unidade=NG&papel=controller')
+        expect(paramsFromFilter(f).toString()).toBe('busca=ana&unidade=NG&papel=controller&situacao=disabled')
     })
     it('campos vazios não vão para a URL', () => {
         expect(paramsFromFilter(none).toString()).toBe('')
     })
     it('papel inválido na URL vira "todos"', () => {
         expect(filterFromParams(new URLSearchParams('papel=chefe')).role).toBe('')
+        expect(filterFromParams(new URLSearchParams('situacao=sumido')).status).toBe('')
     })
 })
 
-describe('summaryOf', () => {
-    const now = new Date()
-    it('cargo em cada unidade; Owner/Dev pelo papel; convite pelo vencimento', () => {
-        expect(summaryOf(row('bruno'), now)).toBe('Controller em LA AM · Gestor em NG')
-        expect(summaryOf(row('ana'), now)).toBe('Desenvolvedor')
-        expect(summaryOf(row('gabriel'), now)).toBe('Convite · vence em 5 dias')
+describe('situação e busca por setor', () => {
+    it('situação filtra membros ativos, desativados e convites', () => {
+        expect(names(filterRows(rows, { ...none, status: 'invited' }))).toEqual(['gabriel'])
+        expect(names(filterRows(rows, { ...none, status: 'disabled' }))).toEqual(['fernanda'])
+    })
+    it('a busca acha pelo setor', () => {
+        expect(names(filterRows(rows, { ...none, q: 'protocolo' }))).toEqual(['carla'])
+    })
+})
+
+describe('colunas da lista', () => {
+    it('unidades pelo nome, em maiúsculas; Owner/Dev = TODAS', () => {
+        expect(unitsText(row('bruno'), members.units)).toBe('LUIS ALBERT AM, NICOLAS GOMES')
+        expect(unitsText(row('ana'), members.units)).toBe('TODAS')
+        expect(unitsText(row('gabriel'), members.units)).toBe('NICOLAS GOMES')
+    })
+    it('setores e último acesso', () => {
+        expect(sectorsText(row('bruno'))).toBe('Comercial')
+        expect(lastSeenText(row('gabriel'))).toBe('Nunca acessou')
+        const never = { kind: 'member' as const, member: { ...members.members[0], last_seen_at: null } }
+        expect(lastSeenText(never)).toBe('Nunca acessou')
+        expect(lastSeenText(row('ana'))).toMatch(/^\d{2}\/\d{2}\/\d{4}$/)
     })
 })
 
@@ -154,5 +176,27 @@ describe('unitViewOf', () => {
         expect(firstUnitOf(row('carla'), codes, teams)).toBe('LA_RJ')
         expect(firstUnitOf(row('gabriel'), codes, teams)).toBe('NG')
         expect(firstUnitOf(row('gabriel'), [], teams)).toBe('')
+    })
+})
+
+describe('pílulas ou cards', () => {
+    it('lembra a escolha; sem escolha, valor estranho ou storage quebrado: cards', () => {
+        const box = new Map<string, string>()
+        const storage = {
+            getItem: (k: string) => box.get(k) ?? null,
+            setItem: (k: string, v: string) => void box.set(k, v),
+        }
+        expect(storedMembersLayout(storage)).toBe('cards')
+        storeMembersLayout('pilulas', storage)
+        expect(box.get(MEMBERS_LAYOUT_KEY)).toBe('pilulas')
+        expect(storedMembersLayout(storage)).toBe('pilulas')
+        box.set(MEMBERS_LAYOUT_KEY, 'tabela')
+        expect(storedMembersLayout(storage)).toBe('cards')
+        const broken = {
+            getItem: (): string | null => {
+                throw new Error('bloqueado')
+            },
+        }
+        expect(storedMembersLayout(broken)).toBe('cards')
     })
 })

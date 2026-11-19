@@ -1896,38 +1896,254 @@ div.org {
 .acc-panels.is-muted {
     opacity: 0.6;
 }
-/* Membros mestre-detalhe: filtros compactos na lista, fatos da unidade e convite no lugar do detalhe. */
-.mem-filters {
+/* Membros: lista em cards (um por pessoa) e detalhe numa gaveta. */
+.mem-cards {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.mem-cards > li {
+    display: flex;
+}
+.mem-card {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 0 14px 10px;
+    gap: 12px;
+    width: 100%;
+    padding: 16px;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 0.15s,
+        background 0.15s;
 }
-.mem-filters-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 6px;
+.mem-card:hover {
+    border-color: var(--border-hover);
+    background: var(--surface-2);
 }
-.mem-row-top {
+.mem-card:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.mem-card-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    gap: 12px;
     min-width: 0;
 }
-.mem-row-top .people-name {
+.mem-card-head > svg {
+    flex: none;
+    margin-left: auto;
+    color: var(--text-muted);
+}
+.mem-av {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+.mem-card-name {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.mem-card-name > * {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+.mem-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.mem-card-facts {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--divider);
+    font-size: var(--fs-sm);
+}
+.mem-card-fact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.mem-card-fact > svg {
+    flex: none;
+    color: var(--text-muted);
+}
+.mem-card-fact > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mem-card-unit {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.mem-chip {
+    display: inline-block;
+    padding: 2px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--surface-2);
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+}
+.mem-chip.strong {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+}
+.mem-cards-empty {
+    margin: 0;
+    padding: 18px;
+    text-align: center;
+}
+/* Membros em pílulas (uma linha arredondada por pessoa) */
+.mem-pills {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mem-pill {
+    display: grid;
+    grid-template-columns:
+        minmax(220px, 2.6fr) minmax(120px, 1.3fr) minmax(120px, 1.4fr) minmax(96px, 0.8fr)
+        minmax(110px, 0.9fr) minmax(110px, 0.8fr);
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+}
+.mem-pill-head {
+    padding-bottom: 2px;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+.mem-pill-row {
+    width: 100%;
+    min-height: 58px;
+    padding: 10px 18px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+        border-color 0.15s,
+        background 0.15s;
+}
+.mem-pill-row:hover {
+    border-color: var(--border-hover);
+    background: var(--surface-2);
+}
+.mem-pill-row:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.mem-pill-person {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+.mem-pill-name {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.mem-pill-name > *,
+.mem-pill-cell > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mem-pill-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    font-size: var(--fs-sm);
+}
+.mem-pill-cell > svg {
+    flex: none;
+    color: var(--text-muted);
+}
+.mem-pill-unit {
+    font-weight: 600;
+    font-size: var(--fs-xs);
+    letter-spacing: 0.02em;
+}
+.mem-pill-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    color: var(--text-muted);
+}
+.mem-pills-empty {
+    margin: 0;
+    padding: 18px;
+    text-align: center;
+}
+/* Cards: 6 por linha; descem para 4, 3, 2 e 1 conforme a tela. Pílulas perdem colunas. */
+@media (max-width: 1680px) {
+    .mem-cards {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+@media (max-width: 1280px) {
+    .mem-cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .mem-pill {
+        grid-template-columns: minmax(200px, 2.4fr) minmax(110px, 1.2fr) minmax(90px, 0.8fr) minmax(100px, 0.8fr);
+    }
+    .mem-pill > :nth-child(3),
+    .mem-pill > :nth-child(5) {
+        display: none;
+    }
+}
+@media (max-width: 960px) {
+    .mem-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 640px) {
+    .mem-cards {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .mem-pill-head {
+        display: none;
+    }
+    .mem-pill {
+        grid-template-columns: minmax(0, 1fr) auto;
+        border-radius: var(--r-lg);
+    }
+    .mem-pill > :nth-child(2),
+    .mem-pill > :nth-child(4) {
+        display: none;
+    }
+}
+.export-dialog.side-drawer.mem-drawer {
+    width: min(820px, 100vw);
 }
 .mem-facts {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 12px;
     align-items: start;
-}
-.acc-md > .invite {
-    max-width: none;
 }
 .acc-panel {
     display: flex;

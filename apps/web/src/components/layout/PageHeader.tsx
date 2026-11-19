@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 type PageHeaderProps = {
     title: string
-    description?: string
+    description?: ReactNode
     badge?: ReactNode // selo antes do título (ex.: "Plataforma")
     actions?: ReactNode // botões à direita (ex.: "Convidar pessoas")
 }

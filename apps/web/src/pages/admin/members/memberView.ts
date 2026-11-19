@@ -1,4 +1,12 @@
-import type { Invitation, Member, MembersResponse, MemberTeam, OrgRoleKey, UnitRoleKey } from '../../../types/index.ts'
+import type {
+    Invitation,
+    Member,
+    MembersResponse,
+    MemberTeam,
+    OrgRoleKey,
+    Unit,
+    UnitRoleKey,
+} from '../../../types/index.ts'
 import { matchesText } from '../../../lib/text.ts'
 
 // Regras da lista de Membros (sem React); os testes ficam em memberView.test.ts.
@@ -102,8 +110,20 @@ export function initialsOf(row: MemberRow): string {
     return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase()
 }
 
-// --- Filtros (Buscar, Unidade, Papel) ---
-export type MemberFilter = { q: string; unit: string; role: OrgRoleKey | UnitRoleKey | '' } // '' = todas / todos
+// --- Filtros (Buscar, Unidade, Cargo, Situação) ---
+export type MemberStatusFilter = Member['status'] | '' // '' = todas
+export type MemberFilter = {
+    q: string
+    unit: string
+    role: OrgRoleKey | UnitRoleKey | '' // '' = todas / todos
+    status: MemberStatusFilter
+}
+
+export const STATUS_OPTIONS: { value: Member['status']; label: string }[] = [
+    { value: 'active', label: 'Ativo' },
+    { value: 'invited', label: 'Convite pendente' },
+    { value: 'disabled', label: 'Desativado' },
+]
 
 function inUnit(row: MemberRow, unit: string): boolean {
     if (row.kind === 'invitation') return row.invitation.role === 'admin' || row.invitation.units.includes(unit)
@@ -116,20 +136,32 @@ function hasRole(row: MemberRow, role: MemberFilter['role'], unit: string): bool
     return m.org_role === role || m.units.some((u) => u.role === role && (!unit || u.code === unit))
 }
 
+const statusKey = (row: MemberRow) => (row.kind === 'member' ? row.member.status : 'invited')
+
 export function filterRows(rows: MemberRow[], f: MemberFilter): MemberRow[] {
     return rows.filter((row) => {
-        const text = row.kind === 'member' ? `${row.member.name} ${row.member.email}` : row.invitation.email
-        return matchesText(text, f.q) && (!f.unit || inUnit(row, f.unit)) && (!f.role || hasRole(row, f.role, f.unit))
+        // Busca por nome, e-mail ou setor.
+        const text =
+            row.kind === 'member'
+                ? `${row.member.name} ${row.member.email} ${row.member.teams.join(' ')}`
+                : `${row.invitation.email} ${row.invitation.teams.join(' ')}`
+        return (
+            matchesText(text, f.q) &&
+            (!f.unit || inUnit(row, f.unit)) &&
+            (!f.role || hasRole(row, f.role, f.unit)) &&
+            (!f.status || statusKey(row) === f.status)
+        )
     })
 }
 
-// Filtro <-> URL (?busca=&unidade=&papel=). Papel desconhecido na URL vira "todos".
+// Filtro <-> URL (?busca=&unidade=&papel=&situacao=). Valor desconhecido na URL vira "todos".
 export function filterFromParams(params: URLSearchParams): MemberFilter {
     const role = params.get('papel') ?? ''
     return {
         q: params.get('busca') ?? '',
         unit: params.get('unidade') ?? '',
         role: role in ROLE_LABEL ? (role as MemberFilter['role']) : '',
+        status: STATUS_OPTIONS.find((o) => o.value === params.get('situacao'))?.value ?? '',
     }
 }
 
@@ -138,19 +170,11 @@ export function paramsFromFilter(f: MemberFilter): URLSearchParams {
     if (f.q) params.set('busca', f.q)
     if (f.unit) params.set('unidade', f.unit)
     if (f.role) params.set('papel', f.role)
+    if (f.status) params.set('situacao', f.status)
     return params
 }
 
 // --- Mestre-detalhe (lista à esquerda, pessoa à direita) ---
-
-// Linha de baixo na lista: "Gestor em NG · Leitor em LA AM" · "Desenvolvedor" · "Convite · vence em 3 dias"
-export function summaryOf(row: MemberRow, now: Date): string {
-    if (row.kind === 'invitation') return noteOf(row, now).replace(/^Convidado por .* · /, 'Convite · ')
-    const m = row.member
-    if (isOrgWide(m)) return ROLE_LABEL[m.org_role]
-    if (m.units.length === 0) return 'Sem cargo'
-    return m.units.map((u) => `${ROLE_LABEL[u.role]} em ${unitLabel(u.code)}`).join(' · ')
-}
 
 // O que a pessoa tem numa unidade (só leitura): cargo, setores e exceções (só visualizam).
 export type UnitView = { role: string | null; sectors: string[]; extraGroups: number; extraDashboards: number }
@@ -179,4 +203,55 @@ export const hasUnitAccess = (v: UnitView) =>
 // Primeira unidade com algo; senão a primeira da lista.
 export function firstUnitOf(row: MemberRow, units: string[], teams: MemberTeam[]): string {
     return units.find((u) => hasUnitAccess(unitViewOf(row, u, teams))) ?? units[0] ?? ''
+}
+
+// --- Lista em pílulas (uma linha por pessoa) ---
+
+// "LUIS ALBERT AM, NICOLAS GOMES" · "TODAS" (Owner/Dev) · "—"
+export function unitsText(row: MemberRow, units: Unit[]): string {
+    const name = (code: string) => (units.find((u) => u.code === code)?.name ?? unitLabel(code)).toUpperCase()
+    if (row.kind === 'invitation') {
+        if (row.invitation.role === 'admin') return 'TODAS'
+        return row.invitation.units.map(name).join(', ') || '—'
+    }
+    if (isOrgWide(row.member)) return 'TODAS'
+    return row.member.units.map((u) => name(u.code)).join(', ') || '—'
+}
+
+export const sectorsText = (row: MemberRow) =>
+    (row.kind === 'member' ? row.member.teams : row.invitation.teams).join(', ') || '—'
+
+// Data do último acesso (dd/mm/aaaa); convite e quem nunca entrou: "Nunca acessou".
+export function lastSeenText(row: MemberRow): string {
+    if (row.kind === 'invitation' || !row.member.last_seen_at) return 'Nunca acessou'
+    return new Date(row.member.last_seen_at).toLocaleDateString('pt-BR')
+}
+
+// --- Como a lista aparece (pílulas ou cards), lembrado no localStorage deste navegador ---
+export type MembersLayout = 'cards' | 'pilulas'
+export const MEMBERS_LAYOUT_KEY = 'lexhub.membersLayout'
+
+// Sem escolha, valor estranho ou storage bloqueado: cards.
+export function storedMembersLayout(storage: Pick<Storage, 'getItem'> | null = safeLocal()): MembersLayout {
+    try {
+        return storage?.getItem(MEMBERS_LAYOUT_KEY) === 'pilulas' ? 'pilulas' : 'cards'
+    } catch {
+        return 'cards'
+    }
+}
+
+export function storeMembersLayout(layout: MembersLayout, storage: Pick<Storage, 'setItem'> | null = safeLocal()) {
+    try {
+        storage?.setItem(MEMBERS_LAYOUT_KEY, layout)
+    } catch {
+        // sem storage: vale só enquanto a página estiver aberta
+    }
+}
+
+function safeLocal(): Storage | null {
+    try {
+        return window.localStorage
+    } catch {
+        return null
+    }
 }

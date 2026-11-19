@@ -106,6 +106,7 @@ const PATHS = {
     ),
     'chevron-up': <path d="M6 15l6-6 6 6" />,
     'chevron-down': <path d="M6 9l6 6 6-6" />,
+    'chevron-right': <path d="M9 6l6 6-6 6" />,
     menu: <path d="M4 6h16M4 12h16M4 18h16" />,
     'panel-left': (
         <>
