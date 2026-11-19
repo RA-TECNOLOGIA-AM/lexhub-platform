@@ -1,6 +1,6 @@
 import type { Column } from '../../../components/ui/DataTable.tsx'
 import type { AuditEvent } from '../../../types/index.ts'
-import { KIND, whenLabel } from './auditView.ts'
+import { KIND, whenLabel, type NeverRow } from './auditView.ts'
 
 // Módulo: como um evento aparece em cada coluna da tabela (como no protótipo).
 export const AUDIT_COLUMNS: Column<AuditEvent>[] = [
@@ -16,4 +16,25 @@ export const AUDIT_COLUMNS: Column<AuditEvent>[] = [
     { header: 'O que aconteceu', render: (e) => <span className={KIND[e.kind].badge}>{e.action}</span> },
     { header: 'E-mail', render: (e) => <span className="muted small nowrap">{e.email ?? '—'}</span> },
     { header: 'Detalhe', render: (e) => <span className="muted small">{e.detail}</span> },
+]
+
+// Lista "Nunca acessou": pessoas, não eventos.
+export const NEVER_COLUMNS: Column<NeverRow>[] = [
+    { header: 'Quem', render: (r) => <span className="nowrap">{r.name}</span> },
+    { header: 'E-mail', render: (r) => <span className="muted small nowrap">{r.email}</span> },
+    {
+        header: 'Situação',
+        render: (r) => <span className={r.status === 'Membro' ? 'badge neutral' : 'badge warn'}>{r.status}</span>,
+    },
+    {
+        header: 'Convidado em',
+        render: (r) =>
+            r.since ? (
+                <time className="muted small nowrap" dateTime={r.since}>
+                    {whenLabel(r.since)}
+                </time>
+            ) : (
+                <span className="muted small">—</span>
+            ),
+    },
 ]

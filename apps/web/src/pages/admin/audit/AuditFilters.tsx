@@ -1,5 +1,4 @@
-import type { AuditKind } from '../../../types/index.ts'
-import { KIND, type AuditFilter } from './auditView.ts'
+import { KIND, NEVER, NEVER_LABEL, type AuditFilter } from './auditView.ts'
 
 type AuditFiltersProps = {
     value: AuditFilter
@@ -16,7 +15,7 @@ export function AuditFilters({ value, actors, onChange }: AuditFiltersProps) {
                 <select
                     className="field"
                     value={value.kind}
-                    onChange={(e) => onChange({ ...value, kind: e.target.value as AuditKind | '' })}
+                    onChange={(e) => onChange({ ...value, kind: e.target.value as AuditFilter['kind'] })}
                 >
                     <option value="">Todos</option>
                     {Object.entries(KIND).map(([key, k]) => (
@@ -24,6 +23,7 @@ export function AuditFilters({ value, actors, onChange }: AuditFiltersProps) {
                             {k.label}
                         </option>
                     ))}
+                    <option value={NEVER}>{NEVER_LABEL}</option>
                 </select>
             </label>
             <label className="filter">
