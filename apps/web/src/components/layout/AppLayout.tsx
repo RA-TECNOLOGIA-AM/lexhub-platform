@@ -1,4 +1,5 @@
 import { Suspense, useRef, useState } from 'react'
+import { ErrorBoundary } from '../states/ErrorBoundary.tsx'
 import { LoadingState } from '../states/LoadingState.tsx'
 import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
@@ -183,9 +184,11 @@ export function AppLayout() {
                 <main className="content">
                     <TopbarSlotContext value={{ start: topbarStart, end: topbarEnd }}>
                         {/* Páginas carregadas sob demanda (lazy): o "carregando" fica só no miolo. */}
-                        <Suspense fallback={<LoadingState />}>
-                            <Outlet />
-                        </Suspense>
+                        <ErrorBoundary resetKey={pathname}>
+                            <Suspense fallback={<LoadingState />}>
+                                <Outlet />
+                            </Suspense>
+                        </ErrorBoundary>
                     </TopbarSlotContext>
                 </main>
             </div>
