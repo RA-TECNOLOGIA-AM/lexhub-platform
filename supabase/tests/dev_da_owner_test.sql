@@ -1,5 +1,5 @@
 -- =============================================================================
--- Teste de 20261119190000_dev_da_owner.sql. Roda numa transação e desfaz no fim (ROLLBACK): não deixa dados.
+-- Teste de 20261119200000_dev_da_owner.sql. Roda numa transação e desfaz no fim (ROLLBACK): não deixa dados.
 -- Passou = nenhum ERROR (só o aviso 'OK: ...'). Falhou = ERROR 'FALHOU: ...' (o CI para aí).
 --
 -- Cenário: org 'org-teste-dao' com a unidade U1.

@@ -121,7 +121,9 @@ export function PersonEditor({ member, overview, isSelf, onSave, onDirtyChange }
                     <div className="acc-dev-label">
                         <span>Papel na organização</span>
                         {isSelf || readOnly ? (
-                            <span className="badge">{ORG_ROLE_OPTIONS.find((o) => o.value === draft.orgRole)?.label}</span>
+                            <span className="badge">
+                                {ORG_ROLE_OPTIONS.find((o) => o.value === draft.orgRole)?.label}
+                            </span>
                         ) : (
                             <Segmented
                                 label="Papel na organização"
