@@ -111,6 +111,18 @@ export const DASHBOARD_PAGES: Record<string, ComponentType> = {
         () => import('./previsao-individualizada/index.ts'),
         (m) => m.previsaoIndividualizada,
     ),
+    replicas: lazyDashboard(
+        () => import('./replicas/index.ts'),
+        (m) => m.replicas,
+    ),
+    'emendas-manifestacoes': lazyDashboard(
+        () => import('./emendas-manifestacoes/index.ts'),
+        (m) => m.emendasManifestacoes,
+    ),
+    'pendencias-intermediarias': lazyDashboard(
+        () => import('./pendencias-intermediarias/index.ts'),
+        (m) => m.pendenciasIntermediarias,
+    ),
     publicacoes: lazyDashboard(
         () => import('./publicacoes/index.ts'),
         (m) => m.publicacoes,

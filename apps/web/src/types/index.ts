@@ -140,6 +140,16 @@ export type DashboardFilters = {
     atividade_agendamento_publicacoes?: string[]
     setor_agendamento_publicacoes?: string[]
     status_agendamento_publicacoes?: string[]
+    // Pendências Intermediárias (LexFlow): os da seção da v1 (na v1, o NG manda com _ng; a API faz a troca)
+    funcionario_intermediarias?: string[]
+    atividade_intermediarias?: string[]
+    // Emendas e Manifestações (LexFlow): os mesmos nomes da v1 nas duas unidades; a UF só existe no NG
+    funcionario_emendas_manifestacoes?: string[]
+    atividade_emendas_manifestacoes?: string[]
+    uf_emendas_manifestacoes?: string[]
+    // Réplicas (LexFlow): os da seção da v1 (na v1, o NG manda com _ng; a API faz a troca)
+    funcionario_replicas?: string[]
+    atividade_replicas?: string[]
     situacao_processo?: string[] // ATIVO | SUSPENSO/SOBRESTADO | ARQUIVADO (sem nenhum = recorte padrão da query)
 }
 

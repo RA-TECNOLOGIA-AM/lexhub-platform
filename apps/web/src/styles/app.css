@@ -2579,7 +2579,11 @@ button.barlist-hit[aria-pressed='true'] .barlist-name {
     max-width: 100%;
     padding: 0 10px;
     border-radius: var(--r-sm);
-    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 85%, #000), var(--accent));
+    background: linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--bar-cor, var(--accent)) 85%, #000),
+        var(--bar-cor, var(--accent))
+    );
 }
 .barlist-v {
     font-size: var(--fs-xs);
@@ -7383,6 +7387,168 @@ body {
 }
 .pv-rodape {
     text-align: center;
+}
+/* Pendências Intermediárias: os 5 cards da visão e, numa linha própria, o card de dilação (taxa, faixa e o
+   medidor de 0 a 20%+ ocupando a largura) */
+.pi-kpis {
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.pi-dil {
+    --pi-cor: var(--text-muted);
+    display: grid;
+    grid-template-columns: minmax(260px, 380px) minmax(0, 1fr);
+    align-items: center;
+    gap: 16px 40px;
+    padding: 18px 22px;
+    border-left: 4px solid var(--pi-cor);
+}
+@media (max-width: 800px) {
+    .pi-dil {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+.pi-dil-info,
+.pi-dil-escala {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+.pi-dil.pi-ouro,
+.pi-selo.pi-ouro {
+    --pi-cor: #d4a017;
+}
+.pi-dil.pi-prata,
+.pi-selo.pi-prata {
+    --pi-cor: #9aa3ad;
+}
+.pi-dil.pi-bronze,
+.pi-selo.pi-bronze {
+    --pi-cor: #c26a2b;
+}
+.pi-dil.pi-fora,
+.pi-selo.pi-fora {
+    --pi-cor: var(--danger);
+}
+.pi-dil-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.pi-selo {
+    --pi-cor: var(--text-muted);
+    padding: 2px 10px;
+    border: 1px solid color-mix(in srgb, var(--pi-cor) 60%, transparent);
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--pi-cor) 14%, transparent);
+    color: var(--pi-cor);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    white-space: nowrap;
+}
+.pi-dil-valor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 12px;
+}
+.pi-dil-valor strong {
+    color: var(--pi-cor);
+    font-size: 30px;
+    line-height: 1.1;
+}
+.pi-medidor {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    height: 12px;
+}
+.pi-medidor .z {
+    border-radius: 2px;
+    opacity: 0.55;
+}
+.pi-medidor .ouro {
+    background: #d4a017;
+}
+.pi-medidor .prata {
+    background: #9aa3ad;
+}
+.pi-medidor .bronze {
+    background: #c26a2b;
+}
+.pi-medidor .fora {
+    background: var(--danger);
+}
+.pi-medidor i {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--text);
+    transform: translateX(-50%);
+}
+.pi-medidor-leg {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+}
+/* Emendas e Manifestações: o bloco de agenda cumprida (NG: com as peças e o comparativo; LA: com as faixas 85/97) */
+.em-ng {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--gap);
+}
+@media (max-width: 1100px) {
+    .em-ng {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+.em-ng .em-agenda {
+    grid-template-columns: minmax(0, 1fr);
+}
+.pi-dil.pi-neutra {
+    --pi-cor: var(--ok-dot);
+}
+.em-barra {
+    height: 12px;
+    border-radius: 3px;
+    background: var(--surface-2);
+    overflow: hidden;
+}
+.em-barra span {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    background: var(--ok-dot);
+}
+.em-medidor-la {
+    grid-template-columns: 85fr 12fr 3fr;
+}
+.em-leg-la {
+    position: relative;
+    height: 14px;
+    font-size: 11px;
+}
+.em-leg-la span {
+    position: absolute;
+    transform: translateX(-50%);
+}
+.em-leg-la span:first-child {
+    transform: none;
+}
+.em-legenda {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.em-legenda i {
+    width: 9px;
+    height: 9px;
+    margin-left: 4px;
+    border-radius: 50%;
 }
 
 /* Perfil: avatar no canto direito da topbar (anel e brilho no tom de destaque) e o cartão que ele abre. */

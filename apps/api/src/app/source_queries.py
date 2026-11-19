@@ -3479,3 +3479,496 @@ QUERIES["tcc_sobrevivencia_processual"] = {
     ),
     "params": []
 }
+
+
+# v1: queries.py:3534, "agendamentos_setor_intermediarias_NG" (copiada em 19/11/2026). pendencias_intermediarias_NG, pendencias_intermediarias_LA.
+QUERIES["agendamentos_setor_intermediarias_NG"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            'PENDÊNCIA'                                     AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 20
+          AND v.setor_atividade_nome LIKE 'PENDÊNCIA - %'
+        """,
+        "description": "Agendamentos do setor PENDÊNCIA (NG) via vw_dashboard_agendamentos_detalhados.",
+        "params": []
+    }
+
+
+# v1: queries.py:3933, "agendamentos_dilacao_prazo_intermediarias_NG" (copiada em 19/11/2026). pendencias_intermediarias_NG, pendencias_intermediarias_LA.
+QUERIES["agendamentos_dilacao_prazo_intermediarias_NG"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 20
+          AND v.setor_atividade_nome = 'MANIFESTAÇÃO - ELABORAR DILAÇÃO'
+        """,
+        "description": (
+            "Agendamentos 'MANIFESTAÇÃO - ELABORAR DILAÇÃO' (NG) criados pelo fluxo de "
+            "encerramento das Pendências Intermediárias — NG não tem um setor dedicado de "
+            "Dilação de Prazo como a LA; SOLICITAR DOCS COM CLIENTE encerrado como "
+            "'Encerrado Não Cumprido' com motivo 'CLIENTE NÃO RESPONDEU/ENVIOU DOCS' "
+            "encaminha para esta atividade do setor MANIFESTAÇÃO."
+        ),
+        "params": []
+    }
+
+
+# v1: queries.py:3500, "agendamentos_setor_intermediarias_LA" (copiada em 19/11/2026). pendencias_intermediarias_NG, pendencias_intermediarias_LA.
+QUERIES["agendamentos_setor_intermediarias_LA"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            'PENDÊNCIAS'                                    AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 21
+          AND v.setor_atividade_nome LIKE 'PENDÊNCIAS - %'
+        """,
+        "description": "Agendamentos do setor PENDÊNCIAS (LA) via vw_dashboard_agendamentos_detalhados.",
+        "params": []
+    }
+
+
+# v1: queries.py:3909, "agendamentos_dilacao_prazo_intermediarias_LA" (copiada em 19/11/2026). pendencias_intermediarias_NG, pendencias_intermediarias_LA.
+QUERIES["agendamentos_dilacao_prazo_intermediarias_LA"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 21
+          AND UPPER(v.setor_atividade_nome) LIKE '%DILAÇÃO DE PRAZO%'
+        """,
+        "description": "Agendamentos de Dilação de Prazo criados pelo fluxo de encerramento das Pendências Intermediárias (LA).",
+        "params": []
+    }
+
+
+# V2 (19/11/2026): Pendências Intermediárias no RJ (escritório 27), que a v1 não tem. As mesmas queries do NG
+# (agendamentos_setor_intermediarias_NG e agendamentos_dilacao_prazo_intermediarias_NG), só com o escritório trocado:
+# o RJ usa o mesmo setor PENDÊNCIA e a mesma atividade de dilação do NG (app/dashboards/pendencias_intermediarias.py).
+QUERIES["agendamentos_setor_intermediarias_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            'PENDÊNCIA'                                     AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 27
+          AND v.setor_atividade_nome LIKE 'PENDÊNCIA - %'
+        """,
+        "description": "Agendamentos do setor PENDÊNCIA (RJ) via vw_dashboard_agendamentos_detalhados.",
+        "params": []
+    }
+
+
+QUERIES["agendamentos_dilacao_prazo_intermediarias_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 27
+          -- V2 (decisão de 19/11/2026): no RJ a dilação também é pedida como "MANIFESTAR DILAÇÃO DE PRAZO"
+          AND v.setor_atividade_nome IN (
+              'MANIFESTAÇÃO - ELABORAR DILAÇÃO',
+              'MANIFESTAÇÃO - MANIFESTAR DILAÇÃO DE PRAZO'
+          )
+        """,
+        "description": (
+            "Agendamentos 'MANIFESTAÇÃO - ELABORAR DILAÇÃO' (RJ) criados pelo fluxo de "
+            "encerramento das Pendências Intermediárias — o RJ, como o NG, não tem um setor dedicado de "
+            "Dilação de Prazo como a LA; SOLICITAR DOCS COM CLIENTE encerrado como "
+            "'Encerrado Não Cumprido' com motivo 'CLIENTE NÃO RESPONDEU/ENVIOU DOCS' "
+            "encaminha para esta atividade do setor MANIFESTAÇÃO."
+        ),
+        "params": []
+    }
+
+
+# v1: queries.py:3671, "agendamentos_setor_emendas_manifestacoes_NG" (copiada em 19/11/2026). emendas_manifestacoes_NG, emendas_manifestacoes_LA.
+QUERIES["agendamentos_setor_emendas_manifestacoes_NG"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            'MANIFESTAÇÃO'                                  AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            v.numero_processo                               AS "NUMERO_PROCESSO",
+            p.uf                                             AS "UF",
+            p.id_situacao                                   AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo p ON p.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = p.id_situacao
+        WHERE v.id_escritorio_assinante = 20
+          AND v.setor_atividade_nome LIKE 'MANIFESTAÇÃO - %'
+        """,
+        "description": "Agendamentos do setor MANIFESTAÇÃO (NG) via vw_dashboard_agendamentos_detalhados — base do dashboard Emendas e Manifestações (NG).",
+        "params": []
+    }
+
+
+# v1: queries.py:3602, "agendamentos_setor_emendas_manifestacoes_LA" (copiada em 19/11/2026). emendas_manifestacoes_NG, emendas_manifestacoes_LA.
+QUERIES["agendamentos_setor_emendas_manifestacoes_LA"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            'INTERMEDIÁRIAS'                                AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            v.numero_processo                               AS "NUMERO_PROCESSO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 21
+          AND v.setor_atividade_nome LIKE 'INTERMEDIÁRIAS - %'
+        """,
+        "description": "Agendamentos do setor INTERMEDIÁRIAS (LA) via vw_dashboard_agendamentos_detalhados — base do dashboard Emendas e Manifestações.",
+        "params": []
+    }
+
+
+# V2 (19/11/2026): Emendas e Manifestações no RJ (escritório 27), que a v1 não tem. A mesma query do NG
+# (agendamentos_setor_emendas_manifestacoes_NG), só com o escritório trocado: o RJ usa o mesmo setor MANIFESTAÇÃO
+# (com UF) do NG (app/dashboards/emendas_manifestacoes.py).
+QUERIES["agendamentos_setor_emendas_manifestacoes_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            'MANIFESTAÇÃO'                                  AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            v.numero_processo                               AS "NUMERO_PROCESSO",
+            p.uf                                             AS "UF",
+            p.id_situacao                                   AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo p ON p.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = p.id_situacao
+        WHERE v.id_escritorio_assinante = 27
+          AND v.setor_atividade_nome LIKE 'MANIFESTAÇÃO - %'
+        """,
+        "description": "Agendamentos do setor MANIFESTAÇÃO (RJ) via vw_dashboard_agendamentos_detalhados — base do dashboard Emendas e Manifestações (RJ).",
+        "params": []
+    }
+
+
+# v1: queries.py:3761, "agendamentos_setor_replicas_NG" (copiada em 19/11/2026). replicas_NG, replicas_LA.
+QUERIES["agendamentos_setor_replicas_NG"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            'RÉPLICA'                                        AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 20
+          AND v.setor_atividade_nome LIKE 'RÉPLICA - %'
+        """,
+        "description": "Agendamentos do setor RÉPLICA (NG) via vw_dashboard_agendamentos_detalhados — base do dashboard Réplicas (NG). No NG o setor é RÉPLICA (singular) e tem 3 atividades: ELABORAR RÉPLICA, RÉPLICA CANCELADA e VERIFICAR CONTESTAÇÃO.",
+        "params": []
+    }
+
+
+# v1: queries.py:3795, "processos_status_1g_replicas_NG" (copiada em 19/11/2026). replicas_NG, replicas_LA.
+QUERIES["processos_status_1g_replicas_NG"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT DISTINCT
+            CAST(v.processo_id AS INTEGER)              AS processo_id,
+            p.id_status_grau1                           AS "ID_1G",
+            spg.nome                                    AS "STATUS_1G",
+            p.id_situacao                                   AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        JOIN public.processo p ON p.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = p.id_situacao
+        LEFT JOIN public.status_primeiro_grau spg ON p.id_status_grau1 = spg.id
+        WHERE v.id_escritorio_assinante = 20
+          AND v.setor_atividade_nome LIKE 'RÉPLICA - %'
+        """,
+        "description": "Status de 1G (primeiro grau) dos processos do setor RÉPLICA (NG) — base do card de taxa de procedência.",
+        "params": []
+    }
+
+
+# v1: queries.py:3707, "agendamentos_setor_replicas_LA" (copiada em 19/11/2026). replicas_NG, replicas_LA.
+QUERIES["agendamentos_setor_replicas_LA"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            'RÉPLICAS'                                       AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 21
+          AND v.setor_atividade_nome LIKE 'RÉPLICAS - %'
+        """,
+        "description": "Agendamentos do setor RÉPLICAS (LA) via vw_dashboard_agendamentos_detalhados — base do dashboard Réplicas.",
+        "params": []
+    }
+
+
+# v1: queries.py:3741, "processos_status_1g_replicas_LA" (copiada em 19/11/2026). replicas_NG, replicas_LA.
+QUERIES["processos_status_1g_replicas_LA"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT DISTINCT
+            CAST(v.processo_id AS INTEGER)              AS processo_id,
+            p.id_status_grau1                           AS "ID_1G",
+            spg.nome                                    AS "STATUS_1G",
+            p.id_situacao                                   AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        JOIN public.processo p ON p.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = p.id_situacao
+        LEFT JOIN public.status_primeiro_grau spg ON p.id_status_grau1 = spg.id
+        WHERE v.id_escritorio_assinante = 21
+          AND v.setor_atividade_nome LIKE 'RÉPLICAS - %'
+        """,
+        "description": "Status de 1G (primeiro grau) dos processos do setor RÉPLICAS (LA) — base do card de taxa de procedência.",
+        "params": []
+    }
+
+
+# V2 (19/11/2026): Réplicas no RJ (escritório 27), que a v1 não tem. As mesmas queries do NG
+# (agendamentos_setor_replicas_NG e processos_status_1g_replicas_NG), só com o escritório trocado: o RJ usa o mesmo
+# setor RÉPLICA do NG (app/dashboards/replicas.py).
+QUERIES["agendamentos_setor_replicas_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            v.agendamento_id                                AS id,
+            CAST(v.processo_id AS INTEGER)                  AS processo_id,
+            v.agendamento_status::text                      AS "STATUS",
+            v.agendamento_prazo                             AS "PRAZO",
+            v.data_hora_criacao                             AS "DATA_HORA_CRIACAO",
+            v.data_hora_conclusao                           AS "DATA_HORA_CONCLUSAO",
+            v.id_usuario_atribuido                          AS "ID_USUARIO_ATRIBUIDO",
+            v.nome_usuario_atribuido                        AS "FUNCIONARIO_ATRIBUIDO",
+            v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
+            v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
+            CASE
+                WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
+                THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
+                ELSE v.setor_atividade_nome
+            END                                             AS "ATIVIDADE",
+            'RÉPLICA'                                        AS "SETOR",
+            v.agendamento_descricao                         AS "DESCRICAO",
+            v.operacao_descricao                            AS "OPERACAO",
+            ps.id_situacao                                  AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
+        WHERE v.id_escritorio_assinante = 27
+          AND v.setor_atividade_nome LIKE 'RÉPLICA - %'
+        """,
+        "description": "Agendamentos do setor RÉPLICA (RJ) via vw_dashboard_agendamentos_detalhados — base do dashboard Réplicas (RJ). No NG o setor é RÉPLICA (singular) e tem 3 atividades: ELABORAR RÉPLICA, RÉPLICA CANCELADA e VERIFICAR CONTESTAÇÃO.",
+        "params": []
+    }
+
+
+QUERIES["processos_status_1g_replicas_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT DISTINCT
+            CAST(v.processo_id AS INTEGER)              AS processo_id,
+            p.id_status_grau1                           AS "ID_1G",
+            spg.nome                                    AS "STATUS_1G",
+            p.id_situacao                                   AS "ID_SITUACAO",
+            sit.description                                 AS "SITUACAO"
+        FROM public.vw_dashboard_agendamentos_detalhados v
+        JOIN public.processo p ON p.id = CAST(v.processo_id AS INTEGER)
+        LEFT JOIN public.situacao sit ON sit.id = p.id_situacao
+        LEFT JOIN public.status_primeiro_grau spg ON p.id_status_grau1 = spg.id
+        WHERE v.id_escritorio_assinante = 27
+          AND v.setor_atividade_nome LIKE 'RÉPLICA - %'
+        """,
+        "description": "Status de 1G (primeiro grau) dos processos do setor RÉPLICA (RJ) — base do card de taxa de procedência.",
+        "params": []
+    }

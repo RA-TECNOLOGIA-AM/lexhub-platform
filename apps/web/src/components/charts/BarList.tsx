@@ -16,6 +16,7 @@ type BarListProps = {
     wrapNames?: boolean // nome longo quebra linha em vez de cortar (cartão estreito, poucas linhas)
     ranked?: boolean // posição antes do nome (1º, 2º...), como o ranking da v1
     valueOutside?: boolean // valor à direita da barra, não dentro (valores longos, ex.: R$ 1.221.277,44)
+    colors?: Record<string, string> // cor da barra por nome (ex.: gera / não gera comissão); sem = a cor da marca
 }
 
 // Módulo: barras horizontais sobre um trilho, com o nome à esquerda e o % à direita (Top 10 por matéria).
@@ -32,6 +33,7 @@ export function BarList({
     wrapNames = false,
     ranked = false,
     valueOutside = false,
+    colors,
 }: BarListProps) {
     if (items.length === 0) return <ChartEmpty />
     const base = total ?? items.reduce((sum, p) => sum + p.value, 0)
@@ -49,7 +51,10 @@ export function BarList({
                 const active = selected.includes(p.name)
                 const dim = selected.length > 0 && !active
                 const label = format(p.value)
-                const style = { '--w': `${Math.max(pct, 3)}%` } as CSSProperties
+                const style = {
+                    '--w': `${Math.max(pct, 3)}%`,
+                    ...(colors?.[p.name] ? { '--bar-cor': colors[p.name] } : {}),
+                } as CSSProperties
                 const content = (
                     <>
                         <span className="barlist-name num" title={p.name}>
