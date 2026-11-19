@@ -398,7 +398,7 @@ export type MemberAccessUpdate = {
 
 // Auditoria: o que aconteceu na organização (entradas, exportações, acesso, suporte, fontes).
 // source = unidades e fontes (criar/editar unidade, sincronização); other = evento que a tela ainda não conhece
-export type AuditKind = 'login' | 'export' | 'access' | 'support' | 'source' | 'other'
+export type AuditKind = 'login' | 'view' | 'export' | 'access' | 'support' | 'source' | 'other'
 
 // Um evento como vem do banco (api.list_audit); services/auditEvents.ts traduz para AuditEvent.
 export type RawAuditEvent = {
@@ -423,7 +423,12 @@ export type AuditEvent = {
     detail: string
 }
 
-export type AuditResponse = { events: AuditEvent[] } // mais recente primeiro
+// events: mais recente primeiro. truncated: havia mais eventos no filtro do que o limite (2000) trouxe.
+// actors: quem aparece no período/tipo (sem o filtro de pessoa), para o campo Pessoa.
+export type AuditResponse = { events: AuditEvent[]; truncated: boolean; actors: string[] }
+
+// O que a Auditoria pede ao banco: período (ISO; null = sem limite daquele lado), tipo e pessoa ('' = todos).
+export type AuditQuery = { from: string | null; to: string | null; kind: AuditKind | ''; actor: string }
 
 // Plataforma (só equipe RA): as organizações clientes.
 export type ClientPlan = PlanKey | 'onboarding' // 'onboarding' = em implantação, antes de assinar um plano

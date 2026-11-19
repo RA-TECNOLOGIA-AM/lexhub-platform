@@ -54,7 +54,7 @@ begin
     if e -> 0 ->> 'actorEmail' <> 'dev.audit@exemplo.com' or e -> 2 ->> 'actorEmail' is not null then
         raise exception 'FALHOU: e-mail de quem fez (Sistema = null): % / %', e -> 0, e -> 2;
     end if;
-    if jsonb_array_length(api.list_audit('org-teste-audit', 1) -> 'events') <> 1 then
+    if jsonb_array_length(api.list_audit('org-teste-audit', p_limit => 1) -> 'events') <> 1 then
         raise exception 'FALHOU: limite';
     end if;
     if (api.my_admin_permissions('org-teste-audit') ->> 'audit')::boolean is not true then

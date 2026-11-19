@@ -19,6 +19,7 @@ import type {
     AccessOverview,
     AdminPermissions,
     MemberAccessUpdate,
+    AuditQuery,
     AuditResponse,
     ClientsResponse,
     DataSource,
@@ -110,7 +111,10 @@ export interface DataClient {
     setTeamGroups(org: string, teamId: string, groups: string[], seesAll: boolean | null): Promise<void>
     // O que a pessoa gere na organização (o menu esconde Acesso de quem não gere).
     getMyAdminPermissions(org: string): Promise<AdminPermissions>
-    getAudit(org: string): Promise<AuditResponse>
+    // Auditoria filtrada no banco por período e tipo.
+    getAudit(org: string, query: AuditQuery): Promise<AuditResponse>
+    // Abriu um dashboard (vai para a Auditoria). Quem chama ignora falha: nunca impede o dashboard de abrir.
+    logDashboardView(org: string, unit: string, dashboardKey: string): Promise<void>
     // Registra na própria auditoria que ela foi exportada (com o filtro e quantos eventos). Falhou = não baixa.
     logAuditExport(org: string, filter: { kind: string; actor: string }, rows: number): Promise<void>
     getSources(org: string): Promise<SourcesResponse>

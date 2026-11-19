@@ -18,6 +18,7 @@ import { useAutoRefresh } from '../../hooks/useAutoRefresh.ts'
 import { useDashboardExport } from '../../hooks/useDashboardExport.ts'
 import { useDashboardQuery } from '../../hooks/useDashboardQuery.ts'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue.ts'
+import { useLogDashboardView } from '../../hooks/useLogDashboardView.ts'
 import { FETCH_DELAY_MS, queryFromParams } from '../../lib/dashboardQuery.ts'
 import type { DashboardModule } from './types.ts'
 
@@ -30,6 +31,8 @@ const AUTO_REFRESH_MS = 5 * 60_000
 // por fim, o conteúdo próprio do dashboard.
 export function DashboardView<T extends { meta: Meta }>({ module }: { module: DashboardModule<T> }) {
     const { org = '', unit = '' } = useParams()
+    // Abriu o dashboard: vai para a Auditoria (Dashboards abertos).
+    useLogDashboardView(org, unit, module.key)
     const hub = `/${org}/dashboards`
     const { query, search, setPeriod, setFilters } = useDashboardQuery()
     // Exporta com o período e os filtros em uso (os mesmos da tela).

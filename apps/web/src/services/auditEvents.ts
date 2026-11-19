@@ -51,6 +51,11 @@ const EVENTS: Record<string, Rule> = {
             )
         },
     },
+    'dashboard.view': {
+        kind: 'view',
+        action: 'Abriu dashboard',
+        detail: (e, m) => join(e.targetName ?? e.targetId, text(m.unit)),
+    },
     'dashboard.export': {
         kind: 'export',
         action: 'Exportou dados',
@@ -159,6 +164,18 @@ const EVENTS: Record<string, Rule> = {
                 num(m.units) === null ? null : `${m.units} unidades`,
             ),
     },
+}
+
+// O filtro de tipo que o banco aplica (api.list_audit). Um tipo = só os eventos dele. "Outros" = tudo menos os
+// eventos que têm regra aqui (os desconhecidos). '' (todos) = sem filtro.
+export function actionFilter(kind: AuditKind | ''): {
+    p_actions: string[] | null
+    p_exclude_actions: string[] | null
+} {
+    const known = Object.keys(EVENTS)
+    if (!kind) return { p_actions: null, p_exclude_actions: null }
+    if (kind === 'other') return { p_actions: null, p_exclude_actions: known }
+    return { p_actions: known.filter((action) => EVENTS[action]?.kind === kind), p_exclude_actions: null }
 }
 
 export function toAuditEvent(e: RawAuditEvent): AuditEvent {

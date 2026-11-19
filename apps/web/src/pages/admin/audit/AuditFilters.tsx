@@ -1,4 +1,4 @@
-import { KIND, NEVER, NEVER_LABEL, type AuditFilter } from './auditView.ts'
+import { customRange, KIND, NEVER, NEVER_LABEL, PERIODS, type AuditFilter, type AuditPeriod } from './auditView.ts'
 
 type AuditFiltersProps = {
     value: AuditFilter
@@ -6,10 +6,57 @@ type AuditFiltersProps = {
     onChange: (next: AuditFilter) => void
 }
 
-// Módulo: os campos Tipo de evento e Pessoa. Recebe o filtro atual e avisa quando muda.
+// Módulo: os campos Período, Tipo de evento e Pessoa. Recebe o filtro atual e avisa quando muda.
 export function AuditFilters({ value, actors, onChange }: AuditFiltersProps) {
+    // Trocar de período: "Escolher datas" já começa com os últimos 7 dias; os outros limpam as datas.
+    function setPeriod(period: AuditPeriod) {
+        const dates = period === 'custom' ? customRange() : { de: '', ate: '' }
+        onChange({ ...value, period, ...dates })
+    }
+
     return (
         <div className="filters">
+            <label className="filter">
+                <span className="lbl">Período</span>
+                <select
+                    className="field"
+                    value={value.period}
+                    onChange={(e) => setPeriod(e.target.value as AuditPeriod)}
+                >
+                    {Object.entries(PERIODS).map(([key, label]) => (
+                        <option key={key} value={key}>
+                            {label}
+                        </option>
+                    ))}
+                </select>
+            </label>
+            {value.period === 'custom' && (
+                <>
+                    {/* min/max impedem "de" depois de "até" (a URL voltaria para 7 dias). */}
+                    <label className="filter">
+                        <span className="lbl">De</span>
+                        <input
+                            className="field"
+                            type="date"
+                            value={value.de}
+                            max={value.ate}
+                            required
+                            onChange={(e) => e.target.value && onChange({ ...value, de: e.target.value })}
+                        />
+                    </label>
+                    <label className="filter">
+                        <span className="lbl">Até</span>
+                        <input
+                            className="field"
+                            type="date"
+                            value={value.ate}
+                            min={value.de}
+                            required
+                            onChange={(e) => e.target.value && onChange({ ...value, ate: e.target.value })}
+                        />
+                    </label>
+                </>
+            )}
             <label className="filter">
                 <span className="lbl">Tipo de evento</span>
                 <select

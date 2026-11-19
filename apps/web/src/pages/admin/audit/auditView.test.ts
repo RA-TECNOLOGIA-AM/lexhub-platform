@@ -12,11 +12,13 @@ import {
     neverAccessed,
     neverCsv,
     paramsFromFilter,
+    customRange,
+    queryFromFilter,
     whenLabel,
 } from './auditView.ts'
 
 const events = audit.events
-const all = { kind: '' as const, actor: '' }
+const all = { kind: '' as const, actor: '', period: '7' as const, de: '', ate: '' }
 
 describe('whenLabel', () => {
     it('mostra dia/mês e hora no fuso de Manaus', () => {
@@ -36,7 +38,7 @@ describe('filtros', () => {
     })
     it('por tipo e por pessoa', () => {
         expect(filterEvents(events, { ...all, kind: 'access' }).map((e) => e.id)).toEqual(['ev6', 'ev3'])
-        expect(filterEvents(events, { kind: 'export', actor: 'Ana Ribeiro' })).toEqual([])
+        expect(filterEvents(events, { ...all, kind: 'export', actor: 'Ana Ribeiro' })).toEqual([])
         expect(filterEvents(events, { ...all, actor: 'Bruno Melo' }).map((e) => e.action)).toEqual(['Exportou dados'])
     })
     it('pessoas sem repetir, em ordem alfabética', () => {
@@ -52,12 +54,53 @@ describe('filtros', () => {
 
 describe('filtro na URL', () => {
     it('vai e volta', () => {
-        const f = { kind: 'export' as const, actor: 'Bruno Melo' }
+        const f = { ...all, kind: 'export' as const, actor: 'Bruno Melo' }
         expect(filterFromParams(paramsFromFilter(f))).toEqual(f)
         expect(paramsFromFilter(f).toString()).toBe('tipo=export&pessoa=Bruno+Melo')
     })
+    it('período: 7 dias é o padrão e não vai para a URL; 30/90 e datas vão e voltam', () => {
+        expect(filterFromParams(new URLSearchParams('')).period).toBe('7')
+        const trinta = { ...all, period: '30' as const }
+        expect(paramsFromFilter(trinta).toString()).toBe('periodo=30')
+        expect(filterFromParams(paramsFromFilter(trinta))).toEqual(trinta)
+        const datas = { ...all, period: 'custom' as const, de: '2026-11-01', ate: '2026-11-10' }
+        expect(paramsFromFilter(datas).toString()).toBe('periodo=custom&de=2026-11-01&ate=2026-11-10')
+        expect(filterFromParams(paramsFromFilter(datas))).toEqual(datas)
+    })
+    it('período inválido na URL volta para 7 dias', () => {
+        expect(filterFromParams(new URLSearchParams('periodo=365')).period).toBe('7')
+        expect(filterFromParams(new URLSearchParams('periodo=custom&de=lixo&ate=2026-11-10'))).toMatchObject({
+            period: '7',
+            de: '',
+            ate: '',
+        })
+        expect(filterFromParams(new URLSearchParams('periodo=custom&de=2026-11-10&ate=2026-11-01')).period).toBe('7')
+    })
     it('tipo inválido na URL vira "todos"', () => {
         expect(filterFromParams(new URLSearchParams('tipo=ataque')).kind).toBe('')
+    })
+})
+
+describe('consulta ao banco', () => {
+    const now = new Date('2026-11-19T12:00:00-04:00')
+    it('últimos N dias: desde agora menos N dias, sem fim', () => {
+        expect(queryFromFilter({ ...all, kind: 'view', actor: 'Ana Ribeiro' }, now)).toEqual({
+            from: '2026-11-12T16:00:00.000Z',
+            to: null,
+            kind: 'view',
+            actor: 'Ana Ribeiro',
+        })
+        expect(queryFromFilter({ ...all, period: '90' }, now).from).toBe('2026-08-21T16:00:00.000Z')
+    })
+    it('datas livres: do começo do "de" ao fim do "até", no fuso de Manaus', () => {
+        const q = queryFromFilter({ ...all, period: 'custom', de: '2026-11-01', ate: '2026-11-30' }, now)
+        expect(q).toEqual({ from: '2026-11-01T00:00:00-04:00', to: '2026-12-01T00:00:00-04:00', kind: '', actor: '' })
+    })
+    it('ao escolher datas, começa nos últimos 7 dias (dia de Manaus)', () => {
+        expect(customRange(new Date('2026-11-20T02:00:00Z'))).toEqual({ de: '2026-11-12', ate: '2026-11-19' })
+    })
+    it('"Nunca acessou" não filtra eventos por tipo', () => {
+        expect(queryFromFilter({ ...all, kind: NEVER }, now).kind).toBe('')
     })
 })
 

@@ -12,7 +12,6 @@ import { AUDIT_COLUMNS, NEVER_COLUMNS } from './auditColumns.tsx'
 import { AuditFilters } from './AuditFilters.tsx'
 import { saveFile } from '../../../lib/download.ts'
 import {
-    actorsOf,
     auditCsv,
     auditFilename,
     filterEvents,
@@ -22,23 +21,33 @@ import {
     neverAccessed,
     neverCsv,
     paramsFromFilter,
+    queryFromFilter,
     type AuditFilter,
 } from './auditView.ts'
 
 // A página só junta as peças: busca os eventos, aplica o filtro da URL e mostra a tabela.
 export function AuditPage() {
     const { org = '' } = useParams()
-    const { data, error } = useAsync(() => dataClient.getAudit(org), [org])
     const [notice, setNotice] = useState<string | null>(null)
 
     const [params, setParams] = useSearchParams()
     const filter = filterFromParams(params)
     const setFilter = (next: AuditFilter) => setParams(paramsFromFilter(next), { replace: true })
 
+    // Período, tipo e pessoa vão para o banco (busca de novo quando mudam). "Nunca acessou" não usa eventos.
+    const { period, de, ate, kind, actor } = filter
+    const never = kind === NEVER
+    const { data, error } = useAsync(
+        () => dataClient.getAudit(org, queryFromFilter({ ...filter, actor: never ? '' : actor })),
+        [org, period, de, ate, kind, never ? '' : actor],
+    )
+    // Aviso de limite fechado vale só para esta consulta: mudou o filtro, volta a aparecer se cortar de novo.
+    const queryKey = [period, de, ate, kind, actor].join('|')
+    const [truncatedHiddenFor, setTruncatedHiddenFor] = useState<string | null>(null)
+
     const [exporting, setExporting] = useState(false)
 
     // "Nunca acessou" vem dos membros (last_seen_at), não dos eventos: só busca quando escolhido.
-    const never = filter.kind === NEVER
     const members = useAsync(() => (never ? dataClient.listMembers(org) : Promise.resolve(null)), [org, never])
 
     if (error) return <ErrorState error={error} />
@@ -69,7 +78,7 @@ export function AuditPage() {
         <>
             <PageHeader
                 title="Auditoria"
-                description="Entradas, exportações, mudanças de acesso e sessões de suporte. Guardado por pelo menos 6 meses."
+                description="Entradas, dashboards abertos, exportações, mudanças de acesso e sessões de suporte. Guardado por pelo menos 6 meses."
                 actions={
                     <button className="btn" type="button" disabled={exporting || count === 0} onClick={exportCsv}>
                         <Icon name="download" size={16} />
@@ -79,9 +88,15 @@ export function AuditPage() {
             />
             <div className="stack">
                 {notice && <Notice message={notice} onClose={() => setNotice(null)} />}
+                {!never && data.truncated && truncatedHiddenFor !== queryKey && (
+                    <Notice
+                        message="Mostrando os 2000 eventos mais recentes. Estreite o período para ver o resto."
+                        onClose={() => setTruncatedHiddenFor(queryKey)}
+                    />
+                )}
                 <AuditFilters
                     value={filter}
-                    actors={never ? neverAll.map((r) => r.name) : actorsOf(data.events)}
+                    actors={never ? neverAll.map((r) => r.name) : data.actors}
                     onChange={setFilter}
                 />
                 {never ? (

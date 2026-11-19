@@ -60,7 +60,7 @@ export const onboardingAccess: AccessOverview = {
     can_set_org_role: true,
 }
 
-export const onboardingAudit: AuditResponse = { events: [] }
+export const onboardingAudit: AuditResponse = { events: [], truncated: false, actors: [] }
 
 // Ainda sem fontes conectadas: só a unidade-sede, vazia.
 export const onboardingSources: SourcesResponse = {
