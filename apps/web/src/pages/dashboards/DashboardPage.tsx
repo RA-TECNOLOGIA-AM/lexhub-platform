@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { useParams } from 'react-router'
+import { ErrorBoundary } from '../../components/states/ErrorBoundary.tsx'
 import { LoadingState } from '../../components/states/LoadingState.tsx'
 import { StateMessage } from '../../components/states/StateMessage.tsx'
 import { DASHBOARD_PAGES } from './registry.tsx'
@@ -17,9 +18,12 @@ export function DashboardPage() {
         )
     }
     // O dashboard é baixado na 1ª vez que abre: enquanto isso, o mesmo esqueleto do carregamento dos dados.
+    // Erro de render no dashboard fica só no miolo: topbar e menu continuam funcionando.
     return (
-        <Suspense fallback={<LoadingState variant="dashboard" />}>
-            <Page />
-        </Suspense>
+        <ErrorBoundary resetKey={dashboardKey} title="Este dashboard não abriu">
+            <Suspense fallback={<LoadingState variant="dashboard" />}>
+                <Page />
+            </Suspense>
+        </ErrorBoundary>
     )
 }
