@@ -45,6 +45,9 @@ def test_admin_formato_completo(client, signer, me_repo):
             "can_export": True,
             "can_see_commission": True,
             "platform_staff": False,
+            "teams": [],
+            "offices": [],
+            "avatar_path": None,
         },
         "org": {"slug": "lexgroup", "name": "LexGroup", "sub": "3 unidades"},
         "units": [
@@ -130,6 +133,23 @@ def test_sem_unidade_mostra_papel_da_org_e_nenhuma_unidade(client, signer, me_re
     body = client.get("/me", headers=auth(signer)).json()
     assert body["user"]["role_label"] == "Membro"
     assert body["units"] == []
+
+
+def test_setores_e_escritorios_do_perfil(client, signer, me_repo):
+    m = MembershipRow(
+        full_name="Luis Henrique Sousa",
+        role_name="Desenvolvedor",
+        permissions=ADMIN,
+        units=(),
+        teams=("Tecnologia",),
+        offices=("ESCRITÓRIO MASTER",),
+        avatar_path=f"{USER_ID}/foto.webp",
+    )
+    me_repo.add(USER_ID, LEXGROUP, m)
+    user = client.get("/me", headers=auth(signer)).json()["user"]
+    assert user["teams"] == ["Tecnologia"]
+    assert user["offices"] == ["ESCRITÓRIO MASTER"]
+    assert user["avatar_path"] == f"{USER_ID}/foto.webp"
 
 
 def test_platform_staff_vem_do_app_metadata(client, signer, me_repo):

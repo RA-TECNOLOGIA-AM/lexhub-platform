@@ -78,6 +78,9 @@ const copy = <T>(value: T): T => structuredClone(value)
 // Sessão fictícia: fica no sessionStorage (sobrevive ao F5, some ao fechar a aba).
 const SESSION_KEY = 'lexhub.mock.session'
 
+// Foto de perfil do mock (data URL), no localStorage.
+const AVATAR_KEY = 'lexhub.mock.avatar'
+
 // Favoritos: ficam no localStorage (sobrevivem a fechar a aba, como na API ficarão no banco).
 const FAVORITES_KEY = 'lexhub.mock.favorites'
 
@@ -263,7 +266,9 @@ export function createMockClient(): DataClient {
             }
             const found = meFor(org ?? me.org.slug)
             if (!found) throw new DataError(403, 'Você não faz parte desta organização')
-            return copy(found)
+            const result = copy(found)
+            result.user.avatar_path = localStorage.getItem(AVATAR_KEY)
+            return result
         },
 
         async listDashboards(org) {
@@ -538,6 +543,26 @@ export function createMockClient(): DataClient {
         async markNotificationsRead(ids) {
             notifications.markRead(who().email, ids)
         },
+
+        // Foto de perfil: no mock, a própria imagem (data URL) fica no localStorage e vira o avatar_path.
+        async uploadMyAvatar(image) {
+            await wait()
+            requireSession()
+            const path = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = () => resolve(String(reader.result))
+                reader.onerror = () => reject(new DataError(0, 'Não foi possível ler a foto.'))
+                reader.readAsDataURL(image)
+            })
+            localStorage.setItem(AVATAR_KEY, path)
+            return path
+        },
+        async removeMyAvatar() {
+            await wait()
+            requireSession()
+            localStorage.removeItem(AVATAR_KEY)
+        },
+        avatarUrl: (path) => path,
 
         // Mesmas regras da API: sessão, organização, unidade liberada e can_export; registra na Auditoria.
         // No mock o arquivo é sempre CSV (gerar XLSX exige biblioteca); com a API, vem o formato pedido.

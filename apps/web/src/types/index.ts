@@ -8,6 +8,9 @@ export type User = {
     can_export: boolean
     can_see_commission: boolean
     platform_staff: boolean // equipe RA: vê a seção "Plataforma" (Clientes)
+    teams: string[] // setores (app.membership_teams), para o cartão de perfil
+    offices: string[] // escritórios em que tem cargo (app.membership_units)
+    avatar_path: string | null // foto de perfil (bucket 'avatars'); a URL sai de dataClient.avatarUrl
 }
 
 export type Org = { slug: string; name: string; sub: string }

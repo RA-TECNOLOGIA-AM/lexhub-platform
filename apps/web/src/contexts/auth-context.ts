@@ -17,6 +17,8 @@ export type AuthValue = {
     refreshSession(): Promise<void>
     // Troca a organização ativa (busca o "me" dela). Rejeita se a pessoa não faz parte (403).
     switchOrg(slug: string): Promise<void>
+    // Foto de perfil trocada (ou tirada, null): atualiza o me.user na hora.
+    setAvatarPath(path: string | null): void
 }
 
 export const AuthContext = createContext<AuthValue | null>(null)

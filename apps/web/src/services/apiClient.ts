@@ -7,6 +7,7 @@ import { createSourcesClient } from './sourcesClient.ts'
 import { createAuditClient } from './auditClient.ts'
 import { createBillingClient } from './billingClient.ts'
 import { createNotificationsClient } from './notifications.ts'
+import { createProfileClient } from './profileClient.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
 import type {
@@ -53,6 +54,8 @@ export function createApiClient({
         ...createBillingClient(auth),
         // Notificações do sino: também direto no Supabase (schema api).
         ...createNotificationsClient(auth),
+        // Foto de perfil: Storage do Supabase + api.set_my_avatar.
+        ...createProfileClient(auth),
 
         async signIn(email, password) {
             const { error } = await auth.auth.signInWithPassword({ email: email.trim(), password })
