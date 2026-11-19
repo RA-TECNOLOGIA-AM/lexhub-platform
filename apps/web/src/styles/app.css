@@ -952,6 +952,11 @@ button.org:hover {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
 }
+/* Fallback para navegadores que escurecem o ::backdrop, mas não aplicam o blur nele. */
+body:has(.export-dialog[open]) .app > .side,
+body:has(.export-dialog[open]) .app > .main {
+    filter: blur(8px);
+}
 .export-head {
     padding: 20px 20px 14px;
     border-bottom: 1px solid var(--divider);
