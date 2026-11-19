@@ -12,8 +12,14 @@ function summaryOf(m: Member): string {
     return m.units.map((u) => `${ROLE_LABEL[u.role]} em ${unitLabel(u.code)}`).join(' · ')
 }
 
-// Módulo: o card "Pessoas" — busca e lista compacta. Clicar avisa quem usa (que abre o editor).
-export function PeopleList({ members, onPick }: { members: Member[]; onPick: (m: Member) => void }) {
+type PeopleListProps = {
+    members: Member[]
+    selectedId: string | null // a pessoa aberta no detalhe (destacada)
+    onPick: (m: Member) => void
+}
+
+// Módulo: a coluna "Pessoas" do Acesso — busca e lista compacta. Clicar avisa quem usa (que abre o detalhe).
+export function PeopleList({ members, selectedId, onPick }: PeopleListProps) {
     const [q, setQ] = useState('')
     const visible = members.filter((m) => matchesText(`${m.name} ${m.email}`, q))
     return (
@@ -36,7 +42,12 @@ export function PeopleList({ members, onPick }: { members: Member[]; onPick: (m:
                 {visible.length === 0 && <li className="muted small people-empty">Ninguém com essa busca.</li>}
                 {visible.map((m) => (
                     <li key={m.id}>
-                        <button type="button" className="people-row" onClick={() => onPick(m)}>
+                        <button
+                            type="button"
+                            className={m.id === selectedId ? 'people-row on' : 'people-row'}
+                            aria-current={m.id === selectedId ? 'true' : undefined}
+                            onClick={() => onPick(m)}
+                        >
                             <span className="people-name">{m.name}</span>
                             <span className="muted small">{summaryOf(m)}</span>
                         </button>

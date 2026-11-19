@@ -4,6 +4,7 @@ import { createMembersStore } from '../../../services/mock/members.ts'
 import type { Member } from '../../../types/index.ts'
 import {
     draftFromMember,
+    firstUnit,
     gridCell,
     isDirty,
     previewDashboards,
@@ -12,11 +13,13 @@ import {
     previewText,
     readOnlyReason,
     sectorCoverage,
+    setAllTeams,
     setUnitRole,
     toggleExtraDashboard,
     toggleExtraGroup,
     toggleTeam,
     toUpdate,
+    unitHasAccess,
     type AccessDraft,
 } from './accessEditor.ts'
 
@@ -221,5 +224,23 @@ describe('readOnlyReason', () => {
     it('Owner/Desenvolvedor editam todos, inclusive a si', () => {
         expect(readOnlyReason(admin, asDev, true)).toBeNull()
         expect(readOnlyReason(plain, asDev, false)).toBeNull()
+    })
+})
+
+describe('setAllTeams, firstUnit e unitHasAccess', () => {
+    it('marca e limpa só os setores da unidade', () => {
+        const draft = toggleTeam(setUnitRole(blank, 'NG', 'colaborador', overview.teams), 't-protocolo')
+        const all = setAllTeams(draft, 'NG', overview.teams, true)
+        expect(all.teams).toEqual(['t-protocolo', 't-diretoria', 't-pendencias'])
+        expect(setAllTeams(all, 'NG', overview.teams, false).teams).toEqual(['t-protocolo'])
+    })
+    it('abre na primeira unidade com cargo; sem cargo, na primeira', () => {
+        expect(firstUnit(setUnitRole(blank, 'NG', 'leitor', overview.teams), ['LA_AM', 'LA_RJ', 'NG'])).toBe('NG')
+        expect(firstUnit(blank, ['LA_AM', 'NG'])).toBe('LA_AM')
+    })
+    it('unidade acesa com cargo ou exceção', () => {
+        expect(unitHasAccess(blank, 'NG')).toBe(false)
+        expect(unitHasAccess(setUnitRole(blank, 'NG', 'leitor', overview.teams), 'NG')).toBe(true)
+        expect(unitHasAccess({ ...blank, extraDashboards: { ...none, NG: ['nps'] } }, 'NG')).toBe(true)
     })
 })
