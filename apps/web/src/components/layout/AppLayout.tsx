@@ -20,6 +20,13 @@ import { env } from '../../services/env.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 import { useTransitionArea } from '../page_transition/useTransitionArea.ts'
 
+function sidebarName(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean)
+    const first = parts[0]
+    const last = parts[parts.length - 1]
+    return parts.length > 2 && first && last ? `${first} ${last}` : name
+}
+
 export function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false)
     // Barra lateral recolhida (só ícones), lembrada no localStorage. Só vale no computador: no celular é gaveta.
@@ -118,7 +125,7 @@ export function AppLayout() {
                 <div className="side-user">
                     <span className="av">{user.initials}</span>
                     <span className="side-user-text">
-                        <span className="name">{user.name}</span>
+                        <span className="name">{sidebarName(user.name)}</span>
                         <span className="sub">{user.role_label}</span>
                     </span>
                     {/* Conectar uma TV: digitar o código que a TV mostra (/ativar), sem precisar do QR. */}

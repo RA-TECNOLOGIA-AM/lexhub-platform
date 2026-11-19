@@ -5343,6 +5343,10 @@ body {
     margin-left: auto;
     padding: 8px;
 }
+.side-user-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
 /* Conectar TV fica colado no Sair: só o primeiro botão empurra para a direita. */
 .side-tv + .side-logout {
     margin-left: 0;
