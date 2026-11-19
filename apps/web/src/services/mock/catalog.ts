@@ -240,6 +240,15 @@ export const catalog: DashboardCatalog = {
             syncedMin: 6,
         }),
         entry({
+            key: 'controle-processos',
+            title: 'Controle de Processos',
+            area: 'Jurídico',
+            desc: 'Esteira de trabalho (protocolados, inicial, recursal, execução e arquivados), extintos, permanência por fase e subfases.',
+            units: ['NG'],
+            source: 'LexFlow',
+            syncedMin: 6,
+        }),
+        entry({
             key: 'julgados-acordaos',
             title: 'Julgados Acórdãos',
             area: 'Jurídico',

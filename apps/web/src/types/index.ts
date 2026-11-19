@@ -150,6 +150,10 @@ export type DashboardFilters = {
     // Réplicas (LexFlow): os da seção da v1 (na v1, o NG manda com _ng; a API faz a troca)
     funcionario_replicas?: string[]
     atividade_replicas?: string[]
+    // Controle de Processos (NG): a situação (ativo | suspenso; uma), as UFs e a fase do gráfico de subfases
+    situacao_controle?: string[]
+    uf_controle?: string[]
+    fase_controle?: string[]
     situacao_processo?: string[] // ATIVO | SUSPENSO/SOBRESTADO | ARQUIVADO (sem nenhum = recorte padrão da query)
 }
 

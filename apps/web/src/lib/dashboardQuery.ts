@@ -86,6 +86,9 @@ export const FILTER_KEYS = [
     'uf_emendas_manifestacoes',
     'funcionario_replicas',
     'atividade_replicas',
+    'situacao_controle',
+    'uf_controle',
+    'fase_controle',
     'situacao_processo',
 ] as const satisfies readonly (keyof DashboardFilters)[]
 

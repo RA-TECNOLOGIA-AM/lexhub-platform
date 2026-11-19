@@ -25,11 +25,13 @@ export function MesAMes({
     format = fmt.int,
     height = 320,
     onSelectMes,
+    meta,
 }: {
     pontos: Point[]
     format?: (v: number) => string
     height?: number
     onSelectMes?: (ano: number, mes: number) => void // clicar num mês (mes 1–12; o ano mais recente com dado nele)
+    meta?: { value: number; label: string } // linha tracejada horizontal (ex.: a meta de dias por fase)
 }) {
     const anos = seriesByYear(pontos)
     if (anos.length === 0) return <ChartEmpty>Sem dados no histórico.</ChartEmpty>
@@ -42,6 +44,7 @@ export function MesAMes({
             emphasizeData
             format={format}
             labels={MESES}
+            reference={meta}
             partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
             tooltip={{ heading: 'Mês', title: mesNome }}
             onSelect={

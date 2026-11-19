@@ -6,6 +6,7 @@ from app.dashboards import (
     comercial_lexpre,
     comissao,
     comissao_lexpre,
+    controle_processos,
     emendas_manifestacoes,
     execucao,
     execucao_estrategico,
@@ -65,6 +66,7 @@ DASHBOARDS: dict[str, DashboardModule] = {
         pendencias_intermediarias.MODULE,
         emendas_manifestacoes.MODULE,
         replicas.MODULE,
+        controle_processos.MODULE,
         sobrevivencia_processual.MODULE,
         previsao_individualizada.MODULE,
     )
