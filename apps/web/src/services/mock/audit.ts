@@ -58,6 +58,8 @@ export const audit: AuditResponse = {
             detail: 'Navegador Chrome · Manaus',
         },
     ],
+    truncated: false,
+    actors: [],
 }
 
 // Evento novo (ex.: uma exportação) entra no topo da lista, como a API fará. Volta ao original no F5.

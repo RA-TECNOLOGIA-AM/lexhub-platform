@@ -1,4 +1,5 @@
 import type { DataClient, DeviceSession } from './client.ts'
+import { actorsOf } from '../pages/admin/audit/auditView.ts'
 import { DataError } from './errors.ts'
 import {
     addAuditEvent,
@@ -78,6 +79,9 @@ const copy = <T>(value: T): T => structuredClone(value)
 
 // Sessão fictícia: fica no sessionStorage (sobrevive ao F5, some ao fechar a aba).
 const SESSION_KEY = 'lexhub.mock.session'
+// Dashboards abertos (mock): última abertura por unidade/dashboard, para ignorar repetição em < 5 min.
+const VIEW_REPEAT_MS = 5 * 60 * 1000
+const lastViews = new Map<string, number>()
 
 // Foto de perfil do mock (data URL), no localStorage.
 const AVATAR_KEY = 'lexhub.mock.avatar'
@@ -387,10 +391,42 @@ export function createMockClient(): DataClient {
             accessStore.setTeamGroups(teamId, groups, seesAll)
         },
 
-        async getAudit(org) {
+        // Filtra como o banco: período [from, to), tipo e pessoa (datas comparadas como instantes, não como texto).
+        // actors = quem aparece no período/tipo, antes do filtro de pessoa.
+        async getAudit(org, query) {
             await wait()
             requireSession()
-            return copy(requireOrg(org) ? audit : onboardingAudit)
+            const all = requireOrg(org) ? audit : onboardingAudit
+            const time = (iso: string) => new Date(iso).getTime()
+            const events = all.events.filter(
+                (e) =>
+                    (!query.from || time(e.at) >= time(query.from)) &&
+                    (!query.to || time(e.at) < time(query.to)) &&
+                    (!query.kind || e.kind === query.kind),
+            )
+            return copy({
+                events: events.filter((e) => !query.actor || e.actor === query.actor),
+                truncated: false,
+                actors: actorsOf(events),
+            })
+        },
+
+        // Como o banco: a mesma pessoa/dashboard/unidade em menos de 5 min não grava de novo.
+        async logDashboardView(org, unit, dashboardKey) {
+            requireSession()
+            if (!requireOrg(org)) return
+            const key = `${unit}/${dashboardKey}`
+            const last = lastViews.get(key) ?? 0
+            if (Date.now() - last < VIEW_REPEAT_MS) return
+            lastViews.set(key, Date.now())
+            const name = catalog.available.find((d) => d.key === dashboardKey)?.title ?? dashboardKey
+            addAuditEvent({
+                actor: 'Você',
+                email: sessionStorage.getItem(SESSION_KEY) || null,
+                kind: 'view',
+                action: 'Abriu dashboard',
+                detail: `${name} · ${unit}`,
+            })
         },
 
         async logAuditExport(org, filter, rows) {

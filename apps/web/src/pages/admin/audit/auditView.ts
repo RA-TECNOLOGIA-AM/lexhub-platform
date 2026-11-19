@@ -1,11 +1,12 @@
-import type { AuditEvent, AuditKind, MembersResponse } from '../../../types/index.ts'
+import type { AuditEvent, AuditKind, AuditQuery, MembersResponse } from '../../../types/index.ts'
 import { toCsv, type CsvColumn } from '../../../lib/csv.ts'
 
 // Nome no filtro "Tipo de evento" e cor do selo de cada tipo.
 export const KIND: Record<AuditKind, { label: string; badge: string }> = {
     login: { label: 'Entradas', badge: 'badge neutral' },
+    view: { label: 'Dashboards abertos', badge: 'badge info' },
     export: { label: 'Exportações', badge: 'badge info' },
-    access: { label: 'Acesso', badge: 'badge neutral' },
+    access: { label: 'Mudanças de acesso', badge: 'badge neutral' },
     support: { label: 'Suporte', badge: 'badge pro' },
     source: { label: 'Unidades e fontes', badge: 'badge warn' },
     other: { label: 'Outros', badge: 'badge neutral' },
@@ -70,27 +71,87 @@ export const auditFilename = (org: string, today = new Date()): string =>
 export const actorsOf = (events: AuditEvent[]): string[] =>
     [...new Set(events.map((e) => e.actor))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
-// --- Filtros (Tipo de evento, Pessoa) ---
+// --- Filtros (Período, Tipo de evento, Pessoa) ---
 // 'nunca' = "Nunca acessou": não é um evento, é quem nunca entrou (a tela troca para a lista de pessoas).
 export const NEVER = 'nunca'
 export const NEVER_LABEL = 'Nunca acessou'
-export type AuditFilter = { kind: AuditKind | typeof NEVER | ''; actor: string } // '' = todos / todas
+// Período: últimos 7/30/90 dias ou datas livres (de/ate = 'AAAA-MM-DD', só valem em 'custom').
+export const PERIODS = {
+    '7': 'Últimos 7 dias',
+    '30': 'Últimos 30 dias',
+    '90': 'Últimos 90 dias',
+    custom: 'Escolher datas',
+}
+export type AuditPeriod = keyof typeof PERIODS
+export type AuditFilter = {
+    kind: AuditKind | typeof NEVER | '' // '' = todos
+    actor: string // '' = todas
+    period: AuditPeriod
+    de: string
+    ate: string
+}
 
 export const filterEvents = (events: AuditEvent[], f: AuditFilter): AuditEvent[] =>
     events.filter((e) => (!f.kind || e.kind === f.kind) && (!f.actor || e.actor === f.actor))
 
-// Filtro <-> URL (?tipo=&pessoa=). Tipo desconhecido na URL vira "todos".
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
+const DAY_MS = 24 * 60 * 60 * 1000
+// Fuso da LexGroup (Manaus não tem horário de verão): as datas livres valem do começo ao fim do dia aqui.
+const MANAUS_OFFSET = '-04:00'
+
+// Filtro <-> URL (?periodo=&de=&ate=&tipo=&pessoa=). Valor desconhecido na URL vira o padrão
+// (tipo: todos; período: 7 dias, que nem aparece na URL). Datas trocadas ou inválidas também voltam a 7 dias.
 export function filterFromParams(params: URLSearchParams): AuditFilter {
     const kind = params.get('tipo') ?? ''
     const known = kind === NEVER || kind in KIND
-    return { kind: known ? (kind as AuditFilter['kind']) : '', actor: params.get('pessoa') ?? '' }
+    const period = params.get('periodo') ?? '7'
+    const de = params.get('de') ?? ''
+    const ate = params.get('ate') ?? ''
+    const datesOk = ISO_DAY.test(de) && ISO_DAY.test(ate) && de <= ate
+    const valid = period in PERIODS && (period !== 'custom' || datesOk)
+    return {
+        kind: known ? (kind as AuditFilter['kind']) : '',
+        actor: params.get('pessoa') ?? '',
+        period: valid ? (period as AuditPeriod) : '7',
+        de: valid && period === 'custom' ? de : '',
+        ate: valid && period === 'custom' ? ate : '',
+    }
 }
 
 export function paramsFromFilter(f: AuditFilter): URLSearchParams {
     const params = new URLSearchParams()
+    if (f.period !== '7') params.set('periodo', f.period)
+    if (f.period === 'custom') {
+        params.set('de', f.de)
+        params.set('ate', f.ate)
+    }
     if (f.kind) params.set('tipo', f.kind)
     if (f.actor) params.set('pessoa', f.actor)
     return params
+}
+
+// '2026-11-30' -> '2026-12-01' (o dia seguinte, para o fim do "até" incluir o dia inteiro).
+const nextDay = (day: string): string => new Date(Date.parse(`${day}T00:00:00Z`) + DAY_MS).toISOString().slice(0, 10)
+
+// "Escolher datas" começa nos últimos 7 dias (o dia de hoje em Manaus), para a URL já nascer válida.
+export function customRange(now = new Date()): { de: string; ate: string } {
+    const day = (d: Date) => d.toLocaleDateString('sv-SE', { timeZone: 'America/Manaus' })
+    return { de: day(new Date(now.getTime() - 7 * DAY_MS)), ate: day(now) }
+}
+
+// O que pedir ao banco: o período vira instantes; "Nunca acessou" não é um tipo de evento (busca todos).
+export function queryFromFilter(f: AuditFilter, now = new Date()): AuditQuery {
+    const kind = f.kind === NEVER ? '' : f.kind
+    const actor = f.actor
+    if (f.period === 'custom') {
+        return {
+            from: `${f.de}T00:00:00${MANAUS_OFFSET}`,
+            to: `${nextDay(f.ate)}T00:00:00${MANAUS_OFFSET}`,
+            kind,
+            actor,
+        }
+    }
+    return { from: new Date(now.getTime() - Number(f.period) * DAY_MS).toISOString(), to: null, kind, actor }
 }
 
 // --- Nunca acessou: membros que nunca entraram e convites ainda não aceitos ---

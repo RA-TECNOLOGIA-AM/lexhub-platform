@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RawAuditEvent } from '../types/index.ts'
-import { toAuditEvent } from './auditEvents.ts'
+import { actionFilter, toAuditEvent } from './auditEvents.ts'
 
 const raw = (over: Partial<RawAuditEvent>): RawAuditEvent => ({
     id: '1',
@@ -37,6 +37,19 @@ describe('toAuditEvent', () => {
         expect(toAuditEvent(raw({ action: 'auth.login', metadata: { userAgent: 'python-httpx/0.27.0' } })).detail).toBe(
             'TV (QR)',
         )
+    })
+
+    it('dashboard aberto: nome do dashboard e unidade', () => {
+        const e = toAuditEvent(
+            raw({
+                action: 'dashboard.view',
+                targetType: 'dashboard',
+                targetId: 'comercial-lexpre',
+                targetName: 'Comercial (LexPre)',
+                metadata: { org: 'lexgroup', unit: 'NG' },
+            }),
+        )
+        expect(e).toMatchObject({ kind: 'view', action: 'Abriu dashboard', detail: 'Comercial (LexPre) · NG' })
     })
 
     it('exportação: dashboard, unidade, período, linhas e formato', () => {
@@ -110,5 +123,24 @@ describe('exportação da auditoria', () => {
         )
         expect(e).toMatchObject({ kind: 'export', action: 'Exportou a auditoria' })
         expect(e.detail).toBe('1.204 eventos · Entradas · Nicolas Gomes · CSV')
+    })
+})
+
+describe('actionFilter', () => {
+    it('um tipo: o banco traz só os eventos dele', () => {
+        expect(actionFilter('view')).toEqual({ p_actions: ['dashboard.view'], p_exclude_actions: null })
+        expect(actionFilter('export').p_actions).toEqual(expect.arrayContaining(['dashboard.export', 'audit.export']))
+    })
+
+    it('"Outros": o banco traz tudo menos os tipos conhecidos', () => {
+        const f = actionFilter('other')
+        expect(f.p_actions).toBeNull()
+        expect(f.p_exclude_actions).toEqual(
+            expect.arrayContaining(['dashboard.view', 'auth.login', 'dashboard.export']),
+        )
+    })
+
+    it('"Todos": sem filtro de tipo', () => {
+        expect(actionFilter('')).toEqual({ p_actions: null, p_exclude_actions: null })
     })
 })
