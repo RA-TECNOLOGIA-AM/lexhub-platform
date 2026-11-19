@@ -6,13 +6,16 @@ import { ROLE_LABEL } from '../members/memberView.ts'
 import {
     draftFromMember,
     isDirty,
+    personalText,
     previewDashboards,
     previewText,
     readOnlyReason,
+    roleSeesAll,
     setUnitRole,
     toggleTeam,
     toUpdate,
 } from './accessEditor.ts'
+import { UnitExceptions } from './UnitExceptions.tsx'
 
 type AccessDialogProps = {
     member: Member
@@ -24,8 +27,8 @@ type AccessDialogProps = {
 
 const UNIT_ROLES: UnitRoleKey[] = ['gestor', 'controller', 'colaborador', 'leitor']
 
-// Módulo: a janela de acesso de uma pessoa — cargo por unidade, equipes e (Owner/Dev) Desenvolvedor,
-// com a prévia do que ela passa a ver. Edita um rascunho; nada muda até o Salvar. Cancelar (ou Esc)
+// Módulo: a janela de acesso de uma pessoa — cargo por unidade, setores, exceções (grupos extras e
+// dashboards avulsos, só visualização) e (Owner/Dev) Desenvolvedor, com a prévia do que ela passa a ver. Edita um rascunho; nada muda até o Salvar. Cancelar (ou Esc)
 // fecha sem gravar. Usa o Modal da casa, como Filtros e Exportar.
 export function AccessDialog({ member, overview, isSelf, onSave, onClose }: AccessDialogProps) {
     const [original] = useState(() => draftFromMember(member, overview))
@@ -132,6 +135,20 @@ export function AccessDialog({ member, overview, isSelf, onSave, onClose }: Acce
                             {role && unitTeams.length === 0 && (
                                 <span className="muted small">Nenhuma equipe nesta unidade.</span>
                             )}
+                            {role &&
+                                draft.orgRole !== 'admin' &&
+                                draft.orgRole !== 'owner' &&
+                                (roleSeesAll(overview, role) ? (
+                                    <span className="muted small">Já vê tudo nesta unidade pelo cargo.</span>
+                                ) : (
+                                    <UnitExceptions
+                                        overview={overview}
+                                        draft={draft}
+                                        unit={u.code}
+                                        readOnly={readOnly}
+                                        onChange={setDraft}
+                                    />
+                                ))}
                         </fieldset>
                     )
                 })}
@@ -143,6 +160,11 @@ export function AccessDialog({ member, overview, isSelf, onSave, onClose }: Acce
                 {preview.map((p) => (
                     <span key={p.unit}>
                         <strong>{unitName(p.unit)}</strong>: {previewText(p)}
+                        {personalText(p) && (
+                            <span className="muted" style={{ display: 'block' }}>
+                                {personalText(p)}
+                            </span>
+                        )}
                     </span>
                 ))}
             </div>

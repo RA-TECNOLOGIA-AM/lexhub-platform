@@ -25,7 +25,7 @@ insert into app.membership_units (org_id, unit_id, membership_id, role_key)
 values ('10000000-0000-4000-8000-000000000ac1', '20000000-0000-4000-8000-000000000ac1', '40000000-0000-4000-8000-000000000ac2', 'gestor');
 
 insert into app.dashboard_catalog (key, name, description, area, source, sort_order, status)
-values ('dash-teste-audit', 'Dashboard Audit', '', 'Teste', 'LexPre', 1, 'available');
+values ('dash-teste-audit', 'Dashboard Audit', '', 'Tecnologia', 'LexPre', 1, 'available');
 insert into app.audit_log (org_id, actor_user_id, action, target_type, target_id, metadata, created_at)
 values ('10000000-0000-4000-8000-000000000ac1', null, 'import.v1', 'organization', null,
         '{"members": 2, "units": 1}', now() - interval '3 days'),

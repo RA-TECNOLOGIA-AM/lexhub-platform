@@ -106,6 +106,8 @@ export interface DataClient {
     // Acesso (schema api no Supabase): grade da unidade (null = a primeira gerida) e edição de uma pessoa.
     getAccessOverview(org: string, unit: string | null): Promise<AccessOverview>
     updateMemberAccess(org: string, memberId: string, update: MemberAccessUpdate): Promise<Member>
+    // Grupos de um setor (colunas inteiras) e, só Owner/Desenvolvedor, "vê tudo" (null = não muda).
+    setTeamGroups(org: string, teamId: string, groups: string[], seesAll: boolean | null): Promise<void>
     // O que a pessoa gere na organização (o menu esconde Acesso de quem não gere).
     getMyAdminPermissions(org: string): Promise<AdminPermissions>
     getAudit(org: string): Promise<AuditResponse>
