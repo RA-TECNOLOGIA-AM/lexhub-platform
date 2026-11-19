@@ -2,7 +2,7 @@ import type { ControleResponse } from '../../pages/dashboards/controle-processos
 import type { DashboardQuery } from '../../types/index.ts'
 import { metaFor } from './helpers.ts'
 
-// Controle de Processos fictício (só NG), no formato da resposta da V2 (app/dashboards/controle_processos.py).
+// Controle de Processos fictício (NG, LA e RJ; os mesmos números), no formato da resposta da V2 (app/dashboards/controle_processos.py).
 // Números inventados, determinísticos.
 
 const FASES: [string, number][] = [
@@ -36,13 +36,15 @@ function serie(base: number) {
 
 export function controleFor(unit: string, query?: DashboardQuery): ControleResponse {
     const meta = metaFor(unit, 'LexFlow')
-    if (unit !== 'NG') return { meta }
+    const unidade = ({ NG: 'NG', LA: 'LA', LA_AM: 'LA', RJ: 'RJ', LA_RJ: 'RJ' } as Record<string, string>)[unit]
+    if (!unidade) return { meta }
     const fase = query?.filters?.fase_controle?.[0]
     const totalFase = FASES.find(([f]) => f === fase)?.[1] ?? 0
     const c = (k: string) => `controle_processo_${k}_NG`
     return {
         meta,
-        unidade: 'NG',
+        unidade,
+        tem_uf: unidade !== 'LA',
         periodo: {
             [c('fase_inicial_media_dias')]: 204.48,
             [c('fase_recursal_media_dias')]: 71.7,

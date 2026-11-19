@@ -244,7 +244,7 @@ export const catalog: DashboardCatalog = {
             title: 'Controle de Processos',
             area: 'Jurídico',
             desc: 'Esteira de trabalho (protocolados, inicial, recursal, execução e arquivados), extintos, permanência por fase e subfases.',
-            units: ['NG'],
+            units: ALL,
             source: 'LexFlow',
             syncedMin: 6,
         }),

@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections import defaultdict
+from contextvars import ContextVar  # V2: _escritorio_ctx
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -19,6 +20,11 @@ from app.utils import parse_date_from_db, parse_datetime_from_db, resolver_perio
 from app.analyses.common import matriz_julgamento as mj
 
 _ID_ESCRITORIO_NG = 20
+
+# V2 (19/11/2026): o escritório da base, trocado pela casca só no Controle de Processos do RJ (escritório 27), que a
+# v1 não tem e usa este cálculo do NG (app/dashboards/controle_processos.py). Padrão: 20 (o cálculo da v1, sem
+# mudança; o Recursal do RJ continua marcando as linhas dele como 20 para usar estas funções).
+_escritorio_ctx: ContextVar[int] = ContextVar("escritorio_controle_processo_ng", default=_ID_ESCRITORIO_NG)
 
 # LexFlow `fase.id` — alinhado ao cadastro do banco (controle_processo)
 _ID_FASE_INICIAL_NG = 25
@@ -365,7 +371,7 @@ def _base_controle_processo_NG(controle_processo: List[Dict[str, Any]]) -> List[
     """
     base: List[Dict[str, Any]] = []
     for row in controle_processo:
-        if _to_int(_col(row, _COL_ID_ESCRITORIO)) == _ID_ESCRITORIO_NG:
+        if _to_int(_col(row, _COL_ID_ESCRITORIO)) == _escritorio_ctx.get():  # V2: era == _ID_ESCRITORIO_NG
             base.append(row)
     return base
 
@@ -1531,7 +1537,9 @@ _COL_LOG_DATA = "DATA"
 
 def _base_log_subfase_NG(log_subfase: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Mantém apenas linhas do escritório NG (``ID_ESCRITORIO`` == 20)."""
-    return [p for p in log_subfase if _to_int(_col(p, _COL_ID_ESCRITORIO)) == _ID_ESCRITORIO_NG]
+    return [
+        p for p in log_subfase if _to_int(_col(p, _COL_ID_ESCRITORIO)) == _escritorio_ctx.get()  # V2: era _ID_ESCRITORIO_NG
+    ]
 
 
 def _construir_segmentos_subfase_NG(log_subfase: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
