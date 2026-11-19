@@ -41,6 +41,9 @@ import { execucaoEstrategicoFor } from './mock/execucaoEstrategico.ts'
 import { ticketsFor } from './mock/tickets.ts'
 import { recursalFor } from './mock/recursal.ts'
 import { publicacoesFor } from './mock/publicacoes.ts'
+import { intermediariasFor } from './mock/intermediarias.ts'
+import { emendasFor } from './mock/emendas.ts'
+import { replicasFor } from './mock/replicas.ts'
 import { sobrevivenciaFor } from './mock/sobrevivencia.ts'
 import { previsaoFor } from './mock/previsao.ts'
 import { julgadosAcordaosFor } from './mock/julgadosAcordaos.ts'
@@ -187,6 +190,9 @@ const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unk
     tickets: ticketsFor,
     recursal: recursalFor,
     publicacoes: publicacoesFor,
+    'pendencias-intermediarias': intermediariasFor,
+    'emendas-manifestacoes': emendasFor,
+    replicas: replicasFor,
     'sobrevivencia-processual': sobrevivenciaFor,
     'previsao-individualizada': previsaoFor,
     'julgados-acordaos': julgadosAcordaosFor,

@@ -6,6 +6,7 @@ from app.dashboards import (
     comercial_lexpre,
     comissao,
     comissao_lexpre,
+    emendas_manifestacoes,
     execucao,
     execucao_estrategico,
     financeiro_estrategico,
@@ -17,6 +18,7 @@ from app.dashboards import (
     org_documentos,
     org_documentos_lexpre,
     pendencias,
+    pendencias_intermediarias,
     pendencias_lexpre,
     peticionamento,
     peticionamento_lexpre,
@@ -26,6 +28,7 @@ from app.dashboards import (
     protocolo_lexpre,
     publicacoes,
     recursal,
+    replicas,
     sobrevivencia_processual,
     tickets,
 )
@@ -59,6 +62,9 @@ DASHBOARDS: dict[str, DashboardModule] = {
         financeiro_estrategico.MODULE,
         tickets.MODULE,
         publicacoes.MODULE,
+        pendencias_intermediarias.MODULE,
+        emendas_manifestacoes.MODULE,
+        replicas.MODULE,
         sobrevivencia_processual.MODULE,
         previsao_individualizada.MODULE,
     )
