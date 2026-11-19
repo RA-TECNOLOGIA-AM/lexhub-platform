@@ -143,4 +143,10 @@ describe('filtros', () => {
         ])
         expect(filtrosControle({ meta })).toEqual([])
     })
+    it('LA (a rota do controle não filtra por UF): sem o filtro de UF', () => {
+        expect(filtrosControle(resposta({ unidade: 'LA', tem_uf: false })).map((x) => x.key)).toEqual([
+            'situacao_controle',
+            'fase_controle',
+        ])
+    })
 })

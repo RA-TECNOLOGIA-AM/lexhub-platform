@@ -31,14 +31,16 @@ def test_registrado_com_as_fontes_dos_tres_bancos():
     assert "controle_processo" in mod.queries and "execucao_LA" in mod.queries
     assert mod.extra_queries == {
         "ng": ("setor_protocolo", "comercial_geral_NG"),
+        "laadv": ("setor_protocolo_LA", "comercial_geral_LA"),
         "lexpre": ("log_setor_demanda_lexpre_NG",),
     }
+    assert {"execucao_RJ", "log_subfase_processual_RJ"} <= set(mod.queries)
     assert mod.export is None
 
 
-def test_so_ng_por_enquanto():
+def test_so_ng_la_e_rj():
     with pytest.raises(NotReady):
-        asyncio.run(m.build(_ctx("LA")))
+        asyncio.run(m.build(_ctx("SP")))
 
 
 def test_filtros_da_pagina():
@@ -124,3 +126,73 @@ def test_sem_fase_nao_busca_subfases_e_sem_lexpre_soma_so_o_legado(monkeypatch):
     )
     assert corpo["fase"] is None and corpo["lexpre"] is None
     assert "INICIAL" not in nomes
+
+
+def test_la_usa_as_rotas_do_la_sem_uf_no_controle(monkeypatch):
+    chamadas = []
+
+    async def chamar_v1(ctx, copia, fn, from_date, to_date, **kw):
+        chamadas.append((fn.__name__, ctx.source, kw))
+        return SimpleNamespace(
+            model_dump=lambda: {
+                "stats": {
+                    "total_controle_processo_LA": 5,
+                    "protocolos_resolvidos_LA": 2,
+                    "valor_causa_protocolado_LA": 20.0,
+                    "total_em_execucao_LA": 7,
+                    "total_em_execucao_acordos_LA": 1,
+                }
+            }
+        )
+
+    async def lexpre(sub):
+        assert sub.unit_ref == "2" and sub.filters["uf"] == []  # sem UF no LA
+        return {"stats": {}}
+
+    monkeypatch.setattr(m.generico_v1, "chamar_v1", chamar_v1)
+    monkeypatch.setattr(m.protocolo_lexpre, "build", lexpre)
+    ctx = replace(
+        _ctx("LA", uf_controle=["AM"]),
+        extra_sources={"laadv": "laadv", "lexpre": "lexpre"},
+        extra_refs={"laadv": "LA", "lexpre": "2"},
+    )
+    corpo = asyncio.run(m.build(ctx))
+    nomes = [n for n, *_ in chamadas]
+    assert nomes[:2] == ["get_controle_processo_LA_dashboard"] * 2
+    assert "uf" not in chamadas[0][2]
+    assert chamadas[2][:2] == ("get_protocolo_LA_dashboard", "laadv")
+    assert corpo["tem_uf"] is False
+    assert corpo["historico"]["total_controle_processo_NG"] == 5  # nomes da NG na resposta
+    assert corpo["protocolo"]["protocolos_resolvidos"] == 2
+    assert corpo["protocolo"]["valor_causa_protocolo_novo"] == 20.0
+    assert corpo["execucao"]["total_em_execucao"] == 7
+    assert corpo["execucao"]["total_em_execucao_acordos_NG"] == 1
+
+
+def test_rj_usa_o_calculo_do_ng_no_escritorio_27(monkeypatch):
+    """O RJ não tem a página na v1: a rota do NG com a base no escritório 27 e o histórico de subfases do RJ."""
+    from app.analyses.NG import controle_processo_NG as ng
+
+    vistos = []
+
+    class Fonte:
+        async def fetch(self, name):
+            return [name]
+
+    async def chamar_v1(ctx, copia, fn, from_date, to_date, **kw):
+        if fn.__name__ == "get_controle_processo_NG_dashboard":
+            vistos.append(
+                (ng._escritorio_ctx.get(), await ctx.source.fetch("log_subfase_processual"))
+            )
+        return SimpleNamespace(model_dump=lambda: {"stats": {}})
+
+    async def lexpre(sub):
+        return {"stats": {}}
+
+    monkeypatch.setattr(m.generico_v1, "chamar_v1", chamar_v1)
+    monkeypatch.setattr(m.protocolo_lexpre, "build", lexpre)
+    ctx = replace(_ctx("RJ"), source=Fonte(), extra_refs={"ng": "RJ", "lexpre": "3"})
+    corpo = asyncio.run(m.build(ctx))
+    assert vistos == [(27, ["log_subfase_processual_RJ"])] * 2
+    assert ng._escritorio_ctx.get() == 20  # fora da chamada, o NG da v1
+    assert corpo["unidade"] == "RJ" and corpo["tem_uf"] is True

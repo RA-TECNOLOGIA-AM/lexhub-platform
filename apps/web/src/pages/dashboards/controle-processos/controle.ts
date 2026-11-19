@@ -1,7 +1,8 @@
 import type { FilterField } from '../../../lib/filters.ts'
 import type { DashboardFilters, Meta, Point } from '../../../types/index.ts'
 
-// Controle de Processos (NG): a página da v1 NG/ControleProcessos.tsx. A API (app/dashboards/controle_processos.py)
+// Controle de Processos (NG, LA e RJ): a página da v1 NG/ControleProcessos.tsx (LA pela rota da v1 dele; RJ com o
+// cálculo do NG no escritório do RJ). A API (app/dashboards/controle_processos.py)
 // faz as chamadas da v1 (controle no período, no histórico e na fase; Protocolo legado; Protocolo LexPre; Execução e
 // Acordos) e devolve só os campos usados; as somas da esteira ficam aqui, como na v1. Só lógica pura (controle.test.ts).
 
@@ -10,6 +11,7 @@ type Bloco = Record<string, unknown> | null | undefined
 export type ControleResponse = {
     meta: Meta
     unidade?: string
+    tem_uf?: boolean // false = a rota do controle da unidade não filtra por UF (LA, como a v1)
     periodo?: Bloco
     historico?: Bloco
     fase?: Bloco
@@ -271,7 +273,9 @@ export function filtrosControle(data: ControleResponse, f: DashboardFilters = {}
     const ufs = [...new Set([...c.ufs, ...(f.uf_controle ?? [])])]
     return [
         { key: 'situacao_controle', label: 'Situação', options: SITUACOES_CONTROLE, single: true },
-        { key: 'uf_controle', label: 'UF', options: ufs.map((u) => ({ value: u, label: u })) },
+        ...(data.tem_uf === false
+            ? []
+            : [{ key: 'uf_controle' as const, label: 'UF', options: ufs.map((u) => ({ value: u, label: u })) }]),
         {
             key: 'fase_controle',
             label: 'Fase',

@@ -67,7 +67,10 @@ export function ControleContent({ data, filters = {}, onFiltersChange }: Content
             >
                 <div className="card cp-linha">
                     <div className="cp-base">
-                        <span className="cp-base-selo">Base total NG{c.situacao ? ` · ${rotuloSituacao}` : ''}</span>
+                        <span className="cp-base-selo">
+                            Base total {data.unidade ?? ''}
+                            {c.situacao ? ` · ${rotuloSituacao}` : ''}
+                        </span>
                         <strong className="num cp-base-qtd">{qtd(c.total.qtd)}</strong>
                         <span className="muted small">processos no retrato atual</span>
                         <span className="cp-base-sep" aria-hidden="true" />

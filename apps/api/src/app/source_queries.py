@@ -3972,3 +3972,38 @@ QUERIES["processos_status_1g_replicas_RJ"] = {
         "description": "Status de 1G (primeiro grau) dos processos do setor RÉPLICA (RJ) — base do card de taxa de procedência.",
         "params": []
     }
+
+
+# V2 (19/11/2026): Controle de Processos no RJ (escritório 27), que a v1 não tem: o histórico de subfases do RJ
+# (log_subfase_processual traz só os escritórios 20 e 21) para o tempo médio por subfase
+# (app/dashboards/controle_processos.py). controle_processo e controle_processo_todas_situacoes já trazem todos os
+# escritórios (o cálculo recorta pelo escritório).
+QUERIES["log_subfase_processual_RJ"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            lfp.id_processo                        AS "ID_PROCESSO",
+            p.id_escritorio_assinante               AS "ID_ESCRITORIO",
+            p.id_situacao                           AS "ID_SITUACAO",
+            lfp.id_fase                             AS "ID_FASE",
+            f.description                           AS "FASE",
+            lfp.id_status_processual                AS "ID_SUBFASE",
+            sp.description                          AS "SUBFASE",
+            lfp.tipo_movimentacao                   AS "TIPO_MOVIMENTACAO",
+            lfp.data                                AS "DATA"
+        FROM public.log_fase_processual lfp
+        JOIN public.processo p                  ON p.id = lfp.id_processo
+        LEFT JOIN public.fase f                 ON lfp.id_fase = f.id
+        LEFT JOIN public.status_processual sp   ON lfp.id_status_processual = sp.id
+        WHERE p.id_escritorio_assinante = 27
+          AND p.id_situacao IN (1, 6)
+          AND lfp.id_status_processual IS NOT NULL
+        ORDER BY lfp.id_processo, lfp.data
+        """,
+        "description": (
+            "Histórico de movimentação de fase/subfase (log_fase_processual) dos escritórios "
+            "NG (20) e LA (21) — usado para estimar o tempo médio de permanência por subfase "
+            "no dashboard Controle de Processos. Situação ATIVO (1) e SUSPENSO/SOBRESTADO (6)."
+        ),
+        "params": []
+    }
