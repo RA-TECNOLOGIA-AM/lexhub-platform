@@ -24,11 +24,17 @@ type ColumnChartProps = {
     reference?: { value: number; label: string } // linha tracejada horizontal (ex.: média da equipe), como a do LineChart
     gradient?: boolean // colunas em degradê (mais escuro embaixo)
     axis?: boolean // números do eixo vertical (padrão: sim)
+    // Linha por cima das colunas, numa faixa própria no alto (escala própria, sem eixo; o valor em cada ponto).
+    // Ex.: crescimento % sobre o ano anterior. null = sem ponto naquela coluna.
+    line?: ColumnLine
 }
+
+export type ColumnLine = { label: string; values: (number | null)[]; format: (v: number) => string; color?: string }
 
 const PAD = { top: 26, right: 12, bottom: 44, left: 40 }
 const MIN_IN = 17 // altura mínima (px) da parte para o valor caber dentro dela
 const TIP_W = 220 // largura da caixa do tooltip (para decidir o lado da coluna em que ela abre)
+const LINE_H = 84 // altura da faixa da linha, acima das colunas
 
 // Módulo: colunas verticais, empilhadas quando há mais de uma série (Demandas por funcionário,
 // Não protocolados por mês). O total vai em cima; o valor de cada parte, dentro dela quando cabe.
@@ -48,6 +54,7 @@ export function ColumnChart({
     reference,
     gradient = false,
     axis = true,
+    line,
 }: ColumnChartProps) {
     const gradId = useId().replace(/:/g, '')
     const [ref, width] = useWidth<HTMLDivElement>()
@@ -73,10 +80,12 @@ export function ColumnChart({
     ]
     const fill = (cor: string) => (gradient ? `url(#${gradId}-${cores.indexOf(cor)})` : cor)
     const plotW = Math.max(width - padLeft - PAD.right, 40)
-    const plotH = height - PAD.top - PAD.bottom
+    const plotTop = PAD.top + (line ? LINE_H : 0)
+    const plotH = height - plotTop - PAD.bottom
     const band = plotW / categories.length
     const barW = Math.min(band * 0.55, 110)
-    const y = (v: number) => PAD.top + plotH - (v / max) * plotH
+    const y = (v: number) => plotTop + plotH - (v / max) * plotH
+    const pontos = line ? linePoints(line.values, (i) => padLeft + band * i + band / 2, PAD.top) : []
     const maxChars = Math.max(4, Math.floor(band / 7))
     // Nome que não cabe: o primeiro nome; ainda assim grande, cortado com reticências.
     const short = (s: string) => {
@@ -158,7 +167,7 @@ export function ColumnChart({
                             <text className="chart-val" x={x + barW / 2} y={y(totals[i]) - 8} textAnchor="middle">
                                 {format(totals[i])}
                             </text>
-                            <text className="chart-axis" x={x + barW / 2} y={PAD.top + plotH + 18} textAnchor="middle">
+                            <text className="chart-axis" x={x + barW / 2} y={plotTop + plotH + 18} textAnchor="middle">
                                 <title>{cat}</title>
                                 {/* '\n' no nome = duas linhas (ex.: mês em cima, ano embaixo). */}
                                 {cat.split('\n').map((line, j) => (
@@ -174,7 +183,7 @@ export function ColumnChart({
                                     x={padLeft + band * i}
                                     y={PAD.top}
                                     width={band}
-                                    height={plotH + 24}
+                                    height={plotTop - PAD.top + plotH + 24}
                                     role={onSelect ? 'button' : undefined}
                                     tabIndex={0}
                                     onMouseEnter={tooltip ? () => setHover(i) : undefined}
@@ -195,6 +204,27 @@ export function ColumnChart({
                         </g>
                     )
                 })}
+                {line && pontos.length > 0 && (
+                    <g className="col-linha" style={{ color: line.color ?? 'var(--chart-2)' }}>
+                        <path
+                            className="chart-line"
+                            d={pontos.map((p, k) => `${k === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')}
+                        />
+                        {pontos.map((p) => (
+                            <g key={p.i}>
+                                <circle className="chart-dot" cx={p.x} cy={p.y} r={5} />
+                                <text
+                                    className={p.v < 0 ? 'col-linha-val neg' : 'col-linha-val'}
+                                    x={p.x}
+                                    y={p.y - 12}
+                                    textAnchor="middle"
+                                >
+                                    {line.format(p.v)}
+                                </text>
+                            </g>
+                        ))}
+                    </g>
+                )}
                 {reference && (
                     <g className="chart-ref">
                         <line x1={padLeft} x2={padLeft + plotW} y1={y(reference.value)} y2={y(reference.value)} />
@@ -220,7 +250,7 @@ export function ColumnChart({
                 />
             )}
             {caption && <p className="chart-caption">{caption}</p>}
-            {series.length > 1 && (
+            {(series.length > 1 || line) && (
                 <ul className="chart-legend" role="list">
                     {series.map((s) => (
                         <li key={s.label}>
@@ -228,6 +258,12 @@ export function ColumnChart({
                             {s.label}
                         </li>
                     ))}
+                    {line && (
+                        <li style={{ color: line.color ?? 'var(--chart-2)' }}>
+                            <span className="chart-key line" style={{ background: 'currentColor' }} />
+                            <span className="col-linha-leg">{line.label}</span>
+                        </li>
+                    )}
                 </ul>
             )}
         </div>
@@ -264,6 +300,20 @@ function ColumnTip({ title, series, index, total, format, left, top }: ColumnTip
                 <span className="num strong">{format(total)}</span>
             </div>
         </div>
+    )
+}
+
+// Pontos da linha na faixa do alto: o maior valor em cima, o menor embaixo (um só valor: no meio da faixa).
+function linePoints(values: (number | null)[], xOf: (i: number) => number, top: number) {
+    const vals = values.filter((v): v is number => v !== null && Number.isFinite(v))
+    if (vals.length === 0) return []
+    const hi = Math.max(...vals)
+    const lo = Math.min(...vals)
+    const h = LINE_H - 40 // espaço para o valor acima do ponto mais alto e folga para as colunas
+    return values.flatMap((v, i) =>
+        v === null || !Number.isFinite(v)
+            ? []
+            : [{ i, v, x: xOf(i), y: top + 22 + (hi === lo ? h / 2 : ((hi - v) / (hi - lo)) * h) }],
     )
 }
 

@@ -5,6 +5,8 @@ import { ColumnChart } from '../../../components/charts/ColumnChart.tsx'
 import { LineChart } from '../../../components/charts/LineChart.tsx'
 import { PieChart } from '../../../components/charts/PieChart.tsx'
 import { DashSection } from '../../../components/dashboard/DashSection.tsx'
+import { FilterPicker } from '../../../components/dashboard/FilterDialog.tsx'
+import { PeriodPicker } from '../../../components/dashboard/PeriodPicker.tsx'
 import { DeltaPill, FootRow, HeroStat, MiniStat, Pill, StackedRate } from '../../../components/dashboard/StatCard.tsx'
 import type { Tone } from '../../../components/dashboard/tone.ts'
 import { CountUp } from '../../../components/ui/CountUp.tsx'
@@ -12,6 +14,7 @@ import { Icon } from '../../../components/ui/Icon.tsx'
 import { Modal } from '../../../components/ui/Modal.tsx'
 import { toggleFilter } from '../../../lib/filters.ts'
 import { fmt } from '../../../lib/format.ts'
+import type { Period } from '../../../lib/period.ts'
 import type { DashboardFilters } from '../../../types/index.ts'
 import type { ContentProps } from '../types.ts'
 import { CORES_ANO, MESES, mesNome, periodo } from '../setor/datas.ts'
@@ -69,7 +72,11 @@ export function FinanceiroEstrategicoContent({
     return (
         <div className="dsecs">
             <ReflexoSecao r={r} f={f} meta={data.meta} onPendentes={() => setPendentesAberto(true)} />
-            <AjuizamentoSecao r={r} f={f} />
+            <AjuizamentoSecao
+                r={r}
+                f={f}
+                onPeriodo={onFiltersChange && ((p) => onFiltersChange({ ...filters, aj_de: [p.from], aj_ate: [p.to] }))}
+            />
             {data.conversao && <ConversaoSecao c={data.conversao} filters={filters} marcar={marcar} limpar={limpar} />}
             <DashSection
                 index={4}
@@ -334,7 +341,7 @@ function ReflexoSecao({
                     }
                 />
             </div>
-            <div className="grid grid-stat-3 grid-mini grid-mini-stack">
+            <div className="grid grid-stat-3 grid-mini grid-mini-stack ex-mt">
                 <MiniStat
                     label="Ticket médio"
                     icon="receipt"
@@ -360,7 +367,7 @@ function ReflexoSecao({
                     hint="A mesma mediana entre ajuizamento e TED, em meses (dias ÷ 30,44)."
                 />
             </div>
-            <div className="grid fe-tres">
+            <div className="grid fe-tres ex-mt">
                 <ChartCard title="Receita × matérias" subtitle="8 maiores + Outras · clique para filtrar">
                     <PizzaMaterias itens={r.receita_por_materia} f={f} centro="R$ em receita" />
                 </ChartCard>
@@ -371,7 +378,7 @@ function ReflexoSecao({
                     <PizzaOrigem origem={r.origem} f={f} />
                 </ChartCard>
             </div>
-            <div className="grid mz-duas">
+            <div className="grid mz-duas ex-mt">
                 <ChartCard title="Receita por ano de ajuizamento" subtitle="Clique num ano para filtrar">
                     <PieChart
                         items={r.receita_por_ano_ajuizamento}
@@ -389,7 +396,7 @@ function ReflexoSecao({
                     <MesAMes historico={r.historico_mensal} campo="ticket_medio" format={compacto} />
                 </ChartCard>
             </div>
-            <div className="grid mz-duas">
+            <div className="grid mz-duas ex-mt">
                 <ChartCard title="Receita por mês" tag={<Pill>Série anual</Pill>}>
                     <MesAMes historico={r.historico_mensal} campo="receita" format={compacto} />
                 </ChartCard>
@@ -398,6 +405,7 @@ function ReflexoSecao({
                 </ChartCard>
             </div>
             <ChartCard
+                className="ex-mt"
                 title="Reflexo do mês"
                 subtitle="Receita dos TEDs do período pelo mês de ajuizamento do processo · clique para filtrar pelo ano"
             >
@@ -409,7 +417,8 @@ function ReflexoSecao({
 
 // --- 02 · Reflexo de Ajuizamento -------------------------------------------------------------------------------
 
-function AjuizamentoSecao({ r, f }: { r: ReflexoFinanceiro; f: Filtrar }) {
+// Tem o próprio período (pela DATA AJUIZAMENTO), escolhido no cabeçalho da seção: não segue o da página.
+function AjuizamentoSecao({ r, f, onPeriodo }: { r: ReflexoFinanceiro; f: Filtrar; onPeriodo?: (p: Period) => void }) {
     const a = r.reflexo_ajuizamento
     const med = a.mediana_tempo_ajuizamento_ted
     return (
@@ -417,7 +426,10 @@ function AjuizamentoSecao({ r, f }: { r: ReflexoFinanceiro; f: Filtrar }) {
             index={2}
             eyebrow="Ajuizamento"
             title="Reflexo de Ajuizamento"
-            subtitle="Os processos ajuizados no período (DATA AJUIZAMENTO) e a receita que já deram, em qualquer data do TED."
+            subtitle="Os processos ajuizados no período desta seção (DATA AJUIZAMENTO) e a receita que já deram, em qualquer data do TED. O período da página não vale aqui."
+            action={
+                onPeriodo && <PeriodPicker value={{ from: a.periodo.inicio, to: a.periodo.fim }} onChange={onPeriodo} />
+            }
         >
             <div className="grid grid-stat-3 grid-mini grid-mini-stack">
                 <MiniStat
@@ -426,15 +438,15 @@ function AjuizamentoSecao({ r, f }: { r: ReflexoFinanceiro; f: Filtrar }) {
                     tone="ok"
                     value={pct2(a.percentual_procedentes.valor)}
                     below={<DeltaPill value={a.percentual_procedentes.comparativo} suffix={VS} plain />}
-                    hint="TEDs dos processos ajuizados no período ÷ processos protocolados no período (LexFlow)."
+                    hint="TEDs dos processos ajuizados no período da seção ÷ processos protocolados no mesmo período (LexFlow)."
                 />
                 <MiniStat
                     label="Valor protocolado"
                     icon="check-circle"
                     tone="info"
-                    value={fmt.brl(r.valor_protocolado.valor)}
-                    below={<DeltaPill value={r.valor_protocolado.comparativo} suffix={VS} plain />}
-                    hint="Valor de causa dos processos distribuídos no período (LexFlow)."
+                    value={fmt.brl(a.valor_protocolado.valor)}
+                    below={<DeltaPill value={a.valor_protocolado.comparativo} suffix={VS} plain />}
+                    hint="Valor de causa dos processos distribuídos no período da seção (LexFlow)."
                 />
                 <MiniStat
                     label="Receita"
@@ -469,10 +481,10 @@ function AjuizamentoSecao({ r, f }: { r: ReflexoFinanceiro; f: Filtrar }) {
                     hint="A mesma mediana, em meses (dias ÷ 30,44)."
                 />
             </div>
-            <div className="grid fe-tres">
+            <div className="grid fe-tres ex-mt">
                 <ChartCard title="Protocolados × matérias" subtitle="Valor de causa no LexFlow">
                     <PieChart
-                        items={r.valor_protocolado.por_materia}
+                        items={a.valor_protocolado.por_materia}
                         size={240}
                         format={compacto}
                         centerFormat={semMoeda}
@@ -486,7 +498,7 @@ function AjuizamentoSecao({ r, f }: { r: ReflexoFinanceiro; f: Filtrar }) {
                     <PizzaMaterias itens={a.receita_por_materia} f={f} centro="R$ em receita" />
                 </ChartCard>
             </div>
-            <div className="grid fe-pa">
+            <div className="grid fe-pa ex-mt">
                 <ChartCard title="Percentual anual" subtitle="Receita pelo ano do TED">
                     <PieChart
                         items={a.receita_por_ano_ted}
@@ -524,30 +536,36 @@ function ConversaoSecao({
     marcar: Marcar
     limpar: Limpar
 }) {
+    const [aberto, setAberto] = useState<'aj' | 'fin' | null>(null)
     const anos = (xs: string[]) => xs.map((value) => ({ value, label: value }))
+    const seletor = (
+        id: 'aj' | 'fin',
+        label: string,
+        key: 'conv_ano_ajuizamento' | 'conv_ano_financeiro',
+        opcoes: string[],
+    ) => (
+        <FilterPicker
+            field={{ label, icon: 'calendar', options: anos(opcoes) }}
+            chosen={filters[key] ?? []}
+            open={aberto === id}
+            onOpenChange={(o) => setAberto(o ? id : null)}
+            onToggle={(v) => marcar?.(key, v)}
+            onClear={() => limpar?.(key)}
+        />
+    )
     return (
         <DashSection
             index={3}
             eyebrow="Conversão"
             title="Conversão"
             subtitle="Quanto do valor de causa ajuizado virou receita: escolha os anos de ajuizamento e do financeiro (TED)."
+            action={
+                <div className="fe-conv-anos">
+                    {seletor('aj', 'Data ajuizamento', 'conv_ano_ajuizamento', c.anos_ajuizamento_opcoes)}
+                    {seletor('fin', 'Data financeiro', 'conv_ano_financeiro', c.anos_financeiro_opcoes)}
+                </div>
+            }
         >
-            <div className="card fe-seletores">
-                <Seletor
-                    titulo="Data ajuizamento"
-                    opcoes={anos(c.anos_ajuizamento_opcoes)}
-                    marcados={filters.conv_ano_ajuizamento ?? []}
-                    onToggle={marcar && ((v) => marcar('conv_ano_ajuizamento', v))}
-                    onLimpar={limpar && (() => limpar('conv_ano_ajuizamento'))}
-                />
-                <Seletor
-                    titulo="Data financeiro"
-                    opcoes={anos(c.anos_financeiro_opcoes)}
-                    marcados={filters.conv_ano_financeiro ?? []}
-                    onToggle={marcar && ((v) => marcar('conv_ano_financeiro', v))}
-                    onLimpar={limpar && (() => limpar('conv_ano_financeiro'))}
-                />
-            </div>
             <div className="grid grid-stat-3">
                 <HeroStat
                     label="Valor receita"
@@ -579,7 +597,7 @@ function ConversaoSecao({
                     footer={<FootRow left="Receita sobre o valor ajuizado" />}
                 />
             </div>
-            <div className="grid fe-tres">
+            <div className="grid fe-tres ex-mt">
                 <ChartCard title="Receita × matérias" subtitle="8 maiores + Outras">
                     <PieChart
                         items={c.receita_por_materia}
@@ -615,30 +633,18 @@ function ConversaoSecao({
 function EvolucaoCard({ evolucao }: { evolucao: ReflexoFinanceiro['evolucao_anual'] }) {
     if (evolucao.length === 0) return <ChartEmpty />
     return (
-        <ChartCard
-            title="Receita por ano"
-            subtitle={`Pelo ano do TED, a partir de ${evolucao[0].ano}`}
-            footer={
-                <div className="fe-crescimentos">
-                    {evolucao.map((e) => (
-                        <span key={e.ano} className="small">
-                            <span className="muted num">{e.ano}</span>{' '}
-                            {e.crescimento_pct === null ? (
-                                <span className="muted">—</span>
-                            ) : (
-                                <DeltaPill value={e.crescimento_pct} suffix=" vs ano anterior" />
-                            )}
-                        </span>
-                    ))}
-                </div>
-            }
-        >
+        <ChartCard title="Receita por ano" subtitle={`Pelo ano do TED, a partir de ${evolucao[0].ano}`}>
             <ColumnChart
-                height={300}
+                height={380}
                 className="col-accent"
                 format={compacto}
                 categories={evolucao.map((e) => String(e.ano))}
                 series={[{ label: 'Receita', color: 'var(--chart-1)', values: evolucao.map((e) => e.receita) }]}
+                line={{
+                    label: 'Crescimento sobre o ano anterior',
+                    values: evolucao.map((e) => e.crescimento_pct),
+                    format: (v) => `${v > 0 ? '+' : ''}${fmt.pct2(v)}`,
+                }}
             />
         </ChartCard>
     )
@@ -694,6 +700,7 @@ function PrevisaoSecao({ p }: { p: Previsao }) {
                 />
             </div>
             <ChartCard
+                className="ex-mt"
                 title="Receita anual — real e previsão"
                 subtitle={`Real · o que ainda deve entrar em ${p.ano_atual} · previsão ${p.ano_previsto} (cenário base e até o maior cenário)`}
             >
@@ -714,7 +721,7 @@ function PrevisaoSecao({ p }: { p: Previsao }) {
                     tooltip
                 />
             </ChartCard>
-            <div className="grid grid-stat">
+            <div className="grid grid-stat ex-mt">
                 {[...p.cenarios]
                     .sort((x, y) => x.valor - y.valor)
                     .map((c) => (
@@ -722,7 +729,7 @@ function PrevisaoSecao({ p }: { p: Previsao }) {
                     ))}
             </div>
             {p.conferencia_safra && (
-                <p className="small muted">
+                <p className="small muted ex-mt">
                     Conferência: o cenário por safra previa {fmt.brl(p.conferencia_safra.previsto)} para{' '}
                     {p.conferencia_safra.ano}; entrou {fmt.brl(p.conferencia_safra.real)} (erro de{' '}
                     {fmt.dec1(p.conferencia_safra.erro_pct)}%).

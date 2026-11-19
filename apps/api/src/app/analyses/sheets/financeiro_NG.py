@@ -1270,8 +1270,13 @@ async def get_financeiro_NG_reflexo_financeiro(
     materias: Optional[List[str]] = None,
     anos_ajuizamento: Optional[List[str]] = None,
     escritorio: str = "NG",
+    ajuizamento_from: Optional[date] = None,
+    ajuizamento_to: Optional[date] = None,
 ) -> Dict[str, Any]:
     """Cards da section "Reflexo Financeiro" (planilha `REPASSES CLIENTES`).
+
+    V2: `ajuizamento_from`/`ajuizamento_to` = o período próprio da section "Reflexo de Ajuizamento" (pela
+    DATA AJUIZAMENTO, escolhido na própria section); sem eles, o período da página, como na v1.
 
     `escritorio` ("NG" ou "LA") escolhe a planilha e as regras próprias
     (`FINANCEIRO_ESTRATEGICO_CONFIG`); o cálculo é o mesmo.
@@ -1317,6 +1322,15 @@ async def get_financeiro_NG_reflexo_financeiro(
     inicio_atual, fim_atual, inicio_anterior, fim_anterior = (
         resolver_periodo_comparativo(from_date, to_date)
     )
+    # V2: o período próprio da section "Reflexo de Ajuizamento" (o comparativo segue a mesma regra).
+    if ajuizamento_from and ajuizamento_to:
+        aj_inicio, aj_fim, aj_inicio_ant, aj_fim_ant = resolver_periodo_comparativo(
+            ajuizamento_from, ajuizamento_to
+        )
+    else:
+        aj_inicio, aj_fim, aj_inicio_ant, aj_fim_ant = (
+            inicio_atual, fim_atual, inicio_anterior, fim_anterior
+        )
     kwargs_cols = dict(col_hono_suc=col_hono_suc, col_hono=col_hono, col_suc=col_suc)
     atual    = _reflexo_financeiro_metricas(
         rows, from_date=inicio_atual, to_date=fim_atual, **kwargs_cols
@@ -1381,15 +1395,18 @@ async def get_financeiro_NG_reflexo_financeiro(
         "evolucao_anual": _evolucao_anual(historico_mensal, cfg.ano_inicial),
         "reflexo_do_mes": _reflexo_do_mes(atual["receita_por_mes_ajuizamento"]),
         "filtros_opcoes": filtros_opcoes,
-        # Section "Reflexo de Ajuizamento": mesmo período, aplicado a DATA AJUIZAMENTO.
-        "reflexo_ajuizamento": _reflexo_ajuizamento(
-            rows,
-            inicio_atual=inicio_atual,
-            fim_atual=fim_atual,
-            inicio_anterior=inicio_anterior,
-            fim_anterior=fim_anterior,
-            **kwargs_cols,
-        ),
+        # Section "Reflexo de Ajuizamento": o período dela (V2) ou o da página, aplicado a DATA AJUIZAMENTO.
+        "reflexo_ajuizamento": {
+            "periodo": {"inicio": aj_inicio.isoformat(), "fim": aj_fim.isoformat()},
+            **_reflexo_ajuizamento(
+                rows,
+                inicio_atual=aj_inicio,
+                fim_atual=aj_fim,
+                inicio_anterior=aj_inicio_ant,
+                fim_anterior=aj_fim_ant,
+                **kwargs_cols,
+            ),
+        },
         "mediana_tempo_ajuizamento_ted": {
             "dias":             mediana_dias_atual,
             "dias_anterior":    mediana_dias_anterior,

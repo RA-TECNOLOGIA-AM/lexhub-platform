@@ -1,4 +1,5 @@
 import type { FinanceiroEstrategicoResponse } from '../../pages/dashboards/financeiro-estrategico/types.ts'
+import { todayIso } from '../../lib/period.ts'
 import { metaFor } from './helpers.ts'
 
 // Financeiro Estratégico fictício: o cálculo da v1 nas planilhas do financeiro (NG e LA) e no LexFlow em
@@ -819,5 +820,12 @@ const LA = {
 
 export function financeiroEstrategicoFor(unit: string): FinanceiroEstrategicoResponse {
     const dados = unit === 'NG' ? NG : unit === 'LA_AM' ? LA : null
-    return { meta: metaFor(unit, 'Planilha do financeiro + LexFlow'), ...(dados ? structuredClone(dados) : {}) }
+    const r = dados ? structuredClone(dados) : null
+    // A foto é de antes do período próprio da seção Reflexo de Ajuizamento: preenche com o padrão (este ano).
+    if (r?.reflexo_financeiro && !r.reflexo_financeiro.reflexo_ajuizamento.periodo) {
+        const ano = new Date().getFullYear()
+        r.reflexo_financeiro.reflexo_ajuizamento.periodo = { inicio: `${ano}-01-01`, fim: todayIso() }
+        r.reflexo_financeiro.reflexo_ajuizamento.valor_protocolado = r.reflexo_financeiro.valor_protocolado
+    }
+    return { meta: metaFor(unit, 'Planilha do financeiro + LexFlow'), ...(r ?? {}) }
 }

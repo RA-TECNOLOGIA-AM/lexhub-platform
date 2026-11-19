@@ -23,6 +23,8 @@ export const FILTER_KEYS = [
     'ano_ajuizamento',
     'conv_ano_ajuizamento',
     'conv_ano_financeiro',
+    'aj_de',
+    'aj_ate',
     'pend_ano',
     'pend_mes',
     'subfase',

@@ -77,6 +77,9 @@ export type DashboardFilters = {
     ano_ajuizamento?: string[]
     conv_ano_ajuizamento?: string[]
     conv_ano_financeiro?: string[]
+    // Financeiro Estratégico: o período próprio da seção Reflexo de Ajuizamento (uma data AAAA-MM-DD cada).
+    aj_de?: string[]
+    aj_ate?: string[]
     pend_ano?: string[]
     pend_mes?: string[]
     // Execução Condenação e Execução Acordos (LexFlow): os parâmetros das rotas da v1. Subfase e comarca valem
