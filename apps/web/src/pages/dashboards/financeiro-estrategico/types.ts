@@ -16,7 +16,11 @@ export type Mediana = {
     comparativo: number | null
 }
 
+export type ValorProtocolado = Comparado & { quantidade: number; quantidade_anterior: number; por_materia: Fatia[] }
+
 export type ReflexoAjuizamento = {
+    periodo: { inicio: string; fim: string } // o período próprio da seção (aj_de/aj_ate; padrão: este ano)
+    valor_protocolado: ValorProtocolado // LexFlow, no período da seção
     total_entradas: Comparado
     valor_receita: Comparado
     ticket_medio: Comparado
@@ -45,7 +49,7 @@ export type ReflexoFinanceiro = {
     reflexo_ajuizamento: ReflexoAjuizamento
     mediana_tempo_ajuizamento_ted: Mediana
     // LexFlow: valor de causa dos processos distribuídos no período (não muda com os filtros da planilha)
-    valor_protocolado: Comparado & { quantidade: number; quantidade_anterior: number; por_materia: Fatia[] }
+    valor_protocolado: ValorProtocolado
 }
 
 export type Conversao = {

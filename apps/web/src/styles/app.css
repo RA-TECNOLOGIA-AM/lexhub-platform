@@ -878,6 +878,18 @@ button.org:hover {
     left: 0;
     width: min(390px, calc(100vw - 32px));
 }
+/* No cabeçalho de uma seção (à direita): o painel abre para a esquerda. Tela estreita: o controle desce para
+   baixo do título, à esquerda, e o painel volta a abrir para a direita. */
+.dsec-action .period-popover {
+    left: auto;
+    right: 0;
+}
+@media (max-width: 720px) {
+    .dsec-action .period-popover {
+        left: 0;
+        right: auto;
+    }
+}
 .popover-actions {
     display: flex;
     justify-content: flex-end;
@@ -3034,6 +3046,16 @@ div.org {
 }
 .chart-key.line.dashed {
     background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 8px);
+}
+/* ColumnChart com linha (ex.: crescimento % sobre o ano anterior): o valor em cada ponto. */
+.col-linha-val {
+    fill: var(--ok);
+    font-family: var(--num);
+    font-size: 12px;
+    font-weight: 700;
+}
+.col-linha-val.neg {
+    fill: var(--danger);
 }
 .chart-key.dot {
     width: 8px;
@@ -5791,6 +5813,17 @@ button.at-name:hover {
 .fe-scroll {
     overflow-x: auto;
 }
+/* Conversão: os anos de ajuizamento e do financeiro como selects no cabeçalho, ao lado do "Ocultar". */
+.fe-conv-anos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.fe-conv-anos .fpick {
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 14px;
+}
 .fe-seletores {
     display: flex;
     flex-direction: column;
@@ -5825,11 +5858,6 @@ button.at-name:hover {
     background: color-mix(in srgb, var(--accent) 16%, transparent);
     color: var(--accent);
     font-weight: 700;
-}
-.fe-crescimentos {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 18px;
 }
 .fe-aviso {
     display: flex;

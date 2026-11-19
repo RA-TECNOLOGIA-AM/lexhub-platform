@@ -128,11 +128,33 @@ def _soma_anos(por_ano: dict[str, tuple[float, int]], anos: list[str] | None) ->
     return round(sum(v for v, _ in sel), 2), sum(q for _, q in sel)
 
 
+def _periodo_ajuizamento(ctx: DashboardContext) -> tuple[date, date]:
+    """V2: o período próprio da seção "Reflexo de Ajuizamento" (aj_de/aj_ate, escolhido na seção; não segue o
+    período da página). Sem ele, ou inválido: este ano até hoje."""
+    f = ctx.filters
+
+    def _data(chave: str) -> date | None:
+        try:
+            return date.fromisoformat(str((f.get(chave) or [""])[0]))
+        except ValueError:
+            return None
+
+    de, ate = _data("aj_de"), _data("aj_ate")
+    if de and ate and de <= ate:
+        return de, ate
+    hoje = date.today()
+    return hoje.replace(month=1, day=1), hoje
+
+
 async def _reflexo(ctx: DashboardContext, escritorio: str, dias: Ajuizado) -> dict[str, Any]:
     """v1 _financeiro_estrategico_dashboard: o reflexo da planilha + o valor protocolado do LexFlow e o
-    "% Julgados Procedentes" (entradas do Reflexo de Ajuizamento ÷ processos protocolados)."""
+    "% Julgados Procedentes" (entradas do Reflexo de Ajuizamento ÷ processos protocolados).
+
+    V2: a seção "Reflexo de Ajuizamento" usa o período próprio dela (_periodo_ajuizamento), também no valor
+    protocolado e no "% Julgados Procedentes" dela."""
     f = ctx.filters
     inicio_atual, fim_atual, _, _ = resolver_periodo_comparativo(ctx.period.start, ctx.period.end)
+    aj_de, aj_ate = _periodo_ajuizamento(ctx)
     reflexo = await get_financeiro_NG_reflexo_financeiro(
         from_date=inicio_atual,
         to_date=fim_atual,
@@ -140,10 +162,15 @@ async def _reflexo(ctx: DashboardContext, escritorio: str, dias: Ajuizado) -> di
         materias=f.get("materia") or None,
         anos_ajuizamento=f.get("ano_ajuizamento") or None,
         escritorio=escritorio,
+        ajuizamento_from=aj_de,
+        ajuizamento_to=aj_ate,
     )
-    valor_protocolado = _build_financeiro_valor_protocolado(dias, inicio_atual, fim_atual)
-    reflexo["valor_protocolado"] = valor_protocolado
+    reflexo["valor_protocolado"] = _build_financeiro_valor_protocolado(
+        dias, inicio_atual, fim_atual
+    )
     ajuiz = reflexo["reflexo_ajuizamento"]
+    valor_protocolado = _build_financeiro_valor_protocolado(dias, aj_de, aj_ate)
+    ajuiz["valor_protocolado"] = valor_protocolado
 
     def _pct(entradas: int, protocolados: int) -> float:
         return round(entradas / protocolados * 100, 2) if protocolados else 0.0
@@ -242,6 +269,8 @@ MODULE = DashboardModule(
         "ano_ajuizamento": str,
         "conv_ano_ajuizamento": str,
         "conv_ano_financeiro": str,
+        "aj_de": str,
+        "aj_ate": str,
         "pend_ano": str,
         "pend_mes": int,
     },

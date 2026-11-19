@@ -27,6 +27,9 @@ function filtros(d: FinanceiroEstrategicoResponse): FilterField[] {
             options: opcoes(d.conversao?.anos_financeiro_opcoes),
             inline: true,
         },
+        // O período da seção Reflexo de Ajuizamento (o seletor de período fica na própria seção).
+        { key: 'aj_de', label: 'Ajuizamento · de', options: [], inline: true },
+        { key: 'aj_ate', label: 'Ajuizamento · até', options: [], inline: true },
         { key: 'pend_ano', label: 'Pendentes · ano', options: opcoes(d.clientes_pendentes?.anos_opcoes), inline: true },
         { key: 'pend_mes', label: 'Pendentes · mês', options: OPCOES_MES, inline: true },
     ]

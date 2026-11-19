@@ -90,6 +90,31 @@ def test_conversao_usa_os_proprios_seletores_de_ano(client, signer, repo, source
     assert r.json()["reflexo_financeiro"]["valor_receita"]["valor"] == 1_000
 
 
+def test_reflexo_de_ajuizamento_usa_o_proprio_periodo(client, signer, repo, sources):
+    _pronto(repo, sources)
+    # Período da página = novembro de 2026; o da seção = março de 2025 (pela DATA AJUIZAMENTO).
+    r = client.get(URL + "?aj_de=2025-03-01&aj_ate=2025-03-31", headers=auth(signer))
+    assert r.status_code == 200, r.text
+    reflexo = r.json()["reflexo_financeiro"]
+    ajuiz = reflexo["reflexo_ajuizamento"]
+    assert ajuiz["periodo"] == {"inicio": "2025-03-01", "fim": "2025-03-31"}
+    # o processo ajuizado em 10/03/2025 (TED de 2026)
+    assert ajuiz["valor_receita"]["valor"] == 1_000
+    assert ajuiz["total_entradas"]["valor"] == 1
+    assert ajuiz["valor_protocolado"]["valor"] == 100_000  # LexFlow distribuído em março de 2025
+    assert ajuiz["percentual_procedentes"]["valor"] == 25.0  # 1 TED ÷ 4 protocolados
+    # o resto da página continua no período dela
+    assert reflexo["valor_protocolado"]["valor"] == 50_000
+
+
+def test_reflexo_de_ajuizamento_sem_periodo_usa_este_ano(client, signer, repo, sources):
+    _pronto(repo, sources)
+    r = client.get(URL, headers=auth(signer))
+    ajuiz = r.json()["reflexo_financeiro"]["reflexo_ajuizamento"]
+    hoje = date.today()
+    assert ajuiz["periodo"] == {"inicio": f"{hoje.year}-01-01", "fim": hoje.isoformat()}
+
+
 def test_sem_lexflow_ligado_503(client, signer, repo, sources):
     _pronto(repo, sources)
     del repo.unit_refs[(repo.units[("lexgroup", "NG")], "lexflow")]
