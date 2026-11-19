@@ -1,5 +1,5 @@
 -- =============================================================================
--- Teste de 20261119130000_grupos_acesso.sql. Roda numa transação e desfaz no fim (ROLLBACK): não deixa dados.
+-- Teste de 20261119170000_grupos_acesso.sql. Roda numa transação e desfaz no fim (ROLLBACK): não deixa dados.
 -- Passou = nenhum ERROR (só o aviso 'OK: ...'). Falhou = ERROR 'FALHOU: ...' (o CI para aí).
 --
 -- Cenário: org 'org-teste-grupos', unidades U1 e U2.

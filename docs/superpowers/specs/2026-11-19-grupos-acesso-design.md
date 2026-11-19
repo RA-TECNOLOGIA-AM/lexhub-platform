@@ -35,7 +35,7 @@ Acesso de um Colaborador/Leitor a um dashboard numa unidade = **união** de:
 - Escopo de linhas: as camadas 2–4 dão `scope = 'all'`. A comissão continua filtrada à parte
   (`can_see_commission` + `member_source_refs`), sem mudança.
 
-## 3. Banco (migration `20261119130000_grupos_acesso.sql`)
+## 3. Banco (migration `20261119170000_grupos_acesso.sql`)
 
 ### 3.1 Grupos com slug fixo
 
