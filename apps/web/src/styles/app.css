@@ -323,19 +323,6 @@
 .cell-no {
     color: var(--text-faint);
 }
-.access-cols {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    align-items: flex-start;
-}
-.access-main {
-    flex: 999 1 460px;
-    min-width: 0;
-}
-.access-side {
-    flex: 1 1 300px;
-}
 .rule {
     display: flex;
     flex-direction: column;
@@ -1748,59 +1735,372 @@ div.org {
 .people-empty {
     padding: 8px 10px;
 }
-.access-dialog {
-    width: min(860px, calc(100vw - 32px));
-}
-.unit-grid {
+
+/* Acesso mestre-detalhe: lista de pessoas à esquerda, detalhe da pessoa à direita. */
+.acc-md {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px;
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
 }
-.unit-card {
-    margin: 0;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--r-md);
+.acc-md .people-card {
+    max-width: none;
+    position: sticky;
+    top: 16px;
+}
+.acc-md .people-list {
+    max-height: calc(100vh - 260px);
+}
+.people-row {
+    border-left: 3px solid transparent;
+}
+.people-row.on {
+    background: var(--accent-soft);
+    border-left-color: var(--accent);
+}
+.acc-detail {
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    overflow: hidden;
 }
-.unit-teams {
+.acc-detail-head {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 16px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--divider);
 }
-.unit-exceptions {
+.acc-person {
     display: flex;
-    flex-direction: column;
-    gap: 6px;
-    padding-top: 8px;
-    border-top: 1px dashed var(--border);
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
 }
-.unit-exceptions-title,
-.unit-avulsos > summary {
-    font-size: 12px;
+.acc-av {
+    width: 42px;
+    height: 42px;
+    font-size: 14px;
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+.acc-person-name {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.acc-person-email {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.acc-note {
+    margin: 12px 18px 0;
+}
+.acc-dev {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    padding: 10px 18px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--divider);
+}
+.acc-dev-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     font-weight: 500;
-    color: var(--text-muted);
-}
-.unit-avulsos {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-.unit-avulsos > summary {
     cursor: pointer;
 }
-.unit-avulsos[open] > * + * {
-    margin-top: 6px;
+/* Abas das unidades */
+.acc-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 12px 18px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-bottom: 1px solid var(--divider);
 }
-.unit-avulsos-list {
-    max-height: 180px;
-    overflow-y: auto;
+.acc-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: -1px;
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: var(--r-md) var(--r-md) 0 0;
+    background: none;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.acc-tab:hover {
+    color: var(--text);
+    background: var(--surface-2);
+}
+.acc-tab.on {
+    color: var(--text);
+    font-weight: 600;
+    background: var(--surface);
+    border-color: var(--divider);
+}
+.acc-tab:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+}
+.acc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border-strong);
+    flex: none;
+}
+.acc-dot.on {
+    background: var(--accent);
+}
+.acc-tab-role {
+    padding: 1px 6px;
+    border-radius: var(--r-sm);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 11px;
+}
+.acc-body {
+    container-type: inline-size; /* os painéis quebram pela largura do detalhe, não da tela */
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 14px;
+    padding: 16px 18px 18px;
+}
+.acc-body > .acc-note {
+    margin: 0;
+}
+/* Três painéis: Cargo e setores (mais largo) · Grupos extras · Dashboards avulsos */
+.acc-panels {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 3fr) minmax(0, 4fr);
+    gap: 12px;
+    align-items: start;
+}
+.acc-panels.is-muted {
+    opacity: 0.6;
+}
+.acc-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+}
+.acc-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+.acc-panel-title {
+    margin: 0;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-2);
+}
+.acc-role {
+    width: auto;
+    min-width: 130px;
+}
+.acc-subhead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid var(--divider);
+}
+.acc-empty {
+    margin: 0;
+    padding: 16px 12px;
+    text-align: center;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--r-md);
+}
+.acc-options {
+    display: grid;
+    gap: 6px;
+}
+.acc-options-2 {
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+.acc-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    font-size: var(--fs-xs);
+    cursor: pointer;
+    user-select: none;
+}
+.acc-option:hover {
+    border-color: var(--border-hover);
+}
+.acc-option.on {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 500;
+}
+.acc-option input[type='checkbox']:not(.acc-switch) {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    accent-color: var(--accent);
+}
+.acc-option-switch > span:first-child {
+    flex: 1;
+}
+.acc-option:has(input:disabled) {
+    cursor: default;
+}
+.acc-avulsos {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 290px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+.acc-group-label {
+    display: block;
+    margin: 6px 0 2px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.acc-tag-x {
+    border: 0;
+    font: inherit;
+    font-size: var(--fs-xs);
+    cursor: pointer;
+}
+/* Interruptor do Acesso (checkbox com role=switch). Nome próprio: .switch é o liga/desliga das fontes. */
+.acc-switch {
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    width: 38px;
+    height: 20px;
+    margin: 0;
+    flex: none;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-pill);
+    background: var(--surface-3);
+    cursor: pointer;
+    transition:
+        background 0.2s,
+        border-color 0.2s;
+}
+.acc-switch::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    transition:
+        transform 0.2s,
+        background 0.2s;
+}
+.acc-switch:checked {
+    background: var(--accent);
+    border-color: var(--accent-hover);
+}
+.acc-switch:checked::before {
+    transform: translateX(18px);
+    background: var(--bg);
+}
+.acc-switch:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+.acc-switch:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+/* Gaveta lateral (o Modal com a classe side-drawer): Regras dos papéis */
+.export-dialog.side-drawer {
+    width: min(980px, 100vw);
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0 0 0 auto;
+    border-radius: 0;
+    border-width: 0 0 0 1px;
+}
+.export-dialog.side-drawer[open] {
+    animation: drawer-in 0.22s ease-out;
+}
+.side-drawer .export-body > .card {
+    border: 0;
+    box-shadow: none;
+}
+@keyframes drawer-in {
+    from {
+        transform: translateX(40px);
+        opacity: 0;
+    }
+    to {
+        transform: none;
+        opacity: 1;
+    }
+}
+@container (max-width: 980px) {
+    .acc-panels {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    .acc-panel-sectors {
+        grid-column: 1 / -1;
+    }
+}
+@container (max-width: 560px) {
+    .acc-panels {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+@media (max-width: 860px) {
+    .acc-md {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .acc-md .people-card {
+        position: static;
+    }
+    .acc-md .people-list {
+        max-height: 260px;
+    }
+    .acc-panels {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .export-dialog.side-drawer[open] {
+        animation: none;
+    }
 }
 
 /* ---------- Dashboards com seções e gráficos (Protocolo LexPre) ---------- */

@@ -63,6 +63,27 @@ export function toggleTeam(draft: AccessDraft, id: string): AccessDraft {
     return { ...draft, teams: toggle(draft.teams, id) }
 }
 
+// "Selecionar todos" / "Limpar" dos setores de uma unidade.
+export function setAllTeams(draft: AccessDraft, unit: string, teams: MemberTeam[], on: boolean): AccessDraft {
+    const unitTeams = teams.filter((t) => t.unit === unit).map((t) => t.id)
+    const others = draft.teams.filter((id) => !unitTeams.includes(id))
+    return { ...draft, teams: on ? [...others, ...unitTeams] : others }
+}
+
+// A aba que abre: a primeira unidade em que a pessoa tem cargo (ou a primeira gerida).
+export function firstUnit(draft: AccessDraft, units: string[]): string {
+    return units.find((u) => draft.units[u]) ?? units[0] ?? ''
+}
+
+// A unidade tem algo para a pessoa (cargo ou exceção): o ponto aceso na aba.
+export function unitHasAccess(draft: AccessDraft, unit: string): boolean {
+    return (
+        Boolean(draft.units[unit]) ||
+        (draft.extraGroups[unit] ?? []).length > 0 ||
+        (draft.extraDashboards[unit] ?? []).length > 0
+    )
+}
+
 export function toggleExtraGroup(draft: AccessDraft, unit: string, slug: string): AccessDraft {
     return { ...draft, extraGroups: { ...draft.extraGroups, [unit]: toggle(draft.extraGroups[unit] ?? [], slug) } }
 }
