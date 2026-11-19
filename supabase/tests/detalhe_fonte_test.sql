@@ -36,8 +36,8 @@ values ('20000000-0000-4000-8000-0000000000f1', 'db1', 'U1'),
        ('20000000-0000-4000-8000-0000000000f2', 'db1', 'U2');
 
 insert into app.dashboard_catalog (key, name, description, area, source, sort_order, status)
-values ('dash-teste-1', 'Dashboard Teste 1', '', 'Teste', 'Banco 1', 1, 'available'),
-       ('dash-teste-2', 'Dashboard Teste 2', '', 'Teste', 'Banco 1', 2, 'available');
+values ('dash-teste-1', 'Dashboard Teste 1', '', 'Tecnologia', 'Banco 1', 1, 'available'),
+       ('dash-teste-2', 'Dashboard Teste 2', '', 'Tecnologia', 'Banco 1', 2, 'available');
 insert into app.dashboard_sources (dashboard_key, source_key)
 values ('dash-teste-1', 'db1'), ('dash-teste-2', 'db1');
 insert into app.org_dashboards (org_id, unit_id, dashboard_key, enabled)

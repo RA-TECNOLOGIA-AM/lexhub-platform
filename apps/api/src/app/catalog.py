@@ -21,7 +21,6 @@ from pydantic import BaseModel
 
 from app.access import get_db_pool
 
-EXPORT = "dashboards.export"
 SEE_ALL_ORG = "org.dashboards.all"  # owner, admin
 SEE_ALL_UNIT = "unit.dashboards.all"  # gestor, controller
 TOGGLE = "dashboards.toggle"  # admin (Desenvolvedor): liga/desliga dashboard na unidade
@@ -151,15 +150,15 @@ def build_catalog(
 _AVAILABLE_SQL = """
 select d.key, d.name as title, d.area, coalesce(d.description, '') as "desc",
        d.source, d.max_delay_min, u.code as unit_code,
-       app_private.has_unit_permission($1::uuid, u.id, $3) as can_export,
-       (app_private.has_unit_permission($1::uuid, u.id, $4)
-        or app_private.has_unit_permission($1::uuid, u.id, $5)) as can_see_commission,
+       app_private.dashboard_can_export($1::uuid, u.id, d.key) as can_export,
+       (app_private.has_unit_permission($1::uuid, u.id, $3)
+        or app_private.has_unit_permission($1::uuid, u.id, $4)) as can_see_commission,
        od.enabled,
        x.can_toggle
   from app.org_dashboards od
   join app.units u             on u.id = od.unit_id and u.active
   join app.dashboard_catalog d on d.key = od.dashboard_key and d.active and d.status = 'available'
-  cross join lateral (select app_private.has_unit_permission($1::uuid, u.id, $6) as can_toggle) x
+  cross join lateral (select app_private.has_unit_permission($1::uuid, u.id, $5) as can_toggle) x
  where od.org_id = $2::uuid
    and (od.enabled or x.can_toggle)
    and app_private.dashboard_scope($1::uuid, u.id, d.key) is not null
@@ -182,7 +181,7 @@ class PgCatalogRepo:
 
     async def list_available(self, user_id: str, org_id: str) -> list[DashboardUnitRow]:
         rows = await self._pool.fetch(
-            _AVAILABLE_SQL, user_id, org_id, EXPORT, SEE_ALL_ORG, SEE_ALL_UNIT, TOGGLE
+            _AVAILABLE_SQL, user_id, org_id, SEE_ALL_ORG, SEE_ALL_UNIT, TOGGLE
         )
         return [DashboardUnitRow(**dict(r)) for r in rows]
 

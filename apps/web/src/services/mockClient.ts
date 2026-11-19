@@ -378,6 +378,13 @@ export function createMockClient(): DataClient {
             return accessStore.update(memberId, update, sessionStorage.getItem(SESSION_KEY) ?? '')
         },
 
+        async setTeamGroups(org, teamId, groups, seesAll) {
+            await wait()
+            requireSession()
+            if (!requireOrg(org)) throw new DataError(403, 'Você não gere esta equipe.')
+            accessStore.setTeamGroups(teamId, groups, seesAll)
+        },
+
         async getAudit(org) {
             await wait()
             requireSession()

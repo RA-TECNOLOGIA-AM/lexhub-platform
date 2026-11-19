@@ -7,9 +7,14 @@ import {
     gridCell,
     isDirty,
     previewDashboards,
+    avulsoOptions,
+    personalText,
     previewText,
     readOnlyReason,
+    sectorCoverage,
     setUnitRole,
+    toggleExtraDashboard,
+    toggleExtraGroup,
     toggleTeam,
     toUpdate,
     type AccessDraft,
@@ -18,7 +23,14 @@ import {
 const members = createMembersStore({ name: 'Ana Ribeiro', email: 'ana@lexgroup.com.br' })
 const overview = createAccessStore(members).overview('NG')
 const person = (name: string): Member => members.list().members.find((m) => m.email.startsWith(name))!
-const blank: AccessDraft = { orgRole: 'member', units: { LA_AM: '', LA_RJ: '', NG: '' }, teams: [] }
+const none = { LA_AM: [], LA_RJ: [], NG: [] }
+const blank: AccessDraft = {
+    orgRole: 'member',
+    units: { LA_AM: '', LA_RJ: '', NG: '' },
+    teams: [],
+    extraGroups: none,
+    extraDashboards: none,
+}
 
 describe('draftFromMember', () => {
     it('um cargo por unidade gerida ("" = sem cargo) e as equipes por id', () => {
@@ -26,6 +38,8 @@ describe('draftFromMember', () => {
             orgRole: 'member',
             units: { LA_AM: 'controller', LA_RJ: '', NG: 'gestor' },
             teams: ['t-comercial'],
+            extraGroups: none,
+            extraDashboards: none,
         })
     })
 })
@@ -82,6 +96,8 @@ describe('toUpdate e isDirty', () => {
             units: [{ code: 'NG', role: 'gestor' }],
             teams: [],
             org_role: null,
+            extra_groups: [],
+            extra_dashboards: [],
         })
     })
     it('virar Desenvolvedor manda org_role; sem permissão, nunca manda', () => {
@@ -110,19 +126,79 @@ describe('gridCell', () => {
 
 describe('previewText', () => {
     it('unidade sem dashboard ligado não diz "todos os 0"', () => {
-        expect(previewText({ unit: 'MT', all: true, titles: [], total: 0 })).toBe(
+        expect(previewText({ unit: 'MT', all: true, titles: [], personal: [], total: 0 })).toBe(
             'nenhum dashboard ligado nesta unidade',
         )
-        expect(previewText({ unit: 'MT', all: false, titles: [], total: 0 })).toBe(
+        expect(previewText({ unit: 'MT', all: false, titles: [], personal: [], total: 0 })).toBe(
             'nenhum dashboard ligado nesta unidade',
         )
     })
     it('vê tudo, uma parte ou nada', () => {
-        expect(previewText({ unit: 'NG', all: true, titles: ['A', 'B'], total: 2 })).toBe('todos os 2 dashboards')
-        expect(previewText({ unit: 'NG', all: false, titles: ['A'], total: 2 })).toBe('1 de 2: A')
-        expect(previewText({ unit: 'NG', all: false, titles: [], total: 2 })).toBe(
-            'nenhum — marque uma equipe que libere dashboards',
+        expect(previewText({ unit: 'NG', all: true, titles: ['A', 'B'], personal: [], total: 2 })).toBe(
+            'todos os 2 dashboards',
         )
+        expect(previewText({ unit: 'NG', all: false, titles: ['A'], personal: [], total: 2 })).toBe('1 de 2: A')
+        expect(previewText({ unit: 'NG', all: false, titles: [], personal: [], total: 2 })).toBe(
+            'nenhum — marque um setor, um grupo extra ou um dashboard avulso',
+        )
+    })
+    it('exceções entram na conta e têm a linha delas', () => {
+        const p = { unit: 'NG', all: false, titles: ['A'], personal: ['B'], total: 3 }
+        expect(previewText(p)).toBe('2 de 3: A')
+        expect(personalText(p)).toBe('só visualiza (exceção): B')
+        expect(previewText({ ...p, titles: [] })).toBe('1 de 3')
+        expect(personalText({ ...p, personal: [] })).toBe('')
+    })
+})
+
+describe('4 camadas (mesma regra de app_private.dashboard_access)', () => {
+    const store = createAccessStore(members)
+    store.setTeamGroups('t-pendencias', ['juridico'], null)
+    const ov = store.overview('NG')
+    const juridicoNg = ov.dashboards_by_unit.NG.filter((k) => ov.group_of[k] === 'juridico')
+    const colab = setUnitRole(blank, 'NG', 'colaborador', ov.teams)
+
+    it('grupo do setor libera a coluna inteira, somada à regra card a card', () => {
+        const [ng] = previewDashboards(ov, toggleTeam(colab, 't-pendencias'))
+        expect(juridicoNg.length).toBeGreaterThan(0)
+        expect(ng.titles).toEqual(
+            expect.arrayContaining([...juridicoNg.map((k) => ov.titles[k]), 'Pendências (LexPre)']),
+        )
+        expect(ng.personal).toEqual([])
+    })
+    it('setor que vê tudo (Diretoria) vê todos', () => {
+        const [ng] = previewDashboards(ov, toggleTeam(colab, 't-diretoria'))
+        expect(ng.all).toBe(true)
+    })
+    it('grupo extra e avulso da pessoa: só visualiza, fora do que o setor já dá', () => {
+        const draft = toggleExtraDashboard(toggleExtraGroup(colab, 'NG', 'juridico'), 'NG', 'nps')
+        const [ng] = previewDashboards(ov, draft)
+        expect(ng.titles).toEqual([])
+        expect(ng.personal).toEqual(expect.arrayContaining([...juridicoNg.map((k) => ov.titles[k]), 'NPS']))
+        const withSector = previewDashboards(ov, toggleTeam(draft, 't-pendencias'))[0]
+        expect(withSector.personal).toEqual(['NPS']) // o Jurídico agora vem do setor
+    })
+    it('sectorCoverage diz qual setor dá cada grupo', () => {
+        const cov = sectorCoverage(ov, toggleTeam(colab, 't-pendencias'), 'NG')
+        expect(cov.groups.get('juridico')).toEqual(['Pendências'])
+        expect(cov.all).toBe(false)
+    })
+    it('avulsoOptions esconde o que já está coberto', () => {
+        const draft = toggleExtraGroup(toggleTeam(colab, 't-pendencias'), 'NG', 'comercial')
+        const { options, covered } = avulsoOptions(ov, draft, 'NG')
+        expect(options.some((o) => o.group === 'juridico' || o.group === 'comercial')).toBe(false)
+        expect(options.length + covered).toBe(ov.dashboards_by_unit.NG.length)
+    })
+    it('tirar o cargo limpa as exceções; toUpdate só manda unidade com cargo', () => {
+        const draft = toggleExtraDashboard(toggleExtraGroup(colab, 'NG', 'juridico'), 'NG', 'nps')
+        expect(toUpdate(draft, blank, false)).toMatchObject({
+            extra_groups: [{ unit: 'NG', slug: 'juridico' }],
+            extra_dashboards: [{ unit: 'NG', key: 'nps' }],
+        })
+        const cleared = setUnitRole(draft, 'NG', '', ov.teams)
+        expect(cleared.extraGroups.NG).toEqual([])
+        expect(cleared.extraDashboards.NG).toEqual([])
+        expect(isDirty(draft, cleared)).toBe(true)
     })
 })
 

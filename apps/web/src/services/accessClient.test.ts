@@ -12,7 +12,10 @@ describe('createAccessClient', () => {
             units: [{ code: 'NG', role: 'leitor' }],
             teams: ['t1'],
             org_role: null,
+            extra_groups: [{ unit: 'NG', slug: 'juridico' }],
+            extra_dashboards: [],
         })
+        await client.setTeamGroups('lexgroup', 't1', ['juridico'], null)
         expect(calls).toEqual([
             { schema: 'api', fn: 'access_overview', args: { p_org: 'lexgroup', p_unit: null } },
             {
@@ -24,7 +27,14 @@ describe('createAccessClient', () => {
                     p_units: [{ code: 'NG', role: 'leitor' }],
                     p_teams: ['t1'],
                     p_org_role: null,
+                    p_extra_groups: [{ unit: 'NG', slug: 'juridico' }],
+                    p_extra_dashboards: [],
                 },
+            },
+            {
+                schema: 'api',
+                fn: 'set_team_groups',
+                args: { p_org: 'lexgroup', p_team: 't1', p_groups: ['juridico'], p_sees_all: null },
             },
         ])
     })

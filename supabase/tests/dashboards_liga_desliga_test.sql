@@ -23,7 +23,7 @@ values ('30000000-0000-4000-8000-0000000000e1', '10000000-0000-4000-8000-0000000
         '20000000-0000-4000-8000-0000000000e1', 'E1');
 
 insert into app.dashboard_catalog (key, name, area, active, sort_order)
-values ('d-liga', 'Dash Liga', 'Teste', true, 1);
+values ('d-liga', 'Dash Liga', 'Tecnologia', true, 1);
 insert into app.org_dashboards (org_id, unit_id, dashboard_key, enabled)
 values ('10000000-0000-4000-8000-0000000000e1', '20000000-0000-4000-8000-0000000000e1', 'd-liga', true),
        ('10000000-0000-4000-8000-0000000000e1', '20000000-0000-4000-8000-0000000000e2', 'd-liga', true);

@@ -43,7 +43,7 @@ values ('50000000-0000-4000-8000-0000000000e2', '20000000-0000-4000-8000-0000000
        ('50000000-0000-4000-8000-0000000000e2', '20000000-0000-4000-8000-0000000000e2');
 -- Status pelo log só vale para fonte com dashboard ligado na unidade (senão é 'no_dashboards')
 insert into app.dashboard_catalog (key, name, description, area, source, sort_order, status)
-values ('dash-teste-fontes', 'Dashboard Teste Fontes', '', 'Teste', 'Banco 1', 1, 'available');
+values ('dash-teste-fontes', 'Dashboard Teste Fontes', '', 'Tecnologia', 'Banco 1', 1, 'available');
 insert into app.dashboard_sources (dashboard_key, source_key)
 values ('dash-teste-fontes', 'db1'), ('dash-teste-fontes', 'sh1'), ('dash-teste-fontes', 'prod1');
 insert into app.org_dashboards (org_id, unit_id, dashboard_key, enabled)

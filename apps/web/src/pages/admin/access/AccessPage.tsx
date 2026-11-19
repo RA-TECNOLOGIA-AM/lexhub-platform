@@ -13,9 +13,10 @@ import { PeopleList } from './PeopleList.tsx'
 import { PermissionMatrix } from './PermissionMatrix.tsx'
 import { PERMISSIONS } from './permissions.ts'
 import { RoleGrid } from './RoleGrid.tsx'
+import { SectorGroups } from './SectorGroups.tsx'
 
 const DESCRIPTION =
-    'O papel diz o que a pessoa pode fazer. A equipe e as unidades dizem quais dashboards ela vê. Tudo isso é conferido no servidor.'
+    'O papel diz o que a pessoa pode fazer. O setor (e os grupos dele) e as unidades dizem quais dashboards ela vê; exceções por pessoa só liberam visualização. Tudo isso é conferido no servidor.'
 
 // A página só junta as peças: a grade da unidade (?unidade=), a matriz de papéis e o editor de pessoas.
 export function AccessPage() {
@@ -56,6 +57,10 @@ export function AccessPage() {
         await dataClient.updateMemberAccess(org, memberId, update) // erro: a janela mostra a mensagem
         setVersion((v) => v + 1) // busca a grade e a lista de novo
     }
+    async function saveTeamGroups(teamId: string, groups: string[], seesAll: boolean | null) {
+        await dataClient.setTeamGroups(org, teamId, groups, seesAll) // erro: a tabela mostra a mensagem
+        setVersion((v) => v + 1)
+    }
     const self = (selfEmail ?? '').toLowerCase()
 
     return (
@@ -84,6 +89,7 @@ export function AccessPage() {
             />
             <div className="stack">
                 <RoleGrid overview={overview} />
+                <SectorGroups overview={overview} onSave={saveTeamGroups} />
                 <div className="access-cols">
                     <PeopleList members={members.members.filter((m) => m.status === 'active')} onPick={setEditing} />
                     <div className="access-main">

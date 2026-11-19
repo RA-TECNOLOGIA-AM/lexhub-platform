@@ -32,7 +32,7 @@ values ('30000000-0000-4000-8000-0000000000a3', '10000000-0000-4000-8000-0000000
         '20000000-0000-4000-8000-0000000000a1', 'E3 inativa', false);
 
 insert into app.dashboard_catalog (key, name, area, active, sort_order)
-values ('d-um', 'Dash Um', 'Teste', true, 1), ('d-dois', 'Dash Dois', 'Teste', true, 2);
+values ('d-um', 'Dash Um', 'Tecnologia', true, 1), ('d-dois', 'Dash Dois', 'Tecnologia', true, 2);
 insert into app.org_dashboards (org_id, unit_id, dashboard_key, enabled)
 values ('10000000-0000-4000-8000-0000000000a1', '20000000-0000-4000-8000-0000000000a1', 'd-um', true),
        ('10000000-0000-4000-8000-0000000000a1', '20000000-0000-4000-8000-0000000000a1', 'd-dois', true),

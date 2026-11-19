@@ -260,6 +260,9 @@ export type Member = {
     units: { code: string; role: UnitRoleKey }[]
     teams: string[]
     team_ids: string[] // mesmas equipes, por id (o nome se repete entre unidades: Diretoria)
+    // Exceções da pessoa (só visualização), por unidade: colunas inteiras e dashboards avulsos.
+    extra_groups: { unit: string; slug: string }[]
+    extra_dashboards: { unit: string; key: string }[]
     status: MemberStatus
     last_seen_at: string | null
     security: string | null // 'Google' quando já entrou pelo Google
@@ -279,6 +282,12 @@ export type Invitation = {
 }
 
 export type MemberTeam = { id: string; name: string; unit: string } // unit = código da unidade
+
+// Grupo de acesso = coluna do hub, por slug fixo ('juridico', 'pre_protocolo'...); name é o rótulo.
+export type HubGroup = { slug: string; name: string }
+
+// Setor na aba Acesso: sees_all = vê tudo da unidade (Diretoria); groups = colunas inteiras que libera.
+export type AccessTeam = MemberTeam & { sees_all: boolean; groups: string[] }
 
 export type InviteRequest = { emails: string[]; role: Invitation['role']; units: string[]; teams: string[] }
 export type InviteResult = { invited: string[]; skipped: { email: string; reason: string }[] }
@@ -346,12 +355,15 @@ export type Permission = {
 export type AccessOverview = {
     units: Unit[] // as unidades em que quem pergunta gere acesso
     unit: string // a unidade da grade
-    dashboards: { key: string; title: string; area: string; teams: string[] }[] // teams = equipes que liberam
-    teams: MemberTeam[] // equipes de todas as unidades geridas
+    // teams = setores que liberam (regra do card, grupo do setor ou setor que vê tudo)
+    dashboards: { key: string; title: string; area: string; group: string; teams: string[] }[]
+    groups: HubGroup[] // as colunas do hub, em ordem
+    teams: AccessTeam[] // setores de todas as unidades geridas
     roles: { key: UnitRoleKey; sees_all: boolean; exports: boolean }[]
     rules: { team_id: string; dashboard_key: string }[] // regras das equipes de todas as unidades geridas
     dashboards_by_unit: Record<string, string[]> // keys ligadas em cada unidade gerida
     titles: Record<string, string> // key -> título
+    group_of: Record<string, string> // key -> slug do grupo
     can_set_org_role: boolean // pode tornar alguém Desenvolvedor (Owner/Desenvolvedor)
 }
 
@@ -373,6 +385,8 @@ export type MemberAccessUpdate = {
     units: { code: string; role: UnitRoleKey }[]
     teams: string[] // ids
     org_role: 'admin' | 'member' | null // null = não muda
+    extra_groups: { unit: string; slug: string }[] // estado desejado nas unidades geridas
+    extra_dashboards: { unit: string; key: string }[]
 }
 
 // Auditoria: o que aconteceu na organização (entradas, exportações, acesso, suporte, fontes).

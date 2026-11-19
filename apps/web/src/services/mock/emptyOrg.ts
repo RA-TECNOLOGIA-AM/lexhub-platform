@@ -8,6 +8,7 @@ import type {
     SourcesResponse,
 } from '../../types/index.ts'
 import { plans } from './billing.ts'
+import { HUB_GROUPS } from './hubGroups.ts'
 
 // Organização em implantação (Cliente parceiro): ainda sem dashboards, regras ou eventos.
 // Serve para as telas mostrarem os estados vazios, e não os dados da LexGroup por engano.
@@ -24,6 +25,8 @@ export function onboardingMembers(email: string, name: string): MembersResponse 
         units: [],
         teams: [],
         team_ids: [],
+        extra_groups: [],
+        extra_dashboards: [],
         status: 'active',
         last_seen_at: new Date().toISOString(),
         security: 'Google',
@@ -42,6 +45,7 @@ export const onboardingAccess: AccessOverview = {
     units: [{ code: 'CP', name: 'Parceiro · sede' }],
     unit: 'CP',
     dashboards: [],
+    groups: HUB_GROUPS,
     teams: [],
     roles: [
         { key: 'gestor', sees_all: true, exports: true },
@@ -52,6 +56,7 @@ export const onboardingAccess: AccessOverview = {
     rules: [],
     dashboards_by_unit: { CP: [] },
     titles: {},
+    group_of: {},
     can_set_org_role: true,
 }
 

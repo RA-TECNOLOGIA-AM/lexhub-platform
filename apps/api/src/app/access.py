@@ -92,7 +92,7 @@ select o.id::text as org_id,
        u.timezone,
        (app_private.has_unit_permission($1::uuid, u.id, 'org.dashboards.all')
         or app_private.has_unit_permission($1::uuid, u.id, 'unit.dashboards.all')) as can_see_commission,
-       app_private.has_unit_permission($1::uuid, u.id, 'dashboards.export') as can_export,
+       app_private.dashboard_can_export($1::uuid, u.id, $4) as can_export,  -- exceção da pessoa só vê
        coalesce((select jsonb_object_agg(r.source, r.ref) from app.unit_source_refs r
                   where r.unit_id = u.id), '{}'::jsonb)::text as source_refs
   from app.organizations o

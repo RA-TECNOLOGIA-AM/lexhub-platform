@@ -77,6 +77,24 @@ def test_resolve_access_usa_a_regra_do_banco(user, org, unit, key, expected):
     _run(_with_fixtures(check))
 
 
+def test_excecao_da_pessoa_ve_mas_nao_exporta():
+    """Dashboard avulso (camada 4) libera ver; exportar só pelo cargo ou pelo setor."""
+
+    async def check(repo, conn):
+        await conn.execute(
+            "insert into app.member_dashboard_grants (membership_id, unit_id, dashboard_key)"
+            " values ('40000000-0000-0000-0000-0000000000a3', '20000000-0000-0000-0000-0000000000a1', 'pendencias')"
+        )
+        avulso = await repo.resolve_access(PROTOCOLO_NG, "org-a", "NG", "pendencias")
+        assert (avulso.scope, avulso.can_export) == ("all", False)
+        setor = await repo.resolve_access(PROTOCOLO_NG, "org-a", "NG", "protocolo-lexpre")
+        assert (setor.scope, setor.can_export) == ("all", True)
+        sem_acesso = await repo.resolve_access(PROTOCOLO_NG, "org-a", "NG", "comercial-lexpre")
+        assert (sem_acesso.scope, sem_acesso.can_export) == (None, False)
+
+    _run(_with_fixtures(check))
+
+
 def test_org_ou_unidade_inexistente_retorna_none():
     async def check(repo, _conn):
         assert await repo.resolve_access(ADMIN_A, "nao-existe", "NG", "protocolo-lexpre") is None

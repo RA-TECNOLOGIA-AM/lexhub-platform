@@ -1766,6 +1766,37 @@ div.org {
     flex-wrap: wrap;
     gap: 4px 16px;
 }
+.unit-exceptions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+}
+.unit-exceptions-title,
+.unit-avulsos > summary {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+.unit-avulsos {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.unit-avulsos > summary {
+    cursor: pointer;
+}
+.unit-avulsos[open] > * + * {
+    margin-top: 6px;
+}
+.unit-avulsos-list {
+    max-height: 180px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
 
 /* ---------- Dashboards com seções e gráficos (Protocolo LexPre) ---------- */
 :root {

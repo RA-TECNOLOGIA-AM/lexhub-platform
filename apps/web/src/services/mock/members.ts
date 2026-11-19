@@ -35,6 +35,8 @@ export const members: MembersResponse = {
             units: [],
             teams: ['Diretoria'],
             team_ids: ['t-diretoria'],
+            extra_groups: [],
+            extra_dashboards: [],
             status: 'active',
             last_seen_at: daysFromNow(0),
             security: 'Google',
@@ -50,6 +52,8 @@ export const members: MembersResponse = {
             ],
             teams: ['Comercial'],
             team_ids: ['t-comercial'],
+            extra_groups: [],
+            extra_dashboards: [],
             status: 'active',
             last_seen_at: daysFromNow(-1),
             security: 'Google',
@@ -62,6 +66,8 @@ export const members: MembersResponse = {
             units: [{ code: 'LA_RJ', role: 'colaborador' }],
             teams: ['Protocolo'],
             team_ids: ['t-protocolo'],
+            extra_groups: [],
+            extra_dashboards: [],
             status: 'active',
             last_seen_at: daysFromNow(-2),
             security: 'Google',
@@ -74,6 +80,8 @@ export const members: MembersResponse = {
             units: [{ code: 'NG', role: 'colaborador' }],
             teams: ['Pendências'],
             team_ids: ['t-pendencias'],
+            extra_groups: [],
+            extra_dashboards: [],
             status: 'active',
             last_seen_at: null,
             security: null,
@@ -86,6 +94,8 @@ export const members: MembersResponse = {
             units: [{ code: 'NG', role: 'leitor' }],
             teams: ['Diretoria'],
             team_ids: ['t-diretoria'],
+            extra_groups: [],
+            extra_dashboards: [],
             status: 'disabled',
             last_seen_at: daysFromNow(-40),
             security: 'Google',
@@ -161,6 +171,10 @@ export function createMembersStore(inviter: { name: string; email: string }) {
                 .sort((a, b) => a.name.localeCompare(b.name))
             member.teams = chosen.map((t) => t.name)
             member.team_ids = chosen.map((t) => t.id)
+            // exceções só nas unidades com cargo, como o banco
+            const withRole = new Set(update.units.map((u) => u.code))
+            member.extra_groups = update.extra_groups.filter((g) => withRole.has(g.unit))
+            member.extra_dashboards = update.extra_dashboards.filter((d) => withRole.has(d.unit))
             if (update.org_role) member.org_role = update.org_role
             return structuredClone(member)
         },
@@ -202,6 +216,8 @@ export function createMembersStore(inviter: { name: string; email: string }) {
             team_ids: state.teams
                 .filter((t) => inv.teams.includes(t.name) && inv.units.includes(t.unit))
                 .map((t) => t.id),
+            extra_groups: [],
+            extra_dashboards: [],
             status: 'active',
             last_seen_at: daysFromNow(0),
             security: 'Google',

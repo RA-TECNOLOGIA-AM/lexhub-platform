@@ -59,7 +59,7 @@ export const NAV_SECTIONS: NavSection[] = [
                 label: 'Acesso',
                 title: 'Acesso',
                 description:
-                    'O papel diz o que a pessoa pode fazer. A equipe e as unidades dizem quais dashboards ela vê.',
+                    'O papel diz o que a pessoa pode fazer. O setor, os grupos dele e as unidades dizem quais dashboards ela vê.',
                 icon: 'shield',
                 route: '/:org/admin/acesso',
                 requires: 'access',
