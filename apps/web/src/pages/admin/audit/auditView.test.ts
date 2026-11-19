@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { audit } from '../../../services/mock/audit.ts'
+import { members } from '../../../services/mock/members.ts'
 import {
     actorsOf,
     auditCsv,
     auditFilename,
     filterEvents,
     filterFromParams,
+    filterNever,
+    NEVER,
+    neverAccessed,
+    neverCsv,
     paramsFromFilter,
     whenLabel,
 } from './auditView.ts'
@@ -75,5 +80,27 @@ describe('exportar CSV', () => {
     })
     it('nome do arquivo com a org e o dia em Manaus', () => {
         expect(auditFilename('lexgroup', new Date('2026-11-19T02:00:00Z'))).toBe('auditoria-lexgroup-2026-11-18.csv')
+    })
+})
+
+describe('nunca acessou', () => {
+    it('lê "nunca" da URL e devolve na URL', () => {
+        const f = filterFromParams(new URLSearchParams('tipo=nunca'))
+        expect(f.kind).toBe(NEVER)
+        expect(paramsFromFilter(f).toString()).toBe('tipo=nunca')
+    })
+    it('lista membros sem last_seen_at e convites; ignora desativados', () => {
+        const rows = neverAccessed(members)
+        const ids = rows.map((r) => r.id)
+        for (const m of members.members) {
+            const expected = !m.last_seen_at && m.status !== 'disabled'
+            expect(ids.includes(m.id)).toBe(expected)
+        }
+        expect(rows.filter((r) => r.status === 'Convite pendente')).toHaveLength(members.invitations.length)
+    })
+    it('filtra por pessoa e gera CSV', () => {
+        const rows = neverAccessed(members)
+        expect(filterNever(rows, rows[0].name)).toEqual([rows[0]])
+        expect(neverCsv(rows).split('\n')[0]).toContain('Situação')
     })
 })

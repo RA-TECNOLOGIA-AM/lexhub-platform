@@ -1,4 +1,4 @@
-import type { AuditEvent, AuditKind } from '../../../types/index.ts'
+import type { AuditEvent, AuditKind, MembersResponse } from '../../../types/index.ts'
 import { toCsv, type CsvColumn } from '../../../lib/csv.ts'
 
 // Nome no filtro "Tipo de evento" e cor do selo de cada tipo.
@@ -71,7 +71,10 @@ export const actorsOf = (events: AuditEvent[]): string[] =>
     [...new Set(events.map((e) => e.actor))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
 // --- Filtros (Tipo de evento, Pessoa) ---
-export type AuditFilter = { kind: AuditKind | ''; actor: string } // '' = todos / todas
+// 'nunca' = "Nunca acessou": não é um evento, é quem nunca entrou (a tela troca para a lista de pessoas).
+export const NEVER = 'nunca'
+export const NEVER_LABEL = 'Nunca acessou'
+export type AuditFilter = { kind: AuditKind | typeof NEVER | ''; actor: string } // '' = todos / todas
 
 export const filterEvents = (events: AuditEvent[], f: AuditFilter): AuditEvent[] =>
     events.filter((e) => (!f.kind || e.kind === f.kind) && (!f.actor || e.actor === f.actor))
@@ -79,7 +82,8 @@ export const filterEvents = (events: AuditEvent[], f: AuditFilter): AuditEvent[]
 // Filtro <-> URL (?tipo=&pessoa=). Tipo desconhecido na URL vira "todos".
 export function filterFromParams(params: URLSearchParams): AuditFilter {
     const kind = params.get('tipo') ?? ''
-    return { kind: kind in KIND ? (kind as AuditKind) : '', actor: params.get('pessoa') ?? '' }
+    const known = kind === NEVER || kind in KIND
+    return { kind: known ? (kind as AuditFilter['kind']) : '', actor: params.get('pessoa') ?? '' }
 }
 
 export function paramsFromFilter(f: AuditFilter): URLSearchParams {
@@ -88,3 +92,41 @@ export function paramsFromFilter(f: AuditFilter): URLSearchParams {
     if (f.actor) params.set('pessoa', f.actor)
     return params
 }
+
+// --- Nunca acessou: membros que nunca entraram e convites ainda não aceitos ---
+export type NeverRow = {
+    id: string
+    name: string // convite ainda não tem nome: mostra o e-mail
+    email: string
+    status: 'Membro' | 'Convite pendente'
+    since: string | null // convite: quando foi enviado; membro: sem data
+}
+
+// Ordem alfabética. Pessoa desativada fica de fora (não pode mais entrar).
+export function neverAccessed(data: MembersResponse): NeverRow[] {
+    const members = data.members
+        .filter((m) => !m.last_seen_at && m.status !== 'disabled')
+        .map((m): NeverRow => ({ id: m.id, name: m.name, email: m.email, status: 'Membro', since: null }))
+    const invitations = data.invitations.map((i): NeverRow => ({
+        id: `convite-${i.id}`,
+        name: i.email,
+        email: i.email,
+        status: 'Convite pendente',
+        since: i.created_at,
+    }))
+    return [...members, ...invitations].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+}
+
+export const filterNever = (rows: NeverRow[], actor: string): NeverRow[] =>
+    rows.filter((r) => !actor || r.name === actor)
+
+export const neverCsv = (rows: NeverRow[]): string =>
+    toCsv(
+        [
+            { key: 'name', label: 'Quem' },
+            { key: 'email', label: 'E-mail' },
+            { key: 'status', label: 'Situação' },
+            { key: 'since', label: 'Convidado em' },
+        ],
+        rows.map((r) => ({ ...r, since: r.since ? fullWhen(r.since) : '' })),
+    )
