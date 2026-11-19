@@ -2,9 +2,11 @@ import { Suspense, useRef, useState } from 'react'
 import { LoadingState } from '../states/LoadingState.tsx'
 import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
+import { Avatar } from '../ui/Avatar.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { NotificationsBell } from './NotificationsBell.tsx'
 import { OrgSwitcher } from './OrgSwitcher.tsx'
+import { ProfileMenu } from './ProfileMenu.tsx'
 import { SearchBox } from './SearchBox.tsx'
 import { ThemeToggle } from './ThemeToggle.tsx'
 import { FullscreenToggle } from './FullscreenToggle.tsx'
@@ -123,7 +125,7 @@ export function AppLayout() {
                 </div>
 
                 <div className="side-user">
-                    <span className="av">{user.initials}</span>
+                    <Avatar user={user} />
                     <span className="side-user-text">
                         <span className="name">{sidebarName(user.name)}</span>
                         <span className="sub">{user.role_label}</span>
@@ -175,6 +177,7 @@ export function AppLayout() {
                     <NotificationsBell staff={user.platform_staff} pending={pending} onNavigate={closeMenu} />
                     <FullscreenToggle />
                     <ThemeToggle />
+                    <ProfileMenu user={user} />
                 </header>
 
                 <main className="content">

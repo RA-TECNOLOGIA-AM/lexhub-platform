@@ -48,6 +48,9 @@ class MembershipRow:
     role_name: str  # papel na organização ("Desenvolvedor", "Membro"...)
     permissions: frozenset[str]
     units: tuple[UnitRow, ...]  # só as unidades que a pessoa vê
+    teams: tuple[str, ...] = ()  # setores (app.membership_teams) para o cartão de perfil
+    offices: tuple[str, ...] = ()  # escritórios em que tem cargo (app.membership_units)
+    avatar_path: str | None = None  # foto de perfil no bucket 'avatars' (app.profiles)
 
 
 class MeRepo(Protocol):
@@ -65,6 +68,9 @@ class UserOut(BaseModel):
     can_export: bool
     can_see_commission: bool
     platform_staff: bool
+    teams: list[str]  # setores, ex.: ["Tecnologia"]
+    offices: list[str]  # escritórios em que tem cargo, ex.: ["ESCRITÓRIO MASTER"]
+    avatar_path: str | None  # caminho no bucket público 'avatars'; o front monta a URL
 
 
 class OrgOut(BaseModel):
@@ -136,6 +142,9 @@ def build_me(
             # Igual à v1 (Gestor e Desenvolvedor): quem vê tudo da organização ou da unidade.
             can_see_commission=_has_any(m, {SEE_ALL_ORG, SEE_ALL_UNIT}),
             platform_staff=platform_staff,
+            teams=list(m.teams),
+            offices=list(m.offices),
+            avatar_path=m.avatar_path,
         ),
         org=org_out(current),
         units=[UnitOut(code=u.code, name=u.name) for u in m.units],
@@ -170,10 +179,20 @@ select o.id::text as id, o.slug, o.name,
               and (mu.membership_id is not null
                    or exists (select 1 from app.role_permissions rp
                                where rp.role_key = m.role_key and rp.permission = $2))
-       ), '[]') as units
+       ), '[]') as units,
+       array(select t.name from app.membership_teams mt
+               join app.teams t on t.id = mt.team_id and t.active
+              where mt.membership_id = m.id
+              order by t.name) as teams,
+       array(select u.name from app.membership_units mu
+               join app.units u on u.id = mu.unit_id and u.active
+              where mu.membership_id = m.id
+              order by u.name) as offices,
+       p.avatar_path
   from app.memberships m
   join app.organizations o on o.id = m.org_id and o.active
   join app.roles r         on r.key = m.role_key
+  left join app.profiles p on p.user_id = m.user_id
  where m.user_id = $1::uuid and m.status = 'active'
  order by m.last_seen_at desc nulls last, o.name
 """
@@ -202,6 +221,9 @@ class PgMeRepo:
                     role_name=r["role_name"],
                     permissions=frozenset(r["permissions"]),
                     units=tuple(_unit(u) for u in json.loads(r["units"])),
+                    teams=tuple(r["teams"]),
+                    offices=tuple(r["offices"]),
+                    avatar_path=r["avatar_path"],
                 ),
             )
             for r in rows

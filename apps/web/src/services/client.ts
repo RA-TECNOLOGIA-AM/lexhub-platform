@@ -153,6 +153,12 @@ export interface DataClient {
     // Notificações do sino: só as de quem está logado.
     listMyNotifications(): Promise<NotificationsResponse>
     markNotificationsRead(ids: string[] | null): Promise<void> // null = todas
+
+    // Foto de perfil de quem está logado (bucket 'avatars'). Envia a imagem já cortada e devolve o caminho novo.
+    uploadMyAvatar(image: Blob): Promise<string>
+    removeMyAvatar(): Promise<void>
+    // URL pública da foto a partir do avatar_path do /me.
+    avatarUrl(path: string): string
 }
 
 // mock = dados fictícios; api = Supabase Auth (login) + API V2 (dados). Escolha em VITE_DATA_SOURCE.

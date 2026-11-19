@@ -102,6 +102,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setMe(await dataClient.getMe(slug))
     }, [])
 
+    // Depois de trocar/tirar a foto: atualiza o avatar em toda a tela sem buscar o "me" de novo.
+    function setAvatarPath(path: string | null) {
+        setMe((prev) => (prev ? { ...prev, user: { ...prev.user, avatar_path: path } } : prev))
+    }
+
     return (
         <AuthContext
             value={{
@@ -114,6 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 signOut,
                 switchOrg,
                 refreshSession,
+                setAvatarPath,
             }}
         >
             {children}
