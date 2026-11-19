@@ -11,6 +11,10 @@ import {
     rowsOf,
     scopeOf,
     statusOf,
+    summaryOf,
+    unitViewOf,
+    firstUnitOf,
+    hasUnitAccess,
     type MemberRow,
 } from './memberView.ts'
 
@@ -116,5 +120,39 @@ describe('filtro na URL', () => {
     })
     it('papel inválido na URL vira "todos"', () => {
         expect(filterFromParams(new URLSearchParams('papel=chefe')).role).toBe('')
+    })
+})
+
+describe('summaryOf', () => {
+    const now = new Date()
+    it('cargo em cada unidade; Owner/Dev pelo papel; convite pelo vencimento', () => {
+        expect(summaryOf(row('bruno'), now)).toBe('Controller em LA AM · Gestor em NG')
+        expect(summaryOf(row('ana'), now)).toBe('Desenvolvedor')
+        expect(summaryOf(row('gabriel'), now)).toBe('Convite · vence em 5 dias')
+    })
+})
+
+describe('unitViewOf', () => {
+    const teams = members.teams
+    it('cargo e setores só da unidade pedida', () => {
+        expect(unitViewOf(row('bruno'), 'LA_AM', teams)).toEqual({
+            role: 'Controller',
+            sectors: ['Comercial'],
+            extraGroups: 0,
+            extraDashboards: 0,
+        })
+        const ng = unitViewOf(row('bruno'), 'LA_RJ', teams)
+        expect(ng.role).toBeNull()
+        expect(hasUnitAccess(ng)).toBe(false)
+    })
+    it('convite: cargo e setores pelo nome, nas unidades do convite', () => {
+        expect(unitViewOf(row('gabriel'), 'NG', teams)).toMatchObject({ role: 'Colaborador', sectors: ['Pendências'] })
+        expect(unitViewOf(row('gabriel'), 'LA_AM', teams).role).toBeNull()
+    })
+    it('primeira unidade com algo; senão a primeira', () => {
+        const codes = members.units.map((u) => u.code)
+        expect(firstUnitOf(row('carla'), codes, teams)).toBe('LA_RJ')
+        expect(firstUnitOf(row('gabriel'), codes, teams)).toBe('NG')
+        expect(firstUnitOf(row('gabriel'), [], teams)).toBe('')
     })
 })

@@ -1896,6 +1896,39 @@ div.org {
 .acc-panels.is-muted {
     opacity: 0.6;
 }
+/* Membros mestre-detalhe: filtros compactos na lista, fatos da unidade e convite no lugar do detalhe. */
+.mem-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 14px 10px;
+}
+.mem-filters-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+}
+.mem-row-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+.mem-row-top .people-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mem-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+.acc-md > .invite {
+    max-width: none;
+}
 .acc-panel {
     display: flex;
     flex-direction: column;

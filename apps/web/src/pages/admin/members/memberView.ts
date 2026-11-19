@@ -1,4 +1,4 @@
-import type { Invitation, Member, MembersResponse, OrgRoleKey, UnitRoleKey } from '../../../types/index.ts'
+import type { Invitation, Member, MembersResponse, MemberTeam, OrgRoleKey, UnitRoleKey } from '../../../types/index.ts'
 import { matchesText } from '../../../lib/text.ts'
 
 // Regras da lista de Membros (sem React); os testes ficam em memberView.test.ts.
@@ -139,4 +139,44 @@ export function paramsFromFilter(f: MemberFilter): URLSearchParams {
     if (f.unit) params.set('unidade', f.unit)
     if (f.role) params.set('papel', f.role)
     return params
+}
+
+// --- Mestre-detalhe (lista à esquerda, pessoa à direita) ---
+
+// Linha de baixo na lista: "Gestor em NG · Leitor em LA AM" · "Desenvolvedor" · "Convite · vence em 3 dias"
+export function summaryOf(row: MemberRow, now: Date): string {
+    if (row.kind === 'invitation') return noteOf(row, now).replace(/^Convidado por .* · /, 'Convite · ')
+    const m = row.member
+    if (isOrgWide(m)) return ROLE_LABEL[m.org_role]
+    if (m.units.length === 0) return 'Sem cargo'
+    return m.units.map((u) => `${ROLE_LABEL[u.role]} em ${unitLabel(u.code)}`).join(' · ')
+}
+
+// O que a pessoa tem numa unidade (só leitura): cargo, setores e exceções (só visualizam).
+export type UnitView = { role: string | null; sectors: string[]; extraGroups: number; extraDashboards: number }
+
+export function unitViewOf(row: MemberRow, unit: string, teams: MemberTeam[]): UnitView {
+    if (row.kind === 'invitation') {
+        const i = row.invitation
+        const inUnit = i.role === 'admin' || i.units.includes(unit)
+        const sectors = teams.filter((t) => t.unit === unit && i.teams.includes(t.name)).map((t) => t.name)
+        return { role: inUnit ? ROLE_LABEL[i.role] : null, sectors, extraGroups: 0, extraDashboards: 0 }
+    }
+    const m = row.member
+    const here = m.units.find((u) => u.code === unit)
+    return {
+        role: here ? ROLE_LABEL[here.role] : null,
+        sectors: teams.filter((t) => t.unit === unit && m.team_ids.includes(t.id)).map((t) => t.name),
+        extraGroups: m.extra_groups.filter((g) => g.unit === unit).length,
+        extraDashboards: m.extra_dashboards.filter((d) => d.unit === unit).length,
+    }
+}
+
+// Bolinha acesa na aba: a pessoa tem algo nesta unidade.
+export const hasUnitAccess = (v: UnitView) =>
+    v.role !== null || v.sectors.length > 0 || v.extraGroups > 0 || v.extraDashboards > 0
+
+// Primeira unidade com algo; senão a primeira da lista.
+export function firstUnitOf(row: MemberRow, units: string[], teams: MemberTeam[]): string {
+    return units.find((u) => hasUnitAccess(unitViewOf(row, u, teams))) ?? units[0] ?? ''
 }
