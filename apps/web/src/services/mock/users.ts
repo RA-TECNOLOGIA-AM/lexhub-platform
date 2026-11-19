@@ -8,6 +8,9 @@ const user: User = {
     can_export: true,
     can_see_commission: true,
     platform_staff: true,
+    teams: ['Tecnologia'],
+    offices: ['ESCRITÓRIO MASTER'],
+    avatar_path: null,
 }
 
 // As organizações de que essa pessoa faz parte (as mesmas do protótipo).
