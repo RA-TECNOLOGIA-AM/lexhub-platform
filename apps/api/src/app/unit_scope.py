@@ -13,7 +13,8 @@ nomes da v1 não mudam): quem troca o nome é a `UnitScopedSource`, entre o cál
 Só entra no recorte a query cujo cálculo descarta as outras unidades ANTES de qualquer conta. Cada módulo
 de dashboard diz quais são as suas (`DashboardModule.unit_scoped`), conferido com testes que comparam o
 resultado com e sem as linhas das outras unidades (tests/test_unit_scope_paridade.py) e, com os dados
-reais, por scripts/comparar_v1/conferir_recorte_unidade.py. Desligado por padrão (SOURCE_UNIT_SCOPE).
+reais, por scripts/comparar_v1/conferir_recorte_unidade.py (189 de 189 idênticos em 21/11/2026). Liga e
+desliga em SOURCE_UNIT_SCOPE.
 """
 
 from collections.abc import Iterable
@@ -79,6 +80,31 @@ def scoped_sql(query_name: str, sql: str, escritorio: int) -> str:
     column = UNIT_COLUMN[query_name]
     body = sql.strip().rstrip(";")
     return f'select * from (\n{body}\n) q where q."{column}" = {int(escritorio)}'
+
+
+# Ordem fixa das linhas destas queries: id do processo e parte adversa. Nenhuma tem ORDER BY, então o banco
+# devolvia as linhas na ordem do plano, que muda com o recorte (e pode mudar sozinha). O cálculo da v1 tem
+# listas sem desempate (matérias com a mesma contagem, processos da mesma data) e, no Recursal e no Controle,
+# um processo vem numa linha por parte adversa e vale a primeira. Ordenadas, a query inteira e o recorte dão
+# o mesmo resultado, e a mesma tela não troca a ordem dos empatados a cada atualização. Conferido nos dados de
+# 21/11/2026: as linhas repetidas de um processo só diferem na parte adversa; com a mesma parte, são iguais.
+_COLUNA_ID = {"julgados": "ID"}  # nas outras, "id"
+
+
+def ordem_canonica(query_name: str, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """As linhas de uma query do recorte (inteira ou 'nome@N') na ordem fixa; as outras queries, como vieram."""
+    base = query_name.partition(SEP)[0]
+    if base not in UNIT_COLUMN:
+        return rows
+    coluna = _COLUNA_ID.get(base, "id")
+
+    def chave(row: dict[str, Any]) -> tuple:
+        pid = row.get(coluna)
+        parte = row.get("PARTE_ADVERSA")
+        return (pid is None, pid if pid is not None else 0, parte is None, str(parte or ""))
+
+    rows.sort(key=chave)
+    return rows
 
 
 class UnitScopedSource:

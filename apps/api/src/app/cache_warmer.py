@@ -30,7 +30,7 @@ def warm_targets(modules: Iterable[DashboardModule], skip_dbs: Iterable[str] = (
 
     Planilhas do Google (app/sheets.py) ficam de fora: o download do XLSX inteiro a cada ciclo pesaria sem
     ninguém ver; elas só entram no cache (5 min) quando alguém abre o dashboard.
-    `skip_dbs` (SOURCE_CACHE_WARM_SKIP) também: o LexFlow responde em ~1 s, então o aquecedor não
+    `skip_dbs` (SOURCE_CACHE_WARM_SKIP) também: LexFlow e LexPre respondem rápido, então o aquecedor não
     poupa espera a ninguém, e cada renovação dele era egress cobrado pelo Supabase. Lá o dado vencido
     vai para a tela na hora e é renovado em segundo plano só quando alguém lê.
     As queries com recorte por unidade (app/unit_scope.py) entram também com o nome de cada recorte

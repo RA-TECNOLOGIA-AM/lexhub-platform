@@ -337,7 +337,7 @@ def test_impressao_digital_muda_com_o_formato_do_dado(monkeypatch):
     from app import database
 
     antes = fingerprint_query("select 1 as x")
-    monkeypatch.setattr(database, "FINGERPRINT_FORMAT", "2")
+    monkeypatch.setattr(database, "FINGERPRINT_FORMAT", database.FINGERPRINT_FORMAT + "-outro")
     assert fingerprint_query("select 1 as x") != antes
     monkeypatch.setattr(database.asyncpg, "__version__", "99.0")
     assert fingerprint_query("select 1 as x") != antes
@@ -391,11 +391,13 @@ def test_busca_condicional_diferente_ou_sem_base_baixa_na_mesma_transacao():
 # --- configuração --------------------------------------------------------------------------------
 
 
-def test_padroes_contra_o_egress_do_lexflow():
+def test_padroes_contra_o_egress_do_supabase():
     s = Settings(_env_file=None)
-    assert s.source_cache_ttl_by_db == {"lexflow": 900}
-    assert s.source_cache_probe_dbs == {"lexflow"}
-    assert s.source_cache_warm_skip == {"lexflow"}
+    assert s.source_cache_ttl_by_db == {
+        "lexflow": 900
+    }  # o LexPre segue com 5 min (telas de operação)
+    assert s.source_cache_probe_dbs == {"lexflow", "lexpre"}
+    assert s.source_cache_warm_skip == {"lexflow", "lexpre"}
 
 
 def test_listas_vazias_desligam():
@@ -404,3 +406,32 @@ def test_listas_vazias_desligam():
     assert s.source_cache_warm_skip == frozenset()
     s = Settings(_env_file=None, SOURCE_CACHE_PROBE=" LexFlow , ng ")
     assert s.source_cache_probe_dbs == {"lexflow", "ng"}
+
+
+# --- resumo do egress no log -------------------------------------------------------------------------
+
+
+def test_resumo_do_que_saiu_dos_bancos_vai_para_o_log_a_cada_periodo(caplog):
+    clock = Clock()
+    cache = SourceCache(
+        MemoryStore(), ttl=300, clock=clock, probe_dbs=("lexflow",), stats_every=3600
+    )
+    origin = Origin()
+
+    async def go():
+        await ler(cache, origin)  # baixou 1 linha
+        clock.now += 300 + 600 + 1
+        await ler(cache, origin)  # conferido sem mudança
+        await ler(cache, origin, "lexpre:q")  # outro banco, sem conferência: baixou
+        clock.now += 3600
+        await ler(cache, origin, "lexpre:x")  # passou da hora: este entra e o resumo sai
+
+    with caplog.at_level("INFO", logger="app.source_cache"):
+        run(go())
+    resumos = [
+        r.getMessage() for r in caplog.records if "Bancos de origem nos últimos" in r.getMessage()
+    ]
+    assert len(resumos) == 1
+    assert "lexflow: 1 baixadas (1 linhas), 1 conferidas sem mudança" in resumos[0]
+    assert "lexpre: 2 baixadas (2 linhas), 0 conferidas sem mudança" in resumos[0]
+    assert cache._stats == {}  # zerou para o próximo período

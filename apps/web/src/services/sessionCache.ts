@@ -47,7 +47,7 @@ export function withSessionCache(client: DataClient, ttlMs = 5 * 60_000, now: ()
     const clearAll = () => [catalog, favorites, hubOrder].forEach((m) => m.clear())
 
     // Um dashboard carregou: o card dele no hub passa a mostrar a mesma hora de atualização
-    // (o catálogo guardado pode ser de antes da primeira sincronização e dizer "Aguardando sincronização").
+    // (o catálogo guardado pode ser de antes da primeira sincronização e dizer "Atualiza ao abrir").
     async function syncCard(org: string, key: string, syncedAt: string | null) {
         const current = catalog.peek(org)
         if (!current || !syncedAt) return

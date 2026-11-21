@@ -1,6 +1,6 @@
 """Cache das queries dos bancos de origem (5 min), no padrão da v1 (fetch_data_with_cache).
 
-Protege os bancos de origem e evita que o usuário espere a query pesada (LexPre: ~22 a 50 s):
+Protege os bancos de origem e evita que o usuário espere a query (as do banco NG são as mais lentas):
   * fresco (até `ttl`): devolve da memória (L1), sem ir ao banco;
   * vencido na memória: tenta o Redis (L2, compartilhado e que sobrevive a restart/deploy);
   * vencido há pouco (até `ttl + stale_while_revalidate`): devolve o que tem NA HORA e renova em
@@ -70,6 +70,11 @@ def error_name(exc: BaseException) -> str:
     """
     cause = exc.__cause__
     return f"{type(exc).__name__} ({type(cause).__name__})" if cause else type(exc).__name__
+
+
+def _milhar(n: int) -> str:
+    """12345 -> '12.345'."""
+    return f"{n:,}".replace(",", ".")
 
 
 def db_of(key: str) -> str:
@@ -147,8 +152,13 @@ class SourceCache:
         stale_while_revalidate: float = 600,
         ttl_by_db: Mapping[str, float] | None = None,
         probe_dbs: Collection[str] = (),
+        stats_every: float = 3600,
     ):
         self._store = store
+        # Resumo no log do que saiu dos bancos (egress), a cada `stats_every` s: banco -> contadores.
+        self._stats_every = stats_every
+        self._stats: dict[str, dict[str, int]] = {}
+        self._stats_since = clock()
         self._ttl = ttl
         self._ttl_by_db = dict(ttl_by_db or {})
         self._probe_dbs = frozenset(probe_dbs)
@@ -361,11 +371,33 @@ class SourceCache:
             logger.info(
                 "%s: %s linhas em %s (vale por %s)",
                 key,
-                f"{len(data):,}".replace(",", "."),
+                _milhar(len(data)),
                 seconds(entry.fetched_at - started),
                 seconds(self.ttl_of(key)),
             )
+        self._count(key, None if data is None else len(data))
         return entry
+
+    def _count(self, key: str, rows: int | None) -> None:
+        """Conta o que saiu do banco (rows) ou a conferência sem mudança (None) e, passado `stats_every`,
+        escreve o resumo no log e zera. É por ele que se acompanha o egress sem o painel do Supabase."""
+        s = self._stats.setdefault(db_of(key), {"baixadas": 0, "linhas": 0, "sem_mudanca": 0})
+        if rows is None:
+            s["sem_mudanca"] += 1
+        else:
+            s["baixadas"] += 1
+            s["linhas"] += rows
+        decorrido = self._clock() - self._stats_since
+        if decorrido < self._stats_every:
+            return
+        partes = [
+            f"{db}: {c['baixadas']} baixadas ({_milhar(c['linhas'])} linhas), "
+            f"{c['sem_mudanca']} conferidas sem mudança"
+            for db, c in sorted(self._stats.items())
+        ]
+        logger.info("Bancos de origem nos últimos %s: %s", seconds(decorrido), "; ".join(partes))
+        self._stats = {}
+        self._stats_since = self._clock()
 
 
 class CachedSourceFetcher:

@@ -115,7 +115,8 @@ async def fetch_read_only(conn: asyncpg.Connection, query: str) -> list[asyncpg.
 # Versão do formato do dado guardado no cache. Mude ao alterar como as linhas do banco viram o que o cache
 # guarda (ex.: o dict(r) de PgSourceFetcher, um codec do asyncpg): a impressão digital muda junto e o dado
 # antigo do Redis não é reaproveitado por uma conferência "igual".
-FINGERPRINT_FORMAT = "1"
+# 2: as linhas das queries do recorte em ordem fixa (unit_scope.ordem_canonica).
+FINGERPRINT_FORMAT = "2"
 
 
 def fingerprint_query(query: str) -> str:

@@ -56,11 +56,15 @@ $env:PYTHONPATH = "$PWD\src"
 .venv\Scripts\python.exe scripts\comparar_v1\conferir_recorte_unidade.py "$env:TEMP\conferir_recorte"
 ```
 
-Imprime `IGUAL` ou o número de diferenças por caso, grava `relatorio_recorte.json` e sai com código 1 se houver
-diferença. Rodar de novo reaproveita `recorte.pkl` (apague para buscar dados novos).
+Imprime, por caso, `IGUAL`, `SÓ ORDEM` (mesmos itens em outra posição de alguma lista) ou `DIFERENÇAS`, grava
+`relatorio_recorte.json` e sai com código 1 se houver qualquer um dos dois últimos. Rodar de novo reaproveita `recorte.pkl` (apague para buscar dados novos).
 
 ## Resultados
 
+- **Recorte por unidade, 21/11/2026** (`conferir_recorte_unidade.py`, 7 dashboards × NG/LA/RJ × 3 períodos, dados e
+  exportações): o SQL dos 33 recortes devolveu exatamente as linhas da unidade. Sem ordem fixa, 66 casos iguais, 114
+  só com itens empatados em outra posição e 9 com outra parte adversa na exportação do Recursal (processos com mais
+  de uma). Com a ordem fixa (`unit_scope.ordem_canonica`), **189 de 189 iguais**, e o recorte foi ligado.
 - **LexPre, 11/11/2026:** 36 de 36 iguais. Única variação: a ordem de atendentes **empatados** em
   `tabela_por_atendente` (Comercial) muda de uma execução para outra, na v1 e na V2, porque a v1 não desempata.
 - **Banco NG, 12/11/2026** (`compare_v1_lexflow.py <saida> ng` e `compare_v2.py <saida> ng`, linhas de

@@ -228,7 +228,7 @@ def _auth(signer):
 
 @pytest.fixture
 def recorte_ligado(client):
-    """SOURCE_UNIT_SCOPE=true (o padrão é desligado até a conferência com os dados reais)."""
+    """SOURCE_UNIT_SCOPE=true (o padrão; explícito para o teste não depender do ambiente)."""
     client.app.dependency_overrides[get_unit_scope] = lambda: True
 
 
@@ -249,8 +249,76 @@ def test_rota_de_exportacao_pede_o_recorte_da_unidade(
     assert sources.last.fetched == ["execucao_LA@20"]
 
 
-def test_recorte_vem_desligado_e_pede_a_query_inteira(client, signer, sources, lexflow_module):
+def test_recorte_vem_ligado_por_padrao(client, signer, sources, lexflow_module):
+    r = client.get("/orgs/lexgroup/units/NG/dashboards/execucao", headers=_auth(signer))
+    assert r.status_code == 200, r.text
+    assert sources.last.fetched == ["execucao_LA@20", "agendamentos_setor_execucao_NG"]
+    assert get_unit_scope() is True
+
+
+def test_recorte_desligado_pede_a_query_inteira(client, signer, sources, lexflow_module):
+    client.app.dependency_overrides[get_unit_scope] = lambda: False
     r = client.get("/orgs/lexgroup/units/NG/dashboards/execucao", headers=_auth(signer))
     assert r.status_code == 200, r.text
     assert sources.last.fetched == ["execucao_LA", "agendamentos_setor_execucao_NG"]
-    assert get_unit_scope() is False
+
+
+# --- ordem fixa das linhas -----------------------------------------------------------------------------
+
+from app.unit_scope import ordem_canonica
+
+
+def test_ordem_fixa_por_id_e_parte_adversa_nas_queries_do_recorte():
+    linhas = [
+        {"id": 3, "PARTE_ADVERSA": "B"},
+        {"id": 1, "PARTE_ADVERSA": None},
+        {"id": 3, "PARTE_ADVERSA": "A"},
+        {"id": None, "PARTE_ADVERSA": "X"},
+        {"id": 2, "PARTE_ADVERSA": "Z"},
+    ]
+    ordenadas = ordem_canonica("setor_recurso_NG@20", list(linhas))
+    assert [(r["id"], r["PARTE_ADVERSA"]) for r in ordenadas] == [
+        (1, None),
+        (2, "Z"),
+        (3, "A"),
+        (3, "B"),
+        (None, "X"),
+    ]
+    # A inteira e o recorte ficam na mesma ordem relativa: recortar depois de ordenar = ordenar o recorte.
+    inteira = ordem_canonica("setor_recurso_NG", list(reversed(linhas)))
+    assert inteira == ordenadas
+
+
+def test_ordem_fixa_usa_a_coluna_ID_nos_julgados_e_nao_mexe_nas_outras_queries():
+    julgados = ordem_canonica("julgados", [{"ID": 9}, {"ID": 4}])
+    assert [r["ID"] for r in julgados] == [4, 9]
+    outra = [{"id": 2}, {"id": 1}]
+    assert ordem_canonica("agendamentos_setor_execucao_NG", outra) == [{"id": 2}, {"id": 1}]
+
+
+def test_banco_devolve_as_linhas_do_recorte_em_ordem_fixa():
+    class Manager(FakeManager):
+        def get_connection(self, name):
+            ctx = super().get_connection(name)
+
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    conn = await ctx.__aenter__()
+
+                    async def fetch(query):
+                        return [{"id": 5}, {"id": 1}, {"id": 3}]
+
+                    conn.fetch = fetch
+                    return conn
+
+                async def __aexit__(self_inner, *exc):
+                    return False
+
+            return _Ctx()
+
+    fonte = PgSourceFetcher(Manager(), "lexflow")
+    assert [r["id"] for r in run(fonte.fetch("execucao_LA@20"))] == [1, 3, 5]
+    assert [r["id"] for r in run(fonte.fetch("execucao_LA"))] == [1, 3, 5]
+    rows, _ = run(fonte.fetch_if_changed("execucao_LA", None))
+    assert [r["id"] for r in rows] == [1, 3, 5]
+    assert [r["id"] for r in run(fonte.fetch("agendamentos_setor_execucao_NG"))] == [5, 1, 3]
