@@ -27,7 +27,7 @@ from app.database import (
 )
 from app.source_cache import CachedSourceFetcher, SourceCache
 from app.source_queries import QUERIES
-from app.unit_scope import scoped_sql, split_scoped
+from app.unit_scope import ordem_canonica, scoped_sql, split_scoped
 
 if TYPE_CHECKING:
     from app.registered_sources import RegisteredSources
@@ -91,7 +91,7 @@ class PgSourceFetcher:
             operation_name=query_name,
         )
         self._fetched.append(time.time())
-        return [dict(r) for r in rows]
+        return ordem_canonica(query_name, [dict(r) for r in rows])
 
     async def fetch_if_changed(
         self, query_name: str, known: str | None
@@ -106,7 +106,9 @@ class PgSourceFetcher:
             operation_name=query_name,
         )
         self._fetched.append(time.time())
-        return (None if rows is None else [dict(r) for r in rows]), fingerprint
+        if rows is None:
+            return None, fingerprint
+        return ordem_canonica(query_name, [dict(r) for r in rows]), fingerprint
 
     def synced_at(self) -> float | None:
         return min(self._fetched) if self._fetched else None

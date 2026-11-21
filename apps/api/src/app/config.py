@@ -114,12 +114,14 @@ class Settings(BaseSettings):
     SOURCE_CACHE_TTL_LEXFLOW: int = Field(default=900, ge=0)
     # Bancos com "só baixa se mudou" (separados por vírgula): na renovação, o banco devolve antes uma
     # impressão digital do resultado (uma linha) e as linhas só vêm se ela mudou. A query roda no banco
-    # do mesmo jeito; o que se economiza é a transferência. Vazio = desligado.
-    SOURCE_CACHE_PROBE: str = "lexflow"
+    # do mesmo jeito; o que se economiza é a transferência. Vazio = desligado. LexFlow e LexPre estão no
+    # Supabase (egress cobrado); as 52 queries do LexFlow e as 5 do LexPre foram conferidas no banco real.
+    SOURCE_CACHE_PROBE: str = "lexflow,lexpre"
     # Recorte por unidade (app/unit_scope.py): as queries do LexFlow que trazem todos os escritórios vêm só
-    # com as linhas da unidade da tela, nos dashboards que declaram `unit_scoped`. Desligado até a conferência
-    # com os dados reais (scripts/comparar_v1/conferir_recorte_unidade.py) dar tudo IGUAL; aí, true na stack.
-    SOURCE_UNIT_SCOPE: bool = False
+    # com as linhas da unidade da tela, nos dashboards que declaram `unit_scoped`. Ligado depois que o
+    # scripts/comparar_v1/conferir_recorte_unidade.py deu 189 de 189 casos idênticos com os dados reais
+    # (21/11/2026, já com a ordem fixa das linhas). False = como antes, sem deploy (variável na stack).
+    SOURCE_UNIT_SCOPE: bool = True
     SOURCE_CACHE_STALE_MAX_AGE: int = Field(default=3600, ge=0)
     # Vencido há até isto (s): a tela recebe o dado atual na hora e ele é renovado em segundo
     # plano. 0 = desligado (quem pedir depois de vencer espera a query no banco).
@@ -132,10 +134,11 @@ class Settings(BaseSettings):
     # não vai ao banco a cada ciclo. A tela à vista busca de novo a cada 5 min (useAutoRefresh), então
     # o dashboard aberto segue quente; fechado, para de ser renovado depois deste prazo.
     SOURCE_CACHE_WARM_IDLE: int = Field(default=1800, ge=60)
-    # Bancos que o aquecedor não renova (separados por vírgula). O LexFlow responde em ~1 s: o aquecedor
-    # não poupa espera e cada renovação dele era egress cobrado (até 15 renovações por hora por query
-    # em uso). Lá o dado vencido vai para a tela e é renovado em segundo plano quando alguém lê.
-    SOURCE_CACHE_WARM_SKIP: str = "lexflow"
+    # Bancos que o aquecedor não renova (separados por vírgula). LexFlow (~1 s) e LexPre (60 a 224 ms no
+    # banco, medido em 21/11/2026) respondem rápido: o aquecedor não poupa espera e cada renovação dele era
+    # egress cobrado pelo Supabase (até 15 por hora por query em uso, mais 30 min depois de fechar). Lá o
+    # dado vencido vai para a tela na hora e é renovado em segundo plano quando alguém lê.
+    SOURCE_CACHE_WARM_SKIP: str = "lexflow,lexpre"
     # Memória dos cálculos dos dashboards (app/result_memo.py): quantos resultados guarda (cada um é uma
     # resposta inteira; sai o usado há mais tempo). Vale até o dado ser renovado ou SOURCE_CACHE_TTL.
     # 0 = desligada (todo pedido calcula).

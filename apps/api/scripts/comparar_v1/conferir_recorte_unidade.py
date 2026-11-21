@@ -38,6 +38,7 @@ from app.sources import PgSourceFetcher
 from app.unit_scope import (
     ESCRITORIO_POR_UNIDADE,
     UNIT_COLUMN,
+    ordem_canonica,
     scope_source,
     scoped_name,
 )
@@ -64,7 +65,8 @@ async def buscar() -> dict[str, list[dict]]:
     if arquivo.exists():
         print(f"Reaproveitando {arquivo}")
         return pickle.loads(arquivo.read_bytes())
-    dbs = DatabaseManager(Settings())
+    # Só o LexFlow é usado: o Supabase da plataforma (login) fica com valores que nunca são chamados.
+    dbs = DatabaseManager(Settings(SUPABASE_URL="http://localhost", SUPABASE_PUBLISHABLE_KEY="-"))
     dbs.start()
     inicio = time.monotonic()
     while not dbs.is_up("lexflow"):
@@ -119,9 +121,9 @@ class Fonte:
         self._rows = rows
 
     async def fetch(self, name):
-        return [
-            dict(r) for r in self._rows[name]
-        ]  # cópia: o cálculo nunca vê a lista do outro lado
+        # Cópia (o cálculo nunca vê a lista do outro lado), na ordem fixa que o PgSourceFetcher aplica: o
+        # recorte.pkl pode ter sido salvo antes dela.
+        return ordem_canonica(name, [dict(r) for r in self._rows[name]])
 
     def synced_at(self):
         return None
@@ -179,6 +181,16 @@ async def _rodar(trabalho):
         return {"<erro>": f"{type(exc).__name__}: {exc}"}
 
 
+def _sem_ordem(valor):
+    """O mesmo JSON com cada lista ordenada: compara o conteúdo sem olhar a posição dos itens."""
+    if isinstance(valor, dict):
+        return {k: _sem_ordem(v) for k, v in valor.items()}
+    if isinstance(valor, list):
+        itens = [_sem_ordem(v) for v in valor]
+        return sorted(itens, key=lambda v: json.dumps(v, sort_keys=True, default=str))
+    return valor
+
+
 async def comparar(rows) -> dict:
     relatorio = {}
     inteira = Fonte(rows)
@@ -206,9 +218,18 @@ async def comparar(rows) -> dict:
                     antes = await _rodar(fazer(inteira))
                     depois = await _rodar(fazer(recorte))
                     d = diffs(antes, depois)
-                    relatorio[caso] = {"diferencas": len(d), "exemplos": d[:10]}
+                    # Mesmos itens em outra posição de alguma lista (empates sem critério) = "SÓ ORDEM".
+                    conteudo = diffs(_sem_ordem(antes), _sem_ordem(depois)) if d else []
+                    estado = "IGUAL" if not d else ("SÓ ORDEM" if not conteudo else "DIFERENÇAS")
+                    relatorio[caso] = {
+                        "estado": estado,
+                        "diferencas": len(conteudo),
+                        "so_ordem": bool(d) and not conteudo,
+                        "exemplos": (conteudo or d)[:10],
+                    }
                     erro = " (erro nos dois lados)" if "<erro>" in antes else ""
-                    print(f"{caso:75s} {'IGUAL' if not d else f'{len(d)} DIFERENÇAS'}{erro}")
+                    extra = f" ({len(conteudo)})" if conteudo else ""
+                    print(f"{caso:75s} {estado}{extra}{erro}")
     return relatorio
 
 
@@ -221,11 +242,15 @@ async def main():
         json.dumps(relatorio, ensure_ascii=False, indent=1, default=str), encoding="utf-8"
     )
     casos = [v for k, v in relatorio.items() if not k.startswith("_")]
-    diferentes = sum(1 for v in casos if v["diferencas"])
+    estados = {
+        e: sum(1 for v in casos if v["estado"] == e) for e in ("IGUAL", "SÓ ORDEM", "DIFERENÇAS")
+    }
     print(
-        f"\n{len(casos) - diferentes} de {len(casos)} casos iguais; SQL diferente: {erros_sql or 'nenhum'}"
+        f"\n{estados['IGUAL']} de {len(casos)} casos iguais, {estados['SÓ ORDEM']} só com outra ordem, "
+        f"{estados['DIFERENÇAS']} com conteúdo diferente; SQL diferente: {erros_sql or 'nenhum'}"
     )
-    if diferentes or erros_sql:
+    # Ordem diferente já muda o que a tela mostra (itens empatados trocam de lugar): também reprova.
+    if estados["SÓ ORDEM"] or estados["DIFERENÇAS"] or erros_sql:
         sys.exit(1)
 
 
