@@ -14,6 +14,7 @@ from dataclasses import replace
 
 from app.dashboards import execucao_campos, execucao_export, generico_v1
 from app.dashboards.base import DashboardContext
+from app.unit_scope import com_recorte
 
 _MODULO = generico_v1.modulo(
     key="execucao",
@@ -60,3 +61,6 @@ MODULE = replace(
         execucao_campos.RELATORIO: execucao_campos.RELATORIO_SPEC,
     },
 )
+
+# Só as linhas da unidade da tela nas queries que trazem todos os escritórios (app/unit_scope.py).
+MODULE = replace(MODULE, unit_scoped=com_recorte(MODULE.queries))

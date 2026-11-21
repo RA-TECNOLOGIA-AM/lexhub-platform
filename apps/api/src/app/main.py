@@ -28,7 +28,7 @@ from app.routes import (
     source_connections,
     sources,
 )
-from app.source_cache import MemoryStore, SourceCache, ttl_by_query
+from app.source_cache import MemoryStore, SourceCache, shared_ttl_covering, ttl_by_query
 from app.source_switch import PgDisabledRepo, SourceSwitch
 from app.sources import source_fetcher
 from app.supabase_client import create_supabase
@@ -45,7 +45,7 @@ async def _start_warmer(app: FastAPI, settings) -> None:
     await warm_loop(
         cache,
         lambda db: source_fetcher(databases, db),
-        warm_targets(DASHBOARDS.values()),
+        warm_targets(DASHBOARDS.values(), settings.source_cache_warm_skip),
         databases.is_up,
         lambda key: cache.read_within(key, settings.SOURCE_CACHE_WARM_IDLE),
         interval=settings.SOURCE_CACHE_WARM_INTERVAL,
@@ -113,8 +113,14 @@ def create_app() -> FastAPI:
             ttl=settings.SOURCE_CACHE_TTL,
             stale_max_age=settings.SOURCE_CACHE_STALE_MAX_AGE,
             shared=app.state.cache,
-            shared_ttl=ttl_by_query(settings.CACHE_TTL_HEAVY, settings.CACHE_TTL_DEFAULT),
+            shared_ttl=shared_ttl_covering(
+                ttl_by_query(settings.CACHE_TTL_HEAVY, settings.CACHE_TTL_DEFAULT),
+                settings.source_cache_ttl_by_db,
+                settings.SOURCE_CACHE_STALE_WHILE_REVALIDATE,
+            ),
             stale_while_revalidate=settings.SOURCE_CACHE_STALE_WHILE_REVALIDATE,
+            ttl_by_db=settings.source_cache_ttl_by_db,
+            probe_dbs=settings.source_cache_probe_dbs,
         )
         # Resultado dos cálculos por pedido, enquanto os dados lidos não mudam.
         app.state.result_memo = ResultMemo(
@@ -141,7 +147,19 @@ def create_app() -> FastAPI:
                 seconds(settings.SOURCE_CACHE_STALE_WHILE_REVALIDATE),
                 seconds(settings.SOURCE_CACHE_STALE_MAX_AGE),
             )
+            for db, ttl in settings.source_cache_ttl_by_db.items():
+                logger.info("Cache: %s vale %s", db, seconds(ttl))
+            if settings.source_cache_probe_dbs:
+                logger.info(
+                    "Cache: só baixa se mudou em %s",
+                    ", ".join(sorted(settings.source_cache_probe_dbs)),
+                )
             if settings.SOURCE_CACHE_WARM_ENABLED:
+                if settings.source_cache_warm_skip:
+                    logger.info(
+                        "Aquecedor não renova: %s",
+                        ", ".join(sorted(settings.source_cache_warm_skip)),
+                    )
                 warmer = asyncio.create_task(_start_warmer(app, settings))
             else:
                 logger.info("Aquecedor do cache desligado (SOURCE_CACHE_WARM_ENABLED=false)")

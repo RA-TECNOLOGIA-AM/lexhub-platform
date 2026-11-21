@@ -24,6 +24,7 @@ from app.analyses.RJ import julgados_sentenca_RJ as rj
 from app.analyses.situacao_processo import _situacoes_processo_ctx, parse_situacoes_processo
 from app.dashboards import dados_faltando, generico_v1
 from app.dashboards.base import DashboardContext, DashboardInputError, ExportSpec, NotReady
+from app.unit_scope import com_recorte
 
 _FALTA = "Julgados Sentenças não existe na v1 para esta unidade (só NG, LA e RJ)"
 UNIDADES = ("NG", "LA", "RJ")
@@ -173,3 +174,6 @@ MODULE = replace(
         ),
     },
 )
+
+# Só as linhas da unidade da tela nas queries que trazem todos os escritórios (app/unit_scope.py).
+MODULE = replace(MODULE, unit_scoped=com_recorte(MODULE.queries))

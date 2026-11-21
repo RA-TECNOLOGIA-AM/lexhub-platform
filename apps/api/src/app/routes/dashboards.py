@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from app.access import AccessRepo, DashboardAccess, audit_entry, get_repo, require_dashboard
+from app.config import get_settings
 from app.dashboards import DASHBOARDS, export
 from app.dashboards.base import (
     DashboardContext,
@@ -27,6 +28,7 @@ from app.sources import (
     get_source_factory,
     get_source_refs_repo,
 )
+from app.unit_scope import scope_source
 
 router = APIRouter(prefix="/orgs/{org_slug}/units/{unit_code}/dashboards", tags=["dashboards"])
 
@@ -46,6 +48,11 @@ async def dashboard_access(access: Annotated[DashboardAccess, Depends(require_da
 
 
 Today = Callable[[str], date]
+
+
+def get_unit_scope() -> bool:
+    """Dependency: o recorte por unidade está ligado (SOURCE_UNIT_SCOPE; trocável nos testes)."""
+    return get_settings().SOURCE_UNIT_SCOPE
 
 
 def today_in(timezone: str) -> date:
@@ -89,6 +96,7 @@ async def _prepare(
     today: Today,
     start: date | None,
     end: date | None,
+    unit_scope: bool = False,
 ) -> tuple[DashboardModule, DashboardContext]:
     """O que dados e exportação têm em comum: módulo, escopo, período, filtros e unidade -> fonte."""
     module = DASHBOARDS.get(access.dashboard_key)
@@ -125,6 +133,9 @@ async def _prepare(
         db: ref for db in module.extra_queries if (ref := access.source_refs.get(db)) is not None
     }
     source = sources(source_db)
+    if unit_scope:
+        # Só as linhas da unidade da tela nas queries que aceitam o recorte (app/unit_scope.py).
+        source = scope_source(source, source_db, unit_ref, module.unit_scoped)
     extra_sources = {db: sources(db) for db in extra_refs}
     ctx = DashboardContext(
         source=source,
@@ -201,11 +212,14 @@ async def dashboard_data(
     sources: Annotated[SourceFactory, Depends(get_source_factory)],
     audit: Annotated[AccessRepo, Depends(get_repo)],
     today: Annotated[Today, Depends(get_today)],
+    unit_scope: Annotated[bool, Depends(get_unit_scope)],
     start: Annotated[date | None, Query(alias="from")] = None,
     end: Annotated[date | None, Query(alias="to")] = None,
 ):
     """Dados de um dashboard numa unidade: período, filtros da v1, `meta` e o que o módulo calcula."""
-    module, ctx = await _prepare(request, access, refs, sources, audit, today, start, end)
+    module, ctx = await _prepare(
+        request, access, refs, sources, audit, today, start, end, unit_scope
+    )
     # O cálculo prende o único worker. Se a pessoa já desistiu (trocou o filtro de novo e o front
     # cancelou esta busca), não calcula: a requisição que vale não fica esperando na fila.
     if await request.is_disconnected():
@@ -240,6 +254,7 @@ async def dashboard_export(
     sources: Annotated[SourceFactory, Depends(get_source_factory)],
     audit: Annotated[AccessRepo, Depends(get_repo)],
     today: Annotated[Today, Depends(get_today)],
+    unit_scope: Annotated[bool, Depends(get_unit_scope)],
     start: Annotated[date | None, Query(alias="from")] = None,
     end: Annotated[date | None, Query(alias="to")] = None,
     format: Annotated[str | None, Query()] = None,
@@ -250,7 +265,9 @@ async def dashboard_export(
 
     `relatorio` escolhe um dos outros relatórios do dashboard (ex.: as Atividades dos Acordos); as opções dele
     (ex.: ?criterio=saida) vêm na URL e chegam ao cálculo em ctx.export_options."""
-    module, ctx = await _prepare(request, access, refs, sources, audit, today, start, end)
+    module, ctx = await _prepare(
+        request, access, refs, sources, audit, today, start, end, unit_scope
+    )
     try:
         spec = export.pick_report(module, relatorio)
     except export.ExportError as exc:

@@ -109,6 +109,17 @@ class Settings(BaseSettings):
     # Cache das queries dos bancos de origem (mesmos padrões da v1: 5 min, reserva de 1 h,
     # aquecedor um pouco antes de vencer). Ver app/source_cache.py e app/cache_warmer.py.
     SOURCE_CACHE_TTL: int = Field(default=300, ge=0)
+    # Validade própria do LexFlow (s). O banco é do Supabase, que cobra cada GB que sai (egress), e as
+    # queries trazem dezenas de milhares de processos: 15 min em vez de 5 corta as renovações a um terço.
+    SOURCE_CACHE_TTL_LEXFLOW: int = Field(default=900, ge=0)
+    # Bancos com "só baixa se mudou" (separados por vírgula): na renovação, o banco devolve antes uma
+    # impressão digital do resultado (uma linha) e as linhas só vêm se ela mudou. A query roda no banco
+    # do mesmo jeito; o que se economiza é a transferência. Vazio = desligado.
+    SOURCE_CACHE_PROBE: str = "lexflow"
+    # Recorte por unidade (app/unit_scope.py): as queries do LexFlow que trazem todos os escritórios vêm só
+    # com as linhas da unidade da tela, nos dashboards que declaram `unit_scoped`. Desligado até a conferência
+    # com os dados reais (scripts/comparar_v1/conferir_recorte_unidade.py) dar tudo IGUAL; aí, true na stack.
+    SOURCE_UNIT_SCOPE: bool = False
     SOURCE_CACHE_STALE_MAX_AGE: int = Field(default=3600, ge=0)
     # Vencido há até isto (s): a tela recebe o dado atual na hora e ele é renovado em segundo
     # plano. 0 = desligado (quem pedir depois de vencer espera a query no banco).
@@ -121,6 +132,10 @@ class Settings(BaseSettings):
     # não vai ao banco a cada ciclo. A tela à vista busca de novo a cada 5 min (useAutoRefresh), então
     # o dashboard aberto segue quente; fechado, para de ser renovado depois deste prazo.
     SOURCE_CACHE_WARM_IDLE: int = Field(default=1800, ge=60)
+    # Bancos que o aquecedor não renova (separados por vírgula). O LexFlow responde em ~1 s: o aquecedor
+    # não poupa espera e cada renovação dele era egress cobrado (até 15 renovações por hora por query
+    # em uso). Lá o dado vencido vai para a tela e é renovado em segundo plano quando alguém lê.
+    SOURCE_CACHE_WARM_SKIP: str = "lexflow"
     # Memória dos cálculos dos dashboards (app/result_memo.py): quantos resultados guarda (cada um é uma
     # resposta inteira; sai o usado há mais tempo). Vale até o dado ser renovado ou SOURCE_CACHE_TTL.
     # 0 = desligada (todo pedido calcula).
@@ -182,6 +197,24 @@ class Settings(BaseSettings):
 
     def source_concurrency(self, name: str) -> int:
         return getattr(self, f"DB_QUERY_CONCURRENCY_{name.upper()}")
+
+    @property
+    def source_cache_ttl_by_db(self) -> dict[str, int]:
+        """Validade do cache por banco, quando difere de SOURCE_CACHE_TTL."""
+        return {"lexflow": self.SOURCE_CACHE_TTL_LEXFLOW}
+
+    @property
+    def source_cache_probe_dbs(self) -> frozenset[str]:
+        return _names(self.SOURCE_CACHE_PROBE)
+
+    @property
+    def source_cache_warm_skip(self) -> frozenset[str]:
+        return _names(self.SOURCE_CACHE_WARM_SKIP)
+
+
+def _names(value: str) -> frozenset[str]:
+    """'lexflow, ng' -> {'lexflow', 'ng'} (vazio = nenhum)."""
+    return frozenset(n.strip().lower() for n in value.split(",") if n.strip())
 
 
 @lru_cache

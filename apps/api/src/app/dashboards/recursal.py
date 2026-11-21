@@ -11,12 +11,14 @@ os da seção Atividades vão sempre. Única mudança de cálculo: o filtro de d
 "V2:" em analyses/<u>/recurso_<u>.py).
 """
 
+from dataclasses import replace
 from datetime import date
 from typing import Any
 
 from app.analyses import v1_dashboard_generico as v1
 from app.dashboards import generico_v1, recursal_export
 from app.dashboards.base import DashboardContext, DashboardInputError, DashboardModule, NotReady
+from app.unit_scope import com_recorte
 
 UNIDADES = ("NG", "LA", "RJ")
 
@@ -289,3 +291,6 @@ MODULE = DashboardModule(
         )
     ),
 )
+
+# Só as linhas da unidade da tela nas queries que trazem todos os escritórios (app/unit_scope.py).
+MODULE = replace(MODULE, unit_scoped=com_recorte(MODULE.queries))
