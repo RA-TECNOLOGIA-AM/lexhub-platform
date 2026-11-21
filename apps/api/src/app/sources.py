@@ -21,6 +21,7 @@ from app.database import (
     DatabaseManager,
     SourceUnavailable,
     fetch_read_only,
+    fetch_read_only_if_changed,
     get_databases,
     run_with_connection_retry,
 )
@@ -68,19 +69,38 @@ class PgSourceFetcher:
         self._queries = queries
         self._fetched: list[float] = []
 
-    async def fetch(self, query_name: str) -> list[dict[str, Any]]:
-        """Banco desligado, fora do ar ou lento demais = SourceUnavailable (ver app/database.py)."""
+    def _sql(self, query_name: str) -> str:
         spec = self._queries[query_name]  # KeyError = query não copiada da v1: erro de programação
         if spec["database"] != self._db:
             raise ValueError(f"Query {query_name} é do banco {spec['database']}, não de {self._db}")
+        return spec["query"]
+
+    async def fetch(self, query_name: str) -> list[dict[str, Any]]:
+        """Banco desligado, fora do ar ou lento demais = SourceUnavailable (ver app/database.py)."""
+        sql = self._sql(query_name)
         rows = await run_with_connection_retry(
             self._manager,
             self._db,
-            lambda conn: fetch_read_only(conn, spec["query"]),
+            lambda conn: fetch_read_only(conn, sql),
             operation_name=query_name,
         )
         self._fetched.append(time.time())
         return [dict(r) for r in rows]
+
+    async def fetch_if_changed(
+        self, query_name: str, known: str | None
+    ) -> tuple[list[dict[str, Any]] | None, str]:
+        """Só baixa se mudou (ver app/database.py, fetch_read_only_if_changed): (linhas, impressão
+        digital); linhas None = o resultado no banco é igual ao de `known`, nada foi baixado."""
+        sql = self._sql(query_name)
+        rows, fingerprint = await run_with_connection_retry(
+            self._manager,
+            self._db,
+            lambda conn: fetch_read_only_if_changed(conn, sql, known),
+            operation_name=query_name,
+        )
+        self._fetched.append(time.time())
+        return (None if rows is None else [dict(r) for r in rows]), fingerprint
 
     def synced_at(self) -> float | None:
         return min(self._fetched) if self._fetched else None

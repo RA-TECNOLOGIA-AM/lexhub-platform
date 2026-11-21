@@ -16,6 +16,7 @@ obrigatório fora do ar impedia a subida; aqui nenhum banco de origem impede.
 """
 
 import asyncio
+import hashlib
 import logging
 import random
 import socket
@@ -109,6 +110,38 @@ async def fetch_read_only(conn: asyncpg.Connection, query: str) -> list[asyncpg.
     modo transação, onde o SET de sessão de _read_only pode cair numa conexão diferente."""
     async with conn.transaction(readonly=True):
         return await conn.fetch(query)
+
+
+def fingerprint_query(query: str) -> str:
+    """A consulta que devolve, numa linha só, a impressão digital do resultado de `query`.
+
+    Formato: '<hash do SQL>:<linhas>:<soma dos hashes das linhas>'. A soma não depende da ordem das
+    linhas, e qualquer valor que mude numa linha muda o hash dela. O hash do SQL entra para que uma
+    query alterada num deploy (ex.: coluna renomeada com os mesmos valores) nunca reaproveite o dado
+    guardado com a query antiga.
+    """
+    body = query.strip().rstrip(";")
+    sql_hash = hashlib.sha256(body.encode()).hexdigest()[:16]
+    return (
+        f"select '{sql_hash}:' || count(*)::text || ':' || "
+        "coalesce(sum(hashtextextended(q::text, 0)::numeric), 0)::text\n"
+        f"from (\n{body}\n) q"
+    )
+
+
+async def fetch_read_only_if_changed(
+    conn: asyncpg.Connection, query: str, known: str | None
+) -> tuple[list[asyncpg.Record] | None, str]:
+    """Só baixa se mudou: (linhas, impressão digital); linhas None = igual a `known`, nada baixado.
+
+    A impressão digital e as linhas saem da mesma foto do banco (REPEATABLE READ, só leitura): a
+    impressão guardada é exatamente a das linhas guardadas, mesmo com alguém editando no meio.
+    """
+    async with conn.transaction(readonly=True, isolation="repeatable_read"):
+        fingerprint = await conn.fetchval(fingerprint_query(query))
+        if known is not None and fingerprint == known:
+            return None, fingerprint
+        return await conn.fetch(query), fingerprint
 
 
 PoolFactory = Callable[..., Awaitable[Any]]
