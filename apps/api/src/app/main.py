@@ -39,13 +39,15 @@ logger = logging.getLogger("app.startup")
 
 
 async def _start_warmer(app: FastAPI, settings) -> None:
-    """Mantém quentes as queries dos dashboards (só dos bancos que estão no ar)."""
+    """Mantém quentes as queries dos dashboards em uso (só dos bancos que estão no ar)."""
     databases: DatabaseManager = app.state.databases
+    cache: SourceCache = app.state.source_cache
     await warm_loop(
-        app.state.source_cache,
+        cache,
         lambda db: source_fetcher(databases, db),
         warm_targets(DASHBOARDS.values()),
         databases.is_up,
+        lambda key: cache.read_within(key, settings.SOURCE_CACHE_WARM_IDLE),
         interval=settings.SOURCE_CACHE_WARM_INTERVAL,
     )
 

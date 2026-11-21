@@ -10,7 +10,8 @@ Protege os bancos de origem e evita que o usuário espere a query pesada (LexPre
     segundo plano ou do aquecedor: todos esperam a mesma; grava no L1 e no L2;
   * banco fora do ar: devolve o último dado bom (L1 ou L2) até `stale_max_age` (igual à v1);
     depois, o erro;
-  * o aquecedor (cache_warmer.py) renova antes de vencer, então a tela quase nunca espera.
+  * o aquecedor (cache_warmer.py) renova antes de vencer o que alguém leu há pouco (`read_within`),
+    então a tela em uso quase nunca espera.
 
 Por que servir o vencido: trocar um filtro logo depois de a query vencer (o aquecedor nem sempre chega
 antes) fazia a pessoa esperar a query inteira no banco. `meta.synced_at` continua dizendo a hora real.
@@ -122,6 +123,13 @@ class SourceCache:
         self._swr = stale_while_revalidate
         self._locks: dict[str, asyncio.Lock] = {}
         self._loading: dict[str, asyncio.Task[Entry]] = {}  # a busca em andamento de cada chave
+        # Última leitura de cada chave por um pedido (`get`); a renovação do aquecedor não conta.
+        self._last_read: dict[str, float] = {}
+
+    def read_within(self, key: str, seconds: float) -> bool:
+        """Algum pedido leu essa chave nos últimos `seconds` (o aquecedor só renova essas)."""
+        last = self._last_read.get(key)
+        return last is not None and self._clock() - last <= seconds
 
     def fetched_at(self, key: str) -> float | None:
         """Quando o dado dessa chave veio do banco (None = ainda não buscado)."""
@@ -148,6 +156,7 @@ class SourceCache:
 
         Banco fora = último dado bom (o mais recente entre memória e Redis).
         """
+        self._last_read[key] = self._clock()
         entry = self._store.get(key)
         if self._fresh(entry):
             return entry
