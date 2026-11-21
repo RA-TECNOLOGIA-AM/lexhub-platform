@@ -208,4 +208,29 @@ def test_card_mostra_quando_o_dado_veio_do_banco(client, signer, repo, catalog_r
     cards = client.get("/orgs/lexgroup/dashboards", headers=auth(signer)).json()["available"]
 
     assert cards[0]["synced_at"] == "2025-11-11T14:00:00Z"
-    assert cards[1]["synced_at"] is None  # Pendências ainda sem query no cache
+    # Pendências tem a query do log no cache (a setor_func ainda não): conta o que está no cache.
+    assert cards[1]["synced_at"] == "2025-11-11T14:00:00Z"
+
+
+def test_card_sem_nenhuma_query_no_cache_fica_sem_hora(client, signer, repo, catalog_repo):
+    repo.join(USER_ID)
+    catalog_repo.add(USER_ID, repo.org_id, row(key="pendencias-lexpre", title="Pendências"))
+
+    cards = client.get("/orgs/lexgroup/dashboards", headers=auth(signer)).json()["available"]
+
+    assert cards[0]["synced_at"] is None
+
+
+def test_card_usa_o_dado_mais_antigo_entre_as_queries_no_cache(client, signer, repo, catalog_repo):
+    """Recursal: 12 queries das três unidades; com só as da NG no cache, o card já mostra a hora."""
+    from app.source_cache import Entry
+
+    repo.join(USER_ID)
+    catalog_repo.add(USER_ID, repo.org_id, row(key="recursal", title="Recursal"))
+    cache = client.app.state.source_cache
+    cache._store.set("lexflow:setor_recurso_NG", Entry([], 1_762_869_600.0))  # 14:00
+    cache._store.set("lexflow:agendamentos_setor_recursos_NG", Entry([], 1_762_873_200.0))  # 15:00
+
+    cards = client.get("/orgs/lexgroup/dashboards", headers=auth(signer)).json()["available"]
+
+    assert cards[0]["synced_at"] == "2025-11-11T14:00:00Z"

@@ -68,14 +68,23 @@ async def set_dashboard_enabled(
 
 
 def synced_from_cache(cache: SourceCache, keys: set[str]) -> dict[str, datetime]:
-    """Card -> quando o dado MAIS ANTIGO que ele usa veio do banco. Sem tudo no cache: fica de fora (null)."""
+    """Card -> quando veio do banco o dado MAIS ANTIGO que ele tem no cache. Nenhuma query no cache: fica de
+    fora (null, "Atualiza ao abrir").
+
+    Só as queries que estão no cache contam: sem o aquecedor no LexFlow e no LexPre, e com as queries de todas
+    as unidades em `module.queries` (o Recursal tem 12), exigir todas deixava o card quase sempre sem hora.
+    """
     out: dict[str, datetime] = {}
     for key in keys:
         module = DASHBOARDS.get(key)
         if module is None or not module.queries:
             continue
-        times = [_query_fetched_at(cache, module.source_db, q) for q in module.queries]
-        if all(t is not None for t in times):
+        times = [
+            t
+            for q in module.queries
+            if (t := _query_fetched_at(cache, module.source_db, q)) is not None
+        ]
+        if times:
             out[key] = datetime.fromtimestamp(min(times), UTC)
     return out
 
