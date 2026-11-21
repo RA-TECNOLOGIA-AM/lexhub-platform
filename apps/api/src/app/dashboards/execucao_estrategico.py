@@ -15,12 +15,14 @@ ficam no front, como na v1 (pages/dashboards/execucao-estrategico/estrategico.ts
 """
 
 import calendar
+from dataclasses import replace
 from datetime import date
 from typing import Any
 
 from app.analyses import v1_dashboard_generico as v1
 from app.dashboards import generico_v1
 from app.dashboards.base import DashboardContext, DashboardModule, NotReady
+from app.unit_scope import com_recorte
 
 # v1: ATIVIDADES_CONFECCAO_CS (ExecucaoEstrategicoGeral.tsx).
 ATIVIDADES_CONFECCAO_CS = (
@@ -296,3 +298,6 @@ MODULE = DashboardModule(
         )
     ),
 )
+
+# Só as linhas da unidade da tela nas queries que trazem todos os escritórios (app/unit_scope.py).
+MODULE = replace(MODULE, unit_scoped=com_recorte(MODULE.queries))

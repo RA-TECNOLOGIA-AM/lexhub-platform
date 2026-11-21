@@ -40,6 +40,25 @@ $env:PYTHONPATH = "$PWD\src"
 O passo 3 imprime `IGUAL` ou o número de diferenças por caso e grava `relatorio.json` com exemplos (caminho, V1,
 V2). Os resultados abaixo são registros de execuções nas datas indicadas; rode novamente para validar dados atuais.
 
+## Recorte por unidade (LexFlow)
+
+`conferir_recorte_unidade.py` confere que o recorte por unidade (`app/unit_scope.py`) não muda nenhum número. Só a V2,
+sem a pasta da v1. Busca no LexFlow, uma vez, as queries dos dashboards com `unit_scoped`, inteiras e recortadas
+(~0,5 GB de egress; a pasta de saída tem dados do LexFlow, mantenha fora do Git). Depois:
+
+1. confere que o SQL do recorte devolve exatamente as linhas da unidade que a query inteira devolve;
+2. roda cada dashboard e cada exportação por unidade (NG/LA/RJ) e período (mês atual, anterior e ano), com a query
+   inteira e com o recorte, e compara o JSON campo a campo.
+
+```powershell
+cd C:\workspace\lexhub-platform\apps\api
+$env:PYTHONPATH = "$PWD\src"
+.venv\Scripts\python.exe scripts\comparar_v1\conferir_recorte_unidade.py "$env:TEMP\conferir_recorte"
+```
+
+Imprime `IGUAL` ou o número de diferenças por caso, grava `relatorio_recorte.json` e sai com código 1 se houver
+diferença. Rodar de novo reaproveita `recorte.pkl` (apague para buscar dados novos).
+
 ## Resultados
 
 - **LexPre, 11/11/2026:** 36 de 36 iguais. Única variação: a ordem de atendentes **empatados** em

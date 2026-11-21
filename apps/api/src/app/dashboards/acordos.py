@@ -12,6 +12,7 @@ da v1 (generico_v1.nome_na_unidade).
 from dataclasses import replace
 
 from app.dashboards import execucao_export, generico_v1
+from app.unit_scope import com_recorte
 
 _MODULO = generico_v1.modulo(
     key="acordos",
@@ -53,3 +54,6 @@ MODULE = replace(
     export=execucao_export.ACORDOS,
     export_reports={"atividades": execucao_export.ATIVIDADES_ACORDOS},
 )
+
+# Só as linhas da unidade da tela nas queries que trazem todos os escritórios (app/unit_scope.py).
+MODULE = replace(MODULE, unit_scoped=com_recorte(MODULE.queries))

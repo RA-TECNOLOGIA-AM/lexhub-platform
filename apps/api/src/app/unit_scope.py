@@ -15,13 +15,24 @@ de dashboard diz quais são as suas (`DashboardModule.unit_scoped`), conferido c
 resultado com e sem as linhas das outras unidades (tests/test_unit_scope.py).
 """
 
-from typing import Any
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any
 
-from app.dashboards.base import SourceFetcher
+if TYPE_CHECKING:  # só tipo: os módulos de dashboard importam este arquivo
+    from app.dashboards.base import SourceFetcher
 
 # Query da v1 que traz todas as unidades -> coluna do escritório no resultado (uma só, com esse nome).
 # Fora daqui: as que já filtram a unidade no SQL e as com ORDER BY no fim (a ordem de um SELECT externo
 # não é garantida, e há cálculo que depende dela, ex.: log_subfase_processual).
+#
+# Conferido em 20/11/2026 (auditoria do código + dados do LexFlow): todo cálculo, exportação e lista de
+# opções dos dashboards que as leem descarta as outras unidades (ID_ESCRITORIO) antes de deduplicar ou
+# contar. Os dois caminhos que olham linhas de outra unidade não mudam nada com os dados de hoje: o
+# "campos-faltando" dos Julgados casa por NUMERO_PROCESSO (nenhum número se repete entre escritórios; com
+# o recorte, passa a casar sempre com a própria unidade) e as Atividades dos Acordos casam o agendamento
+# da unidade com o processo pelo id (nenhum aponta para processo de outro escritório). Linhas repetidas
+# do mesmo processo (uma por parte adversa) só diferem na parte adversa, que sem ORDER BY já não tinha
+# ordem garantida.
 UNIT_COLUMN: dict[str, str] = {
     "execucao_LA": "ID_ESCRITORIO",
     "execucao_RJ": "ID_ESCRITORIO",
@@ -47,6 +58,11 @@ def scoped_name(query_name: str, escritorio: int) -> str:
     return f"{query_name}{SEP}{int(escritorio)}"
 
 
+def com_recorte(queries: Iterable[str]) -> tuple[str, ...]:
+    """As queries de um dashboard que aceitam o recorte (para `DashboardModule.unit_scoped`)."""
+    return tuple(q for q in dict.fromkeys(queries) if q in UNIT_COLUMN)
+
+
 def split_scoped(name: str) -> tuple[str, int | None]:
     """'execucao_LA@20' -> ('execucao_LA', 20); 'execucao_LA' -> ('execucao_LA', None)."""
     base, sep, escritorio = name.partition(SEP)
@@ -70,7 +86,7 @@ class UnitScopedSource:
     Repassa o resto (versão, leituras e hora da sincronização), para a memória dos cálculos e o `meta`.
     """
 
-    def __init__(self, inner: SourceFetcher, escritorio: int, queries: frozenset[str]):
+    def __init__(self, inner: "SourceFetcher", escritorio: int, queries: frozenset[str]):
         self._inner = inner
         self._escritorio = escritorio
         self._queries = queries
@@ -95,8 +111,8 @@ class UnitScopedSource:
 
 
 def scope_source(
-    source: SourceFetcher, source_db: str, unit_ref: str, queries: tuple[str, ...]
-) -> SourceFetcher:
+    source: "SourceFetcher", source_db: str, unit_ref: str, queries: tuple[str, ...]
+) -> "SourceFetcher":
     """A fonte do pedido, recortada na unidade quando dá: banco LexFlow, unidade conhecida e o módulo
     com queries que aceitam o recorte. Senão, a mesma fonte."""
     escritorio = ESCRITORIO_POR_UNIDADE.get(unit_ref)

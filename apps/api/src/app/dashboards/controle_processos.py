@@ -37,6 +37,7 @@ from app.analyses.NG import controle_processo_NG as controle_ng
 from app.dashboards import generico_v1, protocolo_lexpre
 from app.dashboards.base import DashboardContext, DashboardInputError, DashboardModule, NotReady
 from app.dashboards.pendencias_intermediarias import _FonteRJ, _sem_nulos
+from app.unit_scope import com_recorte
 
 
 @dataclass(frozen=True)
@@ -331,3 +332,6 @@ MODULE = DashboardModule(
         "lexpre": (protocolo_lexpre.QUERY,),
     },
 )
+
+# Só as linhas da unidade da tela nas queries que trazem todos os escritórios (app/unit_scope.py).
+MODULE = replace(MODULE, unit_scoped=com_recorte(MODULE.queries))

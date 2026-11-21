@@ -214,8 +214,16 @@ class FakeSource:
         self.fetched: list[str] = []
 
     async def fetch(self, query_name):
+        """'nome@escritorio' (recorte por unidade, app/unit_scope.py) = as linhas de 'nome' daquele
+        escritório, como o `where q."ID_ESCRITORIO" = N` faria no banco."""
+        from app.unit_scope import UNIT_COLUMN, split_scoped
+
         self.fetched.append(query_name)
-        return list(self.data.get(query_name, []))
+        base, escritorio = split_scoped(query_name)
+        rows = list(self.data.get(base, []))
+        if escritorio is None:
+            return rows
+        return [r for r in rows if r.get(UNIT_COLUMN[base]) == escritorio]
 
     def synced_at(self):
         return None
