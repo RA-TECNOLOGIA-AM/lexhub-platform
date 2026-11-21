@@ -1,7 +1,12 @@
-"""Aquecedor do cache: renova as queries dos dashboards antes de vencerem (padrão da v1).
+"""Aquecedor do cache: renova as queries dos dashboards em uso antes de vencerem (padrão da v1).
 
 Assim o usuário quase nunca paga a query pesada. Uma query por vez (não sobrecarrega a origem),
 pulando bancos desligados ou fora do ar; falha de uma não interrompe as outras.
+
+Só renova a query que algum pedido leu há pouco (`in_use`, SOURCE_CACHE_WARM_IDLE). Renovar todas,
+o dia inteiro, trazia as tabelas inteiras do LexFlow a cada 4 min, inclusive de madrugada: em
+19/11/2026 o LexFlow teve 228 GB de egress pelo pooler do Supabase (cobrado), e as queries que mais
+devolviam linhas eram as destes dashboards.
 """
 
 import asyncio
@@ -40,18 +45,24 @@ async def warm_once(
     fetcher_for: Callable[[str], SourceFetcher],
     targets: list[Target],
     is_up: Callable[[str], bool],
+    in_use: Callable[[str], bool],
 ) -> int:
-    """Um ciclo. Devolve quantas queries foram renovadas."""
-    ok = failed = skipped = 0
+    """Um ciclo. Devolve quantas queries foram renovadas.
+
+    `in_use(chave)`: algum pedido leu a chave 'banco:query' há pouco; as outras ficam como estão.
+    """
+    ok = failed = skipped = unused = 0
     started = time.perf_counter()
     for db, query in targets:
         if not is_up(db):
             skipped += 1
             continue
+        key = f"{db}:{query}"
+        if not in_use(key):
+            unused += 1
+            continue
         try:
-            await cache.refresh(
-                f"{db}:{query}", lambda db=db, query=query: fetcher_for(db).fetch(query)
-            )
+            await cache.refresh(key, lambda db=db, query=query: fetcher_for(db).fetch(query))
             ok += 1
         except SourceUnavailable as exc:
             # Esperado (banco fora, lento ou que cancelou a consulta): uma linha basta, o motivo
@@ -63,11 +74,13 @@ async def warm_once(
             logger.exception("falha ao renovar '%s:%s'", db, query)
     logger.log(
         logging.WARNING if failed else logging.INFO,
-        "ciclo terminado em %s: %d renovadas, %d com falha, %d puladas (banco fora/desligado)",
+        "ciclo terminado em %s: %d renovadas, %d com falha, %d puladas (banco fora/desligado), "
+        "%d sem leitura recente",
         seconds(time.perf_counter() - started),
         ok,
         failed,
         skipped,
+        unused,
     )
     return ok
 
@@ -91,6 +104,7 @@ async def warm_loop(
     fetcher_for: Callable[[str], SourceFetcher],
     targets: list[Target],
     is_up: Callable[[str], bool],
+    in_use: Callable[[str], bool],
     interval: float,
     initial_delay: float = 30,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
@@ -108,5 +122,5 @@ async def warm_loop(
     await sleep(initial_delay)
     while True:
         started = clock()
-        await warm_once(cache, fetcher_for, targets, is_up)
+        await warm_once(cache, fetcher_for, targets, is_up, in_use)
         await sleep(pause_after(clock() - started, interval))

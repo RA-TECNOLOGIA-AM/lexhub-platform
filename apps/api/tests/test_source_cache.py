@@ -315,11 +315,55 @@ def test_aquecedor_pula_banco_fora_e_segue_apos_falha():
     fetchers = {"lexpre": broken, "lexflow": origin}
     targets = [("lexpre", "q1"), ("ng", "q2"), ("lexflow", "q3")]
 
-    ok = run(warm_once(cache, fetchers.__getitem__, targets, lambda db: db != "ng"))
+    ok = run(
+        warm_once(cache, fetchers.__getitem__, targets, lambda db: db != "ng", lambda _key: True)
+    )
 
     assert ok == 1  # lexpre falhou, ng está fora, lexflow renovou
     assert origin.calls == 1
     assert cache._store.get("lexflow:q3") is not None
+
+
+def test_aquecedor_so_renova_o_que_alguem_leu_ha_pouco():
+    cache, _clock, origin = make()
+    run(cache.get("lexflow:lida", lambda: origin.fetch("lida")))  # alguém abriu o dashboard
+    targets = [("lexflow", "lida"), ("lexflow", "ninguem_abriu")]
+
+    ok = run(
+        warm_once(
+            cache,
+            lambda _db: origin,
+            targets,
+            lambda _db: True,
+            lambda key: cache.read_within(key, 1800),
+        )
+    )
+
+    assert ok == 1
+    assert origin.calls == 2  # a leitura e a renovação da lida; a outra nem foi ao banco
+    assert cache._store.get("lexflow:ninguem_abriu") is None
+
+
+def test_aquecedor_para_de_renovar_quando_ninguem_le_mais():
+    cache, clock, origin = make()
+    run(cache.get("lexflow:q", lambda: origin.fetch("q")))
+
+    def ciclo():
+        return run(
+            warm_once(
+                cache,
+                lambda _db: origin,
+                [("lexflow", "q")],
+                lambda _db: True,
+                lambda key: cache.read_within(key, 1800),
+            )
+        )
+
+    clock.now += 1200
+    assert ciclo() == 1  # lida há 20 min: renova
+    clock.now += 601
+    assert ciclo() == 0  # 30 min sem leitura (a renovação do aquecedor não conta como leitura)
+    assert origin.calls == 2
 
 
 def test_aquecedor_registra_fonte_indisponivel_numa_linha_sem_traceback(caplog):
@@ -333,7 +377,15 @@ def test_aquecedor_registra_fonte_indisponivel_numa_linha_sem_traceback(caplog):
                 raise SourceUnavailable("lexflow") from exc
 
     with caplog.at_level(logging.WARNING, logger="app.cache_warmer"):
-        ok = run(warm_once(cache, lambda _db: Cancelada(), [("lexflow", "q1")], lambda _db: True))
+        ok = run(
+            warm_once(
+                cache,
+                lambda _db: Cancelada(),
+                [("lexflow", "q1")],
+                lambda _db: True,
+                lambda _k: True,
+            )
+        )
 
     assert ok == 0
     linhas = [r for r in caplog.records if r.name == "app.cache_warmer"]
@@ -373,6 +425,7 @@ def test_aquecedor_desconta_a_duracao_do_ciclo_da_pausa():
                 lambda _db: SlowOrigin(),
                 [("lexflow", "q")],
                 lambda _db: True,
+                lambda _key: True,
                 interval=240,
                 initial_delay=30,
                 sleep=fake_sleep,

@@ -47,6 +47,7 @@ docker run --rm --env-file .env -p 8001:8000 lexhub-api:dev
 ```
 
 - **Uma réplica e um worker do uvicorn:** o cache das fontes e o aquecedor ficam em memória. Mais processos multiplicam as consultas nos bancos de origem.
+- **Aquecedor só do que está em uso:** a cada `SOURCE_CACHE_WARM_INTERVAL` (4 min) ele renova só as queries que algum pedido leu nos últimos `SOURCE_CACHE_WARM_IDLE` (30 min). Dashboard que ninguém abre não vai ao banco; o aberto à vista segue quente, porque a tela busca de novo a cada 5 min. Cada consulta ao LexFlow traz a tabela inteira pelo pooler do Supabase, e esse tráfego é cobrado como egress.
 - **Bancos de origem fora do ar:** a API não espera NG, LAADV, LexFlow nem LexPre para subir. Cada banco conecta numa tarefa de fundo e, sem resposta, fica `down` e é tentado de novo sozinho (1 s, 2 s, 4 s... até 1 min entre as tentativas). Banco que cai durante o uso também é marcado `down` e conferido até voltar. Enquanto isso, só os dashboards daquele banco respondem 503, ou o último dado bom do cache por até 1 h. Cada conexão nova tem tempo limite de `DB_CONNECT_TIMEOUT` (10 s), então o motivo aparece no log em segundos.
 - **Banco da plataforma (`DATABASE_URL`):** este sim impede a subida. São 3 tentativas; se todas falharem, a API sai com erro, e num deploy o Swarm volta à versão anterior. O pooler do Supabase fica em São Paulo e abrir conexão leva de 1 a 10 s, então:
   - o tempo limite para abrir conexão é próprio, `PLATFORM_DB_CONNECT_TIMEOUT` (30 s);

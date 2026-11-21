@@ -117,6 +117,10 @@ class Settings(BaseSettings):
     SOURCE_CACHE_WARM_ENABLED: bool = True
     # De quanto em quanto tempo (s) começa um ciclo do aquecedor, contado do início do anterior.
     SOURCE_CACHE_WARM_INTERVAL: int = Field(default=240, ge=30)
+    # O aquecedor só renova a query que algum pedido leu nos últimos N s: dashboard que ninguém olha
+    # não vai ao banco a cada ciclo. A tela à vista busca de novo a cada 5 min (useAutoRefresh), então
+    # o dashboard aberto segue quente; fechado, para de ser renovado depois deste prazo.
+    SOURCE_CACHE_WARM_IDLE: int = Field(default=1800, ge=60)
     # Memória dos cálculos dos dashboards (app/result_memo.py): quantos resultados guarda (cada um é uma
     # resposta inteira; sai o usado há mais tempo). Vale até o dado ser renovado ou SOURCE_CACHE_TTL.
     # 0 = desligada (todo pedido calcula).
