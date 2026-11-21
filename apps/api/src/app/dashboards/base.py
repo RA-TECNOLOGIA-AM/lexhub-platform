@@ -125,7 +125,7 @@ class DashboardModule:
     # ligado, ex.: o Protocolo legado sai do banco ng no NG e no RJ e do laadv na LA (rotas _LA da v1).
     alt_sources: dict[str, AltSource] = field(default_factory=dict)
     # Queries de `queries` que podem vir só com as linhas da unidade da tela (app/unit_scope.py): o cálculo
-    # descarta as das outras unidades antes de qualquer conta. Conferido em tests/test_unit_scope.py.
+    # descarta as das outras unidades antes de qualquer conta. Conferido em tests/test_unit_scope_paridade.py.
     unit_scoped: tuple[str, ...] = ()
 
     def pick_source(self, refs: dict[str, str]) -> tuple[str, str] | None:

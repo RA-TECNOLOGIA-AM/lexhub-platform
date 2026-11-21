@@ -3,7 +3,8 @@
 O cálculo (a cópia da v1) roda em Python sobre todas as linhas da fonte e prende o único worker da API
 por segundos. Aqui fica guardado o resultado de cada pedido (quem chama monta a chave: dashboard,
 unidade, período, filtros, quem vê a comissão, dia...) junto com a versão de cada query que o cálculo
-leu (`fetched_at` no cache das fontes, app/source_cache.py). O resultado guardado vale enquanto:
+leu (`data_version` no cache das fontes, app/source_cache.py: quando o dado foi baixado; uma conferência
+sem mudança não muda a versão). O resultado guardado vale enquanto:
   * todas essas queries continuam na mesma versão no cache das fontes (dado renovado = recalcula);
   * não passou de `max_age` (protege o que o cálculo usa sem passar pela fonte, como a hora atual).
 
@@ -28,10 +29,10 @@ Compute = Callable[[], Awaitable[Any]]
 class TrackedFetcher(Protocol):
     """Fonte que diz o que leu e em que versão (ver CachedSourceFetcher)."""
 
-    reads: list[tuple[str, float]]  # (query, fetched_at) de cada leitura, na ordem
+    reads: list[tuple[str, float]]  # (query, versão do dado) de cada leitura, na ordem
 
     async def version(self, query_name: str) -> float:
-        """A versão (fetched_at) do dado que a leitura dessa query devolveria agora; conta como leitura."""
+        """A versão (data_version) do dado que a leitura dessa query devolveria agora; conta como leitura."""
         ...
 
 
@@ -41,7 +42,7 @@ def is_tracked(fetcher: Any) -> bool:
     return hasattr(fetcher, "reads") and callable(getattr(fetcher, "version", None))
 
 
-Dep = tuple[str, str, float]  # (banco, query, fetched_at)
+Dep = tuple[str, str, float]  # (banco, query, versão do dado)
 
 
 @dataclass(frozen=True)

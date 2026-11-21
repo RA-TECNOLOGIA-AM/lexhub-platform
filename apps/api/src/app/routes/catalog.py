@@ -82,7 +82,7 @@ def synced_from_cache(cache: SourceCache, keys: set[str]) -> dict[str, datetime]
 
 def _query_fetched_at(cache: SourceCache, db: str, query: str) -> float | None:
     """Quando a query veio do banco: a inteira ou, se for o caso, o recorte mais novo de alguma unidade
-    (app/unit_scope.py)."""
+    (app/unit_scope.py). O card é do dashboard, não de uma unidade: mostra a sincronização mais recente."""
     names = [query]
     if db == "lexflow" and query in UNIT_COLUMN:
         names += [scoped_name(query, e) for e in ESCRITORIO_POR_UNIDADE.values()]

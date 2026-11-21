@@ -12,7 +12,8 @@ nomes da v1 não mudam): quem troca o nome é a `UnitScopedSource`, entre o cál
 
 Só entra no recorte a query cujo cálculo descarta as outras unidades ANTES de qualquer conta. Cada módulo
 de dashboard diz quais são as suas (`DashboardModule.unit_scoped`), conferido com testes que comparam o
-resultado com e sem as linhas das outras unidades (tests/test_unit_scope.py).
+resultado com e sem as linhas das outras unidades (tests/test_unit_scope_paridade.py) e, com os dados
+reais, por scripts/comparar_v1/conferir_recorte_unidade.py. Desligado por padrão (SOURCE_UNIT_SCOPE).
 """
 
 from collections.abc import Iterable

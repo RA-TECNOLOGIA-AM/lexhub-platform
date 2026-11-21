@@ -376,7 +376,7 @@ class CachedSourceFetcher:
         self._inner = inner
         self._db = db_name
         self._fetched: list[float] = []
-        # (query, fetched_at) de cada leitura, na ordem: a memória dos cálculos (app/result_memo.py)
+        # (query, versão do dado) de cada leitura, na ordem: a memória dos cálculos (app/result_memo.py)
         # guarda de que versão dos dados cada resultado saiu.
         self.reads: list[tuple[str, float]] = []
 

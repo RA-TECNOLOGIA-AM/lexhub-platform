@@ -112,16 +112,23 @@ async def fetch_read_only(conn: asyncpg.Connection, query: str) -> list[asyncpg.
         return await conn.fetch(query)
 
 
+# Versão do formato do dado guardado no cache. Mude ao alterar como as linhas do banco viram o que o cache
+# guarda (ex.: o dict(r) de PgSourceFetcher, um codec do asyncpg): a impressão digital muda junto e o dado
+# antigo do Redis não é reaproveitado por uma conferência "igual".
+FINGERPRINT_FORMAT = "1"
+
+
 def fingerprint_query(query: str) -> str:
     """A consulta que devolve, numa linha só, a impressão digital do resultado de `query`.
 
-    Formato: '<hash do SQL>:<linhas>:<soma dos hashes das linhas>'. A soma não depende da ordem das
-    linhas, e qualquer valor que mude numa linha muda o hash dela. O hash do SQL entra para que uma
-    query alterada num deploy (ex.: coluna renomeada com os mesmos valores) nunca reaproveite o dado
-    guardado com a query antiga.
+    Formato: '<hash do código>:<linhas>:<soma dos hashes das linhas>'. A soma não depende da ordem das
+    linhas, e qualquer valor que mude numa linha muda o hash dela. O hash do código (SQL, versão do asyncpg
+    e FINGERPRINT_FORMAT) entra para que um deploy que mude a query (ex.: coluna renomeada com os mesmos
+    valores) ou a leitura das linhas nunca reaproveite o dado guardado pela versão anterior.
     """
     body = query.strip().rstrip(";")
-    sql_hash = hashlib.sha256(body.encode()).hexdigest()[:16]
+    codigo = f"{FINGERPRINT_FORMAT}|asyncpg {asyncpg.__version__}|{body}"
+    sql_hash = hashlib.sha256(codigo.encode()).hexdigest()[:16]
     return (
         f"select '{sql_hash}:' || count(*)::text || ':' || "
         "coalesce(sum(hashtextextended(q::text, 0)::numeric), 0)::text\n"

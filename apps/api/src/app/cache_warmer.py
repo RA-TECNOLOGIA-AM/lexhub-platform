@@ -18,6 +18,7 @@ from app.dashboards.base import DashboardModule, SourceFetcher
 from app.database import SourceUnavailable
 from app.logs import seconds
 from app.source_cache import SourceCache, error_name
+from app.unit_scope import ESCRITORIO_POR_UNIDADE, scoped_name
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,8 @@ def warm_targets(modules: Iterable[DashboardModule], skip_dbs: Iterable[str] = (
     `skip_dbs` (SOURCE_CACHE_WARM_SKIP) também: o LexFlow responde em ~1 s, então o aquecedor não
     poupa espera a ninguém, e cada renovação dele era egress cobrado pelo Supabase. Lá o dado vencido
     vai para a tela na hora e é renovado em segundo plano só quando alguém lê.
+    As queries com recorte por unidade (app/unit_scope.py) entram também com o nome de cada recorte
+    ('execucao_LA@20'): é por ele que os pedidos leem, e o aquecedor só renova o que alguém leu há pouco.
     """
     from app.sheets import is_sheet  # aqui: app.sheets é carregado depois dos módulos de dashboard
 
@@ -40,7 +43,13 @@ def warm_targets(modules: Iterable[DashboardModule], skip_dbs: Iterable[str] = (
     proprias = ((m.source_db, q) for m in modules for q in m.queries)
     extras = ((db, q) for m in modules for db, qs in m.extra_queries.items() for q in qs)
     alternativas = ((db, q) for m in modules for db, a in m.alt_sources.items() for q in a.queries)
-    alvos = dict.fromkeys([*proprias, *extras, *alternativas])
+    recortes = (
+        (m.source_db, scoped_name(q, e))
+        for m in modules
+        for q in m.unit_scoped
+        for e in ESCRITORIO_POR_UNIDADE.values()
+    )
+    alvos = dict.fromkeys([*proprias, *extras, *alternativas, *recortes])
     return [(db, q) for db, q in alvos if not is_sheet(db) and db not in skip]
 
 

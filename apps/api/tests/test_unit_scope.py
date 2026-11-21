@@ -226,23 +226,31 @@ def _auth(signer):
     return {"Authorization": f"Bearer {signer.token()}"}
 
 
+@pytest.fixture
+def recorte_ligado(client):
+    """SOURCE_UNIT_SCOPE=true (o padrão é desligado até a conferência com os dados reais)."""
+    client.app.dependency_overrides[get_unit_scope] = lambda: True
+
+
 @pytest.mark.parametrize(("unit", "escritorio"), [("NG", 20), ("RJ", 27)])
 def test_rota_de_dados_pede_o_recorte_da_unidade(
-    client, signer, sources, lexflow_module, unit, escritorio
+    client, signer, sources, lexflow_module, recorte_ligado, unit, escritorio
 ):
     r = client.get(f"/orgs/lexgroup/units/{unit}/dashboards/execucao", headers=_auth(signer))
     assert r.status_code == 200, r.text
     assert sources.last.fetched == [f"execucao_LA@{escritorio}", "agendamentos_setor_execucao_NG"]
 
 
-def test_rota_de_exportacao_pede_o_recorte_da_unidade(client, signer, sources, lexflow_module):
+def test_rota_de_exportacao_pede_o_recorte_da_unidade(
+    client, signer, sources, lexflow_module, recorte_ligado
+):
     r = client.get("/orgs/lexgroup/units/NG/dashboards/execucao/export", headers=_auth(signer))
     assert r.status_code == 200, r.text
     assert sources.last.fetched == ["execucao_LA@20"]
 
 
-def test_recorte_desligado_pede_a_query_inteira(client, signer, sources, lexflow_module):
-    client.app.dependency_overrides[get_unit_scope] = lambda: False
+def test_recorte_vem_desligado_e_pede_a_query_inteira(client, signer, sources, lexflow_module):
     r = client.get("/orgs/lexgroup/units/NG/dashboards/execucao", headers=_auth(signer))
     assert r.status_code == 200, r.text
     assert sources.last.fetched == ["execucao_LA", "agendamentos_setor_execucao_NG"]
+    assert get_unit_scope() is False

@@ -287,6 +287,28 @@ def test_aquecedor_nao_renova_os_bancos_de_fora():
     assert warm_targets(modulos) == [("lexpre", "a"), ("lexflow", "b"), ("ng", "c")]
 
 
+def test_aquecedor_conhece_as_chaves_recortadas_por_unidade():
+    async def build(ctx):
+        return {}
+
+    m = DashboardModule(
+        key="x",
+        source_db="lexflow",
+        source_label="LexFlow",
+        build=build,
+        queries=("execucao_LA", "agendamentos_setor_execucao_NG"),
+        unit_scoped=("execucao_LA",),
+    )
+    assert warm_targets([m]) == [
+        ("lexflow", "execucao_LA"),
+        ("lexflow", "agendamentos_setor_execucao_NG"),
+        ("lexflow", "execucao_LA@20"),
+        ("lexflow", "execucao_LA@21"),
+        ("lexflow", "execucao_LA@27"),
+    ]
+    assert warm_targets([m], {"lexflow"}) == []
+
+
 def test_aquecedor_tambem_so_baixa_se_mudou():
     cache, _clock, origin = make()
     run(ler(cache, origin))  # alguém leu
@@ -309,6 +331,16 @@ def test_impressao_digital_leva_o_hash_do_sql_e_aceita_ponto_e_virgula_no_fim():
     assert a != c  # coluna renomeada: outra impressão digital, nunca reaproveita o dado antigo
     assert "hashtextextended(q::text, 0)" in a
     assert a.rstrip().endswith("select 1 as x\n) q")
+
+
+def test_impressao_digital_muda_com_o_formato_do_dado(monkeypatch):
+    from app import database
+
+    antes = fingerprint_query("select 1 as x")
+    monkeypatch.setattr(database, "FINGERPRINT_FORMAT", "2")
+    assert fingerprint_query("select 1 as x") != antes
+    monkeypatch.setattr(database.asyncpg, "__version__", "99.0")
+    assert fingerprint_query("select 1 as x") != antes
 
 
 class FakeConn:
