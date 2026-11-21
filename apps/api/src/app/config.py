@@ -116,6 +116,9 @@ class Settings(BaseSettings):
     # impressão digital do resultado (uma linha) e as linhas só vêm se ela mudou. A query roda no banco
     # do mesmo jeito; o que se economiza é a transferência. Vazio = desligado.
     SOURCE_CACHE_PROBE: str = "lexflow"
+    # Recorte por unidade (app/unit_scope.py): as queries do LexFlow que trazem todos os escritórios vêm só
+    # com as linhas da unidade da tela, nos dashboards que declaram `unit_scoped`. False = como antes.
+    SOURCE_UNIT_SCOPE: bool = True
     SOURCE_CACHE_STALE_MAX_AGE: int = Field(default=3600, ge=0)
     # Vencido há até isto (s): a tela recebe o dado atual na hora e ele é renovado em segundo
     # plano. 0 = desligado (quem pedir depois de vencer espera a query no banco).

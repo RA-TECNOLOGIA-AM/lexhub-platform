@@ -17,6 +17,7 @@ from app.catalog import (
 from app.dashboards import DASHBOARDS
 from app.source_cache import SourceCache
 from app.sources import get_source_cache
+from app.unit_scope import ESCRITORIO_POR_UNIDADE, UNIT_COLUMN, scoped_name
 
 router = APIRouter(prefix="/orgs/{org_slug}", tags=["catalog"])
 
@@ -73,7 +74,17 @@ def synced_from_cache(cache: SourceCache, keys: set[str]) -> dict[str, datetime]
         module = DASHBOARDS.get(key)
         if module is None or not module.queries:
             continue
-        times = [cache.fetched_at(f"{module.source_db}:{q}") for q in module.queries]
+        times = [_query_fetched_at(cache, module.source_db, q) for q in module.queries]
         if all(t is not None for t in times):
             out[key] = datetime.fromtimestamp(min(times), UTC)
     return out
+
+
+def _query_fetched_at(cache: SourceCache, db: str, query: str) -> float | None:
+    """Quando a query veio do banco: a inteira ou, se for o caso, o recorte mais novo de alguma unidade
+    (app/unit_scope.py)."""
+    names = [query]
+    if db == "lexflow" and query in UNIT_COLUMN:
+        names += [scoped_name(query, e) for e in ESCRITORIO_POR_UNIDADE.values()]
+    times = [t for n in names if (t := cache.fetched_at(f"{db}:{n}")) is not None]
+    return max(times, default=None)

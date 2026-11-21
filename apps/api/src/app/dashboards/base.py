@@ -124,6 +124,9 @@ class DashboardModule:
     # Bancos alternativos (banco -> AltSource): a unidade sem `source_db` lê o primeiro destes que tiver
     # ligado, ex.: o Protocolo legado sai do banco ng no NG e no RJ e do laadv na LA (rotas _LA da v1).
     alt_sources: dict[str, AltSource] = field(default_factory=dict)
+    # Queries de `queries` que podem vir só com as linhas da unidade da tela (app/unit_scope.py): o cálculo
+    # descarta as das outras unidades antes de qualquer conta. Conferido em tests/test_unit_scope.py.
+    unit_scoped: tuple[str, ...] = ()
 
     def pick_source(self, refs: dict[str, str]) -> tuple[str, str] | None:
         """(banco, ref da unidade nele) de onde o dashboard sai nesta unidade; None = nenhum ligado."""

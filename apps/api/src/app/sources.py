@@ -27,6 +27,7 @@ from app.database import (
 )
 from app.source_cache import CachedSourceFetcher, SourceCache
 from app.source_queries import QUERIES
+from app.unit_scope import scoped_sql, split_scoped
 
 if TYPE_CHECKING:
     from app.registered_sources import RegisteredSources
@@ -70,10 +71,15 @@ class PgSourceFetcher:
         self._fetched: list[float] = []
 
     def _sql(self, query_name: str) -> str:
-        spec = self._queries[query_name]  # KeyError = query não copiada da v1: erro de programação
+        """O SQL de uma query registrada; 'nome@escritorio' = a mesma query só com as linhas daquele
+        escritório (app/unit_scope.py)."""
+        base, escritorio = split_scoped(query_name)
+        spec = self._queries[base]  # KeyError = query não copiada da v1: erro de programação
         if spec["database"] != self._db:
-            raise ValueError(f"Query {query_name} é do banco {spec['database']}, não de {self._db}")
-        return spec["query"]
+            raise ValueError(f"Query {base} é do banco {spec['database']}, não de {self._db}")
+        if escritorio is None:
+            return spec["query"]
+        return scoped_sql(base, spec["query"], escritorio)
 
     async def fetch(self, query_name: str) -> list[dict[str, Any]]:
         """Banco desligado, fora do ar ou lento demais = SourceUnavailable (ver app/database.py)."""
