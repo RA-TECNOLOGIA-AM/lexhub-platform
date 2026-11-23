@@ -1,4 +1,8 @@
 import { customRange, KIND, NEVER, NEVER_LABEL, PERIODS, type AuditFilter, type AuditPeriod } from './auditView.ts'
+import { kindOptions } from '../../../services/auditEvents.ts'
+
+// Tipos com evento, em ordem alfabética, e "Outros" no fim ("Nunca acessou" vem depois, à parte).
+const KIND_OPTIONS = kindOptions()
 
 type AuditFiltersProps = {
     value: AuditFilter
@@ -65,9 +69,9 @@ export function AuditFilters({ value, actors, onChange }: AuditFiltersProps) {
                     onChange={(e) => onChange({ ...value, kind: e.target.value as AuditFilter['kind'] })}
                 >
                     <option value="">Todos</option>
-                    {Object.entries(KIND).map(([key, k]) => (
+                    {KIND_OPTIONS.map((key) => (
                         <option key={key} value={key}>
-                            {k.label}
+                            {KIND[key].label}
                         </option>
                     ))}
                     <option value={NEVER}>{NEVER_LABEL}</option>

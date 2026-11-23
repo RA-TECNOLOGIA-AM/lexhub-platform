@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { RawAuditEvent } from '../types/index.ts'
-import { actionFilter, toAuditEvent } from './auditEvents.ts'
+import { actionFilter, kindOptions, toAuditEvent } from './auditEvents.ts'
 
 const raw = (over: Partial<RawAuditEvent>): RawAuditEvent => ({
     id: '1',
@@ -142,5 +142,11 @@ describe('actionFilter', () => {
 
     it('"Todos": sem filtro de tipo', () => {
         expect(actionFilter('')).toEqual({ p_actions: null, p_exclude_actions: null })
+    })
+})
+
+describe('kindOptions', () => {
+    it('tipos com evento em ordem alfabética, sem Suporte, com Outros no fim', () => {
+        expect(kindOptions()).toEqual(['view', 'login', 'export', 'access', 'source', 'other'])
     })
 })

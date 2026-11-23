@@ -166,6 +166,15 @@ const EVENTS: Record<string, Rule> = {
     },
 }
 
+// Opções do filtro "Tipo de evento": só os tipos que algum evento usa, em ordem alfabética, com "Outros" no fim.
+// 'support' só aparece quando existir o modo suporte (support.opened / support.closed).
+export const kindOptions = (): AuditKind[] => [
+    ...[...new Set(Object.values(EVENTS).map((r) => r.kind))].sort((a, b) =>
+        KIND[a].label.localeCompare(KIND[b].label, 'pt-BR'),
+    ),
+    'other',
+]
+
 // O filtro de tipo que o banco aplica (api.list_audit). Um tipo = só os eventos dele. "Outros" = tudo menos os
 // eventos que têm regra aqui (os desconhecidos). '' (todos) = sem filtro.
 export function actionFilter(kind: AuditKind | ''): {
