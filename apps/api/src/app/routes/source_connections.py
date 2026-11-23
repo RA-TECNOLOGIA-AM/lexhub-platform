@@ -31,7 +31,8 @@ from app.source_admin import (
     SourceAdminRepo,
     get_source_admin_repo,
 )
-from app.sources import get_registered_sources, get_source_switch
+from app.source_cache import SourceCache
+from app.sources import get_registered_sources, get_source_cache, get_source_switch
 
 DEFAULT_PORT = {"postgres": 5432, "mysql": 3306}
 LABEL = {"postgres": "Postgres", "mysql": "MySQL"}
@@ -453,9 +454,11 @@ async def set_source_enabled(
     repo: Repo,
     registered: Annotated[Any, Depends(get_registered_sources)],
     switch: Annotated[Any, Depends(get_source_switch)],
+    cache: Annotated[SourceCache, Depends(get_source_cache)],
 ) -> dict[str, Any]:
     """Ligar/desligar: pausa reversível. O segredo fica salvo (religar não pede de novo); desligada, a API
-    não lê a fonte (nem o cache) e o dashboard responde 423 "Fonte desligada". Vai para a auditoria."""
+    não lê a fonte (nem o cache) e o dashboard responde 423 "Fonte desligada". Vai para a auditoria.
+    A hora da fonte (app/read_log.py) é esquecida: religada, volta como "Aguardando leitura"."""
     source = await _managed(repo, org_slug, key)
     try:
         item = await repo.set_enabled(user.user_id, source.id, body.enabled)
@@ -470,6 +473,7 @@ async def set_source_enabled(
         switch.invalidate()
     if registered is not None:
         await registered.invalidate(source.key)
+    await cache.reads.forget(source.key)
     return item
 
 
@@ -480,8 +484,9 @@ async def disconnect_source(
     user: Admin,
     repo: Repo,
     registered: Annotated[Any, Depends(get_registered_sources)],
+    cache: Annotated[SourceCache, Depends(get_source_cache)],
 ) -> Response:
-    """Desconectar: some a fonte, as ligações, o log e o segredo. A key não volta a ser usada."""
+    """Desconectar: some a fonte, as ligações, o log, o segredo e a hora. A key não volta a ser usada."""
     source = await _managed(repo, org_slug, key)
     try:
         await repo.disconnect(user.user_id, source.id)
@@ -493,6 +498,7 @@ async def disconnect_source(
         raise HTTPException(status.HTTP_409_CONFLICT, detail=_db_message(exc)) from exc
     if registered is not None:
         await registered.invalidate(source.key)
+    await cache.reads.forget(source.key)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DataSource, SourceFreshness, UnitSources } from '../../../types/index.ts'
-import { withFreshness } from './sourceFreshness.ts'
+import { sourceWithFreshness, withFreshness } from './sourceFreshness.ts'
 
 const NOW = Date.parse('2026-11-23T12:00:00Z')
 const ago = (min: number) => new Date(NOW - min * 60_000).toISOString()
@@ -71,6 +71,12 @@ describe('withFreshness (hora do registro de leituras da API, o mesmo do card do
         const original = unit([source({ id: 'ng', status: 'waiting' })])
         expect(withFreshness(original, null)).toEqual(original)
         expect(withFreshness(original, { lexflow: fresh() })).toEqual(original)
+    })
+
+    it('modal: a fonte sozinha segue a mesma regra da linha da lista', () => {
+        const s = source({ status: 'waiting' })
+        expect(sourceWithFreshness(s, fresh())).toEqual(only(withFreshness(unit([s]), { lexflow: fresh() })))
+        expect(sourceWithFreshness(s, undefined)).toBe(s)
     })
 
     it('falha do Supabase mais recente que a do registro continua sendo a última falha', () => {

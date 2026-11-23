@@ -31,7 +31,7 @@ export function SourcesPage() {
     const keys = data ? [...new Set(data.units.flatMap((u) => u.sources.map((s) => s.id)))].sort() : []
     const { data: freshness } = useAsync(
         () => (keys.length ? dataClient.getSourcesFreshness(org, keys) : Promise.resolve(null)),
-        [org, keys.join(',')],
+        [org, keys.join(','), version], // version: ligou/desligou ou testou, a API pode ter esquecido a hora
     )
     const [params, setParams] = useSearchParams()
     const [notice, setNotice] = useState<string | null>(null)
@@ -135,6 +135,7 @@ export function SourcesPage() {
                     unit={current.unit.code}
                     source={open.id}
                     name={open.name}
+                    freshness={freshness?.[open.id]}
                     onChanged={() => setVersion((v) => v + 1)}
                     onDisconnected={() => {
                         setOpen(null)

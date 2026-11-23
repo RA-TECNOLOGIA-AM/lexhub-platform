@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { SourceDetail, SourceTechnical } from '../../../types/index.ts'
+import type { DataSource, SourceDetail, SourceFreshness, SourceTechnical } from '../../../types/index.ts'
+import { sourceWithFreshness } from './sourceFreshness.ts'
 import { ManageSource } from './ManageSource.tsx'
 import { CopyButton } from './CheckList.tsx'
 import { Modal } from '../../../components/ui/Modal.tsx'
@@ -23,18 +24,23 @@ type SourceDetailDialogProps = {
     unit: string // código da unidade aberta na página
     source: string // chave da fonte ('ng', 'lexpre'...)
     name: string // nome já conhecido pela lista (o título aparece antes de carregar)
+    // A hora da fonte no registro de leituras da API (a mesma da linha da lista); undefined = sem registro.
+    freshness?: SourceFreshness
     onChanged: () => void // testou de novo ou trocou a senha: a lista da página busca de novo
     onDisconnected: () => void
     onClose: () => void
 }
 
 // Módulo: o modal de uma fonte, vista de uma unidade — sobre, conexão (só a TI da LexGroup, nas fontes
-// conectadas pela tela), dashboards que usam e últimas sincronizações. Senha e link nunca aparecem.
+// conectadas pela tela), dashboards que usam e testes de conexão. Senha e link nunca aparecem.
+// O status e a "Última leitura" vêm do registro de leituras (como a linha da lista); a tabela de baixo é
+// só dos testes manuais (Testar de novo), que conferem a conexão sem ler dados para um dashboard.
 export function SourceDetailDialog({
     org,
     unit,
     source,
     name,
+    freshness,
     onChanged,
     onDisconnected,
     onClose,
@@ -45,7 +51,8 @@ export function SourceDetailDialog({
         setVersion((v) => v + 1)
         onChanged()
     }
-    const status = data && statusOf(data.source.status)
+    const current = data && sourceWithFreshness(data.source, freshness)
+    const status = current && statusOf(current.status)
     return (
         <Modal
             title={name}
@@ -65,7 +72,7 @@ export function SourceDetailDialog({
                     {data.canManage && (
                         <ManageSource org={org} detail={data} onChanged={changed} onDisconnected={onDisconnected} />
                     )}
-                    <SourceDetailBody detail={data} />
+                    <SourceDetailBody detail={data} source={current ?? data.source} />
                     {data.technical && <SourceTechnicalSection technical={data.technical} />}
                 </>
             )}
@@ -116,7 +123,8 @@ function SourceTechnicalSection({ technical }: { technical: SourceTechnical }) {
 }
 
 // Módulo: as três seções do modal, a partir da resposta já carregada.
-function SourceDetailBody({ detail }: { detail: SourceDetail }) {
+// `source` = a fonte já com a hora do registro (sourceWithFreshness).
+function SourceDetailBody({ detail, source }: { detail: SourceDetail; source: DataSource }) {
     return (
         <>
             <section aria-label="Sobre a fonte">
@@ -125,8 +133,8 @@ function SourceDetailBody({ detail }: { detail: SourceDetail }) {
                     <dd>{groupLabel(detail.source.group)}</dd>
                     <dt>Quem cuida</dt>
                     <dd>{ownerLabel(detail)}</dd>
-                    <dt>Última sincronização</dt>
-                    <dd>{whenLabel(detail.source)}</dd>
+                    <dt>Última leitura</dt>
+                    <dd>{whenLabel(source)}</dd>
                 </dl>
             </section>
 
@@ -145,11 +153,11 @@ function SourceDetailBody({ detail }: { detail: SourceDetail }) {
                 )}
             </section>
 
-            <section aria-label="Últimas sincronizações">
-                <h3 className="source-section-title">Últimas sincronizações</h3>
+            <section aria-label="Testes de conexão">
+                <h3 className="source-section-title">Testes de conexão</h3>
                 {detail.runs.length === 0 ? (
                     <p className="muted small" style={{ margin: 0 }}>
-                        Ainda não sincronizou. O histórico aparece aqui depois da primeira sincronização.
+                        Nenhum teste ainda. Os testes feitos em Testar de novo ou ao trocar a senha/link aparecem aqui.
                     </p>
                 ) : (
                     <table className="source-runs">

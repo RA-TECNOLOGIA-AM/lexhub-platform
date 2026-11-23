@@ -1,6 +1,6 @@
 import asyncio
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
@@ -15,8 +15,9 @@ from app.catalog import (
     get_catalog_repo,
 )
 from app.dashboards import DASHBOARDS
+from app.database import SourceUnavailable
 from app.source_cache import SourceCache
-from app.sources import get_source_cache
+from app.sources import get_source_cache, get_source_switch
 from app.unit_scope import ESCRITORIO_POR_UNIDADE, UNIT_COLUMN, scoped_name
 
 router = APIRouter(prefix="/orgs/{org_slug}", tags=["catalog"])
@@ -27,13 +28,17 @@ async def list_dashboards(
     access: Annotated[OrgAccess, Depends(require_org)],
     repo: Annotated[CatalogRepo, Depends(get_catalog_repo)],
     cache: Annotated[SourceCache, Depends(get_source_cache)],
+    switch: Annotated[Any, Depends(get_source_switch)],
 ) -> DashboardCatalogOut:
     """Hub: os dashboards que a pessoa pode abrir nesta organização e em quais unidades."""
     # As duas consultas não dependem uma da outra: vão juntas (cada ida ao banco custa caro).
     rows, upcoming = await asyncio.gather(
         repo.list_available(access.user.user_id, access.org_id), repo.list_upcoming()
     )
-    return build_catalog(rows, upcoming, await synced_from_cache(cache, {r.key for r in rows}))
+    keys = {r.key for r in rows}
+    return build_catalog(
+        rows, upcoming, await synced_from_cache(cache, keys), await disabled_sources(switch, keys)
+    )
 
 
 class EnabledIn(BaseModel):
@@ -65,6 +70,27 @@ async def set_dashboard_enabled(
     except DashboardMissing as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from None
     return EnabledOut(unit=unit_code, dashboard=dashboard_key, enabled=enabled)
+
+
+async def disabled_sources(switch: Any, keys: set[str]) -> set[str]:
+    """Cards cuja fonte principal está desligada (app/source_switch.py: a lista guardada por 30 s).
+
+    Sem o banco da plataforma (switch None) ou sem conseguir ler a lista: nenhum. O hub nunca cai por
+    isso; ao abrir, o dashboard confere de novo e responde 423 se a fonte estiver desligada.
+    """
+    if switch is None:
+        return set()
+    out: set[str] = set()
+    for key in keys:
+        module = DASHBOARDS.get(key)
+        if module is None:
+            continue
+        try:
+            if await switch.is_disabled(module.source_db):
+                out.add(key)
+        except SourceUnavailable:
+            return set()
+    return out
 
 
 async def synced_from_cache(cache: SourceCache, keys: set[str]) -> dict[str, datetime]:

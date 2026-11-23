@@ -4,13 +4,18 @@ type FreshnessProps = {
     syncedAt: string | null
     source: string
     maxDelayMin?: number
+    disabled?: boolean // a TI desligou a fonte (source_disabled do catálogo)
 }
 
 // Verde: "Atualizado há 4 min · LexPre".
 // Amarelo (passou do limite): "Fonte atrasada · há 3 h · LexPre".
 // Neutro (syncedAt null): "Atualiza ao abrir · LexPre". A API só busca a fonte quando alguém abre o dashboard
 // (sem aquecedor no LexFlow e no LexPre, por causa do egress do Supabase): não ter hora no hub não é atraso.
-export function Freshness({ syncedAt, source, maxDelayMin = 60 }: FreshnessProps) {
+// Cinza (disabled): "Fonte desligada · Planilha do financeiro". Vem antes de tudo: o dashboard não abre (423).
+export function Freshness({ syncedAt, source, maxDelayMin = 60, disabled = false }: FreshnessProps) {
+    if (disabled) {
+        return <span className="fresh off">Fonte desligada · {source}</span>
+    }
     if (syncedAt === null) {
         return <span className="fresh">Atualiza ao abrir · {source}</span>
     }

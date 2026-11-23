@@ -77,7 +77,12 @@ export function DashboardCard({
                     })}
                 </span>
             )}
-            <Freshness syncedAt={dashboard.synced_at} source={dashboard.source} maxDelayMin={dashboard.max_delay_min} />
+            <Freshness
+                syncedAt={dashboard.synced_at}
+                source={dashboard.source}
+                maxDelayMin={dashboard.max_delay_min}
+                disabled={dashboard.source_disabled}
+            />
         </article>
     )
 }
