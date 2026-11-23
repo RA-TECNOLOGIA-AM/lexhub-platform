@@ -65,6 +65,7 @@ export const onboardingAudit: AuditResponse = { events: [], truncated: false, ac
 // Ainda sem fontes conectadas: só a unidade-sede, vazia.
 export const onboardingSources: SourcesResponse = {
     orgName: 'Cliente parceiro',
+    deletedUnits: [],
     syncEveryMin: 10,
     unitLimit: { used: 1, total: 1 },
     canManageUnits: true,

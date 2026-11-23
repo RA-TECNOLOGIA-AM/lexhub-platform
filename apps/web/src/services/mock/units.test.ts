@@ -5,6 +5,7 @@ import { createUnitIn, updateUnitIn } from './units.ts'
 
 const fresh = (): SourcesResponse => ({
     orgName: 'LexGroup',
+    deletedUnits: [],
     syncEveryMin: 10,
     unitLimit: { used: 1, total: 5 },
     canManageUnits: true,

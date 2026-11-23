@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DataSource, SourceDetail, SyncRun, UnitSources } from '../../../types/index.ts'
 import {
+    deletedSub,
     detailLabel,
     durationLabel,
     groupLabel,
@@ -166,5 +167,21 @@ describe('sourcesView', () => {
         )
         expect(runResultLabel(run({ ok: false, rows: null }))).toBe('Falhou')
         expect(runResultLabel(run({ ok: null, finishedAt: null }))).toBe('Rodando')
+    })
+})
+
+describe('unidade excluída', () => {
+    const now = new Date('2026-11-24T12:00:00Z').getTime()
+    const base = { code: 'EDT', name: 'Escritório de Teste', deletedAt: '2026-11-23T12:00:00Z', deletedBy: 'Ana' }
+    it('conta os dias que faltam para a limpeza, com quem excluiu', () => {
+        expect(deletedSub({ ...base, purgeAt: '2026-12-23T12:00:00Z' }, now)).toBe(
+            'Apagada de vez em 29 dias · por Ana',
+        )
+    })
+    it('amanhã, hoje e sem autor', () => {
+        expect(deletedSub({ ...base, purgeAt: '2026-11-25T11:00:00Z' }, now)).toBe('Apagada de vez amanhã · por Ana')
+        expect(deletedSub({ ...base, purgeAt: '2026-11-24T10:00:00Z', deletedBy: null }, now)).toBe(
+            'Apagada de vez hoje',
+        )
     })
 })

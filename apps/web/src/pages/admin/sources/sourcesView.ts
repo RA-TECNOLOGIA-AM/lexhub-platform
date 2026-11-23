@@ -1,5 +1,14 @@
-import type { DataSource, SourceDetail, SourceGroup, SourceStatus, SyncRun, UnitSources } from '../../../types/index.ts'
+import type {
+    DataSource,
+    DeletedUnit,
+    SourceDetail,
+    SourceGroup,
+    SourceStatus,
+    SyncRun,
+    UnitSources,
+} from '../../../types/index.ts'
 import { timeAgo } from '../../../lib/format.ts'
+import { purgeWhen } from '../../../lib/purge.ts'
 
 // Módulo: as regras de texto e cor da tela Unidades e fontes, sem React (testadas em sourcesView.test.ts).
 
@@ -85,6 +94,12 @@ export const lastFailureLabel = (u: UnitSources): string =>
 // '3 de 5 unidades do plano'; null = o plano não limita (a linha some).
 export const unitLimitLabel = (limit: { used: number; total: number } | null): string | null =>
     limit ? `${limit.used} de ${limit.total} unidades do plano` : null
+
+// Embaixo de uma unidade excluída: 'Apagada de vez em 12 dias · por Ana Ribeiro'.
+export function deletedSub(u: DeletedUnit, now: number = Date.now()): string {
+    const when = purgeWhen(u.purgeAt, now)
+    return u.deletedBy ? `Apagada de vez ${when} · por ${u.deletedBy}` : `Apagada de vez ${when}`
+}
 
 // A unidade escolhida (vem da URL: ?unidade=LA_AM). Código inválido ou ausente = a primeira.
 export const pickUnit = (units: UnitSources[], code: string | null): UnitSources | undefined =>

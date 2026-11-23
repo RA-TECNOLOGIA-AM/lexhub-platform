@@ -1,5 +1,6 @@
-import type { ClientPlan, ClientsResponse, PlatformClient } from '../../../types/index.ts'
+import type { ClientPlan, ClientsResponse, ClosedOrg, PlatformClient } from '../../../types/index.ts'
 import { fmt } from '../../../lib/format.ts'
+import { purgeWhen } from '../../../lib/purge.ts'
 
 type Badge = { label: string; badge: string }
 
@@ -61,3 +62,9 @@ export function validateSupportReason(reason: string): string | null {
     if (text.length < SUPPORT_REASON_MIN) return `Explique melhor (pelo menos ${SUPPORT_REASON_MIN} caracteres).`
     return null
 }
+
+// Embaixo de uma organização encerrada: 'Apagada de vez em 12 dias · por ana@lexgroup.com.br'.
+export const closedSub = (o: ClosedOrg, now: number = Date.now()): string =>
+    o.closedBy
+        ? `Apagada de vez ${purgeWhen(o.purgeAt, now)} · por ${o.closedBy}`
+        : `Apagada de vez ${purgeWhen(o.purgeAt, now)}`

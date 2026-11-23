@@ -3,6 +3,7 @@ import type { ClientsResponse } from '../../types/index.ts'
 // Os clientes do protótipo (canvas "LexHub v2 — protótipo", tela Clientes).
 export const clients: ClientsResponse = {
     monthlyRevenue: null,
+    closed: [],
     clients: [
         {
             slug: 'lexgroup',

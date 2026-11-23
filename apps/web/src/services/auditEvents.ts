@@ -117,6 +117,21 @@ const EVENTS: Record<string, Rule> = {
         action: 'Excluiu unidade',
         detail: (e, m) => join(text(m.name) ?? e.targetName, text(m.code)),
     },
+    'unit.restored': {
+        kind: 'source',
+        action: 'Restaurou unidade',
+        detail: (e, m) => join(text(m.name) ?? e.targetName, text(m.code)),
+    },
+    'org.reopened': {
+        kind: 'access',
+        action: 'Reabriu organização',
+        detail: (_, m) => join(text(m.name), text(m.slug)),
+    },
+    'org.purged': {
+        kind: 'access',
+        action: 'Apagou organização de vez',
+        detail: (_, m) => join(text(m.name), text(m.slug)),
+    },
     'org.closed': {
         kind: 'access',
         action: 'Encerrou organização',

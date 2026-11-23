@@ -58,6 +58,7 @@ const ngDatabase = (managedBy: string | null) =>
 
 export const sources: SourcesResponse = {
     orgName: 'LexGroup',
+    deletedUnits: [],
     syncEveryMin: 10,
     unitLimit: { used: 3, total: 5 },
     canManageUnits: true,

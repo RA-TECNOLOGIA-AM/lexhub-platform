@@ -27,6 +27,7 @@ type SourcesClient = Pick<
     | 'updateUnit'
     | 'getUnitDeletionImpact'
     | 'deleteUnit'
+    | 'restoreUnit'
     | 'listProductOffices'
     | 'linkProductOffice'
     | 'getConnectInfo'
@@ -81,6 +82,7 @@ export function createSourcesClient(supabase: SupabaseClient, http: Http): Sourc
         updateUnit: (org, unit) => call<UnitSources>('update_unit', unitArgs(org, unit)),
         getUnitDeletionImpact: (org, unit) =>
             call<UnitDeletionImpact>('unit_deletion_impact', { p_org: org, p_code: unit }),
+        restoreUnit: (org, unit) => call<UnitSources>('restore_unit', { p_org: org, p_code: unit }),
         deleteUnit: async (org, unit, confirmName) => {
             await call<null>('delete_unit', { p_org: org, p_code: unit, p_confirm: confirmName })
         },
