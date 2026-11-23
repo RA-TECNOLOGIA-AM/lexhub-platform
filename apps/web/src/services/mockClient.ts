@@ -701,8 +701,10 @@ export function createMockClient(): DataClient {
             const summary = catalog.available.find((d) => d.key === dashboard)
             if (!summary?.can_export) throw new DataError(403, 'Você não pode exportar este dashboard')
 
-            const columns = campos.map((slug) => ({ key: slug, label: EXPORT_LABELS[slug] ?? slug }))
-            const rows = exportRowsFor(campos, filters)
+            // Relatório com partes (ex.: 'condenacao.numero_processo'): no mock, o campo sem o prefixo, num CSV só.
+            const base = campos.map((slug) => slug.slice(slug.indexOf('.') + 1))
+            const columns = base.map((slug) => ({ key: slug, label: EXPORT_LABELS[slug] ?? slug }))
+            const rows = exportRowsFor(base, filters)
             const period = from && to ? periodLabel({ from, to }) : 'período padrão'
             addAuditEvent({
                 actor: me.user.name,

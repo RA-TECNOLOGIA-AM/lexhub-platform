@@ -122,6 +122,7 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
                                 module.exportReports ??
                                 (module.exportFields ? [{ key: null, title: '', groups: module.exportFields }] : [])
                             }
+                            initialReport={module.exportReportInicial?.(query.filters ?? {})}
                             onExport={exportReport}
                         />
                     </>

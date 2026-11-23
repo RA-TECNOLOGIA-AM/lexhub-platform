@@ -5,17 +5,19 @@ Funções puras: escolhem os campos, formatam as linhas e geram os bytes. A rota
 
 import csv
 import io
+import zipfile
 from datetime import date, datetime
 from typing import Any
 
 from openpyxl import Workbook
 
-from app.dashboards.base import DashboardModule, ExportSpec
+from app.dashboards.base import DashboardModule, ExportPart, ExportSpec
 
 FORMATS = {
     "csv": "text/csv; charset=utf-8",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }
+ZIP = "application/zip"  # CSV de um relatório com partes: um .zip com um CSV por parte
 
 
 class ExportError(ValueError):
@@ -118,6 +120,53 @@ def to_xlsx_por_aba(
             ws.append(line)
     buffer = io.BytesIO()
     wb.save(buffer)
+    return buffer.getvalue()
+
+
+def combined(prefix_parts: tuple[ExportPart, ...], **kwargs: Any) -> ExportSpec:
+    """O relatório que junta as partes: campos e rótulos de cada uma com o prefixo, na ordem das partes."""
+
+    async def _todas(ctx: Any) -> list[dict[str, Any]]:
+        # A rota monta o arquivo parte a parte; aqui, as linhas de todas juntas (com a parte), para quem precisar.
+        return [{**r, "_parte": p.prefix} for p in prefix_parts for r in await p.spec.rows(ctx)]
+
+    fields = {f"{p.prefix}.{s}": c for p in prefix_parts for s, c in p.spec.fields.items()}
+    labels = {
+        f"{p.prefix}.{s}": rotulo for p in prefix_parts for s, rotulo in p.spec.labels.items()
+    }
+    return ExportSpec(fields=fields, labels=labels, rows=_todas, parts=prefix_parts, **kwargs)
+
+
+def split_parts(spec: ExportSpec, slugs: list[str]) -> list[tuple[ExportPart, list[str]]]:
+    """Os campos escolhidos de cada parte (sem o prefixo), só das partes com algum campo, na ordem das partes."""
+    escolhidas = []
+    for p in spec.parts:
+        dela = [s.split(".", 1)[1] for s in slugs if s.startswith(f"{p.prefix}.")]
+        if dela:
+            escolhidas.append((p, dela))
+    return escolhidas
+
+
+def to_xlsx_abas(abas: list[tuple[str, list[str], list[list[str]]]]) -> bytes:
+    """Um XLSX com uma aba por (nome, cabeçalhos, linhas), como _gerar_xlsx_export_multi_sheet da v1."""
+    wb = Workbook()
+    wb.remove(wb.active)
+    for nome, headers, data in abas:
+        ws = wb.create_sheet(_nome_aba(nome))
+        ws.append(headers)
+        for line in data:
+            ws.append(line)
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    return buffer.getvalue()
+
+
+def to_zip(arquivos: list[tuple[str, bytes]]) -> bytes:
+    """Um .zip com os arquivos (nome, bytes), como _gerar_zip_export_multi_csv da v1."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as z:
+        for nome, conteudo in arquivos:
+            z.writestr(nome, conteudo)
     return buffer.getvalue()
 
 

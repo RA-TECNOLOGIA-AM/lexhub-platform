@@ -15,7 +15,7 @@ export const RECORTE: ExportOptionDef = {
     ],
 }
 
-const camposExecucao: ExportGroup[] = [
+export const camposExecucao: ExportGroup[] = [
     {
         group: 'Identificação',
         fields: [

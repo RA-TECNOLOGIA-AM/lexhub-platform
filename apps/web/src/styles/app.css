@@ -6578,6 +6578,23 @@ body {
     flex-direction: column;
     gap: 6px;
 }
+/* A explicação da escolha feita (ex.: o que o "Relatório personalizado" ignora), na linha toda */
+.export-nota {
+    flex: 1 1 100%;
+    margin: 0;
+}
+/* Relatório com partes (ex.: Condenação e Acordos juntos): um bloco de campos por parte, cada um com o seu
+   "Selecionar todos", como na v1 */
+.export-bloco + .export-bloco {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--divider);
+}
+.export-bloco-titulo {
+    margin: 0 0 6px;
+    font-size: var(--fs-md);
+    font-weight: 600;
+}
 
 /* ---------- Tickets (banco NG) ---------- */
 /* três cartões lado a lado (servidor · categoria · servidor), como a v1 */

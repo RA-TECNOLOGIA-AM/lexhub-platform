@@ -16,6 +16,7 @@ import {
 type ExportDialogProps = {
     title: string // nome do dashboard ('Protocolo')
     reports: ExportReport[] // os relatórios do dashboard (o LexPre tem um só, sem opções)
+    initialReport?: string | null // o que abre escolhido (key; null = o principal); sem ou desconhecido = o primeiro
     onClose: () => void
     // rejeitou = mostra o erro aqui. relatorio/opcoes: o relatório escolhido e as escolhas dele (ex.: o recorte).
     onExport: (
@@ -30,9 +31,15 @@ type ExportDialogProps = {
 // Usa o Modal da casa (foco preso, Esc fecha, fundo escurecido).
 // Quem usa só a desenha quando está aberta; ao abrir, todos os campos começam marcados (como na v1).
 // Com mais de um relatório (ex.: Processos e Atividades nos Acordos), escolher outro volta a marcar todos os campos
-// dele; as opções (ex.: o recorte Entradas/Saídas/Total) aparecem acima dos campos, como na v1.
-export function ExportDialog({ title, reports, onClose, onExport }: ExportDialogProps) {
-    const [indice, setIndice] = useState(0)
+// dele; as opções (ex.: o recorte Entradas/Saídas/Total) aparecem acima dos campos, como na v1. Num relatório com
+// partes (grupos com `block`, ex.: Condenação e Acordos juntos), cada bloco tem o seu "Selecionar todos".
+export function ExportDialog({ title, reports, initialReport, onClose, onExport }: ExportDialogProps) {
+    const [indice, setIndice] = useState(() =>
+        Math.max(
+            0,
+            reports.findIndex((r) => r.key === initialReport),
+        ),
+    )
     const report = reports[indice] ?? reports[0]
     const groups = report.groups
     const all = allSlugs(groups)
@@ -65,6 +72,19 @@ export function ExportDialog({ title, reports, onClose, onExport }: ExportDialog
     }
 
     const none = selected.length === 0
+    // Os blocos na ordem dos grupos; sem `block`, um bloco só (sem título), como sempre foi.
+    const blocos = [...new Set(groups.map((g) => g.block ?? ''))].map((nome) => ({
+        nome,
+        groups: groups.filter((g) => (g.block ?? '') === nome),
+    }))
+    const marcarBloco = (gs: typeof groups, marcar: boolean) => {
+        const doBloco = allSlugs(gs)
+        setSelected(marcar ? [...new Set([...selected, ...doBloco])] : selected.filter((s) => !doBloco.includes(s)))
+    }
+    // A explicação da escolha feita em cada opção (ex.: o "Relatório personalizado" ignora os filtros da página).
+    const notas = (report.options ?? [])
+        .map((o) => o.choices.find((c) => c.value === (opcoes[o.key] ?? o.choices[0]?.value))?.note)
+        .filter((n): n is string => !!n)
     return (
         <Modal
             title={`Exportar relatório de ${title}`}
@@ -120,37 +140,51 @@ export function ExportDialog({ title, reports, onClose, onExport }: ExportDialog
                             />
                         </div>
                     ))}
+                    {notas.map((n) => (
+                        <p key={n} className="muted small export-nota">
+                            {n}
+                        </p>
+                    ))}
                 </div>
             )}
-            <div className="export-toolbar">
-                <span className="muted small">{selectionLabel(selected.length, all.length)}</span>
-                <span className="small">
-                    <button className="link-btn" type="button" onClick={() => setSelected(all)}>
-                        Selecionar todos
-                    </button>
-                    {' · '}
-                    <button className="link-btn" type="button" onClick={() => setSelected([])}>
-                        Desmarcar todos
-                    </button>
-                </span>
-            </div>
-            {groups.map((g) => (
-                <fieldset key={g.group} className="filter-group">
-                    <legend className="export-group-title">{g.group}</legend>
-                    <div className="export-fields">
-                        {g.fields.map((f) => (
-                            <label key={f.slug} className="check">
-                                <input
-                                    type="checkbox"
-                                    checked={selected.includes(f.slug)}
-                                    onChange={() => setSelected(toggleSlug(selected, f.slug))}
-                                />
-                                {f.label}
-                            </label>
+            {blocos.map((b) => {
+                const doBloco = allSlugs(b.groups)
+                const marcados = doBloco.filter((s) => selected.includes(s)).length
+                return (
+                    <section key={b.nome || 'campos'} className={b.nome ? 'export-bloco' : undefined}>
+                        {b.nome && <h3 className="export-bloco-titulo">{b.nome}</h3>}
+                        <div className="export-toolbar">
+                            <span className="muted small">{selectionLabel(marcados, doBloco.length)}</span>
+                            <span className="small">
+                                <button className="link-btn" type="button" onClick={() => marcarBloco(b.groups, true)}>
+                                    Selecionar todos
+                                </button>
+                                {' · '}
+                                <button className="link-btn" type="button" onClick={() => marcarBloco(b.groups, false)}>
+                                    Desmarcar todos
+                                </button>
+                            </span>
+                        </div>
+                        {b.groups.map((g) => (
+                            <fieldset key={g.group} className="filter-group">
+                                <legend className="export-group-title">{g.group}</legend>
+                                <div className="export-fields">
+                                    {g.fields.map((f) => (
+                                        <label key={f.slug} className="check">
+                                            <input
+                                                type="checkbox"
+                                                checked={selected.includes(f.slug)}
+                                                onChange={() => setSelected(toggleSlug(selected, f.slug))}
+                                            />
+                                            {f.label}
+                                        </label>
+                                    ))}
+                                </div>
+                            </fieldset>
                         ))}
-                    </div>
-                </fieldset>
-            ))}
+                    </section>
+                )
+            })}
         </Modal>
     )
 }

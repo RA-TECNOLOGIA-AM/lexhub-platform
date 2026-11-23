@@ -20,6 +20,7 @@ from datetime import date
 from typing import Any
 
 from app.analyses import v1_dashboard_generico as v1
+from app.dashboards import execucao_estrategico_export as relatorio
 from app.dashboards import generico_v1
 from app.dashboards.base import DashboardContext, DashboardModule, NotReady
 from app.unit_scope import com_recorte
@@ -281,6 +282,9 @@ MODULE = DashboardModule(
     source_db="lexflow",
     source_label="LexFlow",
     build=build,
+    # O "Relatório" da página da v1: Condenação, Acordos ou os dois num arquivo só (execucao_estrategico_export.py).
+    export=relatorio.CONDENACAO,
+    export_reports={"acordos": relatorio.ACORDOS, "ambos": relatorio.AMBOS},
     filters={
         "materia": str,
         "subfase": str,

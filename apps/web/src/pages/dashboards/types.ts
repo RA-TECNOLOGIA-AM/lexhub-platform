@@ -16,6 +16,8 @@ export type DashboardModule<T extends { meta: Meta }> = {
     exportFields?: ExportGroup[] // campos do relatório (cópia da lista do servidor); sem = não exporta ainda
     // Mais de um relatório e/ou escolhas além dos campos (recorte, visão), como na v1. Tem preferência sobre exportFields.
     exportReports?: ExportReport[]
+    // O relatório que a janela abre escolhido, pelos filtros da página (key; null = o principal). Sem = o primeiro.
+    exportReportInicial?: (filters: DashboardFilters) => string | null
     // Tabela de comissão do período para o "Gerar comissão (PDF)"; sem = o botão não aparece. Vem da resposta,
     // e o botão só aparece para quem vê a comissão de todos (can_see_commission: Gestor/Desenvolvedor, como na v1).
     commission?: (data: T) => CommissionTable | undefined // undefined = sem comissão nesta unidade (botão some)
