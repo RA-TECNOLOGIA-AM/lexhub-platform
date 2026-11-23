@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.analyses.familias import publicacoes as _familia  # V2: código único da família (app/analyses/familias/publicacoes.py)
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -17,794 +18,252 @@ from app.utils import parse_date_from_db
 # Constantes — nomes de colunas do banco
 # -----------------------------------------------------------------------------
 
-_COL_DISPONIBILIZACAO = "DATA_DISPONIBILIZACAO"
-_COL_CONCLUSAO        = "DATA_CONCLUSAO"
-_COL_STATUS           = "STATUS"
-_COL_LEITOR           = "LEITOR"
-_COL_RESPONSAVEL      = "RESPONSAVEL"
-_COL_MATERIA          = "MATERIA"
-_COL_DOCUMENTO        = "DOCUMENTO"
-_COL_TRIBUNAL         = "TRIBUNAL"
-_COL_ORGAO            = "ORGAO"
-_COL_COMARCA          = "COMARCA"
-_COL_ID_PROCESSO      = "ID_PROCESSO"
-_COL_DATA_LEITURA     = "DATA_LEITURA"
+_COL_DISPONIBILIZACAO = _familia._COL_DISPONIBILIZACAO
+
+_COL_CONCLUSAO = _familia._COL_CONCLUSAO
+
+_COL_STATUS = _familia._COL_STATUS
+
+_COL_LEITOR = _familia._COL_LEITOR
+
+_COL_RESPONSAVEL = _familia._COL_RESPONSAVEL
+
+_COL_MATERIA = _familia._COL_MATERIA
+
+_COL_DOCUMENTO = _familia._COL_DOCUMENTO
+
+_COL_TRIBUNAL = _familia._COL_TRIBUNAL
+
+_COL_ORGAO = _familia._COL_ORGAO
+
+_COL_COMARCA = _familia._COL_COMARCA
+
+_COL_ID_PROCESSO = _familia._COL_ID_PROCESSO
+
+_COL_DATA_LEITURA = _familia._COL_DATA_LEITURA
 
 # Colunas dos agendamentos (query agendamentos_todos_setores_LA_RJ).
-_COL_AG_PROCESSO_ID   = "processo_id"
-_COL_AG_DATA_CRIACAO  = "DATA_HORA_CRIACAO"
-_COL_AG_ATIVIDADE     = "ATIVIDADE"
-_COL_AG_SETOR         = "SETOR"
+_COL_AG_PROCESSO_ID = _familia._COL_AG_PROCESSO_ID
+
+_COL_AG_DATA_CRIACAO = _familia._COL_AG_DATA_CRIACAO
+
+_COL_AG_ATIVIDADE = _familia._COL_AG_ATIVIDADE
+
+_COL_AG_SETOR = _familia._COL_AG_SETOR
 
 # Status elegíveis para a métrica de publicações pendentes no dashboard RJ.
-_STATUS_PENDENTE_METRICA_RJ = frozenset({"visualizado", "não visualizado"})
+_STATUS_PENDENTE_METRICA_RJ = _familia._STATUS_PENDENTE_METRICA
 
 
 # -----------------------------------------------------------------------------
 # Helpers internos
 # -----------------------------------------------------------------------------
 
-def _col(row: Dict[str, Any], name: str) -> Any:
-    return row.get(name) or row.get(name.lower())
+_col = _familia._col
 
 
-_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
+_to_date = _familia._to_date
 
 
-def _get_date(row: Dict[str, Any], col_name: str) -> Optional[date]:
-    """Atalho para _to_date(_col(row, col_name)) — usado em toda leitura de data."""
-    return _to_date(_col(row, col_name))
+_get_date = _familia._get_date
 
 
-def _status_normalizado(row: Dict[str, Any]) -> str:
-    s = _col(row, _COL_STATUS)
-    if s is None:
-        return ""
-    return str(s).strip().lower()
+_status_normalizado = _familia._status_normalizado
 
 
-def _is_cumprido(row: Dict[str, Any]) -> bool:
-    return _status_normalizado(row) == "cumprido"
+_is_cumprido = _familia._is_cumprido
 
 
-def _is_somente_visualizada(row: Dict[str, Any]) -> bool:
-    """Lida (visualizada) mas ainda não cumprida — exclui 'não visualizado' e 'cumprido'."""
-    return _status_normalizado(row) == "visualizado"
+_is_somente_visualizada = _familia._is_somente_visualizada
 
 
-def _conta_como_pendente_publicacao_RJ(row: Dict[str, Any]) -> bool:
-    """Só entra na métrica de pendentes com status Visualizado ou Não visualizado."""
-    return _status_normalizado(row) in _STATUS_PENDENTE_METRICA_RJ
+_conta_como_pendente_publicacao_RJ = _familia._conta_como_pendente_publicacao
 
 
-def _in_interval(
-    d: date,
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> bool:
-    if from_date and to_date:
-        return from_date <= d <= to_date
-    if from_date:
-        return d >= from_date
-    if to_date:
-        return d <= to_date
-    return True
+_in_interval = _familia._in_interval
 
 
-def _formatar_nome(nome_completo: str) -> str:
-    """Extrai apenas o primeiro e segundo nome do leitor ou responsável."""
-    if not nome_completo or nome_completo == "Sem funcionario":
-        return nome_completo
-    partes = nome_completo.strip().split()
-    if len(partes) == 1:
-        return partes[0].upper()
-    return " ".join(partes[:2]).upper()
+_formatar_nome = _familia._formatar_nome
 
 
-def _rotulo_leitor(row: Dict[str, Any]) -> str:
-    """
-    Rótulo para agrupar/filtrar por funcionário: leitor designado, se houver;
-    caso contrário o responsável (ex.: cumprimento em lote no LexFlow costuma
-    não preencher ``LEITOR``, mas mantém ``RESPONSAVEL``).
-    """
-    raw = _col(row, _COL_LEITOR)
-    if raw is not None and str(raw).strip():
-        return _formatar_nome(str(raw).strip())
-    raw_resp = _col(row, _COL_RESPONSAVEL)
-    if raw_resp is not None and str(raw_resp).strip():
-        return _formatar_nome(str(raw_resp).strip())
-    return _formatar_nome("SEM LEITOR")
+_rotulo_leitor = _familia._rotulo_leitor
 
 
-def _label_caixa_alta(value: Any, default: str) -> str:
-    """Rótulo para gráficos: `default` já em maiúsculas; valores preenchidos viram `.upper()`."""
-    if value is None:
-        return default
-    s = str(value).strip()
-    return default if not s else s.upper()
+_label_caixa_alta = _familia._label_caixa_alta
 
 
-def _rotulo_materia_RJ(row: Dict[str, Any]) -> str:
-    return _label_caixa_alta(_col(row, _COL_MATERIA), "SEM MATERIA")
+_rotulo_materia_RJ = _familia._rotulo_materia
 
 
-def _rotulo_documento_RJ(row: Dict[str, Any]) -> str:
-    return _label_caixa_alta(_col(row, _COL_DOCUMENTO), "DOCUMENTO")
+_rotulo_documento_RJ = _familia._rotulo_documento
 
 
-def _rotulo_tribunal_RJ(row: Dict[str, Any]) -> str:
-    return _label_caixa_alta(_col(row, _COL_TRIBUNAL), "SEM TRIBUNAL")
+_rotulo_tribunal_RJ = _familia._rotulo_tribunal
 
 
-def _rotulo_orgao_RJ(row: Dict[str, Any]) -> str:
-    return _label_caixa_alta(_col(row, _COL_ORGAO), "SEM ORGAO")
+_rotulo_orgao_RJ = _familia._rotulo_orgao
 
 
-def _normalizar_filtro_dimensao_RJ(valor: Optional[str]) -> Optional[str]:
-    """Valor da UI ou do banco → comparação com rótulos em maiúsculas."""
-    if valor is None or not str(valor).strip():
-        return None
-    return str(valor).strip().upper()
+_normalizar_filtro_dimensao_RJ = _familia._normalizar_filtro_dimensao
 
 
-def _cumprida_mesmo_dia(row: Dict[str, Any], dia: Optional[date] = None) -> bool:
-    """
-    True se a publicação foi cumprida com DATA_DISPONIBILIZACAO == DATA_CONCLUSAO.
-    Quando `dia` é informado, exige também que ambas as datas sejam iguais a ele.
-    """
-    if not _is_cumprido(row):
-        return False
-    d_disp = _get_date(row, _COL_DISPONIBILIZACAO)
-    d_conc = _get_date(row, _COL_CONCLUSAO)
-    if d_disp is None or d_conc is None or d_disp != d_conc:
-        return False
-    return dia is None or d_disp == dia
+_cumprida_mesmo_dia = _familia._cumprida_mesmo_dia
 
 
-def _agrupar_por_rotulo(
-    publicacoes: List[Dict[str, Any]],
-    fn_rotulo: Callable[[Dict[str, Any]], str],
-) -> List[Dict[str, Any]]:
-    """Agrupa publicações contando ocorrências por rótulo calculado via fn_rotulo."""
-    grouped: Dict[str, int] = defaultdict(int)
-    for p in publicacoes:
-        grouped[fn_rotulo(p)] += 1
-    return [{"name": k, "value": v} for k, v in sorted(grouped.items())]
+_agrupar_por_rotulo = _familia._agrupar_por_rotulo
 
 
-def _filtrar_por_rotulo(
-    publicacoes: List[Dict[str, Any]],
-    valor: Optional[Union[str, List[str]]],
-    fn_rotulo: Callable[[Dict[str, Any]], str],
-) -> List[Dict[str, Any]]:
-    """
-    Filtra publicações cujo rótulo (calculado via fn_rotulo) coincide com valor.
-    Se valor for None ou vazio, devolve cópia da lista sem filtrar.
-    """
-    valores = valor if isinstance(valor, (list, tuple, set)) else [valor]
-    alvos = {a for a in (_normalizar_filtro_dimensao_RJ(v) for v in valores) if a is not None}
-    if not alvos:
-        return list(publicacoes)
-    return [p for p in publicacoes if fn_rotulo(p) in alvos]
+_filtrar_por_rotulo = _familia._filtrar_por_rotulo
 
 
 # -----------------------------------------------------------------------------
 # Filtros por leitor e por dimensão
 # -----------------------------------------------------------------------------
 
-def filter_publicacoes_por_leitor_RJ(
-    publicacoes: List[Dict[str, Any]],
-    leitor: Optional[Union[str, List[str]]] = None,
-) -> List[Dict[str, Any]]:
-    nomes = leitor if isinstance(leitor, (list, tuple, set)) else [leitor]
-    alvos = {_formatar_nome(str(n).strip()) for n in nomes if n is not None and str(n).strip()}
-    if not alvos:
-        return list(publicacoes)
-    return [p for p in publicacoes if _rotulo_leitor(p) in alvos]
+filter_publicacoes_por_leitor_RJ = _familia.filter_publicacoes_por_leitor
 
 
-def filter_publicacoes_por_materia_RJ(
-    publicacoes: List[Dict[str, Any]],
-    materia: Optional[str] = None,
-) -> List[Dict[str, Any]]:
-    return _filtrar_por_rotulo(publicacoes, materia, _rotulo_materia_RJ)
+filter_publicacoes_por_materia_RJ = _familia.filter_publicacoes_por_materia
 
 
-def filter_publicacoes_por_documento_RJ(
-    publicacoes: List[Dict[str, Any]],
-    documento: Optional[str] = None,
-) -> List[Dict[str, Any]]:
-    return _filtrar_por_rotulo(publicacoes, documento, _rotulo_documento_RJ)
+filter_publicacoes_por_documento_RJ = _familia.filter_publicacoes_por_documento
 
 
-def filter_publicacoes_por_tribunal_RJ(
-    publicacoes: List[Dict[str, Any]],
-    tribunal: Optional[str] = None,
-) -> List[Dict[str, Any]]:
-    return _filtrar_por_rotulo(publicacoes, tribunal, _rotulo_tribunal_RJ)
+filter_publicacoes_por_tribunal_RJ = _familia.filter_publicacoes_por_tribunal
 
 
-def filter_publicacoes_por_orgao_RJ(
-    publicacoes: List[Dict[str, Any]],
-    orgao: Optional[str] = None,
-) -> List[Dict[str, Any]]:
-    return _filtrar_por_rotulo(publicacoes, orgao, _rotulo_orgao_RJ)
+filter_publicacoes_por_orgao_RJ = _familia.filter_publicacoes_por_orgao
 
 
 # -----------------------------------------------------------------------------
 # 1 - Funções que vão nos cartões de informações do dashboard
 # -----------------------------------------------------------------------------
 
-def get_publicacoes_recebidas_periodo_RJ(
-    publicacoes: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> int:
-    """Contagem por DATA_DISPONIBILIZACAO dentro do intervalo."""
-    return sum(
-        1 for p in publicacoes
-        if (d := _get_date(p, _COL_DISPONIBILIZACAO)) is not None
-        and _in_interval(d, from_date, to_date)
-    )
+get_publicacoes_recebidas_periodo_RJ = _familia.get_publicacoes_recebidas_periodo
 
 
-def filter_publicacoes_recebidas_no_periodo_RJ(
-    publicacoes: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> List[Dict[str, Any]]:
-    return [
-        p for p in publicacoes
-        if (d := _get_date(p, _COL_DISPONIBILIZACAO)) is not None
-        and _in_interval(d, from_date, to_date)
-    ]
+filter_publicacoes_recebidas_no_periodo_RJ = _familia.filter_publicacoes_recebidas_no_periodo
 
 
-def filter_publicacoes_tratadas_no_periodo_RJ(
-    publicacoes: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> List[Dict[str, Any]]:
-    return [
-        p for p in publicacoes
-        if _is_cumprido(p)
-        and (d := _get_date(p, _COL_CONCLUSAO)) is not None
-        and _in_interval(d, from_date, to_date)
-    ]
+filter_publicacoes_tratadas_no_periodo_RJ = _familia.filter_publicacoes_tratadas_no_periodo
 
 
-def get_publicacoes_tratadas_periodo_RJ(
-    publicacoes: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> int:
-    """Status cumprido; referência de data: DATA_CONCLUSAO."""
-    return sum(
-        1 for p in publicacoes
-        if _is_cumprido(p)
-        and (d := _get_date(p, _COL_CONCLUSAO)) is not None
-        and _in_interval(d, from_date, to_date)
-    )
+get_publicacoes_tratadas_periodo_RJ = _familia.get_publicacoes_tratadas_periodo
 
 
-def resolve_dia_referencia_fim_periodo_RJ(
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> date:
-    if to_date is not None:
-        return to_date
-    if from_date is not None:
-        return from_date
-    return date.today()
+resolve_dia_referencia_fim_periodo_RJ = _familia.resolve_dia_referencia_fim_periodo
 
 
-def get_publicacoes_tratadas_no_dia_RJ(
-    publicacoes: List[Dict[str, Any]],
-    dia: date,
-) -> int:
-    """Cumpridas com DATA_CONCLUSAO no dia civil `dia`."""
-    return sum(
-        1 for p in publicacoes
-        if _is_cumprido(p)
-        and _get_date(p, _COL_CONCLUSAO) == dia
-    )
+get_publicacoes_tratadas_no_dia_RJ = _familia.get_publicacoes_tratadas_no_dia
 
 
-def get_publicacoes_recebidas_no_dia_RJ(
-    publicacoes: List[Dict[str, Any]],
-    dia: date,
-) -> int:
-    """Registros cuja DATA_DISPONIBILIZACAO cai no dia civil `dia` (chegaram nesse dia)."""
-    return sum(
-        1 for p in publicacoes
-        if _get_date(p, _COL_DISPONIBILIZACAO) == dia
-    )
+get_publicacoes_recebidas_no_dia_RJ = _familia.get_publicacoes_recebidas_no_dia
 
 
-def get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia_RJ(
-    publicacoes: List[Dict[str, Any]],
-    dia: date,
-) -> int:
-    return sum(1 for p in publicacoes if _cumprida_mesmo_dia(p, dia))
+get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia_RJ = _familia.get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia
 
 
-def get_publicacoes_com_data_disponibilizacao_RJ(
-    publicacoes: List[Dict[str, Any]],
-) -> int:
-    return sum(
-        1 for p in publicacoes
-        if _get_date(p, _COL_DISPONIBILIZACAO) is not None
-    )
+get_publicacoes_com_data_disponibilizacao_RJ = _familia.get_publicacoes_com_data_disponibilizacao
 
 
-def get_publicacoes_cumpridas_mesmo_dia_chegada_RJ(
-    publicacoes: List[Dict[str, Any]],
-) -> int:
-    return sum(1 for p in publicacoes if _cumprida_mesmo_dia(p))
+get_publicacoes_cumpridas_mesmo_dia_chegada_RJ = _familia.get_publicacoes_cumpridas_mesmo_dia_chegada
 
 
-def get_pct_tratadas_mesmo_dia_publicacoes_RJ(
-    publicacoes: List[Dict[str, Any]],
-    dia_referencia: date,
-) -> Optional[float]:
-    denom = get_publicacoes_recebidas_no_dia_RJ(publicacoes, dia_referencia)
-    if denom == 0:
-        return None
-    num = get_publicacoes_cumpridas_mesmo_dia_chegada_no_dia_RJ(publicacoes, dia_referencia)
-    return round(100.0 * num / denom, 2)
+get_pct_tratadas_mesmo_dia_publicacoes_RJ = _familia.get_pct_tratadas_mesmo_dia_publicacoes
 
 
-def get_publicacoes_pendentes_RJ(publicacoes: List[Dict[str, Any]]) -> int:
-    """Backlog atual: apenas status Visualizado ou Não visualizado."""
-    return sum(1 for p in publicacoes if _conta_como_pendente_publicacao_RJ(p))
+get_publicacoes_pendentes_RJ = _familia.get_publicacoes_pendentes
 
 
-def get_media_tempo_tratamento_publicacoes_RJ(
-    publicacoes: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> Optional[float]:
-    dias = tempo.duracoes(
-        [p for p in publicacoes if _is_cumprido(p)],
-        lambda p: _get_date(p, _COL_DISPONIBILIZACAO),
-        lambda p: _get_date(p, _COL_CONCLUSAO),
-        de=from_date,
-        ate=to_date,
-        aceita_zero=True,
-    )
-    return tempo.media(dias, casas=None, vazio=None)
+get_media_tempo_tratamento_publicacoes_RJ = _familia.get_media_tempo_tratamento_publicacoes
 
 
-def get_publicacoes_pendentes_zeradas_no_periodo_RJ(
-    publicacoes: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> int:
-    if from_date is None or to_date is None or from_date > to_date:
-        return 0
-
-    delta: Dict[date, int] = defaultdict(int)
-    for p in publicacoes:
-        chegada = _get_date(p, _COL_DISPONIBILIZACAO)
-        if chegada is None:
-            continue
-        delta[chegada] += 1
-        if _is_cumprido(p):
-            conclusao = _get_date(p, _COL_CONCLUSAO)
-            if conclusao is not None:
-                delta[conclusao] -= 1
-
-    if not delta:
-        return 0
-
-    estoque = sum(v for d, v in delta.items() if d < from_date)
-    estava_zerado = estoque <= 0
-    zeradas = 0
-    dia = from_date
-    while dia <= to_date:
-        estoque += delta.get(dia, 0)
-        zerado_agora = estoque <= 0
-        if zerado_agora and not estava_zerado:
-            zeradas += 1
-        estava_zerado = zerado_agora
-        dia += timedelta(days=1)
-
-    return zeradas
+get_publicacoes_pendentes_zeradas_no_periodo_RJ = _familia.get_publicacoes_pendentes_zeradas_no_periodo
 
 
-def group_publicacoes_recebidas_por_dia_RJ(
-    publicacoes: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> List[Dict[str, Any]]:
-    grouped: Dict[str, int] = defaultdict(int)
-    for p in publicacoes:
-        d = _get_date(p, _COL_DISPONIBILIZACAO)
-        if d is None or not _in_interval(d, from_date, to_date):
-            continue
-        grouped[d.strftime("%Y-%m-%d")] += 1
-    return [{"name": dia, "value": count} for dia, count in sorted(grouped.items())]
+group_publicacoes_recebidas_por_dia_RJ = _familia.group_publicacoes_recebidas_por_dia
 
 
-def group_publicacoes_tratadas_por_dia_RJ(
-    publicacoes: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> List[Dict[str, Any]]:
-    grouped: Dict[str, int] = defaultdict(int)
-    for p in publicacoes:
-        if not _is_cumprido(p):
-            continue
-        d = _get_date(p, _COL_CONCLUSAO)
-        if d is None or not _in_interval(d, from_date, to_date):
-            continue
-        grouped[d.strftime("%Y-%m-%d")] += 1
-    return [{"name": dia, "value": count} for dia, count in sorted(grouped.items())]
+group_publicacoes_tratadas_por_dia_RJ = _familia.group_publicacoes_tratadas_por_dia
 
 
-def group_publicacoes_visualizadas_por_dia_RJ(
-    publicacoes: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> List[Dict[str, Any]]:
-    """Por dia de leitura (DATA_LEITURA), publicações somente visualizadas (lidas, ainda não cumpridas)."""
-    grouped: Dict[str, int] = defaultdict(int)
-    for p in publicacoes:
-        if not _is_somente_visualizada(p):
-            continue
-        d = _get_date(p, _COL_DATA_LEITURA)
-        if d is None or not _in_interval(d, from_date, to_date):
-            continue
-        grouped[d.strftime("%Y-%m-%d")] += 1
-    return [{"name": dia, "value": count} for dia, count in sorted(grouped.items())]
+group_publicacoes_visualizadas_por_dia_RJ = _familia.group_publicacoes_visualizadas_por_dia
 
 
 # -----------------------------------------------------------------------------
 # 2 - Agrupando dados para os gráficos
 # -----------------------------------------------------------------------------
 
-def group_publicacoes_por_tribunal_RJ(publicacoes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return _agrupar_por_rotulo(publicacoes, _rotulo_tribunal_RJ)
+group_publicacoes_por_tribunal_RJ = _familia.group_publicacoes_por_tribunal
 
 
-def group_publicacoes_por_tipo_documento_RJ(publicacoes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return _agrupar_por_rotulo(publicacoes, _rotulo_documento_RJ)
+group_publicacoes_por_tipo_documento_RJ = _familia.group_publicacoes_por_tipo_documento
 
 
-def group_publicacoes_por_materia_RJ(publicacoes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return _agrupar_por_rotulo(publicacoes, _rotulo_materia_RJ)
+group_publicacoes_por_materia_RJ = _familia.group_publicacoes_por_materia
 
 
-def group_publicacoes_por_orgao_RJ(publicacoes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    return _agrupar_por_rotulo(publicacoes, _rotulo_orgao_RJ)
+group_publicacoes_por_orgao_RJ = _familia.group_publicacoes_por_orgao
 
 
-def group_publicacoes_por_comarca_RJ(publicacoes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    fn_rotulo = lambda p: _label_caixa_alta(p.get(_COL_COMARCA), "SEM COMARCA")
-    return _agrupar_por_rotulo(publicacoes, fn_rotulo)
+group_publicacoes_por_comarca_RJ = _familia.group_publicacoes_por_comarca
 
 
 # -----------------------------------------------------------------------------
 # 3 - Funções por Funcionário (Leitor e Responsável)
 # -----------------------------------------------------------------------------
 
-def group_publicacoes_cumprido_por_leitor_RJ(
-    publicacoes: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    """Por leitor, contagem apenas de publicações com status cumprido."""
-    cumpridas = [p for p in publicacoes if _is_cumprido(p)]
-    return _agrupar_por_rotulo(cumpridas, _rotulo_leitor)
+group_publicacoes_cumprido_por_leitor_RJ = _familia.group_publicacoes_cumprido_por_leitor
 
 
-def group_publicacoes_pendentes_por_leitor_RJ(
-    publicacoes: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    pendentes = [p for p in publicacoes if _conta_como_pendente_publicacao_RJ(p)]
-    return _agrupar_por_rotulo(pendentes, _rotulo_leitor)
+group_publicacoes_pendentes_por_leitor_RJ = _familia.group_publicacoes_pendentes_por_leitor
 
 
-def group_publicacoes_pendentes_por_dias_atraso_RJ(
-    publicacoes: List[Dict[str, Any]],
-    *,
-    data_referencia: Optional[date] = None,
-    modo_atraso: Literal["desde_mais_antiga", "ate_referencia"] = "desde_mais_antiga",
-) -> List[Dict[str, Any]]:
-    datas_chegada: List[date] = []
-    for p in publicacoes:
-        if not _conta_como_pendente_publicacao_RJ(p):
-            continue
-        d_chegada = _get_date(p, _COL_DISPONIBILIZACAO)
-        if d_chegada is None:
-            continue
-        datas_chegada.append(d_chegada)
-
-    if not datas_chegada:
-        return []
-
-    data_mais_antiga = min(datas_chegada)
-    ref = data_referencia if data_referencia is not None else date.today()
-
-    buckets: Dict[int, int] = defaultdict(int)
-    for d_chegada in datas_chegada:
-        if modo_atraso == "desde_mais_antiga":
-            dias = (d_chegada - data_mais_antiga).days
-        else:
-            dias = max((ref - d_chegada).days, 0)
-        buckets[dias] += 1
-
-    return [{"name": str(d), "value": c} for d, c in sorted(buckets.items())]
+group_publicacoes_pendentes_por_dias_atraso_RJ = _familia.group_publicacoes_pendentes_por_dias_atraso
 
 
 # -----------------------------------------------------------------------------
 # 4 - Agendamento criado após a finalização da publicação (qualquer setor)
 # -----------------------------------------------------------------------------
 
-def _agendamentos_por_processo_RJ(
-    agendamentos: List[Dict[str, Any]],
-) -> Dict[Any, List[Dict[str, Any]]]:
-    """Agrupa agendamentos por processo (ID_PROCESSO), ordenados por data de criação (mais antigo primeiro)."""
-    por_processo: Dict[Any, List[Dict[str, Any]]] = defaultdict(list)
-    for ag in agendamentos:
-        pid = _col(ag, _COL_AG_PROCESSO_ID)
-        if pid is None:
-            continue
-        por_processo[pid].append(ag)
-    for lista in por_processo.values():
-        lista.sort(key=lambda ag: _get_date(ag, _COL_AG_DATA_CRIACAO) or date.max)
-    return por_processo
+_agendamentos_por_processo_RJ = _familia._agendamentos_por_processo
 
 
-def _agendamento_apos_finalizacao_RJ(
-    publicacao: Dict[str, Any],
-    agendamentos_por_processo: Dict[Any, List[Dict[str, Any]]],
-) -> Optional[Dict[str, Any]]:
-    d_conclusao = _get_date(publicacao, _COL_CONCLUSAO)
-    if d_conclusao is None:
-        return None
-    id_processo = _col(publicacao, _COL_ID_PROCESSO)
-    if id_processo is None:
-        return None
-    for ag in agendamentos_por_processo.get(id_processo, []):
-        d_criacao = _get_date(ag, _COL_AG_DATA_CRIACAO)
-        if d_criacao is not None and d_criacao >= d_conclusao:
-            return ag
-    return None
+_agendamento_apos_finalizacao_RJ = _familia._agendamento_apos_finalizacao
 
 
-def build_publicacoes_agendamento_apos_finalizacao_RJ(
-    publicacoes: List[Dict[str, Any]],
-    agendamentos: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> tuple[int, int, List[Dict[str, Any]], List[Dict[str, Any]]]:
-    por_processo = _agendamentos_por_processo_RJ(agendamentos)
-    com_agendamento = 0
-    sem_agendamento = 0
-    grouped_atividade: Dict[str, int] = defaultdict(int)
-    grouped_setor: Dict[str, int] = defaultdict(int)
-    for p in publicacoes:
-        if not _is_cumprido(p):
-            continue
-        d = _get_date(p, _COL_CONCLUSAO)
-        if d is None or not _in_interval(d, from_date, to_date):
-            continue
-        ag = _agendamento_apos_finalizacao_RJ(p, por_processo)
-        if ag is None:
-            sem_agendamento += 1
-            continue
-        com_agendamento += 1
-        nome = _label_caixa_alta(_col(ag, _COL_AG_ATIVIDADE), "SEM ATIVIDADE")
-        grouped_atividade[nome] += 1
-        setor = _label_caixa_alta(_col(ag, _COL_AG_SETOR), "SEM SETOR")
-        grouped_setor[setor] += 1
-
-    por_atividade = sorted(
-        ({"name": k, "value": v} for k, v in grouped_atividade.items()),
-        key=lambda x: x["value"],
-        reverse=True,
-    )
-    por_setor = sorted(
-        ({"name": k, "value": v} for k, v in grouped_setor.items()),
-        key=lambda x: x["value"],
-        reverse=True,
-    )
-    return com_agendamento, sem_agendamento, por_atividade, por_setor
+build_publicacoes_agendamento_apos_finalizacao_RJ = _familia.build_publicacoes_agendamento_apos_finalizacao
 
 
-def filter_publicacoes_por_atividade_agendamento_RJ(
-    publicacoes: List[Dict[str, Any]],
-    agendamentos: List[Dict[str, Any]],
-    atividade: Optional[str],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> List[Dict[str, Any]]:
-    alvo = _normalizar_filtro_dimensao_RJ(atividade)
-    if alvo is None:
-        return list(publicacoes)
-    por_processo = _agendamentos_por_processo_RJ(agendamentos)
-    out: List[Dict[str, Any]] = []
-    for p in publicacoes:
-        if not _is_cumprido(p):
-            continue
-        d = _get_date(p, _COL_CONCLUSAO)
-        if d is None or not _in_interval(d, from_date, to_date):
-            continue
-        ag = _agendamento_apos_finalizacao_RJ(p, por_processo)
-        if ag is None:
-            continue
-        nome = _label_caixa_alta(_col(ag, _COL_AG_ATIVIDADE), "SEM ATIVIDADE")
-        if nome == alvo:
-            out.append(p)
-    return out
+filter_publicacoes_por_atividade_agendamento_RJ = _familia.filter_publicacoes_por_atividade_agendamento
 
 
-def filter_publicacoes_por_setor_agendamento_RJ(
-    publicacoes: List[Dict[str, Any]],
-    agendamentos: List[Dict[str, Any]],
-    setor: Optional[str],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> List[Dict[str, Any]]:
-    alvo = _normalizar_filtro_dimensao_RJ(setor)
-    if alvo is None:
-        return list(publicacoes)
-    por_processo = _agendamentos_por_processo_RJ(agendamentos)
-    out: List[Dict[str, Any]] = []
-    for p in publicacoes:
-        if not _is_cumprido(p):
-            continue
-        d = _get_date(p, _COL_CONCLUSAO)
-        if d is None or not _in_interval(d, from_date, to_date):
-            continue
-        ag = _agendamento_apos_finalizacao_RJ(p, por_processo)
-        if ag is None:
-            continue
-        setor_nome = _label_caixa_alta(_col(ag, _COL_AG_SETOR), "SEM SETOR")
-        if setor_nome == alvo:
-            out.append(p)
-    return out
+filter_publicacoes_por_setor_agendamento_RJ = _familia.filter_publicacoes_por_setor_agendamento
 
 
-def filter_publicacoes_por_status_agendamento_RJ(
-    publicacoes: List[Dict[str, Any]],
-    agendamentos: List[Dict[str, Any]],
-    status: Optional[str],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> List[Dict[str, Any]]:
-    alvo = str(status).strip().lower() if status else ""
-    if alvo not in ("com", "sem"):
-        return list(publicacoes)
-    por_processo = _agendamentos_por_processo_RJ(agendamentos)
-    out: List[Dict[str, Any]] = []
-    for p in publicacoes:
-        if not _is_cumprido(p):
-            continue
-        d = _get_date(p, _COL_CONCLUSAO)
-        if d is None or not _in_interval(d, from_date, to_date):
-            continue
-        tem_agendamento = _agendamento_apos_finalizacao_RJ(p, por_processo) is not None
-        if (alvo == "com") == tem_agendamento:
-            out.append(p)
-    return out
+filter_publicacoes_por_status_agendamento_RJ = _familia.filter_publicacoes_por_status_agendamento
 
 
 # -----------------------------------------------------------------------------
 # 5 - Lista de publicações (tabela "Lista de tarefas" do dashboard)
 # -----------------------------------------------------------------------------
 
-def _status_agendamento_amigavel_RJ(status_raw: Any) -> str:
-    s = str(status_raw or "").strip().lower()
-    if "não cumprido" in s or "nao cumprido" in s:
-        return "não cumprido"
-    if "cumprido" in s:
-        return "cumprido"
-    if "cancelado" in s:
-        return "cancelado"
-    return "em andamento"
+_status_agendamento_amigavel_RJ = _familia._status_agendamento_amigavel
 
 
-def _agendamento_mais_recente_apos_finalizacao_RJ(
-    publicacao: Dict[str, Any],
-    agendamentos_por_processo: Dict[Any, List[Dict[str, Any]]],
-) -> Optional[Dict[str, Any]]:
-    d_conclusao = _get_date(publicacao, _COL_CONCLUSAO)
-    if d_conclusao is None:
-        return None
-    id_processo = _col(publicacao, _COL_ID_PROCESSO)
-    if id_processo is None:
-        return None
-    candidatos = [
-        ag for ag in agendamentos_por_processo.get(id_processo, [])
-        if (d_ag := _get_date(ag, _COL_AG_DATA_CRIACAO)) is not None and d_ag >= d_conclusao
-    ]
-    if not candidatos:
-        return None
-    return candidatos[-1]
+_agendamento_mais_recente_apos_finalizacao_RJ = _familia._agendamento_mais_recente_apos_finalizacao
 
 
-def list_publicacoes_RJ(
-    publicacoes: List[Dict[str, Any]],
-    agendamentos: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    por_processo = _agendamentos_por_processo_RJ(agendamentos)
-    itens: List[Dict[str, Any]] = []
-    for p in publicacoes:
-        pub_id = _col(p, "id")
-        try:
-            pub_id_int = int(pub_id)
-        except (TypeError, ValueError):
-            continue
-        criado = _get_date(p, _COL_DISPONIBILIZACAO)
-        status = str(_col(p, _COL_STATUS) or "").strip() or "—"
-
-        pessoa_setor = "SEM AGENDAMENTO"
-        agendamento = _agendamento_mais_recente_apos_finalizacao_RJ(p, por_processo)
-        if agendamento is not None:
-            setor_ag = _label_caixa_alta(_col(agendamento, _COL_AG_SETOR), "SEM SETOR")
-            atividade_ag = _label_caixa_alta(_col(agendamento, _COL_AG_ATIVIDADE), "SEM ATIVIDADE")
-            status_ag = _status_agendamento_amigavel_RJ(_col(agendamento, _COL_STATUS))
-            pessoa_setor = f"{setor_ag} - {atividade_ag} ({status_ag})"
-
-        itens.append({
-            "id": pub_id_int,
-            "status": status,
-            "descricao": _rotulo_documento_RJ(p),
-            "pessoa_setor": pessoa_setor,
-            "funcionario": _rotulo_leitor(p),
-            "atividade": _rotulo_materia_RJ(p),
-            "prazo": None,
-            "concluida": _is_cumprido(p),
-            "criado_em": criado.isoformat() if criado else None,
-            "operacao": _rotulo_materia_RJ(p),
-        })
-    return itens
+list_publicacoes_RJ = _familia.list_publicacoes
 
 
 # -----------------------------------------------------------------------------
 # 6 - Comissionamento por funcionário (leitor)
 # -----------------------------------------------------------------------------
 
-_VALOR_UNITARIO_CERTA_RJ = Decimal("0.20")
-_VALOR_UNITARIO_ERRADA_RJ = Decimal("0.50")
+_VALOR_UNITARIO_CERTA_RJ = _familia._VALOR_UNITARIO_CERTA
+
+_VALOR_UNITARIO_ERRADA_RJ = _familia._VALOR_UNITARIO_ERRADA
 
 
-def get_publicacoes_comissionamento_por_funcionario_RJ(
-    publicacoes: List[Dict[str, Any]],
-    agendamentos: List[Dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> List[Dict[str, Any]]:
-    por_processo = _agendamentos_por_processo_RJ(agendamentos)
-    contagem: Dict[str, Dict[str, int]] = defaultdict(lambda: {"certas": 0, "erradas": 0})
-    for p in publicacoes:
-        if not _is_cumprido(p):
-            continue
-        d = _get_date(p, _COL_CONCLUSAO)
-        if d is None or not _in_interval(d, from_date, to_date):
-            continue
-        nome = _rotulo_leitor(p)
-        if _agendamento_apos_finalizacao_RJ(p, por_processo) is not None:
-            contagem[nome]["certas"] += 1
-        else:
-            contagem[nome]["erradas"] += 1
-
-    linhas: List[Dict[str, Any]] = []
-    for nome, c in contagem.items():
-        qtd_certas = c["certas"]
-        qtd_erradas = c["erradas"]
-        qtd_lidas = qtd_certas + qtd_erradas
-        valor_base = (Decimal(qtd_certas) * _VALOR_UNITARIO_CERTA_RJ).quantize(Decimal("0.01"))
-        valor_penalidade = (Decimal(qtd_erradas) * _VALOR_UNITARIO_ERRADA_RJ).quantize(Decimal("0.01"))
-        comissao = (valor_base - valor_penalidade).quantize(Decimal("0.01"))
-        linhas.append({
-            "funcionario": nome,
-            "qtd_lidas": qtd_lidas,
-            "qtd_certas": qtd_certas,
-            "qtd_erradas": qtd_erradas,
-            "valor_certa": float(_VALOR_UNITARIO_CERTA_RJ),
-            "valor_errada": float(_VALOR_UNITARIO_ERRADA_RJ),
-            "comissao": float(comissao),
-        })
-    linhas.sort(key=lambda x: (-x["comissao"], x["funcionario"]))
-    return linhas
+get_publicacoes_comissionamento_por_funcionario_RJ = _familia.get_publicacoes_comissionamento_por_funcionario

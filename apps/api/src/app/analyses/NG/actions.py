@@ -383,7 +383,7 @@ def get_taxa_fechamento_geral_por_atendente(actions: List[Dict[str, Any]], comer
     leads_por_atendente = get_total_leads_por_atendente(actions)["por_atendente"]
     clientes_por_atendente = get_total_clientes_fechados_por_atendente(comercial_geral)["por_atendente"]
     por_atendente = {}
-    for nome in set(leads_por_atendente) | set(clientes_por_atendente):
+    for nome in dict.fromkeys([*leads_por_atendente, *clientes_por_atendente]):  # V2: na ordem dos dados (com set, a ordem dos empates mudava a cada vez que a API subia)
         leads = leads_por_atendente.get(nome, 0) or 1
         clientes = clientes_por_atendente.get(nome, 0)
         taxa = (clientes / leads) * 100 if leads else 0.0
@@ -401,7 +401,7 @@ def get_taxa_fechamento_campanha_por_cliente(actions: List[Dict[str, Any]], come
     clientes_por_atendente = clientes_result["por_atendente"]
     leads_por_atendente = leads_result["por_atendente"]
     por_atendente = {}
-    for nome in set(clientes_por_atendente) | set(leads_por_atendente):
+    for nome in dict.fromkeys([*clientes_por_atendente, *leads_por_atendente]):  # V2: na ordem dos dados (com set, a ordem dos empates mudava a cada vez que a API subia)
         leads = leads_por_atendente.get(nome, 0) or 1
         clientes = clientes_por_atendente.get(nome, 0)
         taxa = (clientes / leads) * 100 if leads else 0.0
@@ -490,7 +490,7 @@ def get_taxa_fechamento_indicacao_ativa_por_atendente(actions: List[Dict[str, An
     clientes_por_atendente = clientes_result["por_atendente"]
     leads_por_atendente = leads_result["por_atendente"]
     por_atendente = {}
-    for nome in set(clientes_por_atendente) | set(leads_por_atendente):
+    for nome in dict.fromkeys([*clientes_por_atendente, *leads_por_atendente]):  # V2: na ordem dos dados (com set, a ordem dos empates mudava a cada vez que a API subia)
         leads = leads_por_atendente.get(nome, 0) or 1
         clientes = clientes_por_atendente.get(nome, 0)
         taxa = (clientes / leads) * 100 if leads else 0.0
@@ -553,7 +553,7 @@ def get_taxa_fechamento_indicacao_passiva_por_atendente(actions: List[Dict[str, 
     clientes_por_atendente = clientes_result["por_atendente"]
     leads_por_atendente = leads_result["por_atendente"]
     por_atendente = {}
-    for nome in set(clientes_por_atendente) | set(leads_por_atendente):
+    for nome in dict.fromkeys([*clientes_por_atendente, *leads_por_atendente]):  # V2: na ordem dos dados (com set, a ordem dos empates mudava a cada vez que a API subia)
         leads = leads_por_atendente.get(nome, 0) or 1
         clientes = clientes_por_atendente.get(nome, 0)
         taxa = (clientes / leads) * 100 if leads else 0.0
@@ -616,7 +616,7 @@ def get_taxa_fechamento_retorno_ativa_por_atendente(actions: List[Dict[str, Any]
     clientes_por_atendente = clientes_result["por_atendente"]
     leads_por_atendente = leads_result["por_atendente"]
     por_atendente = {}
-    for nome in set(clientes_por_atendente) | set(leads_por_atendente):
+    for nome in dict.fromkeys([*clientes_por_atendente, *leads_por_atendente]):  # V2: na ordem dos dados (com set, a ordem dos empates mudava a cada vez que a API subia)
         leads = leads_por_atendente.get(nome, 0) or 1
         clientes = clientes_por_atendente.get(nome, 0)
         taxa = (clientes / leads) * 100 if leads else 0.0
@@ -679,7 +679,7 @@ def get_taxa_fechamento_retorno_passiva_por_atendente(actions: List[Dict[str, An
     clientes_por_atendente = clientes_result["por_atendente"]
     leads_por_atendente = leads_result["por_atendente"]
     por_atendente = {}
-    for nome in set(clientes_por_atendente) | set(leads_por_atendente):
+    for nome in dict.fromkeys([*clientes_por_atendente, *leads_por_atendente]):  # V2: na ordem dos dados (com set, a ordem dos empates mudava a cada vez que a API subia)
         leads = leads_por_atendente.get(nome, 0) or 1
         clientes = clientes_por_atendente.get(nome, 0)
         taxa = (clientes / leads) * 100 if leads else 0.0
@@ -742,7 +742,7 @@ def get_taxa_fechamento_resgate_ativa_por_atendente(actions: List[Dict[str, Any]
     clientes_por_atendente = clientes_result["por_atendente"]
     leads_por_atendente = leads_result["por_atendente"]
     por_atendente = {}
-    for nome in set(clientes_por_atendente) | set(leads_por_atendente):
+    for nome in dict.fromkeys([*clientes_por_atendente, *leads_por_atendente]):  # V2: na ordem dos dados (com set, a ordem dos empates mudava a cada vez que a API subia)
         leads = leads_por_atendente.get(nome, 0) or 1
         clientes = clientes_por_atendente.get(nome, 0)
         taxa = (clientes / leads) * 100 if leads else 0.0
@@ -805,7 +805,7 @@ def get_taxa_fechamento_resgate_passiva_por_atendente(actions: List[Dict[str, An
     clientes_por_atendente = clientes_result["por_atendente"]
     leads_por_atendente = leads_result["por_atendente"]
     por_atendente = {}
-    for nome in set(clientes_por_atendente) | set(leads_por_atendente):
+    for nome in dict.fromkeys([*clientes_por_atendente, *leads_por_atendente]):  # V2: na ordem dos dados (com set, a ordem dos empates mudava a cada vez que a API subia)
         leads = leads_por_atendente.get(nome, 0) or 1
         clientes = clientes_por_atendente.get(nome, 0)
         taxa = (clientes / leads) * 100 if leads else 0.0
