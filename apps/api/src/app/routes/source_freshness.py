@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app.access import OrgAccess, require_org
+from app.read_log import summarize
 from app.source_cache import SourceCache
 from app.sources import get_source_cache
 
@@ -56,15 +57,11 @@ async def sources_freshness(
 ) -> SourcesFreshnessOut:
     out: dict[str, SourceFreshnessOut] = {}
     for key in parse_keys(keys):
-        reads = (await cache.reads.of_db(key)).values()
-        ok_at = max((r.ok_at for r in reads if r.ok_at is not None), default=None)
-        fail = max(((r.fail_at, r.error) for r in reads if r.fail_at is not None), default=None)
-        if fail is not None and ok_at is not None and fail[0] <= ok_at:
-            fail = None  # houve leitura boa depois da última falha
+        ok_at, fail_at, error = summarize((await cache.reads.of_db(key)).values())
         out[key] = SourceFreshnessOut(
             fetched_at=_when(ok_at),
             ttl_min=max(1, round(cache.ttl_of(f"{key}:") / 60)),
-            error=fail[1] if fail else None,
-            error_at=_when(fail[0]) if fail else None,
+            error=error,
+            error_at=_when(fail_at),
         )
     return SourcesFreshnessOut(sources=out)

@@ -74,6 +74,17 @@ describe('createSourcesClient', () => {
         expect(calls).toEqual([])
     })
 
+    it('getFailingSources pede à API as fontes com falha de cada organização', async () => {
+        const { http, paths } = fakeHttp({ orgs: { lexgroup: ['sheets_financeiro_la'] } })
+        const { supabase, calls } = fakeSupabase({ data: {} })
+
+        expect(await createSourcesClientWith(supabase, http).getFailingSources()).toEqual({
+            lexgroup: ['sheets_financeiro_la'],
+        })
+        expect(paths).toEqual(['/sources/failing'])
+        expect(calls).toEqual([])
+    })
+
     it('linkProductOffice chama api.link_product_office com os nomes do banco', async () => {
         const { supabase, calls } = fakeSupabase({ data: {} })
         await createSourcesClient(supabase).linkProductOffice('cliente', 'C1', 'lexflow', '27')

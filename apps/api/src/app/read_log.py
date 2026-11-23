@@ -13,6 +13,7 @@ Quem grava: SourceCache._load (busca, conferência sem mudança e aquecedor). Qu
 """
 
 import asyncio
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 
 from app.cache import CacheService
@@ -25,6 +26,20 @@ class Read:
     ok_at: float | None  # epoch da última leitura boa (None = nunca leu)
     fail_at: float | None = None  # epoch da última falha DEPOIS da leitura boa (None = nenhuma)
     error: str | None = None  # só o tipo do erro, nunca a mensagem (pode ter host/usuário)
+
+
+def summarize(reads: Iterable[Read]) -> tuple[float | None, float | None, str | None]:
+    """A fonte inteira a partir das leituras das queries dela: (última leitura boa, falha, erro).
+
+    Falha só se a tentativa mais recente (de qualquer query) falhou; houve leitura boa depois = nenhuma.
+    É a regra da tela Unidades e fontes e da tela Clientes (um lugar só).
+    """
+    reads = list(reads)
+    ok_at = max((r.ok_at for r in reads if r.ok_at is not None), default=None)
+    fail = max(((r.fail_at, r.error) for r in reads if r.fail_at is not None), default=None)
+    if fail is None or (ok_at is not None and fail[0] <= ok_at):
+        return ok_at, None, None
+    return ok_at, fail[0], fail[1]
 
 
 def _split(key: str) -> tuple[str, str]:
