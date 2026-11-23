@@ -24,6 +24,8 @@ from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal
 
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.NG.comercial_lexpre import _expandir_ids_para_contagem
 
@@ -81,50 +83,16 @@ BUCKETS_FILA_PRE_PROTOCOLO_ORDENADOS: tuple[str, ...] = (
 
 def _formatar_nome_atendente(nome_completo: Any) -> str:
     """Primeiro nome do atendente — mesmo critério dos outros dashboards comerciais."""
-    if not nome_completo or not str(nome_completo).strip():
-        return "Sem atendente"
-    return str(nome_completo).strip().split()[0]
+    return textos.primeiros_nomes_ou(nome_completo, 1, "Sem atendente")
 
 
 def _converter_valor(valor_raw: Any) -> float:
-    """Converte um valor monetário (string ou numérico) para float."""
-    if valor_raw is None:
-        return 0.0
-
-    if isinstance(valor_raw, (int, float, Decimal)):
-        return float(valor_raw)
-
-    valor_str = str(valor_raw).strip()
-    if not valor_str:
-        return 0.0
-
-    valor_str = (
-        valor_str.replace("R$", "")
-        .replace(" ", "")  # NBSP
-        .replace(" ", "")
-        .strip()
-    )
-
-    if "," in valor_str and "." in valor_str:
-        valor_str = valor_str.replace(".", "").replace(",", ".")
-    elif "," in valor_str and "." not in valor_str:
-        valor_str = valor_str.replace(",", ".")
-
-    try:
-        return float(valor_str)
-    except (ValueError, TypeError):
-        return 0.0
+    # V2: app/analyses/common/conversao.py; esta cópia não tirava o espaço não separável (o comentário da v1
+    # dizia NBSP, mas o caractere era um espaço comum).
+    return conversao.para_valor(valor_raw, remover_nbsp=False)
 
 
-def _to_date(raw: Any) -> Optional[date]:
-    if not raw:
-        return None
-    parsed = parse_date_from_db(raw)
-    if isinstance(parsed, datetime):
-        return parsed.date()
-    if isinstance(parsed, date):
-        return parsed
-    return None
+_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 def _to_datetime(raw: Any) -> Optional[datetime]:
@@ -179,8 +147,7 @@ def _is_protocolado_terminal(row: Dict[str, Any]) -> bool:
 
 def _normalizar_materia(raw: Any) -> str:
     """Rubrica já vem normalizada do lexpre (sem o sufixo livre do banco `ng`) — mesma implementação de `protocolo_setor_lexpre._normalizar_materia`."""
-    s = str(raw or "").strip()
-    return s if s else "Sem matéria"
+    return textos.texto_ou(raw, "Sem matéria")
 
 
 def _valor_causa_protocolado(row: Dict[str, Any]) -> float:

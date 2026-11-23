@@ -9,6 +9,9 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Callable, Optional
 
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
+from app.analyses.common import atividades  # V2: regras das atividades num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 
 # =============================================================================
@@ -102,47 +105,17 @@ _COL_ID_USUARIO_ENCERRAMENTO = "ID_USUARIO_ENCERRAMENTO"
 # Utilitários
 # =============================================================================
 
-def _to_int(value: Any) -> int | None:
-    if value is None or value == "":
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+_to_int = conversao.para_inteiro  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
-def _to_date(value: Any) -> Optional[date]:
-    if not value:
-        return None
-    parsed = parse_date_from_db(value)
-    if isinstance(parsed, datetime):
-        return parsed.date()
-    if isinstance(parsed, date):
-        return parsed
-    return None
+_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
-def _data_no_periodo(
-    d: Optional[date],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> bool:
-    if d is None:
-        return False
-    if from_date and to_date:
-        return from_date <= d <= to_date
-    if from_date:
-        return d >= from_date
-    if to_date:
-        return d <= to_date
-    return True
+_data_no_periodo = periodo.no_periodo  # V2: era uma cópia local (app/analyses/common/periodo.py)
 
 
 def _nome_em_conjunto_filtro(nome: str, conjunto: frozenset[str] | None) -> bool:
-    if not conjunto:
-        return True
-    chave = nome.casefold()
-    return any(chave == x.casefold() for x in conjunto)
+    return atividades.nome_em_conjunto(nome, conjunto)
 
 
 # =============================================================================
@@ -217,6 +190,20 @@ def _get_funcionario_encerramento(item: dict[str, Any]) -> str | None:
     return None
 
 
+# V2: como estas atividades são lidas e quais status contam (app/analyses/common/atividades.py).
+_ATIVIDADES = atividades.Leitor(
+    criacao=_get_data_criacao,
+    conclusao=_get_data_conclusao,
+    prazo=_get_prazo,
+    status=_get_status,
+    funcionario_encerramento=_get_funcionario_encerramento,
+)
+_STATUS_ATIVIDADES = atividades.Status(
+    inativo=_STATUS_INATIVO, em_andamento=_STATUS_EM_ANDAMENTO, encerrado=_STATUS_ENCERRADO
+)
+
+
+
 def _get_funcionario_nome(item: dict[str, Any]) -> str:
     status = _get_status(item) or ""
     if status in _STATUS_ENCERRADO:
@@ -248,17 +235,9 @@ def _filtrar_encerrados_no_periodo(
     *,
     exigir_encerrador: bool = False,
 ) -> list[dict[str, Any]]:
-    resultado = []
-    for row in agendamentos:
-        status = _get_status(row) or ""
-        if status not in _STATUS_ENCERRADO:
-            continue
-        if exigir_encerrador and _get_funcionario_encerramento(row) is None:
-            continue
-        conclusao = _get_data_conclusao(row)
-        if _data_no_periodo(conclusao, from_date, to_date):
-            resultado.append(row)
-    return resultado
+    return atividades.encerrados_no_periodo(
+        agendamentos, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, exigir_encerrador=exigir_encerrador
+    )
 
 
 def _incluir_na_lista_tarefas(
@@ -268,21 +247,7 @@ def _incluir_na_lista_tarefas(
     *,
     ref_date: Optional[date] = None,
 ) -> bool:
-    criacao = _get_data_criacao(row)
-    conclusao = _get_data_conclusao(row)
-    status = _get_status(row) or ""
-    prazo = _get_prazo(row)
-    ref = ref_date or date.today()
-    # Criada no período
-    if _data_no_periodo(criacao, from_date, to_date):
-        return True
-    # Encerrada no período
-    if status in _STATUS_ENCERRADO:
-        return _data_no_periodo(conclusao, from_date, to_date)
-    # Ativa com prazo vencido ou vencendo hoje — aparece independente de quando foi criada
-    if status not in _STATUS_INATIVO and prazo is not None and prazo <= ref:
-        return True
-    return False
+    return atividades.incluir_na_lista(row, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, ref=ref_date)
 
 
 def _classificar_situacao_tarefa(
@@ -292,28 +257,7 @@ def _classificar_situacao_tarefa(
     *,
     ref_date: Optional[date] = None,
 ) -> dict[str, bool]:
-    ref = ref_date or date.today()
-    criacao = _get_data_criacao(row)
-    conclusao = _get_data_conclusao(row)
-    status = _get_status(row) or ""
-    prazo = _get_prazo(row)
-    criada_periodo = _data_no_periodo(criacao, from_date, to_date)
-    ativo = status not in _STATUS_INATIVO
-    # "em andamento" = status de progresso E criada no período selecionado
-    em_andamento = status in _STATUS_EM_ANDAMENTO and criada_periodo
-    # "vencida" e "vence hoje" = ativa com prazo correspondente, independente de quando foi criada
-    vencida = ativo and prazo is not None and prazo < ref
-    vence_hoje = ativo and prazo is not None and prazo == ref
-    concluida = (
-        status in _STATUS_ENCERRADO
-        and _data_no_periodo(conclusao, from_date, to_date)
-    )
-    return {
-        "em_andamento": em_andamento,
-        "vencida": vencida,
-        "vence_hoje": vence_hoje,
-        "concluida": concluida,
-    }
+    return atividades.situacao(row, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, ref=ref_date)
 
 
 # =============================================================================
@@ -463,25 +407,7 @@ def _media_concluidas_por_funcionario(
     get_data_ref: Callable[[dict[str, Any]], Optional[date]],
 ) -> list[dict[str, Any]]:
     """Média diária de concluídas por funcionário (total / dias distintos)."""
-    grouped: dict[str, dict[str, Any]] = defaultdict(lambda: {"total": 0, "dias": set()})
-
-    for row in encerrados:
-        data_ref = get_data_ref(row)
-        if not data_ref:
-            continue
-        funcionario = _get_funcionario_nome(row)
-        grouped[funcionario]["total"] += 1
-        grouped[funcionario]["dias"].add(data_ref)
-
-    result: list[dict[str, Any]] = []
-    for funcionario, stats in grouped.items():
-        dias = len(stats["dias"])
-        if dias > 0:
-            result.append({
-                "name": funcionario,
-                "value": round(stats["total"] / dias, 2),
-            })
-    return sorted(result, key=lambda x: x["value"], reverse=True)
+    return atividades.media_concluidas_por_funcionario(encerrados, get_data_ref, _get_funcionario_nome)
 
 
 def get_media_emendas_manifestacoes_concluidas_por_funcionario_NG(
@@ -845,8 +771,7 @@ def _incluir_na_lista_por_prazo(
     *,
     ref_date: Optional[date] = None,
 ) -> bool:
-    prazo = _get_prazo(row)
-    return _data_no_periodo(prazo, from_date, to_date)
+    return atividades.incluir_na_lista_por_prazo(row, _ATIVIDADES, from_date, to_date)
 
 
 def _classificar_situacao_por_prazo(
@@ -856,22 +781,7 @@ def _classificar_situacao_por_prazo(
     *,
     ref_date: Optional[date] = None,
 ) -> dict[str, bool]:
-    ref = ref_date or date.today()
-    prazo = _get_prazo(row)
-    status = _get_status(row) or ""
-    ativo = status not in _STATUS_INATIVO
-    prazo_no_periodo = _data_no_periodo(prazo, from_date, to_date)
-    em_andamento = status in _STATUS_EM_ANDAMENTO and prazo_no_periodo
-    # Vencida e vence_hoje: filtradas pelo período (consistente com os KPIs)
-    vencida = ativo and prazo_no_periodo and prazo is not None and prazo < ref
-    vence_hoje = ativo and prazo_no_periodo and prazo is not None and prazo == ref
-    concluida = status in _STATUS_ENCERRADO and prazo_no_periodo
-    return {
-        "em_andamento": em_andamento,
-        "vencida": vencida,
-        "vence_hoje": vence_hoje,
-        "concluida": concluida,
-    }
+    return atividades.situacao_por_prazo(row, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, ref=ref_date)
 
 
 # =============================================================================
@@ -938,16 +848,7 @@ def _filtrar_encerrados_com_prazo_no_periodo(
     to_date: Optional[date] = None,
 ) -> list[dict[str, Any]]:
     """Encerradas com PRAZO dentro do intervalo informado."""
-    resultado: list[dict[str, Any]] = []
-    for row in agendamentos:
-        status = _get_status(row) or ""
-        if status not in _STATUS_ENCERRADO:
-            continue
-        prazo = _get_prazo(row)
-        if prazo is None or not _data_no_periodo(prazo, from_date, to_date):
-            continue
-        resultado.append(row)
-    return resultado
+    return atividades.encerrados_com_prazo_no_periodo(agendamentos, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date)
 
 
 def group_emendas_manifestacoes_concluidas_por_prazo_por_mes_NG(
@@ -1375,11 +1276,7 @@ def _comparativo_variacao_percentual_emendas_manifestacoes_NG(
         agendamentos, inicio_anterior, fim_anterior, is_atividade
     )
 
-    if valor_anterior == 0:
-        return 0.0
-
-    variacao = ((valor_atual - valor_anterior) / valor_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(valor_atual, valor_anterior)
 
 
 def get_comparativo_qtd_manifestacoes_emendas_manifestacoes_NG(

@@ -10,6 +10,10 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Optional
 
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
+from app.analyses.common import atividades  # V2: regras das atividades num módulo só
 from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
@@ -49,16 +53,7 @@ _FAIXAS_ULTIMA_MOVIMENTACAO_ORDEM = (
 # 1 - Helpers internos
 # =============================================================================
 
-def _to_date(value: Any) -> Optional[date]:
-    """Converte um valor bruto do banco para ``date``, ou ``None`` se inválido."""
-    if not value:
-        return None
-    parsed = parse_date_from_db(value)
-    if isinstance(parsed, datetime):
-        return parsed.date()
-    if isinstance(parsed, date):
-        return parsed
-    return None
+_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 def _get_data_execucao(item: dict[str, Any]) -> Optional[date]:
@@ -162,52 +157,13 @@ def _get_data_distribuicao(item: dict[str, Any]) -> Optional[date]:
     return _to_date(item.get("DATA_DISTRIBUICAO") or item.get("data_distribuicao"))
 
 
-def _data_no_periodo(
-    d: Optional[date],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> bool:
-    """Verifica se ``d`` está dentro do intervalo [from_date, to_date]."""
-    if d is None:
-        return False
-    if from_date and to_date:
-        return from_date <= d <= to_date
-    if from_date:
-        return d >= from_date
-    if to_date:
-        return d <= to_date
-    return True
+_data_no_periodo = periodo.no_periodo  # V2: era uma cópia local (app/analyses/common/periodo.py)
 
 
-def _converter_valor(valor: Any) -> float:
-    """
-    Converte qualquer representação de valor monetário para ``float``.
-    Retorna ``0.0`` em caso de falha ou valor ausente.
-    """
-    if valor is None:
-        return 0.0
-    try:
-        if isinstance(valor, Decimal):
-            return float(valor)
-        if isinstance(valor, (int, float)):
-            return float(valor)
-        if isinstance(valor, str):
-            limpo = valor.strip().replace(",", ".")
-            limpo = "".join(c for c in limpo if c.isdigit() or c == ".")
-            return float(limpo) if limpo else 0.0
-        return float(str(valor).replace(",", "."))
-    except (ValueError, TypeError, AttributeError):
-        return 0.0
+_converter_valor = conversao.para_valor_digitos  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
-def _to_int(value: Any) -> Optional[int]:
-    """Converte valores numéricos do banco para ``int`` quando possível."""
-    if value is None or value == "":
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+_to_int = conversao.para_inteiro  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 @memo.por_pedido()
@@ -453,12 +409,7 @@ def _filtrar_saida_incontroverso_no_periodo(
 
 def _normalizar_materia(raw: Any) -> str:
     """Extrai a matéria: apenas a parte antes do ' - '."""
-    if raw is None or raw == "":
-        return "Sem materia"
-    s = str(raw).strip()
-    if " - " in s:
-        s = s.split(" - ", 1)[0].strip()
-    return s if s else "Sem materia"
+    return textos.materia(raw)
 
 
 
@@ -585,17 +536,11 @@ def list_processos_alvara_expedido_LA(execucao: list[dict[str, Any]]) -> list[di
 
 
 def _normalizar_subfase(raw: Any) -> str:
-    if raw is None or raw == "":
-        return "Sem subfase"
-    s = str(raw).strip()
-    return s if s else "Sem subfase"
+    return textos.rotulo(raw, "Sem subfase")
 
 
 def _normalizar_comarca(raw: Any) -> str:
-    if raw is None or raw == "":
-        return "Sem comarca"
-    s = str(raw).strip()
-    return s if s else "Sem comarca"
+    return textos.rotulo(raw, "Sem comarca")
 
 
 def filter_execucao_LA_por_materia(
@@ -1710,10 +1655,7 @@ def _ag_data_no_periodo(
 
 
 def _nome_em_conjunto_exec(nome: str, conjunto: frozenset[str] | None) -> bool:
-    if not conjunto:
-        return True
-    chave = nome.casefold()
-    return any(chave == x.casefold() for x in conjunto)
+    return atividades.nome_em_conjunto(nome, conjunto)
 
 
 def _get_ag_status(item: dict[str, Any]) -> str | None:
@@ -1792,6 +1734,20 @@ def _get_ag_funcionario_encerramento(item: dict[str, Any]) -> str | None:
     return None
 
 
+# V2: como estas atividades são lidas e quais status contam (app/analyses/common/atividades.py).
+_ATIVIDADES = atividades.Leitor(
+    criacao=_get_ag_data_criacao,
+    conclusao=_get_ag_data_conclusao,
+    prazo=_get_ag_prazo,
+    status=_get_ag_status,
+    funcionario_encerramento=_get_ag_funcionario_encerramento,
+)
+_STATUS_ATIVIDADES = atividades.Status(
+    inativo=_STATUS_INATIVO_EXEC, em_andamento=_STATUS_EM_ANDAMENTO_EXEC, encerrado=_STATUS_ENCERRADO_EXEC
+)
+
+
+
 def _get_ag_funcionario_nome(item: dict[str, Any]) -> str:
     status = _get_ag_status(item) or ""
     if status in _STATUS_ENCERRADO_EXEC:
@@ -1808,18 +1764,7 @@ def _incluir_na_lista_exec(
     *,
     ref_date: Optional[date] = None,
 ) -> bool:
-    criacao = _get_ag_data_criacao(row)
-    conclusao = _get_ag_data_conclusao(row)
-    status = _get_ag_status(row) or ""
-    prazo = _get_ag_prazo(row)
-    ref = ref_date or date.today()
-    if _ag_data_no_periodo(criacao, from_date, to_date):
-        return True
-    if status in _STATUS_ENCERRADO_EXEC:
-        return _ag_data_no_periodo(conclusao, from_date, to_date)
-    if status not in _STATUS_INATIVO_EXEC and prazo is not None and prazo <= ref:
-        return True
-    return False
+    return atividades.incluir_na_lista(row, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, ref=ref_date)
 
 
 def _classificar_situacao_exec(
@@ -1829,26 +1774,7 @@ def _classificar_situacao_exec(
     *,
     ref_date: Optional[date] = None,
 ) -> dict[str, bool]:
-    ref = ref_date or date.today()
-    criacao = _get_ag_data_criacao(row)
-    conclusao = _get_ag_data_conclusao(row)
-    status = _get_ag_status(row) or ""
-    prazo = _get_ag_prazo(row)
-    criada_periodo = _ag_data_no_periodo(criacao, from_date, to_date)
-    ativo = status not in _STATUS_INATIVO_EXEC
-    em_andamento = status in _STATUS_EM_ANDAMENTO_EXEC and criada_periodo
-    vencida = ativo and prazo is not None and prazo < ref
-    vence_hoje = ativo and prazo is not None and prazo == ref
-    concluida = (
-        status in _STATUS_ENCERRADO_EXEC
-        and _ag_data_no_periodo(conclusao, from_date, to_date)
-    )
-    return {
-        "em_andamento": em_andamento,
-        "vencida": vencida,
-        "vence_hoje": vence_hoje,
-        "concluida": concluida,
-    }
+    return atividades.situacao(row, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, ref=ref_date)
 
 
 @memo.por_pedido()
@@ -1859,17 +1785,9 @@ def _filtrar_ag_encerrados_no_periodo(
     *,
     exigir_encerrador: bool = False,
 ) -> list[dict[str, Any]]:
-    resultado = []
-    for row in agendamentos:
-        status = _get_ag_status(row) or ""
-        if status not in _STATUS_ENCERRADO_EXEC:
-            continue
-        if exigir_encerrador and _get_ag_funcionario_encerramento(row) is None:
-            continue
-        conclusao = _get_ag_data_conclusao(row)
-        if _ag_data_no_periodo(conclusao, from_date, to_date):
-            resultado.append(row)
-    return resultado
+    return atividades.encerrados_no_periodo(
+        agendamentos, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, exigir_encerrador=exigir_encerrador
+    )
 
 
 def get_kpis_atividades_execucao_LA(
@@ -2805,8 +2723,7 @@ def _incluir_na_lista_por_prazo_exec(
     *,
     ref_date: Optional[date] = None,
 ) -> bool:
-    prazo = _get_ag_prazo(row)
-    return _ag_data_no_periodo(prazo, from_date, to_date)
+    return atividades.incluir_na_lista_por_prazo(row, _ATIVIDADES, from_date, to_date)
 
 
 def _classificar_situacao_por_prazo_exec(
@@ -2816,21 +2733,7 @@ def _classificar_situacao_por_prazo_exec(
     *,
     ref_date: Optional[date] = None,
 ) -> dict[str, bool]:
-    ref = ref_date or date.today()
-    prazo = _get_ag_prazo(row)
-    status = _get_ag_status(row) or ""
-    ativo = status not in _STATUS_INATIVO_EXEC
-    prazo_no_periodo = _ag_data_no_periodo(prazo, from_date, to_date)
-    em_andamento = status in _STATUS_EM_ANDAMENTO_EXEC and prazo_no_periodo
-    vencida = ativo and prazo_no_periodo and prazo is not None and prazo < ref
-    vence_hoje = ativo and prazo_no_periodo and prazo is not None and prazo == ref
-    concluida = status in _STATUS_ENCERRADO_EXEC and prazo_no_periodo
-    return {
-        "em_andamento": em_andamento,
-        "vencida": vencida,
-        "vence_hoje": vence_hoje,
-        "concluida": concluida,
-    }
+    return atividades.situacao_por_prazo(row, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, ref=ref_date)
 
 
 def get_kpis_execucao_por_prazo_LA(

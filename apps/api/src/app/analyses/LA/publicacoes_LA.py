@@ -8,6 +8,7 @@ from decimal import Decimal
 from statistics import mean
 from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_date_from_db
 
@@ -46,15 +47,7 @@ def _col(row: Dict[str, Any], name: str) -> Any:
     return row.get(name) or row.get(name.lower())
 
 
-def _to_date(value: Any) -> Optional[date]:
-    if value is None:
-        return None
-    parsed = parse_date_from_db(value)
-    if isinstance(parsed, datetime):
-        return parsed.date()
-    if isinstance(parsed, date):
-        return parsed
-    return None
+_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 def _get_date(row: Dict[str, Any], col_name: str) -> Optional[date]:

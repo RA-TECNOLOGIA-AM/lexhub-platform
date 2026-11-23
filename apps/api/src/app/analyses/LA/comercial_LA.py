@@ -5,6 +5,9 @@ from datetime import datetime, date
 from collections import defaultdict
 import statistics
 from decimal import Decimal
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 
 
@@ -14,14 +17,7 @@ from app.utils import parse_date_from_db, resolver_periodo_comparativo
 
 def _formatar_nome_atendente(nome_completo: str) -> str:
     """Extrai apenas o primeiro e segundo nome da atendente e devolve em caixa alta."""
-    if not nome_completo or nome_completo == "Sem atendente":
-        return nome_completo
-
-    partes = nome_completo.strip().split()
-
-    if len(partes) == 1:
-        return partes[0].upper()
-    return " ".join(partes[:1]).upper()
+    return textos.primeiros_nomes(nome_completo, 1, maiusculas=True, ignorar="Sem atendente")
 
 def _filter_by_date_range(comercial_geral: List[Dict[str, Any]], from_date: date, to_date: date) -> List[Dict[str, Any]]:
     """Filtra dados comerciais por intervalo de datas usando a coluna ASSINATURA."""
@@ -736,11 +732,7 @@ def get_comparativo_clientes_campanha_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a Variação percentual comparativa de clientes de indicação LA
 def get_comparativo_clientes_indicacao_LA(
@@ -768,11 +760,7 @@ def get_comparativo_clientes_indicacao_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a Variação percentual comparativa de clientes de redes sociais LA
 def get_comparativo_clientes_redes_sociais_LA(
@@ -800,11 +788,7 @@ def get_comparativo_clientes_redes_sociais_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a Variação percentual comparativa de clientes de retorno LA
 def get_comparativo_clientes_retorno_LA(
@@ -832,11 +816,7 @@ def get_comparativo_clientes_retorno_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a Variação percentual comparativa de clientes de parceiro LA
 def get_comparativo_clientes_parceiro_LA(
@@ -864,11 +844,7 @@ def get_comparativo_clientes_parceiro_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a Variação percentual comparativa de clientes de externos LA
 def get_comparativo_clientes_externos_LA(
@@ -896,11 +872,7 @@ def get_comparativo_clientes_externos_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a Variação percentual comparativa de total de clientes LA
 def get_comparativo_clientes_total_LA(
@@ -928,11 +900,7 @@ def get_comparativo_clientes_total_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a Variação percentual comparativa de clientes cancelados LA
 def get_comparativo_clientes_cancelados_LA(
@@ -960,11 +928,7 @@ def get_comparativo_clientes_cancelados_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna o comparativo da taxa de aproveitamento LA
 def get_comparativo_taxa_aproveitamento_LA(
@@ -990,11 +954,7 @@ def get_comparativo_taxa_aproveitamento_LA(
     # Calcular quantidade de clientes de parceiro LA para cada período
     qtd_atual = get_taxa_aproveitamento_LA(dados_periodo_atual) 
     qtd_anterior = get_taxa_aproveitamento_LA(dados_periodo_anterior)
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a variação comparativa de ações fechadas LA
 def get_comparativo_acoes_fechadas_LA(
@@ -1022,11 +982,7 @@ def get_comparativo_acoes_fechadas_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # -----------------------------------------------------------------------------
 # 5 - Funções por atendente
@@ -1129,43 +1085,7 @@ def group_contratos_fechados_diariamente_por_atendente_LA(comercial_geral: List[
 # 6 - Analises de comissão
 # -----------------------------------------------------------------------------
 
-def _converter_valor_LA(valor_raw: any) -> float:
-    """Converte um valor monetário (string ou numérico) para float."""
-    if valor_raw is None:
-        return 0.0
-
-    # asyncpg pode retornar Decimal para campos NUMERIC
-    if isinstance(valor_raw, (int, float, Decimal)):
-        return float(valor_raw)
-
-    valor_str = str(valor_raw).strip()
-    if not valor_str:
-        return 0.0
-
-    # Normaliza prefixo/sufixo e espaços
-    valor_str = (
-        valor_str.replace("R$", "")
-        .replace("\u00a0", "")  # NBSP
-        .replace(" ", "")
-        .strip()
-    )
-
-    # Heurística pt-BR vs en-US:
-    # - Se tiver "." e "," assume "." milhar e "," decimal (ex.: 1.234,56)
-    # - Se tiver só "," assume "," decimal (ex.: 470,00)
-    # - Se tiver só "." assume "." decimal (ex.: 470.00) -> NÃO remover o ponto
-    if "," in valor_str and "." in valor_str:
-        valor_str = valor_str.replace(".", "").replace(",", ".")
-    elif "," in valor_str and "." not in valor_str:
-        valor_str = valor_str.replace(",", ".")
-    else:
-        # somente "." ou nenhum separador: mantém como está
-        pass
-
-    try:
-        return float(valor_str)
-    except (ValueError, TypeError):
-        return 0.0
+_converter_valor_LA = conversao.para_valor  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 def _is_acao_fechada_LA(row: Dict[str, Any]) -> bool:

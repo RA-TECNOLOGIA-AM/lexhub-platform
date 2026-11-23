@@ -15,6 +15,8 @@ from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal
 
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo, normalizar_filtro_ids, normalizar_filtro_textos
 
 # "Assinado" em public.status (lexpre) — atualizado assim que o contrato é assinado,
@@ -365,45 +367,10 @@ def _is_assinado(row: Dict[str, Any]) -> bool:
     return bool(row.get("DATA_ASSINATURA"))
 
 
-def _converter_valor(valor_raw: Any) -> float:
-    """Converte um valor monetário (string ou numérico) para float."""
-    if valor_raw is None:
-        return 0.0
-
-    if isinstance(valor_raw, (int, float, Decimal)):
-        return float(valor_raw)
-
-    valor_str = str(valor_raw).strip()
-    if not valor_str:
-        return 0.0
-
-    valor_str = (
-        valor_str.replace("R$", "")
-        .replace(" ", "")  # NBSP
-        .replace(" ", "")
-        .strip()
-    )
-
-    if "," in valor_str and "." in valor_str:
-        valor_str = valor_str.replace(".", "").replace(",", ".")
-    elif "," in valor_str and "." not in valor_str:
-        valor_str = valor_str.replace(",", ".")
-
-    try:
-        return float(valor_str)
-    except (ValueError, TypeError):
-        return 0.0
+_converter_valor = conversao.para_valor  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
-def _to_date(raw: Any) -> Optional[date]:
-    if not raw:
-        return None
-    parsed = parse_date_from_db(raw)
-    if isinstance(parsed, datetime):
-        return parsed.date()
-    if isinstance(parsed, date):
-        return parsed
-    return None
+_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 def get_total_leads(comercial_lexpre: List[Dict[str, Any]]) -> int:
@@ -953,9 +920,7 @@ def get_comparativo_taxa_aproveitamento(
 
 def _formatar_nome_atendente(nome_completo: Any) -> str:
     """Primeiro nome do atendente — mesmo critério dos rankings de outros dashboards comerciais."""
-    if not nome_completo or not str(nome_completo).strip():
-        return "Sem atendente"
-    return str(nome_completo).strip().split()[0]
+    return textos.primeiros_nomes_ou(nome_completo, 1, "Sem atendente")
 
 
 def _distinct_id_actions_por_entrada_no_periodo(

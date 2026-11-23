@@ -62,6 +62,9 @@ from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal
 
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, parse_datetime_from_db, resolver_periodo_comparativo, normalizar_filtro_ids, normalizar_filtro_textos
@@ -122,15 +125,7 @@ def filter_org_doc_lexpre_por_escritorio(
     return [row for row in org_doc_lexpre or [] if row.get("ESCRITORIO_ID") == escritorio_id]
 
 
-def _to_date(raw: Any) -> Optional[date]:
-    if not raw:
-        return None
-    parsed = parse_date_from_db(raw)
-    if isinstance(parsed, datetime):
-        return parsed.date()
-    if isinstance(parsed, date):
-        return parsed
-    return None
+_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 def _to_datetime(raw: Any) -> Optional[datetime]:
@@ -141,38 +136,18 @@ def _to_datetime(raw: Any) -> Optional[datetime]:
 
 def _converter_valor(valor_raw: Any) -> float:
     """Converte um valor monetário (string ou numérico) para float — mesma lógica de comercial_lexpre.py."""
-    if valor_raw is None:
-        return 0.0
-    if isinstance(valor_raw, (int, float, Decimal)):
-        return float(valor_raw)
-    valor_str = str(valor_raw).strip()
-    if not valor_str:
-        return 0.0
-    valor_str = valor_str.replace("R$", "").replace(" ", "").replace(" ", "").strip()
-    if "," in valor_str and "." in valor_str:
-        valor_str = valor_str.replace(".", "").replace(",", ".")
-    elif "," in valor_str and "." not in valor_str:
-        valor_str = valor_str.replace(",", ".")
-    try:
-        return float(valor_str)
-    except (ValueError, TypeError):
-        return 0.0
+    # V2: app/analyses/common/conversao.py; esta cópia não tirava o espaço não separável.
+    return conversao.para_valor(valor_raw, remover_nbsp=False)
 
 
 def _formatar_nome_funcionario(nome_completo: Any) -> str:
     """Primeiro e segundo nome do funcionário — mesmo critério de org_doc.py (banco `ng`)."""
-    if not nome_completo or not str(nome_completo).strip():
-        return "Sem funcionário"
-    partes = str(nome_completo).strip().split()
-    if len(partes) == 1:
-        return partes[0]
-    return " ".join(partes[:2])
+    return textos.primeiros_nomes_ou(nome_completo, 2, "Sem funcionário")
 
 
 def _normalizar_materia(raw: Any) -> str:
     """Rubrica já vem normalizada do lexpre (sem o sufixo livre do banco `ng`)."""
-    s = str(raw or "").strip()
-    return s if s else "Sem matéria"
+    return textos.texto_ou(raw, "Sem matéria")
 
 
 def _is_cancelado(row: Dict[str, Any]) -> bool:
@@ -623,7 +598,7 @@ def _comparativo_variacao_percentual(
     valor_anterior = metrica_fn(data_inicio_anterior, data_fim_anterior)
     # Sem base no período anterior (ex.: LA, que só começou a usar o lexpre em 22/09/2026): crescimento a
     # partir do zero é exibido como +100%.
-    return tempo.variacao_percentual(valor_atual, valor_anterior, sem_base=100.0)
+    return periodo.variacao_percentual(valor_atual, valor_anterior, sem_base=100.0)
 
 
 def _saidas_reais_para_comparativo(org_doc_lexpre: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

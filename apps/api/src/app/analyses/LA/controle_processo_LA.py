@@ -15,6 +15,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
@@ -1202,7 +1203,7 @@ def get_mediana_tempo_dias_fase_execucao_LA(
 
 
 def _comparativo_percentual_LA(atual: float, anterior: float) -> float:
-    return tempo.variacao_percentual(atual, anterior)
+    return periodo.variacao_percentual(atual, anterior)
 
 
 def get_comparativo_media_tempo_dias_fase_inicial_LA(

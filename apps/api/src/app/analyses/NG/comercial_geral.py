@@ -6,6 +6,9 @@ from collections import defaultdict
 import logging
 import statistics
 from decimal import Decimal
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo, normalizar_filtro_ids
 
 logger = logging.getLogger(__name__)
@@ -17,15 +20,7 @@ logger = logging.getLogger(__name__)
 
 def _formatar_nome_atendente(nome_completo: str) -> str:
     """Extrai apenas o primeiro e segundo nome da atendente."""
-    if not nome_completo or nome_completo == "Sem atendente":
-        return nome_completo
-
-    partes = nome_completo.strip().split()
-
-    if len(partes) == 1:
-        return partes[0]
-
-    return " ".join(partes[:1])
+    return textos.primeiros_nomes(nome_completo, 1, ignorar="Sem atendente")
 
 
 def _is_atendente_ativo(row: Dict[str, Any]) -> bool:
@@ -962,11 +957,7 @@ def _comparativo_variacao_percentual(
         _filter_by_date_range(dados_para_busca, data_inicio_anterior, data_fim_anterior)
     )
 
-    if valor_anterior == 0:
-        return 0.0
-
-    variacao = ((valor_atual - valor_anterior) / valor_anterior) * 100
-    return round(variacao, round_digits)
+    return periodo.variacao_percentual(valor_atual, valor_anterior, casas=round_digits)
 
 
 def _valor_periodo_anterior(
@@ -1270,43 +1261,7 @@ def group_contratos_fechados_diariamente_por_atendente(comercial_geral: List[Dic
 # 6 - Analises de comissão
 # -----------------------------------------------------------------------------
 
-def _converter_valor(valor_raw: any) -> float:
-    """Converte um valor monetário (string ou numérico) para float."""
-    if valor_raw is None:
-        return 0.0
-
-    # asyncpg pode retornar Decimal para campos NUMERIC
-    if isinstance(valor_raw, (int, float, Decimal)):
-        return float(valor_raw)
-
-    valor_str = str(valor_raw).strip()
-    if not valor_str:
-        return 0.0
-
-    # Normaliza prefixo/sufixo e espaços
-    valor_str = (
-        valor_str.replace("R$", "")
-        .replace("\u00a0", "")  # NBSP
-        .replace(" ", "")
-        .strip()
-    )
-
-    # Heurística pt-BR vs en-US:
-    # - Se tiver "." e "," assume "." milhar e "," decimal (ex.: 1.234,56)
-    # - Se tiver só "," assume "," decimal (ex.: 470,00)
-    # - Se tiver só "." assume "." decimal (ex.: 470.00) -> NÃO remover o ponto
-    if "," in valor_str and "." in valor_str:
-        valor_str = valor_str.replace(".", "").replace(",", ".")
-    elif "," in valor_str and "." not in valor_str:
-        valor_str = valor_str.replace(",", ".")
-    else:
-        # somente "." ou nenhum separador: mantém como está
-        pass
-
-    try:
-        return float(valor_str)
-    except (ValueError, TypeError):
-        return 0.0
+_converter_valor = conversao.para_valor  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 def _is_acao_fechada(row: Dict[str, Any]) -> bool:

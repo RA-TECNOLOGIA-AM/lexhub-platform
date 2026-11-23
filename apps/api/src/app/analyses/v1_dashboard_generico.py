@@ -12,6 +12,8 @@ import asyncio
 import logging
 import time
 from contextvars import ContextVar
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
 from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.LA.controle_processo_LA import (
     filter_controle_processo_por_situacao_LA,
@@ -1161,33 +1163,15 @@ def _resolve_date_range(
     to_date: Optional[date],
 ) -> Tuple[Optional[date], Optional[date]]:
     """Normaliza o intervalo: se from_date sem to_date, usa hoje como fim."""
-    if from_date and not to_date:
-        return from_date, date.today()
-    return from_date, to_date
+    return periodo.resolver_intervalo(from_date, to_date)
 
 
 # v1: dashboard_routes.py:3161
-def _to_date(value: Any) -> Optional[date]:
-    """Converte valor do banco para date, descartando None e tipos inválidos."""
-    if value is None:
-        return None
-    parsed = parse_date_from_db(value)
-    if isinstance(parsed, datetime):
-        return parsed.date()
-    if isinstance(parsed, date):
-        return parsed
-    return None
+_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 # v1: dashboard_routes.py:3173
-def _in_range(d: date, from_date: Optional[date], to_date: Optional[date]) -> bool:
-    if from_date and to_date:
-        return from_date <= d <= to_date
-    if from_date:
-        return d >= from_date
-    if to_date:
-        return d <= to_date
-    return True
+# V2: _in_range virou parte de periodo.filtrar_por_colunas (era usado só lá).
 
 
 # v1: dashboard_routes.py:3183
@@ -1202,22 +1186,7 @@ def _filter_by_columns(
     Inclui o registro se QUALQUER coluna tiver data dentro do intervalo (OR lógico).
     Colunas são verificadas em caixa-alta e caixa-baixa automaticamente.
     """
-    if not from_date and not to_date:
-        return data
-
-    filtered = []
-    for item in data:
-        for col in columns:
-            raw = item.get(col) or item.get(col.lower())
-            if raw is None:
-                continue
-            d = _to_date(raw)
-            if d is None:
-                continue
-            if _in_range(d, from_date, to_date):
-                filtered.append(item)
-                break
-    return filtered
+    return periodo.filtrar_por_colunas(data, columns, from_date, to_date, para_data=_to_date)
 
 
 # v1: dashboard_routes.py:3213

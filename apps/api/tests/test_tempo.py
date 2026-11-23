@@ -3,7 +3,7 @@
 from datetime import date
 
 import app.dashboards  # noqa: F401  (carrega os módulos na ordem certa; evita import circular)
-from app.analyses.common import tempo
+from app.analyses.common import periodo, tempo
 
 ENTRADA = tempo.coluna("ENTRADA")
 SAIDA = tempo.coluna("SAIDA")
@@ -44,10 +44,10 @@ def test_media_mediana_e_vazio():
 
 
 def test_variacao_percentual():
-    assert tempo.variacao_percentual(15, 10) == 50.0
-    assert tempo.variacao_percentual(5, 10) == -50.0
-    assert tempo.variacao_percentual(5, 0) == 0.0
-    assert tempo.variacao_percentual(5, 0, sem_base=100.0) == 100.0
+    assert periodo.variacao_percentual(15, 10) == 50.0
+    assert periodo.variacao_percentual(5, 10) == -50.0
+    assert periodo.variacao_percentual(5, 0) == 0.0
+    assert periodo.variacao_percentual(5, 0, sem_base=100.0) == 100.0
 
 
 def test_unidades_dias_com_fracao_e_horas():
@@ -87,5 +87,5 @@ def test_duracoes_por_grupo():
 
 
 def test_variacao_sem_base_so_com_valor_atual():
-    assert tempo.variacao_percentual(0, 0, sem_base=100.0) == 0.0
-    assert tempo.variacao_percentual(3, None) == 0.0
+    assert periodo.variacao_percentual(0, 0, sem_base=100.0) == 0.0
+    assert periodo.variacao_percentual(3, None) == 0.0
