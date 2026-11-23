@@ -1276,12 +1276,12 @@ def get_tabela_por_atendente(
 
     colunas = _colunas_tabela_por_atendente()
     por_coluna: Dict[str, tuple] = {}
-    todos_atendentes = set(leads_geral) | set(clientes_geral)
+    todos_atendentes = dict.fromkeys([*leads_geral, *clientes_geral])  # V2: na ordem dos dados (com set, a ordem dos empates mudava a cada vez que a API subia)
     for slug, leads_fn, clientes_fn in colunas:
         leads_c = _leads_por_atendente_no_periodo(comercial_lexpre, leads_fn, from_date, to_date)
         clientes_c = _clientes_por_atendente_no_periodo(comercial_lexpre, clientes_fn, from_date, to_date)
         por_coluna[slug] = (leads_c, clientes_c)
-        todos_atendentes |= set(leads_c) | set(clientes_c)
+        todos_atendentes.update(dict.fromkeys([*leads_c, *clientes_c]))
 
     linhas: List[Dict[str, Any]] = []
     for nome in todos_atendentes:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from app.analyses.common import unidade as _unidade  # V2: valores da unidade (common/unidade.py)
+from app.analyses.familias import emendas_manifestacoes as _familia  # V2: código único da família (familias/emendas_manifestacoes.py)
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -13,49 +15,33 @@ from app.analyses.common import conversao  # V2: conversões dos valores do banc
 from app.analyses.common import atividades  # V2: regras das atividades num módulo só
 from app.utils import parse_date_from_db
 
+# V2: os valores desta unidade para a família, lidos ao vivo deste módulo (common/unidade.py).
+_VALORES_UNIDADE = _unidade.ValoresDoModulo(globals(), {"_ATIVIDADES_DILACAO": "_ATIVIDADES_DILACAO"})
+
 # =============================================================================
 # Constantes
 # =============================================================================
 
 # Inativos: excluídos de Total, Vencidas e Vencem hoje (alinhado com dashboard analítico)
-_STATUS_INATIVO = frozenset({
-    "Encerrado Cumprido", "Encerrado Não Cumprido", "Cancelado", "Concluído",
-})
+_STATUS_INATIVO = _familia._STATUS_INATIVO
 # Em andamento: qualquer status ativo (ainda não encerrado/cancelado)
-_STATUS_EM_ANDAMENTO = frozenset({"Recebido", "Visualizado", "Iniciado", "Reaberto", "Encaminhado"})
-_STATUS_ENCERRADO = frozenset({"Encerrado Cumprido", "Encerrado Não Cumprido"})
+_STATUS_EM_ANDAMENTO = _familia._STATUS_EM_ANDAMENTO
 
-_STATUS_FILTRO_TAREFAS: tuple[str, ...] = (
-    "Recebido",
-    "Visualizado",
-    "Iniciado",
-    "Reaberto",
-    "Encaminhado",
-    "Encerrado Cumprido",
-    "Encerrado Não Cumprido",
-    "Cancelado",
-)
+_STATUS_ENCERRADO = _familia._STATUS_ENCERRADO
 
-_SITUACOES_FILTRO_TAREFAS: tuple[tuple[str, str], ...] = (
-    ("em_andamento", "Em andamento"),
-    ("vencidas", "Vencidas"),
-    ("vencem_hoje", "Vencem hoje"),
-    ("concluidas", "Concluídas"),
-)
+_STATUS_FILTRO_TAREFAS = _familia._STATUS_FILTRO_TAREFAS
 
-SITUACOES_VALIDAS_EMENDAS_MANIFESTACOES = frozenset(sid for sid, _ in _SITUACOES_FILTRO_TAREFAS)
+_SITUACOES_FILTRO_TAREFAS = _familia._SITUACOES_FILTRO_TAREFAS
 
-_STATUS_DEMANDAS_FUNCIONARIO: tuple[tuple[str, str], ...] = (
-    ("encerrado_nao_cumprido", "Encerrado Não Cumprido"),
-    ("encerrado_cumprido", "Encerrado Cumprido"),
-)
+SITUACOES_VALIDAS_EMENDAS_MANIFESTACOES = _familia.SITUACOES_VALIDAS_EMENDAS_MANIFESTACOES
 
-_SLUG_POR_STATUS: dict[str, str] = {
-    label: slug for slug, label in _STATUS_DEMANDAS_FUNCIONARIO
-}
+_STATUS_DEMANDAS_FUNCIONARIO = _familia._STATUS_DEMANDAS_FUNCIONARIO
 
-_SEM_ATIVIDADE = "Sem atividade"
-_SEM_FUNCIONARIO = "Sem funcionário"
+_SLUG_POR_STATUS = _familia._SLUG_POR_STATUS
+
+_SEM_ATIVIDADE = _familia._SEM_ATIVIDADE
+
+_SEM_FUNCIONARIO = _familia._SEM_FUNCIONARIO
 
 # Atividades que contam como "Manifestação" para o comissionamento (inclui Emenda à Inicial)
 _ATIVIDADES_MANIFESTACAO: frozenset[str] = frozenset({
@@ -78,161 +64,83 @@ _ATIVIDADES_DILACAO: frozenset[str] = frozenset({
     "DILAÇÃO DE PRAZO",
 })
 
-_COL_FUNCIONARIO_ATRIBUIDO = "FUNCIONARIO_ATRIBUIDO"
-_COL_FUNCIONARIO_ENCERRAMENTO = "FUNCIONARIO_ENCERRAMENTO"
-_COL_ID_USUARIO_ENCERRAMENTO = "ID_USUARIO_ENCERRAMENTO"
+_COL_FUNCIONARIO_ATRIBUIDO = _familia._COL_FUNCIONARIO_ATRIBUIDO
+
+_COL_FUNCIONARIO_ENCERRAMENTO = _familia._COL_FUNCIONARIO_ENCERRAMENTO
+
+_COL_ID_USUARIO_ENCERRAMENTO = _familia._COL_ID_USUARIO_ENCERRAMENTO
 
 
 # =============================================================================
 # Utilitários
 # =============================================================================
 
-_to_int = conversao.para_inteiro  # V2: era uma cópia local (app/analyses/common/conversao.py)
+_to_int = _familia._to_int
 
 
-_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
+_to_date = _familia._to_date
 
 
-_data_no_periodo = periodo.no_periodo  # V2: era uma cópia local (app/analyses/common/periodo.py)
+_data_no_periodo = _familia._data_no_periodo
 
 
-def _nome_em_conjunto_filtro(nome: str, conjunto: frozenset[str] | None) -> bool:
-    return atividades.nome_em_conjunto(nome, conjunto)
+_nome_em_conjunto_filtro = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._nome_em_conjunto_filtro)
 
 
 # =============================================================================
 # Getters de campos dos agendamentos
 # =============================================================================
 
-def _get_status(item: dict[str, Any]) -> str | None:
-    raw = item.get("STATUS") or item.get("status")
-    if raw is None or not str(raw).strip():
-        return None
-    return str(raw).strip()
+_get_status = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_status)
 
 
-def _get_data_criacao(item: dict[str, Any]) -> Optional[date]:
-    raw = item.get("DATA_HORA_CRIACAO") or item.get("data_hora_criacao")
-    return _to_date(raw)
+_get_data_criacao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_data_criacao)
 
 
-def _get_data_conclusao(item: dict[str, Any]) -> Optional[date]:
-    raw = item.get("DATA_HORA_CONCLUSAO") or item.get("data_hora_conclusao")
-    return _to_date(raw)
+_get_data_conclusao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_data_conclusao)
 
 
-def _get_prazo(item: dict[str, Any]) -> Optional[date]:
-    raw = item.get("PRAZO") or item.get("prazo")
-    return _to_date(raw)
+_get_prazo = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_prazo)
 
 
-def _get_processo_id(item: dict[str, Any]) -> Any | None:
-    return item.get("processo_id") or item.get("PROCESSO_ID")
+_get_processo_id = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_processo_id)
 
 
-def _get_numero_processo(item: dict[str, Any]) -> str | None:
-    raw = item.get("NUMERO_PROCESSO") or item.get("numero_processo")
-    if raw is None or not str(raw).strip():
-        return None
-    return str(raw).strip()
+_get_numero_processo = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_numero_processo)
 
 
-def _get_atividade_nome(item: dict[str, Any]) -> str:
-    raw = item.get("ATIVIDADE") or item.get("atividade")
-    if raw is None or not str(raw).strip():
-        return _SEM_ATIVIDADE
-    return str(raw).strip()
+_get_atividade_nome = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_atividade_nome)
 
 
-def _get_funcionario_atribuido(item: dict[str, Any]) -> str:
-    raw = (
-        item.get(_COL_FUNCIONARIO_ATRIBUIDO)
-        or item.get("FUNCIONARIO")
-        or item.get("funcionario")
-    )
-    if raw is None or not str(raw).strip():
-        return _SEM_FUNCIONARIO
-    return str(raw).strip()
+_get_funcionario_atribuido = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_funcionario_atribuido)
 
 
-def _get_funcionario_encerramento(item: dict[str, Any]) -> str | None:
-    uid = item.get(_COL_ID_USUARIO_ENCERRAMENTO) or item.get("id_usuario_encerramento")
-    if uid is None or (isinstance(uid, str) and not str(uid).strip()):
-        return None
-    raw = item.get(_COL_FUNCIONARIO_ENCERRAMENTO) or item.get("funcionario_encerramento")
-    if raw is not None and str(raw).strip():
-        return str(raw).strip()
-    return None
+_get_funcionario_encerramento = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_funcionario_encerramento)
 
 
 # V2: como estas atividades são lidas e quais status contam (app/analyses/common/atividades.py).
-_ATIVIDADES = atividades.Leitor(
-    criacao=_get_data_criacao,
-    conclusao=_get_data_conclusao,
-    prazo=_get_prazo,
-    status=_get_status,
-    funcionario_encerramento=_get_funcionario_encerramento,
-)
-_STATUS_ATIVIDADES = atividades.Status(
-    inativo=_STATUS_INATIVO, em_andamento=_STATUS_EM_ANDAMENTO, encerrado=_STATUS_ENCERRADO
-)
+_ATIVIDADES = _familia._ATIVIDADES
+
+_STATUS_ATIVIDADES = _familia._STATUS_ATIVIDADES
 
 
-
-def _get_funcionario_nome(item: dict[str, Any]) -> str:
-    status = _get_status(item) or ""
-    if status in _STATUS_ENCERRADO:
-        encerrador = _get_funcionario_encerramento(item)
-        if encerrador:
-            return encerrador
-    return _get_funcionario_atribuido(item)
+_get_funcionario_nome = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_funcionario_nome)
 
 
 # =============================================================================
 # Filtros de período
 # =============================================================================
 
-def _filtrar_criados_no_periodo(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    return [
-        row for row in agendamentos
-        if _data_no_periodo(_get_data_criacao(row), from_date, to_date)
-    ]
+_filtrar_criados_no_periodo = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._filtrar_criados_no_periodo)
 
 
-def _filtrar_encerrados_no_periodo(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-    *,
-    exigir_encerrador: bool = False,
-) -> list[dict[str, Any]]:
-    return atividades.encerrados_no_periodo(
-        agendamentos, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, exigir_encerrador=exigir_encerrador
-    )
+_filtrar_encerrados_no_periodo = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._filtrar_encerrados_no_periodo)
 
 
-def _incluir_na_lista_tarefas(
-    row: dict[str, Any],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-    *,
-    ref_date: Optional[date] = None,
-) -> bool:
-    return atividades.incluir_na_lista(row, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, ref=ref_date)
+_incluir_na_lista_tarefas = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._incluir_na_lista_tarefas)
 
 
-def _classificar_situacao_tarefa(
-    row: dict[str, Any],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-    *,
-    ref_date: Optional[date] = None,
-) -> dict[str, bool]:
-    return atividades.situacao(row, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, ref=ref_date)
+_classificar_situacao_tarefa = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._classificar_situacao_tarefa)
 
 
 # =============================================================================
@@ -296,266 +204,50 @@ def get_kpis_atividades_emendas_manifestacoes_LA(
 # Histórico de concluídas (mensal e diário)
 # =============================================================================
 
-_MONTH_NAMES = (
-    "jan", "fev", "mar", "abr", "mai", "jun",
-    "jul", "ago", "set", "out", "nov", "dez",
-)
+_MONTH_NAMES = _familia._MONTH_NAMES
 
 
-def group_emendas_manifestacoes_concluidas_por_mes_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Agrupa atividades encerradas por mês de DATA_HORA_CONCLUSAO."""
-    encerrados = _filtrar_encerrados_no_periodo(agendamentos, from_date, to_date)
-    grouped: dict[str, dict[str, Any]] = {}
-
-    for row in encerrados:
-        conclusao = _get_data_conclusao(row)
-        if not conclusao:
-            continue
-
-        month_key = f"{conclusao.year}-{conclusao.month:02d}"
-        if month_key not in grouped:
-            month_name = f"{_MONTH_NAMES[conclusao.month - 1]} {conclusao.year}"
-            grouped[month_key] = {"name": month_name, "value": 0, "sort_key": month_key}
-        grouped[month_key]["value"] += 1
-
-    return [
-        {"name": item["name"], "value": item["value"]}
-        for item in sorted(grouped.values(), key=lambda x: x["sort_key"])
-    ]
+group_emendas_manifestacoes_concluidas_por_mes_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_emendas_manifestacoes_concluidas_por_mes)
 
 
-def group_emendas_manifestacoes_concluidas_por_dia_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Agrupa atividades encerradas por dia de DATA_HORA_CONCLUSAO."""
-    encerrados = _filtrar_encerrados_no_periodo(agendamentos, from_date, to_date)
-    grouped: dict[str, int] = defaultdict(int)
-
-    for row in encerrados:
-        conclusao = _get_data_conclusao(row)
-        if not conclusao:
-            continue
-        grouped[conclusao.strftime("%Y-%m-%d")] += 1
-
-    return [
-        {"name": dia, "value": count}
-        for dia, count in sorted(grouped.items(), key=lambda x: x[0])
-    ]
+group_emendas_manifestacoes_concluidas_por_dia_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_emendas_manifestacoes_concluidas_por_dia)
 
 
-def get_emendas_manifestacoes_concluidas_por_dia_por_funcionario_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> dict[str, Any]:
-    """Concluídas por dia e por funcionário (encerrador ou atribuído)."""
-    encerrados = _filtrar_encerrados_no_periodo(agendamentos, from_date, to_date)
-    grouped: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-
-    for row in encerrados:
-        conclusao = _get_data_conclusao(row)
-        if not conclusao:
-            continue
-        dia_key = conclusao.strftime("%Y-%m-%d")
-        grouped[dia_key][_get_funcionario_nome(row)] += 1
-
-    dias_ordenados = sorted(grouped.keys())
-    funcionarios = sorted({f for dia_data in grouped.values() for f in dia_data.keys()})
-    por_funcionario = {
-        func: [
-            {"name": dia, "value": grouped[dia].get(func, 0)}
-            for dia in dias_ordenados
-        ]
-        for func in funcionarios
-    }
-    return {"funcionarios": funcionarios, "por_funcionario": por_funcionario}
+get_emendas_manifestacoes_concluidas_por_dia_por_funcionario_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_emendas_manifestacoes_concluidas_por_dia_por_funcionario)
 
 
-def _media_concluidas_por_funcionario(
-    encerrados: list[dict[str, Any]],
-    get_data_ref: Callable[[dict[str, Any]], Optional[date]],
-) -> list[dict[str, Any]]:
-    """Média diária de concluídas por funcionário (total / dias distintos)."""
-    return atividades.media_concluidas_por_funcionario(encerrados, get_data_ref, _get_funcionario_nome)
+_media_concluidas_por_funcionario = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._media_concluidas_por_funcionario)
 
 
-def get_media_emendas_manifestacoes_concluidas_por_funcionario_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Média diária de atividades encerradas por funcionário (DATA_HORA_CONCLUSAO)."""
-    encerrados = _filtrar_encerrados_no_periodo(agendamentos, from_date, to_date)
-    return _media_concluidas_por_funcionario(encerrados, _get_data_conclusao)
+get_media_emendas_manifestacoes_concluidas_por_funcionario_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_media_emendas_manifestacoes_concluidas_por_funcionario)
 
 
 # =============================================================================
 # Gráfico: processos distintos por atividade
 # =============================================================================
 
-def group_emendas_manifestacoes_processos_por_atividade_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """
-    Agendamentos encerrados (Cumprido ou Não Cumprido) por atividade, com
-    DATA_HORA_CONCLUSAO no período — mesma base (e mesma contagem por linha de
-    agendamento, sem dedupe por processo) do KPI "Concluídas" e do gráfico
-    "Demandas por Funcionário" desta visão, para os três baterem entre si. Demais
-    status (Recebido, Visualizado, Iniciado, Reaberto, Encaminhado, Cancelado)
-    ficam de fora deste resumo; aparecem no detalhamento da lista de tarefas abaixo.
-    """
-    base = _filtrar_encerrados_no_periodo(agendamentos, from_date, to_date)
-
-    grouped: dict[str, int] = defaultdict(int)
-    for row in base:
-        nome = _get_atividade_nome(row)
-        grouped[nome] += 1
-
-    total = float(sum(grouped.values()))
-    itens: list[dict[str, Any]] = []
-    for nome, qtd in grouped.items():
-        itens.append({
-            "name": nome,
-            "value": float(qtd),
-            "percent": round(100.0 * float(qtd) / total, 1) if total > 0 else 0.0,
-        })
-    return sorted(itens, key=lambda x: float(x["value"]), reverse=True)
+group_emendas_manifestacoes_processos_por_atividade_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_emendas_manifestacoes_processos_por_atividade)
 
 
 # =============================================================================
 # Gráfico: demandas encerradas por funcionário
 # =============================================================================
 
-def group_emendas_manifestacoes_demandas_por_funcionario_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """
-    Demandas encerradas por funcionário (Cumprido / Não Cumprido),
-    com DATA_HORA_CONCLUSAO no período.
-    """
-    base = _filtrar_encerrados_no_periodo(
-        agendamentos, from_date, to_date, exigir_encerrador=True
-    )
-
-    grouped: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    for row in base:
-        funcionario = _get_funcionario_encerramento(row)
-        if not funcionario:
-            continue
-        status = _get_status(row) or ""
-        slug = _SLUG_POR_STATUS.get(status)
-        if slug is None:
-            continue
-        grouped[funcionario][slug] += 1
-
-    itens: list[dict[str, Any]] = []
-    for nome, contagens in grouped.items():
-        item: dict[str, Any] = {"name": nome}
-        total = 0
-        for slug, _ in _STATUS_DEMANDAS_FUNCIONARIO:
-            valor = int(contagens.get(slug, 0))
-            item[slug] = valor
-            total += valor
-        item["total"] = total
-        if total > 0:
-            itens.append(item)
-
-    return sorted(itens, key=lambda x: int(x["total"]), reverse=True)
+group_emendas_manifestacoes_demandas_por_funcionario_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_emendas_manifestacoes_demandas_por_funcionario)
 
 
 # =============================================================================
 # Gráfico (por prazo): processos distintos por atividade
 # =============================================================================
 
-def group_emendas_manifestacoes_processos_por_atividade_por_prazo_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """
-    Agendamentos encerrados (Cumprido ou Não Cumprido) por atividade, com PRAZO
-    no período — mesma base (linha de agendamento, sem dedupe por processo) do
-    KPI "Concluídas" e do gráfico "Demandas por Funcionário" desta visão, para os
-    três baterem entre si. Demais status (Recebido, Visualizado, Iniciado,
-    Reaberto, Encaminhado, Cancelado) ficam de fora deste resumo; aparecem no
-    detalhamento da lista de tarefas abaixo.
-    """
-    base = [
-        row for row in agendamentos
-        if _data_no_periodo(_get_prazo(row), from_date, to_date)
-        and (_get_status(row) or "") in _STATUS_ENCERRADO
-    ]
-
-    grouped: dict[str, int] = defaultdict(int)
-    for row in base:
-        nome = _get_atividade_nome(row)
-        grouped[nome] += 1
-
-    total = float(sum(grouped.values()))
-    itens: list[dict[str, Any]] = []
-    for nome, qtd in grouped.items():
-        itens.append({
-            "name": nome,
-            "value": float(qtd),
-            "percent": round(100.0 * float(qtd) / total, 1) if total > 0 else 0.0,
-        })
-    return sorted(itens, key=lambda x: float(x["value"]), reverse=True)
+group_emendas_manifestacoes_processos_por_atividade_por_prazo_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_emendas_manifestacoes_processos_por_atividade_por_prazo)
 
 
 # =============================================================================
 # Gráfico (por prazo): demandas encerradas por funcionário
 # =============================================================================
 
-def group_emendas_manifestacoes_demandas_por_funcionario_por_prazo_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """
-    Demandas encerradas por funcionário (Cumprido / Não Cumprido),
-    com PRAZO no período.
-    """
-    base = [
-        row for row in agendamentos
-        if (_get_status(row) or "") in _STATUS_ENCERRADO
-        and _data_no_periodo(_get_prazo(row), from_date, to_date)
-        and _get_funcionario_encerramento(row) is not None
-    ]
-
-    grouped: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-    for row in base:
-        funcionario = _get_funcionario_encerramento(row)
-        if not funcionario:
-            continue
-        status = _get_status(row) or ""
-        slug = _SLUG_POR_STATUS.get(status)
-        if slug is None:
-            continue
-        grouped[funcionario][slug] += 1
-
-    itens: list[dict[str, Any]] = []
-    for nome, contagens in grouped.items():
-        item: dict[str, Any] = {"name": nome}
-        total = 0
-        for slug, _ in _STATUS_DEMANDAS_FUNCIONARIO:
-            valor = int(contagens.get(slug, 0))
-            item[slug] = valor
-            total += valor
-        item["total"] = total
-        if total > 0:
-            itens.append(item)
-
-    return sorted(itens, key=lambda x: int(x["total"]), reverse=True)
+group_emendas_manifestacoes_demandas_por_funcionario_por_prazo_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_emendas_manifestacoes_demandas_por_funcionario_por_prazo)
 
 
 # =============================================================================
@@ -732,24 +424,10 @@ def filtrar_agendamentos_emendas_manifestacoes_LA(
 # Análise por Prazo — helpers internos
 # =============================================================================
 
-def _incluir_na_lista_por_prazo(
-    row: dict[str, Any],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-    *,
-    ref_date: Optional[date] = None,
-) -> bool:
-    return atividades.incluir_na_lista_por_prazo(row, _ATIVIDADES, from_date, to_date)
+_incluir_na_lista_por_prazo = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._incluir_na_lista_por_prazo)
 
 
-def _classificar_situacao_por_prazo(
-    row: dict[str, Any],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-    *,
-    ref_date: Optional[date] = None,
-) -> dict[str, bool]:
-    return atividades.situacao_por_prazo(row, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date, ref=ref_date)
+_classificar_situacao_por_prazo = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._classificar_situacao_por_prazo)
 
 
 # =============================================================================
@@ -810,98 +488,19 @@ def get_kpis_emendas_manifestacoes_por_prazo_LA(
 # Histórico de concluídas por Prazo (mensal e diário)
 # =============================================================================
 
-def _filtrar_encerrados_com_prazo_no_periodo(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Encerradas com PRAZO dentro do intervalo informado."""
-    return atividades.encerrados_com_prazo_no_periodo(agendamentos, _ATIVIDADES, _STATUS_ATIVIDADES, from_date, to_date)
+_filtrar_encerrados_com_prazo_no_periodo = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._filtrar_encerrados_com_prazo_no_periodo)
 
 
-def group_emendas_manifestacoes_concluidas_por_prazo_por_mes_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Agrupa atividades encerradas por mês do PRAZO."""
-    encerrados = _filtrar_encerrados_com_prazo_no_periodo(agendamentos, from_date, to_date)
-    grouped: dict[str, dict[str, Any]] = {}
-
-    for row in encerrados:
-        prazo = _get_prazo(row)
-        if not prazo:
-            continue
-
-        month_key = f"{prazo.year}-{prazo.month:02d}"
-        if month_key not in grouped:
-            month_name = f"{_MONTH_NAMES[prazo.month - 1]} {prazo.year}"
-            grouped[month_key] = {"name": month_name, "value": 0, "sort_key": month_key}
-        grouped[month_key]["value"] += 1
-
-    return [
-        {"name": item["name"], "value": item["value"]}
-        for item in sorted(grouped.values(), key=lambda x: x["sort_key"])
-    ]
+group_emendas_manifestacoes_concluidas_por_prazo_por_mes_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_emendas_manifestacoes_concluidas_por_prazo_por_mes)
 
 
-def group_emendas_manifestacoes_concluidas_por_prazo_por_dia_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Agrupa atividades encerradas por dia do PRAZO."""
-    encerrados = _filtrar_encerrados_com_prazo_no_periodo(agendamentos, from_date, to_date)
-    grouped: dict[str, int] = defaultdict(int)
-
-    for row in encerrados:
-        prazo = _get_prazo(row)
-        if not prazo:
-            continue
-        grouped[prazo.strftime("%Y-%m-%d")] += 1
-
-    return [
-        {"name": dia, "value": count}
-        for dia, count in sorted(grouped.items(), key=lambda x: x[0])
-    ]
+group_emendas_manifestacoes_concluidas_por_prazo_por_dia_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_emendas_manifestacoes_concluidas_por_prazo_por_dia)
 
 
-def get_emendas_manifestacoes_concluidas_por_prazo_por_dia_por_funcionario_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> dict[str, Any]:
-    """Concluídas (por prazo) por dia do PRAZO e por funcionário."""
-    encerrados = _filtrar_encerrados_com_prazo_no_periodo(agendamentos, from_date, to_date)
-    grouped: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
-
-    for row in encerrados:
-        prazo = _get_prazo(row)
-        if not prazo:
-            continue
-        dia_key = prazo.strftime("%Y-%m-%d")
-        grouped[dia_key][_get_funcionario_nome(row)] += 1
-
-    dias_ordenados = sorted(grouped.keys())
-    funcionarios = sorted({f for dia_data in grouped.values() for f in dia_data.keys()})
-    por_funcionario = {
-        func: [
-            {"name": dia, "value": grouped[dia].get(func, 0)}
-            for dia in dias_ordenados
-        ]
-        for func in funcionarios
-    }
-    return {"funcionarios": funcionarios, "por_funcionario": por_funcionario}
+get_emendas_manifestacoes_concluidas_por_prazo_por_dia_por_funcionario_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_emendas_manifestacoes_concluidas_por_prazo_por_dia_por_funcionario)
 
 
-def get_media_emendas_manifestacoes_concluidas_por_prazo_por_funcionario_LA(
-    agendamentos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Média diária de atividades encerradas por funcionário (PRAZO)."""
-    encerrados = _filtrar_encerrados_com_prazo_no_periodo(agendamentos, from_date, to_date)
-    return _media_concluidas_por_funcionario(encerrados, _get_prazo)
+get_media_emendas_manifestacoes_concluidas_por_prazo_por_funcionario_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_media_emendas_manifestacoes_concluidas_por_prazo_por_funcionario)
 
 
 # =============================================================================
@@ -1085,28 +684,7 @@ def filtrar_agendamentos_emendas_manifestacoes_por_prazo_LA(
 # Batista Fernandes, Jun/2026: 484 manifestações + 29 dilações = R$740,50).
 
 
-def _agenda_cumprida_funcionario_LA(
-    agendamentos_funcionario: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> tuple[int, int, float]:
-    """Retorna (finalizados, total_agenda, percentual) com base no PRAZO no período."""
-    finalizados = 0
-    pendentes = 0
-    for row in agendamentos_funcionario:
-        prazo = _get_prazo(row)
-        if not _data_no_periodo(prazo, from_date, to_date):
-            continue
-        status = _get_status(row) or ""
-        if status in _STATUS_ENCERRADO:
-            finalizados += 1
-        elif status not in _STATUS_INATIVO:
-            pendentes += 1
-        # Cancelado/Concluído: não fazem parte da agenda de comissionamento
-
-    total = finalizados + pendentes
-    percentual = round(100.0 * finalizados / total, 1) if total > 0 else 0.0
-    return finalizados, total, percentual
+_agenda_cumprida_funcionario_LA = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._agenda_cumprida_funcionario)
 
 
 def _preco_unitario_emendas_manifestacoes_LA(percentual_agenda: float) -> tuple[Decimal, Decimal]:

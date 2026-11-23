@@ -13,6 +13,8 @@
 
 from __future__ import annotations
 
+from app.analyses.common import unidade as _unidade  # V2: valores da unidade (common/unidade.py)
+from app.analyses.familias import julgados_acordao as _familia  # V2: código único da família (familias/julgados_acordao.py)
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -27,39 +29,56 @@ from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.common import matriz_julgamento as mj
 from app.analyses.common.julgados_agravo import eh_processo_agravo, numero_processo
 
+# V2: os valores desta unidade para a família, lidos ao vivo deste módulo (common/unidade.py).
+_VALORES_UNIDADE = _unidade.ValoresDoModulo(globals(), {"ID_ESCRITORIO": "ID_ESCRITORIO_RJ"})
+
 # =============================================================================
 # Constantes
 # =============================================================================
 
 ID_ESCRITORIO_RJ = 27
 
-_COL_ID_ESCRITORIO = "ID_ESCRITORIO"
-_COL_ID_2G = "ID_2G"
-_COL_STATUS_2G = "STATUS_2G"
-_COL_DATA_ACORDAO = "DATA_ACORDAO"
-_COL_DATA_AJUIZAMENTO = "DATA_AJUIZAMENTO"
-_COL_RELATOR_2G = "RELATOR_2G"
-_COL_MATERIA = "MATERIA"
-_COL_COMPETENCIA = "COMPETENCIA"
-_COL_COMARCA = "COMARCA"
-_COL_UF = "UF"
-_COL_MOTIVO_STATUS_2G = "MOTIVO_STATUS_2G"
-_COL_VALOR_CAUSA_ACORDAO = "VALOR_CAUSA_ACORDO"
+_COL_ID_ESCRITORIO = _familia._COL_ID_ESCRITORIO
 
-_SEM_MATERIA = "Sem matéria"
-_SEM_COMPETENCIA = "Sem competência"
-_SEM_COMARCA = "Sem comarca"
-_SEM_MOTIVO_EXTINCAO = "Não informado"
-_SEM_ANO_AJUIZAMENTO = "Sem data de ajuizamento"
+_COL_ID_2G = _familia._COL_ID_2G
 
-_MONTH_NAMES = (
-    "jan", "fev", "mar", "abr", "mai", "jun",
-    "jul", "ago", "set", "out", "nov", "dez",
-)
+_COL_STATUS_2G = _familia._COL_STATUS_2G
 
-_RESULTADO_FAV = "fav"
-_RESULTADO_DES = "des"
-_RESULTADO_OUTROS = "outros"
+_COL_DATA_ACORDAO = _familia._COL_DATA_ACORDAO
+
+_COL_DATA_AJUIZAMENTO = _familia._COL_DATA_AJUIZAMENTO
+
+_COL_RELATOR_2G = _familia._COL_RELATOR_2G
+
+_COL_MATERIA = _familia._COL_MATERIA
+
+_COL_COMPETENCIA = _familia._COL_COMPETENCIA
+
+_COL_COMARCA = _familia._COL_COMARCA
+
+_COL_UF = _familia._COL_UF
+
+_COL_MOTIVO_STATUS_2G = _familia._COL_MOTIVO_STATUS_2G
+
+_COL_VALOR_CAUSA_ACORDAO = _familia._COL_VALOR_CAUSA_ACORDAO
+
+_SEM_MATERIA = _familia._SEM_MATERIA
+
+_SEM_COMPETENCIA = _familia._SEM_COMPETENCIA
+
+_SEM_COMARCA = _familia._SEM_COMARCA
+
+_SEM_MOTIVO_EXTINCAO = _familia._SEM_MOTIVO_EXTINCAO
+
+_SEM_ANO_AJUIZAMENTO = _familia._SEM_ANO_AJUIZAMENTO
+
+_MONTH_NAMES = _familia._MONTH_NAMES
+
+_RESULTADO_FAV = _familia._RESULTADO_FAV
+
+_RESULTADO_DES = _familia._RESULTADO_DES
+
+_RESULTADO_OUTROS = _familia._RESULTADO_OUTROS
 
 # Mérito 2G (esquema novo, ``acordao_merito_segundo_grau`` — ver
 # ``app.analyses.common.matriz_julgamento``). ACORDO HOMOLOGADO não tem mais
@@ -68,378 +87,149 @@ _RESULTADO_OUTROS = "outros"
 # classificados". SENTENÇA ANULADA (id novo 8) também não é procedente/
 # improcedente/extinto — continua em "Não classificados", agora corretamente
 # (antes dependia do ID antigo 22 não estar em nenhum dos 3 conjuntos).
-_IDS_2G_PROCEDENTE: frozenset[int] = frozenset({
-    mj.ID_MERITO_PROCEDENTE_COM_PE, mj.ID_MERITO_PROCEDENTE_SEM_PE,
-    mj.ID_MERITO_PARC_PROCEDENTE_COM_PE, mj.ID_MERITO_PARC_PROCEDENTE_SEM_PE,
-})
-_IDS_2G_IMPROCEDENTE: frozenset[int] = frozenset({
-    mj.ID_MERITO_IMPROCEDENTE, mj.ID_MERITO_IMPROCEDENTE_PRESCRICAO,
-})
-_IDS_2G_EXTINTO: frozenset[int] = frozenset({mj.ID_MERITO_EXTINTO_SEM_MERITO})
+_IDS_2G_PROCEDENTE = _familia._IDS_2G_PROCEDENTE
+
+_IDS_2G_IMPROCEDENTE = _familia._IDS_2G_IMPROCEDENTE
+
+_IDS_2G_EXTINTO = _familia._IDS_2G_EXTINTO
 
 
 # =============================================================================
 # Utilitários
 # =============================================================================
 
-_to_int = conversao.para_inteiro  # V2: era uma cópia local (app/analyses/common/conversao.py)
+_to_int = _familia._to_int
 
 
-_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
+_to_date = _familia._to_date
 
 
-_data_no_periodo = periodo.no_periodo  # V2: era uma cópia local (app/analyses/common/periodo.py)
+_data_no_periodo = _familia._data_no_periodo
 
 
-_get_id_2g = julgados.id_2g  # V2: app/analyses/common/julgados.py
+_get_id_2g = _familia._get_id_2g
 
 
-def _get_data_acordao(item: dict[str, Any]) -> Optional[date]:
-    return _to_date(item.get(_COL_DATA_ACORDAO) or item.get("data_acordao"))
+_get_data_acordao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_data_acordao)
 
 
-def _get_data_sentenca(item: dict[str, Any]) -> Optional[date]:
-    return _to_date(item.get("DATA_SENTENCA") or item.get("data_sentenca"))
+_get_data_sentenca = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_data_sentenca)
 
 
-def _get_data_embargos_acordao(item: dict[str, Any]) -> Optional[date]:
-    return _to_date(item.get("ACORDAO_EMBARGOS") or item.get("acordao_embargos"))
+_get_data_embargos_acordao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_data_embargos_acordao)
 
 
-def _get_resultado_embargos_acordao(item: dict[str, Any]) -> Optional[str]:
-    """Status Resultante dos embargos (acórdãos), pela matriz ``mj.classificar_status_embargos``:
-    mérito vigente ANTES dos embargos (``ID_ACORDAO_MERITO_2G_PRE_EMBARGOS``, do ``processo_audit``) x resultado
-    lançado (``STATUS_ACORDAO_EMBARGOS``). Com data de embargo e sem resultado lançado: "Sem
-    resultado lançado" (sem estimativa). ``None`` se não há data de embargo nem resultado lançado."""
-    id_pre = _to_int(item.get("ID_ACORDAO_MERITO_2G_PRE_EMBARGOS"))
-    if id_pre is None:
-        id_pre = _get_id_2g(item)
-    oficial = mj.classificar_status_embargos(id_pre, item.get("STATUS_ACORDAO_EMBARGOS"))
-    if oficial is not None:
-        return oficial
-    if _get_data_embargos_acordao(item) is None:
-        return None
-    return mj.STATUS_EMBARGO_SEM_RESULTADO
+_get_resultado_embargos_acordao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_resultado_embargos_acordao)
 
 
-_get_data_ajuizamento = julgados.data_ajuizamento  # V2: app/analyses/common/julgados.py
+_get_data_ajuizamento = _familia._get_data_ajuizamento
 
 
-_get_ano_ajuizamento = julgados.ano_ajuizamento  # V2: app/analyses/common/julgados.py
+_get_ano_ajuizamento = _familia._get_ano_ajuizamento
 
 
-_to_float = julgados.para_float  # V2: app/analyses/common/julgados.py
+_to_float = _familia._to_float
 
 
-def _get_valor_causa_acordao(item: dict[str, Any]) -> float:
-    """Valor de causa INICIAL do processo (o protocolado, ``processo.valor_causa`` — sincronizado
-    automaticamente do protocolo). Por decisão de negócio, não usa ``processo.valor_causa_va``
-    (campo separado por grau: majoritariamente vazio/zerado e, quando preenchido, diverge do valor
-    inicial em ~93% dos casos — validado ao vivo no banco em 29/09/2026)."""
-    return _to_float(item.get(_COL_VALOR_CAUSA_ACORDAO) or item.get("valor_causa"))
+_get_valor_causa_acordao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_valor_causa_acordao)
 
 
-def _normalizar_nome_relator(value: Any) -> str:
-    nome = str(value or "").strip()
-    if not nome or nome.lower() in {"none", "null", "-", "n/a"}:
-        return ""
-    return nome
+_normalizar_nome_relator = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._normalizar_nome_relator)
 
 
-def _get_relator_2g(item: dict[str, Any]) -> str:
-    """Nome do relator (2G): campo de texto livre ``processo.relator_2g`` (via
-    ``RELATOR_2G`` na query). Por decisão de negócio, o cadastro normalizado
-    (``relator_segundo_grau``) não é usado aqui — o texto livre é a fonte oficial."""
-    return _normalizar_nome_relator(item.get(_COL_RELATOR_2G))
+_get_relator_2g = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_relator_2g)
 
 
-_get_materia = julgados.materia  # V2: app/analyses/common/julgados.py
+_get_materia = _familia._get_materia
 
 
-_get_competencia = julgados.competencia  # V2: app/analyses/common/julgados.py
+_get_competencia = _familia._get_competencia
 
 
-_get_comarca = julgados.comarca  # V2: app/analyses/common/julgados.py
+_get_comarca = _familia._get_comarca
 
 
-_get_uf = julgados.uf  # V2: app/analyses/common/julgados.py
+_get_uf = _familia._get_uf
 
 
-def _get_motivo_extincao(item: dict[str, Any]) -> str:
-    nome = str(item.get(_COL_MOTIVO_STATUS_2G) or item.get("motivo_status_2g") or "").strip()
-    return nome if nome else _SEM_MOTIVO_EXTINCAO
+_get_motivo_extincao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_motivo_extincao)
 
 
-_iniciais_nome = julgados.iniciais_nome  # V2: app/analyses/common/julgados.py
+_iniciais_nome = _familia._iniciais_nome
 
 
-def _classificar_resultado_2g_julgados(id_2g: Optional[int]) -> Optional[str]:
-    if id_2g in _IDS_2G_PROCEDENTE:
-        return _RESULTADO_FAV
-    if id_2g in _IDS_2G_IMPROCEDENTE:
-        return _RESULTADO_DES
-    if id_2g in _IDS_2G_EXTINTO:
-        return _RESULTADO_OUTROS
-    return None
+_classificar_resultado_2g_julgados = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._classificar_resultado_2g_julgados)
 
 
 # =============================================================================
 # Filtros interativos cumulativos (matéria, relator, comarca, competência, categoria, UF)
 # =============================================================================
 
-CATEGORIA_PROCEDENTE = "procedente"
-CATEGORIA_IMPROCEDENTE = "improcedente"
-CATEGORIA_EXTINTO = "extinto"
+CATEGORIA_PROCEDENTE = _familia.CATEGORIA_PROCEDENTE
 
-CATEGORIAS_2G_VALIDAS_JULGADOS_RJ: frozenset[str] = frozenset(
-    {CATEGORIA_PROCEDENTE, CATEGORIA_IMPROCEDENTE, CATEGORIA_EXTINTO}
-)
+CATEGORIA_IMPROCEDENTE = _familia.CATEGORIA_IMPROCEDENTE
 
-_RESULTADO_PARA_CATEGORIA: dict[str, str] = {
-    _RESULTADO_FAV: CATEGORIA_PROCEDENTE,
-    _RESULTADO_DES: CATEGORIA_IMPROCEDENTE,
-    _RESULTADO_OUTROS: CATEGORIA_EXTINTO,
-}
+CATEGORIA_EXTINTO = _familia.CATEGORIA_EXTINTO
+
+CATEGORIAS_2G_VALIDAS_JULGADOS_RJ = _familia.CATEGORIAS_2G_VALIDAS_JULGADOS
+
+_RESULTADO_PARA_CATEGORIA = _familia._RESULTADO_PARA_CATEGORIA
 
 
-def _get_categoria_2g_julgados(item: dict[str, Any]) -> Optional[str]:
-    resultado = _classificar_resultado_2g_julgados(_get_id_2g(item))
-    return _RESULTADO_PARA_CATEGORIA.get(resultado) if resultado else None
+_get_categoria_2g_julgados = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_categoria_2g_julgados)
 
 
-_valor_em_conjunto_filtro_julgados = julgados.valor_em_conjunto  # V2: app/analyses/common/julgados.py
+_valor_em_conjunto_filtro_julgados = _familia._valor_em_conjunto_filtro_julgados
 
 
-@dataclass(frozen=True)
-class JulgadosAcordaoFiltrosRJ:
-    """Filtros cumulativos (AND entre dimensões, OR dentro de cada uma) sobre acórdãos Julgados."""
-
-    materias: Optional[frozenset[str]] = None
-    relatores: Optional[frozenset[str]] = None
-    comarcas: Optional[frozenset[str]] = None
-    competencias: Optional[frozenset[str]] = None
-    categorias: Optional[frozenset[str]] = None
-    ufs: Optional[frozenset[str]] = None
-    motivos_extincao: Optional[frozenset[str]] = None
-    anos_ajuizamento: Optional[frozenset[str]] = None
-    resultados_embargos: Optional[frozenset[str]] = None
-
-    def ativo(self) -> bool:
-        return bool(
-            self.materias
-            or self.relatores
-            or self.comarcas
-            or self.competencias
-            or self.categorias
-            or self.ufs
-            or self.motivos_extincao
-            or self.anos_ajuizamento
-            or self.resultados_embargos
-        )
+JulgadosAcordaoFiltrosRJ = _familia.JulgadosAcordaoFiltros
 
 
-def _acordao_match_filtros_julgados_RJ(
-    item: dict[str, Any],
-    filtros: JulgadosAcordaoFiltrosRJ,
-) -> bool:
-    if filtros.materias is not None and not _valor_em_conjunto_filtro_julgados(
-        _get_materia(item), filtros.materias
-    ):
-        return False
-    if filtros.relatores is not None:
-        relator = _get_relator_2g(item)
-        if not relator or not _valor_em_conjunto_filtro_julgados(relator, filtros.relatores):
-            return False
-    if filtros.comarcas is not None and not _valor_em_conjunto_filtro_julgados(
-        _get_comarca(item), filtros.comarcas
-    ):
-        return False
-    if filtros.competencias is not None and not _valor_em_conjunto_filtro_julgados(
-        _get_competencia(item), filtros.competencias
-    ):
-        return False
-    if filtros.categorias is not None:
-        categoria = _get_categoria_2g_julgados(item)
-        if categoria is None or not _valor_em_conjunto_filtro_julgados(categoria, filtros.categorias):
-            return False
-    if filtros.ufs is not None:
-        uf = _get_uf(item)
-        if not uf or not _valor_em_conjunto_filtro_julgados(uf, filtros.ufs):
-            return False
-    if filtros.motivos_extincao is not None and not _valor_em_conjunto_filtro_julgados(
-        _get_motivo_extincao(item), filtros.motivos_extincao
-    ):
-        return False
-    if filtros.anos_ajuizamento is not None and not _valor_em_conjunto_filtro_julgados(
-        _get_ano_ajuizamento(item), filtros.anos_ajuizamento
-    ):
-        return False
-    if filtros.resultados_embargos is not None:
-        resultado = _get_resultado_embargos_acordao(item)
-        if resultado is None or not _valor_em_conjunto_filtro_julgados(resultado, filtros.resultados_embargos):
-            return False
-    return True
+_acordao_match_filtros_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._acordao_match_filtros_julgados)
 
 
-def filtrar_acordaos_julgados_RJ(
-    processos: list[dict[str, Any]],
-    filtros: Optional[JulgadosAcordaoFiltrosRJ],
-) -> list[dict[str, Any]]:
-    """Restringe processos aos filtros interativos (matéria/relator/comarca/competência/categoria/UF)."""
-    if filtros is None or not filtros.ativo():
-        return processos
-    return [item for item in processos if _acordao_match_filtros_julgados_RJ(item, filtros)]
+filtrar_acordaos_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.filtrar_acordaos_julgados)
 
 
 # =============================================================================
 # Base por escritório
 # =============================================================================
 
-@memo.por_pedido()
-def _base_julgados_RJ(processos: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Base padrão das análises Julgados RJ: ``ID_ESCRITORIO`` == 27, sem agravos
-    (ver :func:`~app.analyses.common.julgados_agravo.eh_processo_agravo`)."""
-    return julgados.base(processos, ID_ESCRITORIO_RJ)
+_base_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._base_julgados)
 
 
-@memo.por_pedido()
-def _filtrar_acordao_no_periodo(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    return [
-        row for row in processos
-        if _data_no_periodo(_get_data_acordao(row), from_date, to_date)
-    ]
+_filtrar_acordao_no_periodo = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._filtrar_acordao_no_periodo)
 
 
-@memo.por_pedido()
-def _filtrar_embargos_acordao_no_periodo(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Acórdãos embargados cujo embargo cai no período — eixo é a data do acórdão de embargos
-    (``ACORDAO_EMBARGOS``), não ``DATA_ACORDAO``: o acórdão original costuma ser de meses antes.
-    Sem período, todos os embargados (inclusive com resultado lançado e sem data de embargo)."""
-    if from_date is None and to_date is None:
-        return [row for row in processos if _get_resultado_embargos_acordao(row) is not None]
-    return [
-        row for row in processos
-        if _data_no_periodo(_get_data_embargos_acordao(row), from_date, to_date)
-    ]
+_filtrar_embargos_acordao_no_periodo = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._filtrar_embargos_acordao_no_periodo)
 
 
-def _contar_acordao_por_categoria(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-    categoria: Optional[frozenset[int]],
-) -> int:
-    """Conta acórdãos no período; ``categoria=None`` conta o total (sem filtro de ID_2G)."""
-    acordaos = _filtrar_acordao_no_periodo(processos, from_date, to_date)
-    if categoria is None:
-        return len(acordaos)
-    return sum(1 for row in acordaos if _get_id_2g(row) in categoria)
+_contar_acordao_por_categoria = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._contar_acordao_por_categoria)
 
 
 # =============================================================================
 # KPIs de Acórdão (2º Grau)
 # =============================================================================
 
-def _contar_acordao_nao_classificados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> int:
-    """Acórdãos no período cujo ID_2G não cai em Procedente/Improcedente/Extinto
-    (ex.: sentença anulada, encerrado 1G, ou sem status lançado)."""
-    total = _contar_acordao_por_categoria(processos, from_date, to_date, None)
-    classificados = sum(
-        _contar_acordao_por_categoria(processos, from_date, to_date, categoria)
-        for categoria in (_IDS_2G_PROCEDENTE, _IDS_2G_IMPROCEDENTE, _IDS_2G_EXTINTO)
-    )
-    return total - classificados
+_contar_acordao_nao_classificados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._contar_acordao_nao_classificados)
 
 
-def _valor_acordao_acordaos_procedentes_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> float:
-    """Soma de VALOR_ACORDAO (valor fixado no acórdão, ``processo.valor_causa_va``) dos acórdãos
-    procedentes do período — mesmo número da coluna "Valor do Acórdão" do relatório."""
-    total = 0.0
-    for row in _filtrar_acordao_no_periodo(processos, from_date, to_date):
-        if _get_id_2g(row) not in _IDS_2G_PROCEDENTE:
-            continue
-        try:
-            total += float(row.get("VALOR_ACORDAO") or 0)
-        except (TypeError, ValueError):
-            continue
-    return round(total, 2)
+_valor_acordao_acordaos_procedentes_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._valor_acordao_acordaos_procedentes)
 
 
-def _valor_causa_acordaos_procedentes_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> float:
-    """Soma de VALOR_CAUSA_ACORDO (valor de causa inicial, ``processo.valor_causa``) dos acórdãos procedentes do período."""
-    acordaos = _filtrar_acordao_no_periodo(processos, from_date, to_date)
-    return round(
-        sum(
-            _get_valor_causa_acordao(row)
-            for row in acordaos
-            if _get_id_2g(row) in _IDS_2G_PROCEDENTE
-        ),
-        2,
-    )
+_valor_causa_acordaos_procedentes_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._valor_causa_acordaos_procedentes)
 
 
-def _contar_acordao_embargados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> int:
-    """Acórdãos com embargo no período (eixo: data do acórdão de embargos)."""
-    acordaos = _filtrar_embargos_acordao_no_periodo(processos, from_date, to_date)
-    return sum(1 for row in acordaos if _get_resultado_embargos_acordao(row) is not None)
+_contar_acordao_embargados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._contar_acordao_embargados)
 
 
-def _contar_acordao_revertidos_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> int:
-    """Acórdãos com embargo no período revertidos a favor ("Revertido Ganho", resultado oficial)."""
-    acordaos = _filtrar_embargos_acordao_no_periodo(processos, from_date, to_date)
-    alvo = {mj.STATUS_EMBARGO_REVERTIDO_GANHO}
-    return sum(1 for row in acordaos if _get_resultado_embargos_acordao(row) in alvo)
+_contar_acordao_revertidos_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._contar_acordao_revertidos)
 
 
-def _tempo_medio_dias_acordao_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> Optional[float]:
-    """Média de dias entre DATA_SENTENCA (1G) e DATA_ACORDAO, para acórdãos do período com ambas
-    as datas válidas (acórdão >= sentença)."""
-    dias = tempo.duracoes(_filtrar_acordao_no_periodo(processos, from_date, to_date), _get_data_sentenca, _get_data_acordao, aceita_zero=True)
-    return tempo.media(dias, casas=1, vazio=None)
+_tempo_medio_dias_acordao_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._tempo_medio_dias_acordao)
 
 
-def _tempo_medio_dias_embargos_acordao_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> Optional[float]:
-    """Média de dias entre DATA_ACORDAO e a data do acórdão de embargos (ACORDAO_EMBARGOS), no mesmo
-    recorte da pizza "Resultado dos embargos" (embargo com data no período), só com as duas datas
-    válidas e embargo >= acórdão."""
-    dias = tempo.duracoes(_filtrar_embargos_acordao_no_periodo(processos, from_date, to_date), _get_data_acordao, _get_data_embargos_acordao, aceita_zero=True)
-    return tempo.media(dias, casas=1, vazio=None)
+_tempo_medio_dias_embargos_acordao_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._tempo_medio_dias_embargos_acordao)
 
 
 def get_kpis_acordao_julgados_RJ(
@@ -480,108 +270,28 @@ def get_kpis_acordao_julgados_RJ(
 # Comparativos (mesmo padrão de analyses/NG/comercial_geral.py)
 # =============================================================================
 
-_resolver_periodos_comparativo_julgados_RJ = julgados.resolver_periodos_comparativo  # V2: app/analyses/common/julgados.py
+_resolver_periodos_comparativo_julgados_RJ = _familia._resolver_periodos_comparativo_julgados
 
 
-def _comparativo_variacao_percentual_julgados_RJ(
-    processos_ng: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-    categoria: Optional[frozenset[int]],
-) -> float:
-    inicio_atual, fim_atual, inicio_anterior, fim_anterior = (
-        _resolver_periodos_comparativo_julgados_RJ(from_date, to_date)
-    )
-    valor_atual = _contar_acordao_por_categoria(processos_ng, inicio_atual, fim_atual, categoria)
-    valor_anterior = _contar_acordao_por_categoria(processos_ng, inicio_anterior, fim_anterior, categoria)
-
-    return periodo.variacao_percentual(valor_atual, valor_anterior)
+_comparativo_variacao_percentual_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._comparativo_variacao_percentual_julgados)
 
 
-def _comparativo_variacao_percentual_nao_classificados_julgados_RJ(
-    processos_ng: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> float:
-    inicio_atual, fim_atual, inicio_anterior, fim_anterior = (
-        _resolver_periodos_comparativo_julgados_RJ(from_date, to_date)
-    )
-    valor_atual = _contar_acordao_nao_classificados_RJ(processos_ng, inicio_atual, fim_atual)
-    valor_anterior = _contar_acordao_nao_classificados_RJ(processos_ng, inicio_anterior, fim_anterior)
-
-    return periodo.variacao_percentual(valor_atual, valor_anterior)
+_comparativo_variacao_percentual_nao_classificados_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._comparativo_variacao_percentual_nao_classificados_julgados)
 
 
-def _comparativo_variacao_percentual_valor_fixado_acordao_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> float:
-    inicio_atual, fim_atual, inicio_anterior, fim_anterior = (
-        _resolver_periodos_comparativo_julgados_RJ(from_date, to_date)
-    )
-    valor_atual = _valor_acordao_acordaos_procedentes_RJ(processos, inicio_atual, fim_atual)
-    valor_anterior = _valor_acordao_acordaos_procedentes_RJ(processos, inicio_anterior, fim_anterior)
-
-    return periodo.variacao_percentual(valor_atual, valor_anterior)
+_comparativo_variacao_percentual_valor_fixado_acordao_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._comparativo_variacao_percentual_valor_fixado_acordao_julgados)
 
 
-def _comparativo_variacao_percentual_valor_acordao_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> float:
-    inicio_atual, fim_atual, inicio_anterior, fim_anterior = (
-        _resolver_periodos_comparativo_julgados_RJ(from_date, to_date)
-    )
-    valor_atual = _valor_causa_acordaos_procedentes_RJ(processos, inicio_atual, fim_atual)
-    valor_anterior = _valor_causa_acordaos_procedentes_RJ(processos, inicio_anterior, fim_anterior)
-
-    return periodo.variacao_percentual(valor_atual, valor_anterior)
+_comparativo_variacao_percentual_valor_acordao_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._comparativo_variacao_percentual_valor_acordao_julgados)
 
 
-def _comparativo_variacao_percentual_embargados_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> float:
-    inicio_atual, fim_atual, inicio_anterior, fim_anterior = (
-        _resolver_periodos_comparativo_julgados_RJ(from_date, to_date)
-    )
-    valor_atual = _contar_acordao_embargados_RJ(processos, inicio_atual, fim_atual)
-    valor_anterior = _contar_acordao_embargados_RJ(processos, inicio_anterior, fim_anterior)
-
-    return periodo.variacao_percentual(valor_atual, valor_anterior)
+_comparativo_variacao_percentual_embargados_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._comparativo_variacao_percentual_embargados_julgados)
 
 
-def _comparativo_variacao_percentual_revertidos_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> float:
-    inicio_atual, fim_atual, inicio_anterior, fim_anterior = (
-        _resolver_periodos_comparativo_julgados_RJ(from_date, to_date)
-    )
-    valor_atual = _contar_acordao_revertidos_RJ(processos, inicio_atual, fim_atual)
-    valor_anterior = _contar_acordao_revertidos_RJ(processos, inicio_anterior, fim_anterior)
-
-    return periodo.variacao_percentual(valor_atual, valor_anterior)
+_comparativo_variacao_percentual_revertidos_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._comparativo_variacao_percentual_revertidos_julgados)
 
 
-def _comparativo_variacao_percentual_tempo_medio_acordao_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> float:
-    inicio_atual, fim_atual, inicio_anterior, fim_anterior = (
-        _resolver_periodos_comparativo_julgados_RJ(from_date, to_date)
-    )
-    valor_atual = _tempo_medio_dias_acordao_RJ(processos, inicio_atual, fim_atual)
-    valor_anterior = _tempo_medio_dias_acordao_RJ(processos, inicio_anterior, fim_anterior)
-
-    if valor_atual is None or not valor_anterior:
-        return 0.0
-    return periodo.variacao_percentual(valor_atual, valor_anterior)
+_comparativo_variacao_percentual_tempo_medio_acordao_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._comparativo_variacao_percentual_tempo_medio_acordao_julgados)
 
 
 def get_comparativos_acordao_julgados_RJ(
@@ -629,121 +339,29 @@ def get_comparativos_acordao_julgados_RJ(
 # Ranking de relatores (2G): Procedentes / Improcedentes / Extintos
 # =============================================================================
 
-def get_ranking_relatores_acordao_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """
-    Ranking de relatores (2G) pelos acórdãos do período: taxa de procedência e
-    distribuição Procedentes / Improcedentes / Extintos.
-
-    Acórdãos com ``ID_2G`` fora dessas 3 categorias (não classificáveis) não
-    entram na contagem — mesmo critério de `recurso_RJ.filtrar_por_relator_2g_recurso_RJ`.
-    """
-    base = _base_julgados_RJ(processos)
-    acordaos = _filtrar_acordao_no_periodo(base, from_date, to_date)
-
-    acc: dict[str, dict[str, Any]] = {}
-    for item in acordaos:
-        nome = _get_relator_2g(item)
-        if not nome:
-            continue
-        resultado = _classificar_resultado_2g_julgados(_get_id_2g(item))
-        if resultado is None:
-            continue
-        chave = nome.casefold()
-        if chave not in acc:
-            acc[chave] = {"name": nome, _RESULTADO_FAV: 0, _RESULTADO_DES: 0, _RESULTADO_OUTROS: 0}
-        acc[chave][resultado] += 1
-
-    linhas: list[dict[str, Any]] = []
-    for row in acc.values():
-        fav = int(row[_RESULTADO_FAV])
-        des = int(row[_RESULTADO_DES])
-        outros = int(row[_RESULTADO_OUTROS])
-        total = fav + des + outros
-        if total <= 0:
-            continue
-        linhas.append({
-            "name": row["name"],
-            "initials": _iniciais_nome(str(row["name"])),
-            "total_casos": total,
-            "taxa_sucesso": round((fav / total) * 100, 1),
-            "fav": fav,
-            "des": des,
-            "outros": outros,
-            "percent_fav": round((fav / total) * 100, 1),
-            "percent_des": round((des / total) * 100, 1),
-            "percent_outros": round((outros / total) * 100, 1),
-        })
-
-    linhas.sort(
-        key=lambda x: (
-            -float(x.get("taxa_sucesso") or 0),
-            -int(x.get("total_casos") or 0),
-            str(x.get("name") or ""),
-        )
-    )
-    return linhas
+get_ranking_relatores_acordao_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_ranking_relatores_acordao_julgados)
 
 
 # =============================================================================
 # Distribuição por matéria / competência / comarca
 # =============================================================================
 
-_agrupar_por_campo = julgados.agrupar_por_campo  # V2: app/analyses/common/julgados.py
+_agrupar_por_campo = _familia._agrupar_por_campo
 
 
-def _group_acordao_por_campo_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-    obter_campo: Any,
-) -> list[dict[str, Any]]:
-    """Distribuição dos acórdãos do período por um campo qualquer (``percent`` soma 100%)."""
-    base = _base_julgados_RJ(processos)
-    acordaos = _filtrar_acordao_no_periodo(base, from_date, to_date)
-    return _agrupar_por_campo(acordaos, obter_campo)
+_group_acordao_por_campo_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._group_acordao_por_campo_julgados)
 
 
-def group_acordao_por_materia_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Distribuição dos acórdãos do período por matéria (``percent`` soma 100%)."""
-    return _group_acordao_por_campo_julgados_RJ(processos, from_date, to_date, _get_materia)
+group_acordao_por_materia_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_acordao_por_materia_julgados)
 
 
-def group_acordao_por_competencia_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Distribuição dos acórdãos do período por competência (``percent`` soma 100%)."""
-    return _group_acordao_por_campo_julgados_RJ(processos, from_date, to_date, _get_competencia)
+group_acordao_por_competencia_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_acordao_por_competencia_julgados)
 
 
-def group_acordao_por_comarca_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Distribuição dos acórdãos do período por comarca (``percent`` soma 100%)."""
-    return _group_acordao_por_campo_julgados_RJ(processos, from_date, to_date, _get_comarca)
+group_acordao_por_comarca_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_acordao_por_comarca_julgados)
 
 
-def group_acordao_por_motivo_extincao_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Distribuição dos acórdãos extintos do período por motivo da extinção (``percent`` soma 100%)."""
-    base = _base_julgados_RJ(processos)
-    acordaos = _filtrar_acordao_no_periodo(base, from_date, to_date)
-    extintos = [row for row in acordaos if _get_id_2g(row) in _IDS_2G_EXTINTO]
-    return _agrupar_por_campo(extintos, _get_motivo_extincao)
+group_acordao_por_motivo_extincao_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_acordao_por_motivo_extincao_julgados)
 
 
 # =============================================================================
@@ -753,151 +371,34 @@ def group_acordao_por_motivo_extincao_julgados_RJ(
 # informado no 2G e ranking de relatores. (STJ/STF só no NG por enquanto — LA/RJ funcionam diferente.)
 # =============================================================================
 
-def _acordaos_improcedentes_no_escopo_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> list[dict[str, Any]]:
-    """Acórdãos improcedentes (``ID_2G`` improcedente) no escopo informado."""
-    base = _base_julgados_RJ(processos)
-    acordaos = _filtrar_acordao_no_periodo(base, from_date, to_date)
-    return [row for row in acordaos if _get_id_2g(row) in _IDS_2G_IMPROCEDENTE]
+_acordaos_improcedentes_no_escopo_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._acordaos_improcedentes_no_escopo)
 
 
-def _uf_por_comarca_julgados_acordao_RJ(processos: list[dict[str, Any]]) -> dict[str, str]:
-    """UF mais frequente por comarca (histórico completo do escritório) — para o mapa multi-UF."""
-    contagem: defaultdict[str, defaultdict[str, int]] = defaultdict(lambda: defaultdict(int))
-    for row in _base_julgados_RJ(processos):
-        uf = _get_uf(row)
-        if uf:
-            contagem[_get_comarca(row)][uf] += 1
-    return {nome: max(por_uf.items(), key=lambda kv: kv[1])[0] for nome, por_uf in contagem.items()}
+_uf_por_comarca_julgados_acordao_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._uf_por_comarca_julgados_acordao)
 
 
-def _tempo_medio_dias_por_comarca_acordao_RJ(processos: list[dict[str, Any]]) -> dict[str, float]:
-    """Média de dias entre a sentença e o acórdão, por comarca — histórico completo do escritório,
-    independente de categoria e do escopo (mesma métrica do card "Tempo médio" do Acórdão)."""
-    por_comarca = tempo.duracoes_por_grupo(
-        _base_julgados_RJ(processos), _get_data_sentenca, _get_data_acordao, lambda row, _fim: _get_comarca(row), aceita_zero=True
-    )
-    return {nome: tempo.media(dias, casas=1) for nome, dias in por_comarca.items()}
+_tempo_medio_dias_por_comarca_acordao_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._tempo_medio_dias_por_comarca_acordao)
 
 
-def group_acordao_improcedentes_por_comarca_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Acórdãos improcedentes do escopo por comarca (qtd, valor de causa inicial, UF, tempo médio)."""
-    improcedentes = _acordaos_improcedentes_no_escopo_RJ(processos, from_date, to_date)
-    uf_por_comarca = _uf_por_comarca_julgados_acordao_RJ(processos)
-    tempo_medio = _tempo_medio_dias_por_comarca_acordao_RJ(processos)
-    contagem: defaultdict[str, int] = defaultdict(int)
-    valores: defaultdict[str, float] = defaultdict(float)
-    for row in improcedentes:
-        comarca = _get_comarca(row)
-        contagem[comarca] += 1
-        valores[comarca] += _get_valor_causa_acordao(row)
-    total = float(sum(contagem.values()))
-    itens = [
-        {
-            "name": nome,
-            "value": float(qtd),
-            "percent": round(100.0 * float(qtd) / total, 1) if total > 0 else 0.0,
-            "valor_causa": round(valores.get(nome, 0.0), 2),
-            "uf": uf_por_comarca.get(nome),
-            "tempo_medio_dias": tempo_medio.get(nome),
-        }
-        for nome, qtd in contagem.items()
-    ]
-    return sorted(itens, key=lambda x: float(x["value"]), reverse=True)
+group_acordao_improcedentes_por_comarca_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_acordao_improcedentes_por_comarca_julgados)
 
 
-def group_acordao_por_motivo_improcedencia_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Acórdãos improcedentes do escopo por motivo informado no 2G (``MOTIVO_STATUS_2G``)."""
-    improcedentes = _acordaos_improcedentes_no_escopo_RJ(processos, from_date, to_date)
-    return _agrupar_por_campo(improcedentes, _get_motivo_extincao)
+group_acordao_por_motivo_improcedencia_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_acordao_por_motivo_improcedencia_julgados)
 
 
-def get_ranking_relatores_improcedencia_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Ranking de relatores (2G) pela quantidade de acórdãos improcedentes (sem relator não entra)."""
-    improcedentes = _acordaos_improcedentes_no_escopo_RJ(processos, from_date, to_date)
-    return _agrupar_por_campo([row for row in improcedentes if _get_relator_2g(row)], _get_relator_2g)
+get_ranking_relatores_improcedencia_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_ranking_relatores_improcedencia_julgados)
 
 
-def get_improcedencia_acordao_totais_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> dict[str, Any]:
-    """Total de acórdãos improcedentes e soma do valor de causa inicial no escopo."""
-    improcedentes = _acordaos_improcedentes_no_escopo_RJ(processos, from_date, to_date)
-    return {
-        "total": len(improcedentes),
-        "valor_causa": round(sum(_get_valor_causa_acordao(row) for row in improcedentes), 2),
-    }
+get_improcedencia_acordao_totais_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_improcedencia_acordao_totais_julgados)
 
 
-def get_total_acordaos_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> int:
-    """Total de acórdãos (todas as categorias) no escopo — denominador do "a cada 10"."""
-    return len(_filtrar_acordao_no_periodo(_base_julgados_RJ(processos), from_date, to_date))
+get_total_acordaos_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_total_acordaos_julgados)
 
 
-def group_acordao_por_ano_ajuizamento_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """
-    Total de acórdãos do período (todos, sem filtro de categoria), agrupados pelo
-    ano de ajuizamento (DATA_AJUIZAMENTO) do processo — quantidade (``value``) e
-    soma do valor de causa do acórdão (``valor_causa``) por ano.
-    """
-    base = _base_julgados_RJ(processos)
-    acordaos = _filtrar_acordao_no_periodo(base, from_date, to_date)
-
-    contagem: defaultdict[str, int] = defaultdict(int)
-    valores: defaultdict[str, float] = defaultdict(float)
-    for row in acordaos:
-        ano = _get_ano_ajuizamento(row)
-        contagem[ano] += 1
-        valores[ano] += _get_valor_causa_acordao(row)
-
-    return sorted(
-        [
-            {"name": nome, "value": qtd, "valor_causa": round(valores.get(nome, 0.0), 2)}
-            for nome, qtd in contagem.items()
-        ],
-        key=lambda x: x["name"],
-    )
+group_acordao_por_ano_ajuizamento_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_acordao_por_ano_ajuizamento_julgados)
 
 
-def group_acordao_embargos_resultado_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Distribuição dos acórdãos com embargo no período (eixo: data do acórdão de embargos) por Status Resultante dos embargos
-    (ordem fixa de ``mj.STATUS_EMBARGO_ORDEM``, zeros incluídos) — ver ``_get_resultado_embargos_acordao``."""
-    base = _base_julgados_RJ(processos)
-    status = [
-        resultado
-        for row in _filtrar_embargos_acordao_no_periodo(base, from_date, to_date)
-        if (resultado := _get_resultado_embargos_acordao(row)) is not None
-    ]
-    return mj.agrupar_status_embargos(status)
+group_acordao_embargos_resultado_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_acordao_embargos_resultado_julgados)
 
 
 # =============================================================================
@@ -905,92 +406,39 @@ def group_acordao_embargos_resultado_julgados_RJ(
 # gráfico "Acórdãos mês a mês" (uma série por categoria; ano filtrado no front)
 # =============================================================================
 
-def _group_acordao_por_mes_categoria_RJ(
-    processos: list[dict[str, Any]],
-    categoria: Optional[frozenset[int]],
-) -> list[dict[str, Any]]:
-    """Total de acórdãos por mês (histórico completo), opcionalmente restrito a uma categoria de ``ID_2G``."""
-    base = _base_julgados_RJ(processos)
-    grouped: dict[str, dict[str, Any]] = {}
-
-    for row in base:
-        d = _get_data_acordao(row)
-        if not d:
-            continue
-        if categoria is not None and _get_id_2g(row) not in categoria:
-            continue
-        month_key = f"{d.year}-{d.month:02d}"
-        if month_key not in grouped:
-            month_name = f"{_MONTH_NAMES[d.month - 1]} {d.year}"
-            grouped[month_key] = {"name": month_name, "value": 0, "sort_key": month_key}
-        grouped[month_key]["value"] += 1
-
-    return [
-        {"name": item["name"], "value": item["value"]}
-        for item in sorted(grouped.values(), key=lambda x: x["sort_key"])
-    ]
+_group_acordao_por_mes_categoria_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._group_acordao_por_mes_categoria)
 
 
-def group_julgados_acordao_procedentes_por_mes_RJ(
-    processos: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Acórdãos procedentes por mês (histórico completo do escritório RJ)."""
-    return _group_acordao_por_mes_categoria_RJ(processos, _IDS_2G_PROCEDENTE)
+group_julgados_acordao_procedentes_por_mes_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_julgados_acordao_procedentes_por_mes)
 
 
-def group_julgados_acordao_improcedentes_por_mes_RJ(
-    processos: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Acórdãos improcedentes por mês (histórico completo do escritório RJ)."""
-    return _group_acordao_por_mes_categoria_RJ(processos, _IDS_2G_IMPROCEDENTE)
+group_julgados_acordao_improcedentes_por_mes_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_julgados_acordao_improcedentes_por_mes)
 
 
-def group_julgados_acordao_extintos_por_mes_RJ(
-    processos: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Acórdãos extintos por mês (histórico completo do escritório RJ)."""
-    return _group_acordao_por_mes_categoria_RJ(processos, _IDS_2G_EXTINTO)
+group_julgados_acordao_extintos_por_mes_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.group_julgados_acordao_extintos_por_mes)
 
 
 # =============================================================================
 # Opções de UF (para o filtro ao lado do seletor de período)
 # =============================================================================
 
-def get_opcoes_uf_julgados_acordao_RJ(processos: list[dict[str, Any]]) -> list[str]:
-    """UFs distintas presentes no escritório RJ (histórico completo, sem filtros)."""
-    base = _base_julgados_RJ(processos)
-    ufs = {_get_uf(item) for item in base if _get_uf(item)}
-    return sorted(ufs)
+get_opcoes_uf_julgados_acordao_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_opcoes_uf_julgados_acordao)
 
 
 # =============================================================================
 # Acórdãos com campos vazios (relator / matéria / comarca / competência / UF)
 # =============================================================================
 
-_IDS_MERITO_COM_PE: frozenset[int] = frozenset({mj.ID_MERITO_PROCEDENTE_COM_PE, mj.ID_MERITO_PARC_PROCEDENTE_COM_PE})
+_IDS_MERITO_COM_PE = _familia._IDS_MERITO_COM_PE
 
 
-def _falta_valor_pe_acordao(row: dict[str, Any]) -> bool:
-    """Mérito com proveito econômico (procedente ou parcialmente procedente) sem o valor da acórdão
-    (``VALOR_ACORDAO``) — vazio ou zero."""
-    if _get_id_2g(row) not in _IDS_MERITO_COM_PE:
-        return False
-    valor = row.get("VALOR_ACORDAO")
-    try:
-        return valor is None or float(valor) <= 0
-    except (TypeError, ValueError):
-        return True
+_falta_valor_pe_acordao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._falta_valor_pe_acordao)
 
 
-def _merito_sem_data_acordao(row: dict[str, Any]) -> bool:
-    """Mérito 2G lançado mas sem data do acórdão (vazia ou inválida) — fica fora de todas as
-    contagens do dashboard, que usam ``DATA_ACORDAO`` como eixo."""
-    return _get_id_2g(row) is not None and _get_data_acordao(row) is None
+_merito_sem_data_acordao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._merito_sem_data_acordao)
 
 
-def _data_sem_merito_acordao(row: dict[str, Any]) -> bool:
-    """Data do acórdão lançada mas sem mérito 2G — entra no total, mas cai em "Não classificados"."""
-    return _get_data_acordao(row) is not None and _get_id_2g(row) is None
+_data_sem_merito_acordao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._data_sem_merito_acordao)
 
 
 def get_julgados_acordao_campos_vazios_RJ(
@@ -1025,101 +473,26 @@ def get_julgados_acordao_campos_vazios_RJ(
     }
 
 
-def get_julgados_acordao_dados_faltando_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Acórdãos do período com relator/matéria/comarca/competência/UF faltando —
-    número do processo + campo faltando (alimenta o alerta clicável do dashboard)."""
-    base = _base_julgados_RJ(processos)
-    acordaos = _filtrar_acordao_no_periodo(base, from_date, to_date)
-
-    def _numero(row: dict[str, Any]) -> str:
-        return str(row.get("NUMERO_PROCESSO") or row.get("numero_processo") or "").strip()
-
-    itens: list[dict[str, Any]] = []
-    for row in acordaos:
-        numero = _numero(row)
-        if not _get_relator_2g(row):
-            itens.append({"numero_processo": numero, "campo": "Relator"})
-        if _get_materia(row) == _SEM_MATERIA:
-            itens.append({"numero_processo": numero, "campo": "Matéria"})
-        if _get_comarca(row) == _SEM_COMARCA:
-            itens.append({"numero_processo": numero, "campo": "Comarca"})
-        if _get_competencia(row) == _SEM_COMPETENCIA:
-            itens.append({"numero_processo": numero, "campo": "Competência"})
-        if not _get_uf(row):
-            itens.append({"numero_processo": numero, "campo": "UF"})
-        if _falta_valor_pe_acordao(row):
-            itens.append({"numero_processo": numero, "campo": "Valor do acórdão"})
-    for row in base:
-        if _merito_sem_data_acordao(row):
-            itens.append({"numero_processo": _numero(row), "campo": "Data do acórdão (mérito lançado)"})
-        elif _data_sem_merito_acordao(row):
-            itens.append({"numero_processo": _numero(row), "campo": "Mérito do acórdão (data lançada)"})
-    return itens
+get_julgados_acordao_dados_faltando_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.get_julgados_acordao_dados_faltando)
 
 
 # =============================================================================
 # Lista de acórdãos (tabela): Nº processo, fase, subfase, status 2G, UF, relator, data
 # =============================================================================
 
-_get_fase = julgados.fase  # V2: app/analyses/common/julgados.py
+_get_fase = _familia._get_fase
 
 
-_get_subfase = julgados.subfase  # V2: app/analyses/common/julgados.py
+_get_subfase = _familia._get_subfase
 
 
-def _get_status_2g(item: dict[str, Any]) -> str:
-    nome = str(item.get("STATUS_2G") or item.get("status_2g") or "").strip()
-    return nome if nome else "—"
+_get_status_2g = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_status_2g)
 
 
-def _get_status_embargos_acordao(item: dict[str, Any]) -> str:
-    """Status oficial do acórdão de embargos (``STATUS_ACORDAO_EMBARGOS``) — campo real da
-    query, preenchido parcialmente desde out/2026 (ver seção "Embargos e reversão" da documentação)."""
-    nome = str(item.get("STATUS_ACORDAO_EMBARGOS") or item.get("status_acordao_embargos") or "").strip()
-    return nome if nome else "—"
+_get_status_embargos_acordao = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia._get_status_embargos_acordao)
 
 
-_get_numero_processo = julgados.numero_processo_linha  # V2: app/analyses/common/julgados.py
+_get_numero_processo = _familia._get_numero_processo
 
 
-def list_acordaos_julgados_RJ(
-    processos: list[dict[str, Any]],
-    from_date: Optional[date] = None,
-    to_date: Optional[date] = None,
-) -> list[dict[str, Any]]:
-    """Lista de acórdãos do período para a tabela: nº processo, fase, subfase, status 2G, UF, relator,
-    data, status do acórdão de embargos (oficial, preenchimento parcial) e data do acórdão de embargos."""
-    base = _base_julgados_RJ(processos)
-    acordaos = _filtrar_acordao_no_periodo(base, from_date, to_date)
-
-    itens: list[dict[str, Any]] = []
-    for row in acordaos:
-        ag_id = _to_int(row.get("ID") or row.get("id"))
-        data_acordao = _get_data_acordao(row)
-        data_embargos = _get_data_embargos_acordao(row)
-        uf = _get_uf(row)
-        relator = _get_relator_2g(row)
-        itens.append({
-            "id": ag_id,
-            "numero_processo": _get_numero_processo(row),
-            "fase": _get_fase(row),
-            "subfase": _get_subfase(row),
-            "status_2g": _get_status_2g(row),
-            "uf": uf if uf else "—",
-            "relator": relator if relator else "—",
-            "data_acordao": data_acordao.isoformat() if data_acordao else None,
-            "status_acordao_embargos": _get_status_embargos_acordao(row),
-            "data_acordao_embargos": data_embargos.isoformat() if data_embargos else None,
-        })
-
-    com_data = sorted(
-        (i for i in itens if i["data_acordao"]),
-        key=lambda i: i["data_acordao"],
-        reverse=True,
-    )
-    sem_data = [i for i in itens if not i["data_acordao"]]
-    return com_data + sem_data
+list_acordaos_julgados_RJ = _unidade.na_unidade(_familia._UNIDADE, _VALORES_UNIDADE, _familia.list_acordaos_julgados)
