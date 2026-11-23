@@ -4014,3 +4014,10 @@ QUERIES["log_subfase_processual_RJ"] = {
         ),
         "params": []
     }
+
+
+# Agravos fora de toda query do LexFlow que lê processo (regra da v1 de 06/11/2026, que lá rodava no fim do
+# queries.py). Fica no fim do arquivo, depois de todas as queries; agendamentos_* ficam de fora. Ver lexflow_agravo.
+from app.lexflow_agravo import aplicar_em as _excluir_agravos
+
+_excluir_agravos(QUERIES)
