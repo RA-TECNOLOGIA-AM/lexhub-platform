@@ -58,6 +58,32 @@ export function deleteUnitIn(data: SourcesResponse, code: string, confirmName: s
     if (confirmName.trim().toLowerCase() !== impact.name.trim().toLowerCase()) {
         throw new DataError(409, 'Digite o nome da unidade para confirmar.')
     }
+    const removed = data.units.find((u) => u.unit.code === code)!
     data.units = data.units.filter((u) => u.unit.code !== code)
     if (data.unitLimit) data.unitLimit = { ...data.unitLimit, used: data.unitLimit.used - 1 }
+    const now = new Date()
+    data.deletedUnits.unshift({
+        code,
+        name: impact.name,
+        deletedAt: now.toISOString(),
+        purgeAt: new Date(now.getTime() + 30 * DAY_MS).toISOString(),
+        deletedBy: 'Você',
+    })
+    trash.set(code, { ...removed, sources: [], lastFailure: null }) // volta sem as fontes próprias
+}
+
+// O que a exclusão guardou para restaurar (no banco: a própria linha arquivada).
+const trash = new Map<string, UnitSources>()
+const DAY_MS = 24 * 60 * 60 * 1000
+
+export function restoreUnitIn(data: SourcesResponse, code: string): UnitSources {
+    const deleted = data.deletedUnits.find((u) => u.code === code)
+    const unit = trash.get(code)
+    if (!deleted || !unit) throw new DataError(409, 'Unidade excluída não encontrada.')
+    data.deletedUnits = data.deletedUnits.filter((u) => u.code !== code)
+    trash.delete(code)
+    data.units.push(unit)
+    data.units.sort((a, b) => a.unit.name.localeCompare(b.unit.name, 'pt-BR'))
+    if (data.unitLimit) data.unitLimit = { ...data.unitLimit, used: data.unitLimit.used + 1 }
+    return unit
 }

@@ -7,6 +7,7 @@ import { Notice } from '../../../components/ui/Notice.tsx'
 import { ErrorState } from '../../../components/states/ErrorState.tsx'
 import { LoadingState } from '../../../components/states/LoadingState.tsx'
 import { dataClient } from '../../../services/client.ts'
+import { toDataError } from '../../../services/errors.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
 import { SourceList } from './SourceList.tsx'
 import { UnitNav } from './UnitNav.tsx'
@@ -57,6 +58,20 @@ export function SourcesPage() {
         pickUnitCode(saved.unit.code)
     }
 
+    // Volta a unidade sem as fontes próprias (foram apagadas com as senhas na exclusão).
+    async function restoreUnit(code: string) {
+        try {
+            const restored = await dataClient.restoreUnit(org, code)
+            setVersion((v) => v + 1)
+            pickUnitCode(restored.unit.code)
+            setNotice(
+                `${restored.unit.name} foi restaurada. As fontes próprias dela não voltam: conecte de novo se precisar.`,
+            )
+        } catch (err) {
+            setNotice(toDataError(err).message)
+        }
+    }
+
     async function linkOffice(product: ProductKey, ref: string) {
         if (!current) return
         await dataClient.linkProductOffice(org, current.unit.code, product, ref)
@@ -96,6 +111,8 @@ export function SourcesPage() {
                         limit={data.unitLimit}
                         onPick={pickUnitCode}
                         onAdd={data.canManageUnits ? () => setForm({ mode: 'create' }) : undefined}
+                        deleted={data.deletedUnits}
+                        onRestore={data.canManageUnits ? restoreUnit : undefined}
                     />
                     {current && (
                         <div className="sources-main">

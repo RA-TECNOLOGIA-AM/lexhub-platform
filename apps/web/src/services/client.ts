@@ -132,6 +132,8 @@ export interface DataClient {
     // Travada, última da organização ou nome digitado errado = 409 com a mensagem.
     getUnitDeletionImpact(org: string, unit: string): Promise<UnitDeletionImpact>
     deleteUnit(org: string, unit: string, confirmName: string): Promise<void>
+    // Restaurar unidade excluída há menos de 30 dias (volta sem as fontes próprias, apagadas na exclusão).
+    restoreUnit(org: string, unit: string): Promise<UnitSources>
     // Conectar fonte (só a TI da LexGroup; os outros recebem 403). A lista vem do banco do produto (API);
     // ligar grava a ref da unidade (Supabase). Escritório já ligado / unidade já ligada = 409 com a mensagem.
     listProductOffices(product: ProductKey): Promise<ProductOffices>
@@ -150,6 +152,8 @@ export interface DataClient {
     // Encerrar organização (some de todas as telas, histórico guardado). A LexGroup nunca.
     getOrgClosureImpact(org: string): Promise<OrgClosureImpact>
     closeOrganization(org: string, confirmName: string): Promise<void>
+    // Reabrir encerrada há menos de 30 dias: unidades e membros voltam como estavam; as fontes, não.
+    reopenOrganization(org: string): Promise<void>
     // Fontes com falha de cada organização (slug -> chaves), pela regra da tela Unidades e fontes. Só a TI da
     // LexGroup (os outros recebem 403). Lê só o registro de leituras da API, nunca os bancos de origem.
     getFailingSources(): Promise<Record<string, string[]>>

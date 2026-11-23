@@ -470,6 +470,16 @@ export type OrgClosureImpact = {
 export type ClientsResponse = {
     clients: PlatformClient[]
     monthlyRevenue: number | null // null = preços ainda não definidos (mostra R$ [—])
+    closed: ClosedOrg[] // encerradas há menos de 30 dias (dá para reabrir; depois somem de vez)
+}
+
+// Organização encerrada que ainda dá para reabrir (api.list_clients.closed).
+export type ClosedOrg = {
+    slug: string
+    name: string
+    closedAt: string // ISO
+    purgeAt: string // ISO: quando a limpeza apaga tudo de vez (closedAt + 30 dias)
+    closedBy: string | null // e-mail de quem encerrou
 }
 
 // Unidades e fontes: de onde vêm os dados de cada unidade (conectores).
@@ -606,6 +616,16 @@ export type SourcesResponse = {
     unitLimit: { used: number; total: number } | null // "3 de 5 unidades do plano"; null = o plano não limita
     canManageUnits: boolean // Owner/Desenvolvedor: criar unidade e editar nome/fuso
     canManageSources: boolean // só Owner/Desenvolvedor da LexGroup: conectar e gerenciar fontes
+    deletedUnits: DeletedUnit[] // excluídas há menos de 30 dias (só para quem gere unidades; senão [])
+}
+
+// Unidade excluída que ainda dá para restaurar (api.list_sources.deletedUnits).
+export type DeletedUnit = {
+    code: string
+    name: string
+    deletedAt: string // ISO
+    purgeAt: string // ISO: quando a limpeza apaga de vez (deletedAt + 30 dias)
+    deletedBy: string | null // nome na organização ou e-mail de quem excluiu
 }
 
 // Conectar fonte: os produtos Lex cujo escritório se escolhe numa lista do banco do produto.

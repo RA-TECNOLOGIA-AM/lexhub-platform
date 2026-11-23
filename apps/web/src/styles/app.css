@@ -467,6 +467,23 @@ button.org:hover {
 .unit-limit {
     padding: 8px 10px;
 }
+/* Unidades excluídas (restauráveis por 30 dias), no fim da lista */
+.unit-deleted {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--divider);
+}
+.unit-deleted-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 4px 8px;
+    opacity: 0.85;
+}
 .unit-add {
     color: var(--link);
 }
@@ -666,6 +683,20 @@ button.org:hover {
     margin-right: auto;
 }
 /* Clientes: as unidades da organização, cada uma leva para Unidades e fontes */
+/* Clientes: encerradas que ainda dá para reabrir */
+.closed-orgs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.closed-org-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    border-top: 1px solid var(--divider);
+}
 .client-units {
     display: flex;
     flex-wrap: wrap;

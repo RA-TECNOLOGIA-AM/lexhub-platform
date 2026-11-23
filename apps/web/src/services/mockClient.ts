@@ -32,7 +32,7 @@ import {
     sources,
     testUsers,
 } from './mock/index.ts'
-import type { DashboardCatalog, DashboardQuery, Meta } from '../types/index.ts'
+import type { DashboardCatalog, DashboardQuery, Meta, PlatformClient } from '../types/index.ts'
 import { metaFor } from './mock/helpers.ts'
 import { orgDocumentosLegadoFor } from './mock/orgDocumentosLegado.ts'
 import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
@@ -55,7 +55,7 @@ import { preProtocoloFor } from './mock/preProtocolo.ts'
 import { peticionamentoLegadoFor } from './mock/peticionamentoLegado.ts'
 import { protocoloLegadoFor } from './mock/protocoloLegado.ts'
 import { sourceDetailFor } from './mock/sourceDetail.ts'
-import { createUnitIn, deleteUnitIn, unitImpactIn, updateUnitIn } from './mock/units.ts'
+import { createUnitIn, deleteUnitIn, restoreUnitIn, unitImpactIn, updateUnitIn } from './mock/units.ts'
 import { linkOfficeIn, productOffices } from './mock/offices.ts'
 import {
     changeSecretIn,
@@ -145,6 +145,9 @@ function who() {
         hasAccess: !blocked,
     }
 }
+
+// O que o encerramento guardou para reabrir (no banco: a própria linha, com active = false).
+const closedClients = new Map<string, PlatformClient>()
 
 // As unidades da LexGroup que não saem pela tela (app.units.deletion_locked).
 const LOCKED_UNITS = ['NG', 'LA_AM', 'LA_RJ'] // no banco: NG, LA e RJ
@@ -507,6 +510,12 @@ export function createMockClient(): DataClient {
             return unitImpactIn(own ? sources : onboardingSources, unit, own ? LOCKED_UNITS : [])
         },
 
+        async restoreUnit(org, unit) {
+            await wait()
+            requireSession()
+            return copy(restoreUnitIn(requireOrg(org) ? sources : onboardingSources, unit))
+        },
+
         async deleteUnit(org, unit, confirmName) {
             await wait()
             requireSession()
@@ -604,6 +613,25 @@ export function createMockClient(): DataClient {
                 throw new DataError(409, 'Digite o nome da organização para confirmar.')
             }
             clients.clients = clients.clients.filter((c) => c.slug !== org)
+            closedClients.set(org, client)
+            const now = Date.now()
+            clients.closed.unshift({
+                slug: client.slug,
+                name: client.name,
+                closedAt: new Date(now).toISOString(),
+                purgeAt: new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                closedBy: sessionStorage.getItem(SESSION_KEY) || null,
+            })
+        },
+
+        async reopenOrganization(org) {
+            await wait()
+            requireSession()
+            const client = closedClients.get(org)
+            if (!client) throw new DataError(409, 'Organização encerrada não encontrada.')
+            closedClients.delete(org)
+            clients.closed = clients.closed.filter((c) => c.slug !== org)
+            clients.clients = [...clients.clients, client].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
         },
 
         // No mock: as fontes fictícias com falha seguida, na LexGroup (as outras organizações não têm fontes).

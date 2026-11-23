@@ -102,7 +102,7 @@ begin
 
     perform api.delete_unit('org-teste-excluir', 'U2', '  unidade 2 ');
     l := api.list_sources('org-teste-excluir');
-    if jsonb_array_length(l -> 'units') <> 2 or l::text like '%"U2"%' then
+    if jsonb_array_length(l -> 'units') <> 2 or (l -> 'units')::text like '%"U2"%' then
         raise exception 'FALHOU: U2 deveria sumir da lista: %', l;
     end if;
     begin

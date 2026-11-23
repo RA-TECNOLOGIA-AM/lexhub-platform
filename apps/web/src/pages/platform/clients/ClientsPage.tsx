@@ -14,6 +14,7 @@ import { clientColumns } from './clientColumns.tsx'
 import { kpisOf, withFailing } from './clientsView.ts'
 import { SupportPanel } from './SupportPanel.tsx'
 import { CloseOrgDialog } from './CloseOrgDialog.tsx'
+import { ClosedOrgs } from './ClosedOrgs.tsx'
 
 // A página: busca os clientes e junta indicadores, tabela e o painel de suporte.
 // Quem vê: Owner/Desenvolvedor da LexGroup e equipe RA. O menu já esconde o item; quem digitar o
@@ -80,12 +81,22 @@ export function ClientsPage() {
                     rows={data.clients}
                     rowKey={(c) => c.slug}
                 />
+                <ClosedOrgs
+                    orgs={data.closed}
+                    onReopen={async (o) => {
+                        await dataClient.reopenOrganization(o.slug)
+                        setVersion((v) => v + 1)
+                        setNotice(`${o.name} foi reaberta. As fontes dela precisam ser conectadas de novo.`)
+                    }}
+                />
                 {closing && (
                     <CloseOrgDialog
                         client={closing}
                         onClosed={() => {
                             setVersion((v) => v + 1)
-                            setNotice(`${closing.name} foi encerrada. O histórico da auditoria fica guardado.`)
+                            setNotice(
+                                `${closing.name} foi encerrada. Dá para reabrir por 30 dias; depois é apagada de vez.`,
+                            )
                         }}
                         onClose={() => setClosing(null)}
                     />
