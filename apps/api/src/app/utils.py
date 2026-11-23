@@ -210,3 +210,16 @@ def normalizar_filtro_textos(valor: Any) -> set[str]:
         return set()
     itens = valor if isinstance(valor, (list, tuple, set)) else [valor]
     return {str(item).strip().upper() for item in itens if item is not None and str(item).strip()}
+
+
+_MESES_ABREVIADOS = ("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
+
+
+def ordem_mes(item: dict) -> tuple:
+    """V2: chave cronológica para séries mês a mês ({"name": "jan 2025", ...}). A v1 ordenava pelo nome,
+    em ordem alfabética ("abr 2025" antes de "jan 2025"). Nome fora do formato vai para o fim, pelo nome."""
+    nome = str(item.get("name", ""))
+    partes = nome.split()
+    if len(partes) == 2 and partes[0].lower() in _MESES_ABREVIADOS and partes[1].isdigit():
+        return (0, int(partes[1]), _MESES_ABREVIADOS.index(partes[0].lower()), "")
+    return (1, 0, 0, nome)

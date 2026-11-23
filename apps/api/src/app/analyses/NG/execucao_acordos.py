@@ -25,6 +25,8 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Optional
 
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
+from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db
 from app.analyses.execucao_estoque_mensal import estoque_por_mes, indice_mes
 
@@ -471,18 +473,10 @@ def group_execucao_acordos_por_comarca(
     else:
         base = _filtrar_em_execucao_acordos(execucao)
 
-    duracoes_por_comarca: defaultdict[str, list[float]] = defaultdict(list)
-    for p in _base_execucao_acordos(execucao):
-        entrada = _get_data_execucao(p)
-        saida = _get_data_pagamento_acordo(p)
-        if entrada and saida:
-            dias = (saida - entrada).days
-            if dias > 0:
-                duracoes_por_comarca[_normalizar_comarca(p.get("COMARCA"))].append(float(dias))
-    tempo_medio_por_comarca = {
-        name: round(sum(duracoes) / len(duracoes), 2)
-        for name, duracoes in duracoes_por_comarca.items()
-    }
+    por_comarca = tempo.duracoes_por_grupo(
+        _base_execucao_acordos(execucao), _get_data_execucao, _get_data_pagamento_acordo, lambda p, _saida: _normalizar_comarca(p.get("COMARCA"))
+    )
+    tempo_medio_por_comarca = {name: tempo.media(dias) for name, dias in por_comarca.items()}
     uf_por_comarca = _uf_por_comarca_acordos(execucao)
 
     grupos: defaultdict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -780,7 +774,7 @@ def group_valor_saida_execucao_acordos_por_mes(
 
     return [
         {**item, "value": round(item["value"], 2)}
-        for item in sorted(grouped.values(), key=lambda x: x["name"])
+        for item in sorted(grouped.values(), key=ordem_mes)
     ]
 
 
@@ -808,7 +802,7 @@ def group_quantidade_saida_execucao_acordos_por_mes(
         except (ValueError, AttributeError, TypeError):
             continue
 
-    return [item for item in sorted(grouped.values(), key=lambda x: x["name"])]
+    return [item for item in sorted(grouped.values(), key=ordem_mes)]
 
 
 def group_quantidade_entrada_execucao_acordos_por_mes(
@@ -835,7 +829,7 @@ def group_quantidade_entrada_execucao_acordos_por_mes(
         except (ValueError, AttributeError, TypeError):
             continue
 
-    return [item for item in sorted(grouped.values(), key=lambda x: x["name"])]
+    return [item for item in sorted(grouped.values(), key=ordem_mes)]
 
 
 def group_valor_entrada_execucao_acordos_por_mes(
@@ -866,7 +860,7 @@ def group_valor_entrada_execucao_acordos_por_mes(
 
     return [
         {**item, "value": round(item["value"], 2)}
-        for item in sorted(grouped.values(), key=lambda x: x["name"])
+        for item in sorted(grouped.values(), key=ordem_mes)
     ]
 
 
@@ -1130,26 +1124,13 @@ def _extrair_duracoes_dias(
     (ex.: arquivado por procedência) — esse processo já saiu da fase 30, mas o pagamento
     é real e deve contar no tempo médio/mediana.
     """
-    duracoes: list[float] = []
-
-    for p in _base_execucao_acordos(execucao):
-        try:
-            saida = _get_data_pagamento_acordo(p)
-            if not _data_no_periodo(saida, from_date, to_date):
-                continue
-
-            entrada = _get_data_execucao(p)
-            if not entrada or not saida:
-                continue
-
-            dias = (saida - entrada).days
-            if dias > 0:
-                duracoes.append(float(dias))
-
-        except (ValueError, AttributeError, TypeError):
-            continue
-
-    return duracoes
+    return tempo.duracoes(
+        _base_execucao_acordos(execucao),
+        tempo.coluna("DATA_EXECUCAO"),
+        tempo.coluna("DATA_PAGAMENTO_ACORDO"),
+        de=from_date,
+        ate=to_date,
+    )
 
 
 def get_media_tempo_execucao_acordos(
@@ -1158,10 +1139,7 @@ def get_media_tempo_execucao_acordos(
     to_date: Optional[date] = None,
 ) -> float:
     """Tempo médio (em dias) entre DATA_EXECUCAO e DATA_PAGAMENTO_ACORDO, amostrado pela saída no período."""
-    duracoes = _extrair_duracoes_dias(execucao, from_date, to_date)
-    if not duracoes:
-        return 0.0
-    return round(sum(duracoes) / len(duracoes), 2)
+    return tempo.media(_extrair_duracoes_dias(execucao, from_date, to_date))
 
 
 def get_mediana_tempo_execucao_acordos(
@@ -1170,16 +1148,7 @@ def get_mediana_tempo_execucao_acordos(
     to_date: Optional[date] = None,
 ) -> float:
     """Mediana do tempo (em dias) entre DATA_EXECUCAO e DATA_PAGAMENTO_ACORDO, amostrada pela saída no período."""
-    duracoes = sorted(_extrair_duracoes_dias(execucao, from_date, to_date))
-    n = len(duracoes)
-
-    if not n:
-        return 0.0
-
-    meio = n // 2
-    if n % 2 == 1:
-        return round(duracoes[meio], 2)
-    return round((duracoes[meio - 1] + duracoes[meio]) / 2.0, 2)
+    return tempo.mediana(_extrair_duracoes_dias(execucao, from_date, to_date))
 
 
 def get_media_tempo_execucao_acordos_por_mes(execucao: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1189,35 +1158,14 @@ def get_media_tempo_execucao_acordos_por_mes(execucao: list[dict[str, Any]]) -> 
     mesmo critério de `_extrair_duracoes_dias`, quebrado mês a mês para acompanhar a
     tendência do tempo médio ao longo do tempo.
     """
-    grouped: dict[str, dict[str, Any]] = {}
-
-    for p in _base_execucao_acordos(execucao):
-        try:
-            saida = _get_data_pagamento_acordo(p)
-            entrada = _get_data_execucao(p)
-            if not entrada or not saida:
-                continue
-
-            dias = (saida - entrada).days
-            if dias <= 0:
-                continue
-
-            month_key = f"{saida.year}-{saida.month:02d}"
-            if month_key not in grouped:
-                month_name = f"{_MONTH_NAMES[saida.month - 1]} {saida.year}"
-                grouped[month_key] = {"name": month_name, "total": 0.0, "count": 0}
-            grouped[month_key]["total"] += float(dias)
-            grouped[month_key]["count"] += 1
-
-        except (ValueError, AttributeError, TypeError):
-            continue
-
-    result = [
-        {"name": v["name"], "value": round(v["total"] / v["count"], 2)}
-        for v in grouped.values()
-        if v["count"] > 0
-    ]
-    return sorted(result, key=lambda x: x["name"])
+    por_mes = tempo.duracoes_por_grupo(
+        _base_execucao_acordos(execucao),
+        _get_data_execucao,
+        _get_data_pagamento_acordo,
+        lambda _p, saida: f"{_MONTH_NAMES[saida.month - 1]} {saida.year}",
+    )
+    result = [{"name": nome, "value": tempo.media(dias)} for nome, dias in por_mes.items()]
+    return sorted(result, key=ordem_mes)
 
 
 # =============================================================================

@@ -5,6 +5,8 @@ from datetime import datetime, date
 from collections import defaultdict
 import statistics
 from decimal import Decimal
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
+from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.NG.comercial_geral import _formatar_nome_atendente
 
@@ -391,7 +393,7 @@ def group_peticionados_por_mes(peticionados: List[Dict[str, Any]]) -> List[Dict[
         except (ValueError, AttributeError, TypeError):
             continue
 
-    return [item for item in sorted(grouped.values(), key=lambda x: x["name"])]
+    return [item for item in sorted(grouped.values(), key=ordem_mes)]
 
 # Agrupados processos não confeccionados por mês
 def group_nao_peticionados_por_mes(peticionados: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -732,65 +734,15 @@ def get_nao_peticionados_por_atendente(peticionados: List[Dict[str, Any]]) -> Di
 
  # Função auxiliar para extrair os dias
 def _extrair_duracoes_dias(peticionados: List[Dict[str, Any]]) -> List[float]:
-    protocolos_agrupados = _filtrar_total_peticionados(peticionados)
-    duracoes: List[float] = []
-
-    for p in protocolos_agrupados:
-        try:
-            entrada_str = p.get("ENTRADA") or p.get("entrada")
-            saida_str = p.get("DATA_CONFECCAO") or p.get("data_confeccao")
-
-            if not entrada_str or not saida_str:
-                continue
-
-            entrada_date = parse_date_from_db(entrada_str)
-            saida_date = parse_date_from_db(saida_str)
-
-            if not entrada_date or not saida_date:
-                continue
-
-            if isinstance(entrada_date, datetime):
-                entrada_date = entrada_date.date()
-            if isinstance(saida_date, datetime):
-                saida_date = saida_date.date()
-
-            if not isinstance(entrada_date, date) or not isinstance(saida_date, date):
-                continue
-
-            duracao_dias = (saida_date - entrada_date).days
-            if duracao_dias > 0:
-                duracoes.append(float(duracao_dias))
-
-        except (ValueError, AttributeError, TypeError):
-            continue
-
-    return duracoes
+    return tempo.duracoes(_filtrar_total_peticionados(peticionados), tempo.coluna("ENTRADA"), tempo.coluna("DATA_CONFECCAO"))
 
 # Retorna o tempo médio (em dias) para o processo peticionado no setor, de forma geral.
 def get_media_tempo_peticionado(peticionados: List[Dict[str, Any]]) -> float:
-    duracoes = _extrair_duracoes_dias(peticionados)
-
-    if not duracoes:
-        return 0.0
-
-    return round(sum(duracoes) / len(duracoes), 2)
+    return tempo.media(_extrair_duracoes_dias(peticionados))
 
 # Retorna a mediana do tempo (em dias) para o processo peticionado no setor, de forma geral.
 def get_mediana_tempo_peticionado(peticionados: List[Dict[str, Any]]) -> float:
-    duracoes = _extrair_duracoes_dias(peticionados)
-
-    if not duracoes:
-        return 0.0
-
-    duracoes.sort()
-    n = len(duracoes)
-
-    if n % 2 == 1:
-        mediana = duracoes[n // 2]
-    else:
-        mediana = (duracoes[n // 2 - 1] + duracoes[n // 2]) / 2.0
-
-    return round(mediana, 2)
+    return tempo.mediana(_extrair_duracoes_dias(peticionados))
 
 # -----------------------------------------------------------------------------
 # 2 - Funções que agrupam por Matéria
@@ -888,10 +840,7 @@ def get_comparativo_tempo_medio_peticionado(
     dados_periodo_atual = get_media_tempo_peticionado(dados_periodo_atual)
     dados_periodo_anterior = get_media_tempo_peticionado(dados_periodo_anterior)
 
-    if dados_periodo_anterior == 0:
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return tempo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de mediana de tempo de peticionados.
 def get_comparativo_tempo_mediana_peticionado(
@@ -912,10 +861,7 @@ def get_comparativo_tempo_mediana_peticionado(
     dados_periodo_atual = get_mediana_tempo_peticionado(dados_periodo_atual)
     dados_periodo_anterior = get_mediana_tempo_peticionado(dados_periodo_anterior)
 
-    if dados_periodo_anterior == 0:
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return tempo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de peticionados manualmente.
 def get_comparativo_peticionados_manualmente(

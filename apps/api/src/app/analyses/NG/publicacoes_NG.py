@@ -8,6 +8,7 @@ from decimal import Decimal
 from statistics import mean
 from typing import Any, Callable, Dict, List, Literal, Optional, Union
 
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_date_from_db
 
 
@@ -436,22 +437,15 @@ def get_media_tempo_tratamento_publicacoes_NG(
     Média em dias entre DATA_DISPONIBILIZACAO e DATA_CONCLUSAO,
     apenas para cumpridas com DATA_CONCLUSAO no intervalo.
     """
-    dias: List[int] = []
-    for p in publicacoes:
-        if not _is_cumprido(p):
-            continue
-        d_fim = _get_date(p, _COL_CONCLUSAO)
-        if d_fim is None or not _in_interval(d_fim, from_date, to_date):
-            continue
-        d_ini = _get_date(p, _COL_DISPONIBILIZACAO)
-        if d_ini is None:
-            continue
-        delta = (d_fim - d_ini).days
-        if delta >= 0:
-            dias.append(delta)
-    if not dias:
-        return None
-    return float(mean(dias))
+    dias = tempo.duracoes(
+        [p for p in publicacoes if _is_cumprido(p)],
+        lambda p: _get_date(p, _COL_DISPONIBILIZACAO),
+        lambda p: _get_date(p, _COL_CONCLUSAO),
+        de=from_date,
+        ate=to_date,
+        aceita_zero=True,
+    )
+    return tempo.media(dias, casas=None, vazio=None)
 
 
 def get_publicacoes_pendentes_zeradas_no_periodo_NG(
