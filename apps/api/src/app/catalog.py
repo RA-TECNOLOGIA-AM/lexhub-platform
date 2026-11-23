@@ -81,12 +81,7 @@ class DashboardSummaryOut(BaseModel):
     desc: str
     units: list[str]
     source: str
-    # Última leitura boa da fonte do card (qualquer dashboard dela): o banco respondeu, então todos os
-    # cards da mesma fonte mostram a mesma hora. null = a fonte ainda não foi lida ("Atualiza ao abrir").
-    synced_at: datetime | None
-    # Banco de origem (app/dashboards, source_db): o front acerta todos os cards da mesma fonte quando um
-    # dashboard dela abre, sem buscar o catálogo de novo. null = dashboard sem módulo na API.
-    source_key: str | None = None
+    synced_at: datetime | None  # null até o cache de 5 min existir
     max_delay_min: int
     can_export: bool
     can_see_commission: bool
@@ -111,7 +106,6 @@ def build_catalog(
     rows: list[DashboardUnitRow],
     upcoming: list[UpcomingRow],
     synced_at: dict[str, datetime] | None = None,
-    source_key: dict[str, str] | None = None,
 ) -> DashboardCatalogOut:
     """Junta as linhas (dashboard x unidade) num card por dashboard, na ordem em que vieram.
 
@@ -130,7 +124,6 @@ def build_catalog(
                 units=[r.unit_code],
                 source=r.source,
                 synced_at=(synced_at or {}).get(r.key),
-                source_key=(source_key or {}).get(r.key),
                 max_delay_min=r.max_delay_min,
                 can_export=r.can_export,
                 can_see_commission=r.can_see_commission,
