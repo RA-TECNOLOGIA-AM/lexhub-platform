@@ -5,6 +5,8 @@ from datetime import datetime, date
 from collections import defaultdict
 import statistics
 from decimal import Decimal
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, parse_datetime_from_db, resolver_periodo_comparativo
@@ -124,23 +126,12 @@ def _filter_by_date_range(peticionados: List[Dict[str, Any]], from_date: date, t
 # Formata o nome do funcionário.
 def _formatar_nome_funcionario(nome_completo: str) -> str:
     """Extrai apenas o primeiro e segundo nome da funcionario."""
-    if not nome_completo or nome_completo == "Sem funcionario":
-        return nome_completo
-
-    partes = nome_completo.strip().split()
-    if len(partes) == 1:
-        return partes[0].upper()
-    return " ".join(partes[:2]).upper()
+    return textos.primeiros_nomes(nome_completo, 2, maiusculas=True, ignorar="Sem funcionario")
 
 
 def _normalizar_materia(raw: Any) -> str:
     """Extrai a matéria: apenas a parte antes do ' - ' (ex: 'BX_ANT_FIN - BANCO BRADESCO' -> 'BX_ANT_FIN')."""
-    if raw is None or raw == "":
-        return "Sem materia"
-    s = str(raw).strip()
-    if " - " in s:
-        s = s.split(" - ", 1)[0].strip()
-    return s if s else "Sem materia"
+    return textos.materia(raw)
 
 
 def filter_peticionamento_LA_por_materia(
@@ -852,11 +843,7 @@ def get_comparativo_confeccionados_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if dados_periodo_anterior == 0:
-        # Se não houver dados do período anterior, retornar 0
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
     # Retorna a variação percentual de confeccionados.
 
@@ -886,11 +873,7 @@ def get_comparativo_confeccionados_automaticamente_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if dados_periodo_anterior == 0:
-        # Se não houver dados do período anterior, retornar 0
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de confeccionados manualmente.
 def get_comparativo_confeccionados_manualmente_LA(
@@ -918,11 +901,7 @@ def get_comparativo_confeccionados_manualmente_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if dados_periodo_anterior == 0:
-        # Se não houver dados do período anterior, retornar 0
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de valor de causa.
 def get_comparativo_valor_causa_confeccionado_LA(
@@ -950,11 +929,7 @@ def get_comparativo_valor_causa_confeccionado_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if dados_periodo_anterior == 0:
-        # Se não houver dados do período anterior, retornar 0
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de ticket médio.
 def get_comparativo_ticket_medio_confeccionado_LA(
@@ -982,11 +957,7 @@ def get_comparativo_ticket_medio_confeccionado_LA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if dados_periodo_anterior == 0:
-        # Se não houver dados do período anterior, retornar 0
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de tempo médio.
 def get_comparativo_tempo_medio_confeccionado_LA(
@@ -1012,7 +983,7 @@ def get_comparativo_tempo_medio_confeccionado_LA(
     dados_periodo_atual = get_media_tempo_confeccionado_LA(confeccionados_periodo_atual)
     dados_periodo_anterior = get_media_tempo_confeccionado_LA(confeccionados_periodo_anterior)
     
-    return tempo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de mediana de tempo.
 def get_comparativo_mediana_tempo_confeccionadoLA(
@@ -1038,4 +1009,4 @@ def get_comparativo_mediana_tempo_confeccionadoLA(
     dados_periodo_atual = get_mediana_tempo_confeccionado_LA(confeccionados_periodo_atual)
     dados_periodo_anterior = get_mediana_tempo_confeccionado_LA(confeccionados_periodo_anterior)
     
-    return tempo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)

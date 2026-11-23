@@ -5,6 +5,8 @@ from datetime import datetime, date
 from collections import defaultdict
 import statistics
 from decimal import Decimal
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
@@ -131,23 +133,12 @@ def _filter_by_date_range(data: List[Dict[str, Any]], from_date: date, to_date: 
 # Formata o nome do funcionário.
 def _formatar_nome_funcionario(nome_completo: str) -> str:
     """Extrai apenas o primeiro e segundo nome da funcionario."""
-    if not nome_completo or nome_completo == "Sem funcionario":
-        return nome_completo
-
-    partes = nome_completo.strip().split()
-    if len(partes) == 1:
-        return partes[0].upper()
-    return " ".join(partes[:2]).upper()
+    return textos.primeiros_nomes(nome_completo, 2, maiusculas=True, ignorar="Sem funcionario")
 
 
 def _normalizar_materia(raw: Any) -> str:
     """Extrai a matéria: apenas a parte antes do ' - ' (ex: 'BX_ANT_FIN - BANCO BRADESCO' -> 'BX_ANT_FIN')."""
-    if raw is None or raw == "":
-        return "Sem materia"
-    s = str(raw).strip()
-    if " - " in s:
-        s = s.split(" - ", 1)[0].strip()
-    return s if s else "Sem materia"
+    return textos.materia(raw)
 
 
 def filter_protocolo_LA_por_materia(
@@ -865,11 +856,7 @@ def get_comparativo_protocolos_resolvidos_LA(
     # Calcular a quantidade de protocolos resolvidos para cada período
     qtd_atual = get_protocolos_resolvidos_LA(dados_periodo_atual)
     qtd_anterior = get_protocolos_resolvidos_LA(dados_periodo_anterior)
-    if qtd_anterior == 0:
-        return 0.0
-
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna o comparativo de valor de causa para protocolos resolvidos.
 def get_comparativo_valor_causa_protocolado_LA(
@@ -893,11 +880,7 @@ def get_comparativo_valor_causa_protocolado_LA(
     # Calcular o valor de causa para protocolos resolvidos para cada período
     valor_causa_atual = get_valor_causa_protocolado_LA(dados_periodo_atual)
     valor_causa_anterior = get_valor_causa_protocolado_LA(dados_periodo_anterior)
-    if valor_causa_anterior == 0:
-        return 0.0
-
-    variacao = ((valor_causa_atual - valor_causa_anterior) / valor_causa_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(valor_causa_atual, valor_causa_anterior)
 
 # Retorna o comparativo de ticket medio de protocolos resolvidos.
 def get_comparativo_ticket_medio_protocolos_resolvidos_LA(
@@ -921,11 +904,7 @@ def get_comparativo_ticket_medio_protocolos_resolvidos_LA(
     # Calcular o ticket medio de protocolos resolvidos para cada período
     ticket_medio_atual = get_ticket_medio_protocolos_resolvidos_LA(dados_periodo_atual)
     ticket_medio_anterior = get_ticket_medio_protocolos_resolvidos_LA(dados_periodo_anterior)
-    if ticket_medio_anterior == 0:
-        return 0.0
-
-    variacao = ((ticket_medio_atual - ticket_medio_anterior) / ticket_medio_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(ticket_medio_atual, ticket_medio_anterior)
 
 # Retorna o comparativo de tempo medio de protocolos resolvidos.
 def get_comparativo_tempo_medio_protocolos_resolvidos_LA(
@@ -949,7 +928,7 @@ def get_comparativo_tempo_medio_protocolos_resolvidos_LA(
     # Calcular o ticket medio de protocolos resolvidos para cada período
     tempo_medio_atual = get_media_tempo_protocolado_LA(dados_periodo_atual)
     tempo_medio_anterior = get_media_tempo_protocolado_LA(dados_periodo_anterior)
-    return tempo.variacao_percentual(tempo_medio_atual, tempo_medio_anterior)
+    return periodo.variacao_percentual(tempo_medio_atual, tempo_medio_anterior)
 
 # Retorna o comparativo de mediana de tempo de protocolos resolvidos.
 def get_comparativo_mediana_tempo_protocolos_resolvidos_LA(
@@ -973,7 +952,7 @@ def get_comparativo_mediana_tempo_protocolos_resolvidos_LA(
     # Calcular o ticket medio de protocolos resolvidos para cada período
     tempo_medio_atual = get_mediana_tempo_protocolado_LA(dados_periodo_atual)
     tempo_medio_anterior = get_mediana_tempo_protocolado_LA(dados_periodo_anterior)
-    return tempo.variacao_percentual(tempo_medio_atual, tempo_medio_anterior)
+    return periodo.variacao_percentual(tempo_medio_atual, tempo_medio_anterior)
 
 # Função auxiliar para extrair os dias desde a contratacao ate o protocolo.
 def _extrair_duracoes_dias_pre_protocolo(protocolos: List[Dict[str, Any]]) -> List[float]:
@@ -1008,7 +987,7 @@ def get_comparativo_tempo_medio_contratacao_protocolado_LA(
     tempo_medio_atual = get_media_tempo_contratacao_protocolado_LA(dados_periodo_atual)
     tempo_medio_anterior = get_media_tempo_contratacao_protocolado_LA(dados_periodo_anterior)
 
-    return tempo.variacao_percentual(tempo_medio_atual, tempo_medio_anterior)
+    return periodo.variacao_percentual(tempo_medio_atual, tempo_medio_anterior)
 
 # Retorna o comparativo da mediana de tempo de contratação até protocolo (vs período anterior equivalente).
 def get_comparativo_mediana_tempo_contratacao_protocolado_LA(
@@ -1029,7 +1008,7 @@ def get_comparativo_mediana_tempo_contratacao_protocolado_LA(
     mediana_atual = get_mediana_tempo_contratacao_protocolado_LA(dados_periodo_atual)
     mediana_anterior = get_mediana_tempo_contratacao_protocolado_LA(dados_periodo_anterior)
 
-    return tempo.variacao_percentual(mediana_atual, mediana_anterior)
+    return periodo.variacao_percentual(mediana_atual, mediana_anterior)
 
 # -----------------------------------------------------------------------------
 # 2.1 - Medidas de comissão proporcional (DAX -> Python)

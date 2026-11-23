@@ -4,6 +4,8 @@ from typing import List, Dict, Any, Optional, Union
 from datetime import datetime, date
 from collections import defaultdict
 from decimal import Decimal
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.LA.comercial_LA import _formatar_nome_atendente
@@ -38,12 +40,7 @@ def _filter_by_date_range(org_documentos: List[Dict[str, Any]], from_date: date,
 # Normalizar a matéria.
 def _normalizar_materia(raw: Any) -> str:
     """Extrai a matéria: apenas a parte antes do ' - ' (ex: 'BX_ANT_FIN - BANCO BRADESCO' -> 'BX_ANT_FIN')."""
-    if raw is None or raw == "":
-        return "Sem materia"
-    s = str(raw).strip()
-    if " - " in s:
-        s = s.split(" - ", 1)[0].strip()
-    return s if s else "Sem materia"
+    return textos.materia(raw)
 
 # Fução que retorna os processos resolvidos.
 def _filtrar_organizados(org_documentos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -71,13 +68,7 @@ def _filtrar_nao_organizados(org_documentos: List[Dict[str, Any]]) -> List[Dict[
 
 # Formata o nome do funcionário.
 def _formatar_nome_funcionario(nome_completo: str) -> str:
-    if not nome_completo or nome_completo == "Sem funcionario":
-        return nome_completo
-
-    partes = nome_completo.strip().split()
-    if len(partes) == 1:
-        return partes[0].upper()
-    return " ".join(partes[:2]).upper()
+    return textos.primeiros_nomes(nome_completo, 2, maiusculas=True, ignorar="Sem funcionario")
 
 
 def filter_org_doc_LA_por_materia(
@@ -522,10 +513,7 @@ def get_comparativo_resolvidos_total_LA(
     dados_periodo_anterior = _filter_by_date_range(dados_para_busca, data_inicio_anterior, data_fim_anterior)
     taxa_atual = get_total_organizados_LA(dados_periodo_atual)
     taxa_anterior = get_total_organizados_LA(dados_periodo_anterior)
-    if taxa_anterior == 0:
-        return 0.0
-    variacao = ((taxa_atual - taxa_anterior) / taxa_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(taxa_atual, taxa_anterior)
 
 # Retorna a variação percentual de processos organizados manualmente (período atual vs anterior).
 def get_comparativo_organizados_manualmente_LA(
@@ -543,10 +531,7 @@ def get_comparativo_organizados_manualmente_LA(
     dados_periodo_anterior = _filter_by_date_range(dados_para_busca, data_inicio_anterior, data_fim_anterior)
     taxa_atual = get_total_organizados_manualmente_LA(dados_periodo_atual)
     taxa_anterior = get_total_organizados_manualmente_LA(dados_periodo_anterior)
-    if taxa_anterior == 0:
-        return 0.0
-    variacao = ((taxa_atual - taxa_anterior) / taxa_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(taxa_atual, taxa_anterior)
 
 # Retorna a variação percentual de processos organizados automaticamente (período atual vs anterior).
 def get_comparativo_organizados_automaticamente_LA(
@@ -564,10 +549,7 @@ def get_comparativo_organizados_automaticamente_LA(
     dados_periodo_anterior = _filter_by_date_range(dados_para_busca, data_inicio_anterior, data_fim_anterior)
     taxa_atual = get_total_organizados_automaticamente_LA(dados_periodo_atual)
     taxa_anterior = get_total_organizados_automaticamente_LA(dados_periodo_anterior)
-    if taxa_anterior == 0:
-        return 0.0
-    variacao = ((taxa_atual - taxa_anterior) / taxa_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(taxa_atual, taxa_anterior)
 
 # Retorna a variação percentual de processos retornados para pendência (período atual vs anterior).
 def get_comparativo_retorno_pendencia_LA(
@@ -585,10 +567,7 @@ def get_comparativo_retorno_pendencia_LA(
     dados_periodo_anterior = _filter_by_date_range(dados_para_busca, data_inicio_anterior, data_fim_anterior)
     taxa_atual = get_retorno_pendencia_LA(dados_periodo_atual)
     taxa_anterior = get_retorno_pendencia_LA(dados_periodo_anterior)
-    if taxa_anterior == 0:
-        return 0.0
-    variacao = ((taxa_atual - taxa_anterior) / taxa_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(taxa_atual, taxa_anterior)
 
 # Retorna a variação percentual de processos cancelados (período atual vs anterior).
 def get_comparativo_cancelados_LA(

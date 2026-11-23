@@ -10,6 +10,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Optional
 
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
 from app.utils import parse_date_from_db
 from app.analyses.common import matriz_julgamento as mj
 
@@ -292,21 +295,7 @@ _IDS_2G_OUTROS = _IDS_2G_EXTINCAO_SEM_MERITO
 # Helpers internos
 # =============================================================================
 
-def _converter_valor(valor: Any) -> float:
-    if valor is None:
-        return 0.0
-    try:
-        if isinstance(valor, Decimal):
-            return float(valor)
-        if isinstance(valor, (int, float)):
-            return float(valor)
-        if isinstance(valor, str):
-            limpo = valor.strip().replace(",", ".")
-            limpo = "".join(c for c in limpo if c.isdigit() or c == ".")
-            return float(limpo) if limpo else 0.0
-        return float(str(valor).replace(",", "."))
-    except (ValueError, TypeError, AttributeError):
-        return 0.0
+_converter_valor = conversao.para_valor_digitos  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
 def _get_valor_causa_acordo(item: dict[str, Any]) -> float:
@@ -319,40 +308,13 @@ def _get_valor_causa_sentenca(item: dict[str, Any]) -> float:
     return _converter_valor(raw)
 
 
-def _to_int(value: Any) -> int | None:
-    if value is None or value == "":
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+_to_int = conversao.para_inteiro  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
-def _to_date(value: Any) -> Optional[date]:
-    if not value:
-        return None
-    parsed = parse_date_from_db(value)
-    if isinstance(parsed, datetime):
-        return parsed.date()
-    if isinstance(parsed, date):
-        return parsed
-    return None
+_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
-def _data_no_periodo(
-    d: Optional[date],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> bool:
-    if d is None:
-        return False
-    if from_date and to_date:
-        return from_date <= d <= to_date
-    if from_date:
-        return d >= from_date
-    if to_date:
-        return d <= to_date
-    return True
+_data_no_periodo = periodo.no_periodo  # V2: era uma cópia local (app/analyses/common/periodo.py)
 
 
 def _base_recurso_RJ(recurso: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1389,12 +1351,7 @@ def _normalizar_nome_magistrado(value: Any) -> str:
 
 
 def _iniciais_nome(nome: str) -> str:
-    partes = [p for p in nome.split() if p]
-    if not partes:
-        return "—"
-    if len(partes) == 1:
-        return partes[0][:2].upper()
-    return f"{partes[0][0]}{partes[1][0]}".upper()
+    return textos.iniciais_nome(nome)
 
 
 def _nome_magistrado_coincide(nome: str, filtro: Optional[str]) -> bool:

@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, date
 from collections import defaultdict
 import statistics
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.NG.comercial_geral import get_clientes_todos, get_clientes_campanha_RA, get_clientes_campanha_NG, _filter_by_date_range as filter_comercial_by_date_range, _formatar_nome_atendente
 
@@ -136,11 +137,7 @@ def get_comparativo_leads_geral(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a variação percentual de Leads de Anúncio RA
 def get_comparativo_leads_anuncio_RA(
@@ -168,11 +165,7 @@ def get_comparativo_leads_anuncio_RA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a variação percentual de Leads de Anúncio NG
 def get_comparativo_leads_anuncio_NG(
@@ -200,11 +193,7 @@ def get_comparativo_leads_anuncio_NG(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if qtd_anterior == 0:
-        return 0.0
-    
-    variacao = ((qtd_atual - qtd_anterior) / qtd_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(qtd_atual, qtd_anterior)
 
 # Retorna a variação percentual de taxa de Leads Geral
 def get_comparativo_taxa_leads_geral(
@@ -237,11 +226,7 @@ def get_comparativo_taxa_leads_geral(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if taxa_anterior == 0:
-        return 0.0
-    
-    variacao = ((taxa_atual - taxa_anterior) / taxa_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(taxa_atual, taxa_anterior)
 
 # Retorna a variação percentual de taxa de Leads de Anúncio RA
 def get_comparativo_taxa_leads_anuncio_RA(
@@ -274,11 +259,7 @@ def get_comparativo_taxa_leads_anuncio_RA(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if taxa_anterior == 0:
-        return 0.0
-    
-    variacao = ((taxa_atual - taxa_anterior) / taxa_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(taxa_atual, taxa_anterior)
 
 # Retorna a variação percentual de taxa de Leads de Anúncio NG
 def get_comparativo_taxa_leads_anuncio_NG(
@@ -311,11 +292,7 @@ def get_comparativo_taxa_leads_anuncio_NG(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if taxa_anterior == 0:
-        return 0.0
-    
-    variacao = ((taxa_atual - taxa_anterior) / taxa_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(taxa_atual, taxa_anterior)
 
 # ===============================================
 # RETORNA AS ANALISES PARA COLOCAR NO GRAFICO DE ATENDENTES 

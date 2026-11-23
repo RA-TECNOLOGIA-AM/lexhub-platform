@@ -10,7 +10,6 @@ da variação "vs período anterior". O que muda de uma análise para outra é s
     aceita_zero       se a duração 0 entra (Protocolo/Execução/LexPre da v1 só contam > 0)
     casas / vazio     arredondamento e o valor sem dados (2 casas e 0.0; Julgados: 1 casa e None)
     divisor           divide o resultado (LexPre: média e mediana em horas, divididas por 24 no fim)
-    sem_base          a variação quando o anterior é 0 e o atual não (0.0; LexPre e Financeiro: 100.0)
 
 O pré-filtro de cada análise (ex.: só os protocolos resolvidos) e o jeito de achar a entrada (ex.: no LexPre,
 a última entrada no setor antes da saída) continuam nela: aqui entram as linhas e as funções de leitura.
@@ -19,28 +18,18 @@ Linha com data ausente, inválida ou com duração negativa fica fora.
 
 from collections import defaultdict
 from collections.abc import Callable, Hashable, Iterable
-from datetime import date, datetime
+from datetime import date
 from typing import Any, Literal
 
-from app.utils import parse_date_from_db, parse_datetime_from_db
+from app.analyses.common.conversao import para_data
+from app.analyses.common.periodo import no_periodo
+from app.utils import parse_datetime_from_db
 
 LerData = Callable[[dict[str, Any]], Any]  # devolve date ou datetime (ou None)
 Unidade = Literal["dias", "dias_fracao", "horas"]
 FORA = (
     object()
 )  # devolvido por `grupo` em duracoes_por_grupo: a linha fica fora (None é um grupo válido)
-
-
-def para_data(valor: Any) -> date | None:
-    """Valor bruto do banco -> `date` (datetime vira a data dele); ausente ou inválido -> None."""
-    if not valor:
-        return None
-    convertido = parse_date_from_db(valor)
-    if isinstance(convertido, datetime):
-        return convertido.date()
-    if isinstance(convertido, date):
-        return convertido
-    return None
 
 
 def coluna(nome: str, *, com_hora: bool = False) -> LerData:
@@ -55,13 +44,6 @@ def coluna(nome: str, *, com_hora: bool = False) -> LerData:
         return para_data(valor)
 
     return ler
-
-
-def no_periodo(d: date | None, de: date | None, ate: date | None) -> bool:
-    """`d` dentro de [de, ate] (inclusive); só um dos limites também vale. Sem data: fora."""
-    if d is None:
-        return False
-    return (not de or d >= de) and (not ate or d <= ate)
 
 
 def _medir(inicio: Any, fim: Any, unidade: Unidade) -> float:
@@ -167,13 +149,3 @@ def mediana(
     meio = ordenados[n // 2] if n % 2 == 1 else (ordenados[n // 2 - 1] + ordenados[n // 2]) / 2.0
     resultado = meio / divisor
     return resultado if casas is None else round(resultado, casas)
-
-
-def variacao_percentual(
-    atual: float, anterior: float, *, casas: int = 2, sem_base: float = 0.0
-) -> float:
-    """Variação (%) do atual sobre o anterior. Anterior 0: `sem_base` se o atual tem valor (crescimento a partir
-    do zero; o LexPre e o Financeiro mostram +100%), senão 0.0."""
-    if not anterior:
-        return sem_base if atual and atual > 0 else 0.0
-    return round(((atual - anterior) / anterior) * 100, casas)

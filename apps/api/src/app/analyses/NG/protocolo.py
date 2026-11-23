@@ -5,6 +5,8 @@ from datetime import datetime, date
 from collections import defaultdict
 import statistics
 from decimal import Decimal
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
@@ -159,24 +161,13 @@ def _get_materias_protocolo(protocolos: List[Dict[str, Any]]) -> List[str]:
 
 def _normalizar_materia(raw: Any) -> str:
     """Extrai a matéria: apenas a parte antes do ' - ' (ex: 'BX_ANT_FIN - BANCO BRADESCO' -> 'BX_ANT_FIN')."""
-    if raw is None or raw == "":
-        return "Sem materia"
-    s = str(raw).strip()
-    if " - " in s:
-        s = s.split(" - ", 1)[0].strip()
-    return s if s else "Sem materia"
+    return textos.materia(raw)
 
 
 # Formata o nome do funcionário.
 def _formatar_nome_funcionario(nome_completo: str) -> str:
     """Extrai apenas o primeiro e segundo nome da funcionario."""
-    if not nome_completo or nome_completo == "Sem funcionario":
-        return nome_completo
-
-    partes = nome_completo.strip().split()
-    if len(partes) == 1:
-        return partes[0].upper()
-    return " ".join(partes[:2]).upper()
+    return textos.primeiros_nomes(nome_completo, 2, maiusculas=True, ignorar="Sem funcionario")
 
 
 def filter_protocolo_por_materia(
@@ -517,7 +508,7 @@ def get_comparativo_tempo_medio_contratacao_protocolado(
     tempo_medio_atual = get_media_tempo_contratacao_protocolado(dados_periodo_atual)
     tempo_medio_anterior = get_media_tempo_contratacao_protocolado(dados_periodo_anterior)
 
-    return tempo.variacao_percentual(tempo_medio_atual, tempo_medio_anterior)
+    return periodo.variacao_percentual(tempo_medio_atual, tempo_medio_anterior)
 
 # Retorna o comparativo da mediana de tempo de contratação até protocolo (vs período anterior equivalente).
 def get_comparativo_mediana_tempo_contratacao_protocolado(
@@ -538,7 +529,7 @@ def get_comparativo_mediana_tempo_contratacao_protocolado(
     mediana_atual = get_mediana_tempo_contratacao_protocolado(dados_periodo_atual)
     mediana_anterior = get_mediana_tempo_contratacao_protocolado(dados_periodo_anterior)
 
-    return tempo.variacao_percentual(mediana_atual, mediana_anterior)
+    return periodo.variacao_percentual(mediana_atual, mediana_anterior)
 
 # Retorna a média de processos resolvidos por funcionário.
 def get_media_protocolados_por_funcionario(
@@ -941,11 +932,7 @@ def get_comparativo_valor_causa_protocolo(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if dados_periodo_anterior == 0:
-        # Se não houver dados do período anterior, retornar 0
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de protocolos resolvidos.
 def get_comparativo_protocolos_resolvidos(
@@ -973,11 +960,7 @@ def get_comparativo_protocolos_resolvidos(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if dados_periodo_anterior == 0:
-        # Se não houver dados do período anterior, retornar 0
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de não protocolados.
 def get_comparativo_nao_protocolados(
@@ -1005,11 +988,7 @@ def get_comparativo_nao_protocolados(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if dados_periodo_anterior == 0:
-        # Se não houver dados do período anterior, retornar 0
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de ticket medio de protocolos resolvidos.
 def get_comparativo_ticket_medio_protocolos_resolvidos(
@@ -1037,11 +1016,7 @@ def get_comparativo_ticket_medio_protocolos_resolvidos(
     
     # Calcular variação percentual: (atual - anterior) / anterior * 100
     # Equivalente ao DIVIDE do DAX
-    if dados_periodo_anterior == 0:
-        # Se não houver dados do período anterior, retornar 0
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 # Retorna a variação percentual de tempo médio de protocolos resolvidos.
 def get_comparativo_tempo_medio_protocolos_resolvidos(
@@ -1062,7 +1037,7 @@ def get_comparativo_tempo_medio_protocolos_resolvidos(
     dados_periodo_atual = get_media_tempo_protocolado(dados_periodo_atual)
     dados_periodo_anterior = get_media_tempo_protocolado(dados_periodo_anterior)
 
-    return tempo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
+    return periodo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 
 # -----------------------------------------------------------------------------

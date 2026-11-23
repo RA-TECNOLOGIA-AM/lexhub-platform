@@ -6,6 +6,7 @@ from datetime import datetime, date
 from collections import defaultdict
 import statistics
 from decimal import Decimal
+from app.analyses.common import textos  # V2: nomes e rótulos de texto num módulo só
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_date_from_db
 from app.analyses.LA.comercial_LA import _formatar_nome_atendente
@@ -39,13 +40,7 @@ def _filter_by_date_range(pendencias: List[Dict[str, Any]], from_date: date, to_
 # Formata o nome do funcionário.
 def _formatar_nome_funcionario(nome_completo: str) -> str:
     """Extrai apenas o primeiro e segundo nome da funcionario."""
-    if not nome_completo or nome_completo == "Sem funcionario":
-        return nome_completo
-
-    partes = nome_completo.strip().split()
-    if len(partes) == 1:
-        return partes[0].upper()
-    return " ".join(partes[:2]).upper()
+    return textos.primeiros_nomes(nome_completo, 2, maiusculas=True, ignorar="Sem funcionario")
 
 
 def filter_pendencia_LA_por_funcionario(

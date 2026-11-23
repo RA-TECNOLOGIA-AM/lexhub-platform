@@ -14,6 +14,9 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
+from app.analyses.common import julgados  # V2: leitores e agrupamentos dos Julgados num módulo só
+from app.analyses.common import conversao  # V2: conversões dos valores do banco num módulo só
+from app.analyses.common import periodo  # V2: período e variação vs período anterior num módulo só
 from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
@@ -73,40 +76,13 @@ _IDS_1G_EXTINTO: frozenset[int] = frozenset({mj.ID_MERITO_EXTINTO_SEM_MERITO})
 # Utilitários
 # =============================================================================
 
-def _to_int(value: Any) -> Optional[int]:
-    if value is None or value == "":
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+_to_int = conversao.para_inteiro  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
-def _to_date(value: Any) -> Optional[date]:
-    if not value:
-        return None
-    parsed = parse_date_from_db(value)
-    if isinstance(parsed, datetime):
-        return parsed.date()
-    if isinstance(parsed, date):
-        return parsed
-    return None
+_to_date = conversao.para_data  # V2: era uma cópia local (app/analyses/common/conversao.py)
 
 
-def _data_no_periodo(
-    d: Optional[date],
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> bool:
-    if d is None:
-        return False
-    if from_date and to_date:
-        return from_date <= d <= to_date
-    if from_date:
-        return d >= from_date
-    if to_date:
-        return d <= to_date
-    return True
+_data_no_periodo = periodo.no_periodo  # V2: era uma cópia local (app/analyses/common/periodo.py)
 
 
 def _get_id_1g(item: dict[str, Any]) -> Optional[int]:
@@ -116,21 +92,14 @@ def _get_id_1g(item: dict[str, Any]) -> Optional[int]:
     return mj.resolver_id_merito_1g(novo, status_antigo)
 
 
-def _get_id_2g(item: dict[str, Any]) -> Optional[int]:
-    """ID de mérito 2G do MESMO processo (a query `julgados` traz 1G e 2G na mesma linha) —
-    usa a coluna nova quando presente, senão traduz o status antigo por nome. Usado para achar
-    sentenças extintas em 1G cujo acórdão em 2G foi "Sentença Anulada" (extinção revertida)."""
-    novo = _to_int(item.get("ID_ACORDAO_MERITO_2G") or item.get("id_acordao_merito_grau2"))
-    status_antigo = item.get(_COL_STATUS_2G) or item.get("status_2g")
-    return mj.resolver_id_merito_2g(novo, status_antigo)
+_get_id_2g = julgados.id_2g  # V2: app/analyses/common/julgados.py
 
 
 def _get_data_sentenca(item: dict[str, Any]) -> Optional[date]:
     return _to_date(item.get(_COL_DATA_SENTENCA) or item.get("data_sentenca"))
 
 
-def _get_data_ajuizamento(item: dict[str, Any]) -> Optional[date]:
-    return _to_date(item.get(_COL_DATA_AJUIZAMENTO) or item.get("data_ajuizamento"))
+_get_data_ajuizamento = julgados.data_ajuizamento  # V2: app/analyses/common/julgados.py
 
 
 def _get_data_embargos_sentenca(item: dict[str, Any]) -> Optional[date]:
@@ -153,18 +122,10 @@ def _get_resultado_embargos_sentenca(item: dict[str, Any]) -> Optional[str]:
     return mj.STATUS_EMBARGO_SEM_RESULTADO
 
 
-def _get_ano_ajuizamento(item: dict[str, Any]) -> str:
-    ajuizamento = _get_data_ajuizamento(item)
-    return str(ajuizamento.year) if ajuizamento else _SEM_ANO_AJUIZAMENTO
+_get_ano_ajuizamento = julgados.ano_ajuizamento  # V2: app/analyses/common/julgados.py
 
 
-def _to_float(value: Any) -> float:
-    if value is None or value == "":
-        return 0.0
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
+_to_float = julgados.para_float  # V2: app/analyses/common/julgados.py
 
 
 def _get_valor_causa_sentenca(item: dict[str, Any]) -> float:
@@ -189,23 +150,16 @@ def _get_juiz_1g(item: dict[str, Any]) -> str:
     return _normalizar_nome_juiz(item.get(_COL_JUIZ_1G))
 
 
-def _get_materia(item: dict[str, Any]) -> str:
-    nome = str(item.get(_COL_MATERIA) or item.get("materia") or "").strip()
-    return nome if nome else _SEM_MATERIA
+_get_materia = julgados.materia  # V2: app/analyses/common/julgados.py
 
 
-def _get_competencia(item: dict[str, Any]) -> str:
-    nome = str(item.get(_COL_COMPETENCIA) or item.get("competencia") or "").strip()
-    return nome if nome else _SEM_COMPETENCIA
+_get_competencia = julgados.competencia  # V2: app/analyses/common/julgados.py
 
 
-def _get_comarca(item: dict[str, Any]) -> str:
-    nome = str(item.get(_COL_COMARCA) or item.get("comarca") or "").strip()
-    return nome if nome else _SEM_COMARCA
+_get_comarca = julgados.comarca  # V2: app/analyses/common/julgados.py
 
 
-def _get_uf(item: dict[str, Any]) -> str:
-    return str(item.get(_COL_UF) or item.get("uf") or "").strip().upper()
+_get_uf = julgados.uf  # V2: app/analyses/common/julgados.py
 
 
 def _get_motivo_extincao(item: dict[str, Any]) -> str:
@@ -213,13 +167,7 @@ def _get_motivo_extincao(item: dict[str, Any]) -> str:
     return nome if nome else _SEM_MOTIVO_EXTINCAO
 
 
-def _iniciais_nome(nome: str) -> str:
-    partes = [p for p in nome.split() if p]
-    if not partes:
-        return "—"
-    if len(partes) == 1:
-        return partes[0][:2].upper()
-    return f"{partes[0][0]}{partes[1][0]}".upper()
+_iniciais_nome = julgados.iniciais_nome  # V2: app/analyses/common/julgados.py
 
 
 def _classificar_resultado_1g_julgados(id_1g: Optional[int]) -> Optional[str]:
@@ -256,11 +204,7 @@ def _get_categoria_1g_julgados(item: dict[str, Any]) -> Optional[str]:
     return _RESULTADO_PARA_CATEGORIA.get(resultado) if resultado else None
 
 
-def _valor_em_conjunto_filtro_julgados(valor: str, conjunto: Optional[frozenset[str]]) -> bool:
-    if not conjunto:
-        return True
-    chave = valor.casefold()
-    return any(chave == v.casefold() for v in conjunto)
+_valor_em_conjunto_filtro_julgados = julgados.valor_em_conjunto  # V2: app/analyses/common/julgados.py
 
 
 @dataclass(frozen=True)
@@ -352,13 +296,7 @@ def filtrar_sentencas_julgados_RJ(
 def _base_julgados_RJ(processos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Base padrão das análises Julgados RJ: ``ID_ESCRITORIO`` == 27, sem agravos
     (ver :func:`~app.analyses.common.julgados_agravo.eh_processo_agravo`)."""
-    return [
-        item
-        for item in processos
-        if _to_int(item.get(_COL_ID_ESCRITORIO) or item.get("id_escritorio_assinante"))
-        == ID_ESCRITORIO_RJ
-        and not eh_processo_agravo(numero_processo(item))
-    ]
+    return julgados.base(processos, ID_ESCRITORIO_RJ)
 
 
 @memo.por_pedido()
@@ -503,16 +441,7 @@ def get_kpis_sentenca_julgados_RJ(
 # Comparativos (mesmo padrão de analyses/NG/comercial_geral.py)
 # =============================================================================
 
-def _resolver_periodos_comparativo_julgados_RJ(
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> tuple[date, date, date, date]:
-    """Retorna (início_atual, fim_atual, início_anterior, fim_anterior).
-
-    O período anterior é o mesmo período um mês civil antes (ex.: 01/08-20/08 ->
-    01/07-20/07).
-    """
-    return resolver_periodo_comparativo(from_date, to_date)
+_resolver_periodos_comparativo_julgados_RJ = julgados.resolver_periodos_comparativo  # V2: app/analyses/common/julgados.py
 
 
 def _comparativo_variacao_percentual_julgados_RJ(
@@ -527,11 +456,7 @@ def _comparativo_variacao_percentual_julgados_RJ(
     valor_atual = _contar_sentenca_por_categoria(processos_ng, inicio_atual, fim_atual, categoria)
     valor_anterior = _contar_sentenca_por_categoria(processos_ng, inicio_anterior, fim_anterior, categoria)
 
-    if valor_anterior == 0:
-        return 0.0
-
-    variacao = ((valor_atual - valor_anterior) / valor_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(valor_atual, valor_anterior)
 
 
 def _comparativo_variacao_percentual_tempo_medio_sentenca_julgados_RJ(
@@ -547,7 +472,7 @@ def _comparativo_variacao_percentual_tempo_medio_sentenca_julgados_RJ(
 
     if valor_atual is None or not valor_anterior:
         return 0.0
-    return tempo.variacao_percentual(valor_atual, valor_anterior)
+    return periodo.variacao_percentual(valor_atual, valor_anterior)
 
 
 def _comparativo_variacao_percentual_valor_sentenca_julgados_RJ(
@@ -561,11 +486,7 @@ def _comparativo_variacao_percentual_valor_sentenca_julgados_RJ(
     valor_atual = _valor_causa_sentencas_procedentes_RJ(processos, inicio_atual, fim_atual)
     valor_anterior = _valor_causa_sentencas_procedentes_RJ(processos, inicio_anterior, fim_anterior)
 
-    if not valor_anterior:
-        return 0.0
-
-    variacao = ((valor_atual - valor_anterior) / valor_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(valor_atual, valor_anterior)
 
 
 def _comparativo_variacao_percentual_embargados_julgados_RJ(
@@ -579,11 +500,7 @@ def _comparativo_variacao_percentual_embargados_julgados_RJ(
     valor_atual = _contar_sentenca_embargados_RJ(processos, inicio_atual, fim_atual)
     valor_anterior = _contar_sentenca_embargados_RJ(processos, inicio_anterior, fim_anterior)
 
-    if not valor_anterior:
-        return 0.0
-
-    variacao = ((valor_atual - valor_anterior) / valor_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(valor_atual, valor_anterior)
 
 
 def _comparativo_variacao_percentual_revertidos_julgados_RJ(
@@ -597,11 +514,7 @@ def _comparativo_variacao_percentual_revertidos_julgados_RJ(
     valor_atual = _contar_sentenca_revertidos_RJ(processos, inicio_atual, fim_atual)
     valor_anterior = _contar_sentenca_revertidos_RJ(processos, inicio_anterior, fim_anterior)
 
-    if not valor_anterior:
-        return 0.0
-
-    variacao = ((valor_atual - valor_anterior) / valor_anterior) * 100
-    return round(variacao, 2)
+    return periodo.variacao_percentual(valor_atual, valor_anterior)
 
 
 def get_comparativos_sentenca_julgados_RJ(
@@ -706,24 +619,7 @@ def get_ranking_juizes_sentenca_julgados_RJ(
 # Distribuição por matéria / competência / comarca
 # =============================================================================
 
-def _agrupar_por_campo(
-    itens_base: list[dict[str, Any]],
-    obter_campo: Any,
-) -> list[dict[str, Any]]:
-    """Agrupa itens já filtrados por um campo qualquer (``percent`` soma 100%)."""
-    grouped: dict[str, int] = defaultdict(int)
-    for item in itens_base:
-        grouped[obter_campo(item)] += 1
-
-    total = float(sum(grouped.values()))
-    itens: list[dict[str, Any]] = []
-    for nome, qtd in grouped.items():
-        itens.append({
-            "name": nome,
-            "value": float(qtd),
-            "percent": round(100.0 * float(qtd) / total, 1) if total > 0 else 0.0,
-        })
-    return sorted(itens, key=lambda x: float(x["value"]), reverse=True)
+_agrupar_por_campo = julgados.agrupar_por_campo  # V2: app/analyses/common/julgados.py
 
 
 def _group_sentenca_por_campo_julgados_RJ(
@@ -1237,14 +1133,10 @@ def get_julgados_sentenca_dados_faltando_RJ(
 # Lista de sentenças (tabela): Nº processo, fase, subfase, status 1G, UF, juiz, data
 # =============================================================================
 
-def _get_fase(item: dict[str, Any]) -> str:
-    nome = str(item.get("FASE") or item.get("fase") or "").strip()
-    return nome if nome else "—"
+_get_fase = julgados.fase  # V2: app/analyses/common/julgados.py
 
 
-def _get_subfase(item: dict[str, Any]) -> str:
-    nome = str(item.get("SUBFASE") or item.get("subfase") or "").strip()
-    return nome if nome else "—"
+_get_subfase = julgados.subfase  # V2: app/analyses/common/julgados.py
 
 
 def _get_status_1g(item: dict[str, Any]) -> str:
@@ -1259,9 +1151,7 @@ def _get_status_embargos_sentenca(item: dict[str, Any]) -> str:
     return nome if nome else "—"
 
 
-def _get_numero_processo(item: dict[str, Any]) -> str:
-    numero = str(item.get("NUMERO_PROCESSO") or item.get("numero_processo") or "").strip()
-    return numero if numero else "—"
+_get_numero_processo = julgados.numero_processo_linha  # V2: app/analyses/common/julgados.py
 
 
 def list_sentencas_julgados_RJ(
