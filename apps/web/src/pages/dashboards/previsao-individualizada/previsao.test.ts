@@ -17,7 +17,8 @@ import {
     type PrevisaoResponse,
 } from './previsao.ts'
 
-// O bundle real (gerado pelo modelo-machine-learning/, versionado na API): os números da v1 com o mesmo JSON.
+// O bundle real (gerado pelo modelo-machine-learning/, versionado na API). Os números abaixo são do modelo treinado
+// na foto de 19/11/2026; retreinou com outra foto? Atualize-os (com a foto de 10/11 eram os da v1: 125 d e 84 d).
 const real = Object.values(
     import.meta.glob('../../../../../api/src/app/analyses/GERAL/data/tcc_previsao_individual.json', {
         eager: true,
@@ -40,28 +41,28 @@ function soDoEscritorio(d: PrevisaoResponse, sigla: string): PrevisaoResponse {
 }
 
 describe('cálculo da v1 com o bundle real', () => {
-    it('tudo em "Todos" (NG + LA, como a v1 sem filtro): mediana 125 d (60–259)', () => {
+    it('tudo em "Todos" (NG + LA, como a v1 sem filtro): mediana 137 d (65–288)', () => {
         const c = calcular(real, SELECAO_VAZIA)
-        expect(c.nTreino).toBe(36362)
-        expect(c.diasPrevisto).toBe(125)
-        expect(c.faixa).toEqual({ de: 60, ate: 259 })
-        expect(c.p1g! * 100).toBeCloseTo(35.6, 1)
-        expect(c.valor2g! * 100).toBeCloseTo(34.0, 1)
-        expect(c.acordoPos! * 100).toBeCloseTo(7.1, 1)
+        expect(c.nTreino).toBe(36851)
+        expect(c.diasPrevisto).toBe(137)
+        expect(c.faixa).toEqual({ de: 65, ate: 288 })
+        expect(c.p1g! * 100).toBeCloseTo(36.1, 1)
+        expect(c.valor2g! * 100).toBeCloseTo(37.2, 1)
+        expect(c.acordoPos! * 100).toBeCloseTo(8.0, 1)
         expect(c.acordoPre! * 100).toBeCloseTo(2.7, 1)
-        expect(c.medianaMateria).toBe(345)
+        expect(c.medianaMateria).toBe(333)
     })
 
-    it('ANP + MANAUS no NG: mediana 84 d (42–165)', () => {
+    it('ANP + MANAUS no NG: mediana 94 d (48–187)', () => {
         const c = calcular(soDoEscritorio(real, 'NG'), { ...SELECAO_VAZIA, materias: ['ANP'], comarcas: ['MANAUS'] })
-        expect(c.nTreino).toBe(1725)
-        expect(c.diasPrevisto).toBe(84)
-        expect(c.faixa).toEqual({ de: 42, ate: 165 })
-        expect(c.p1g! * 100).toBeCloseTo(7.9, 1)
-        expect(c.valor2g! * 100).toBeCloseTo(27.7, 1)
-        expect(c.acordoPos! * 100).toBeCloseTo(0.9, 1)
-        expect(c.acordoPre! * 100).toBeCloseTo(1.25, 2)
-        expect(c.medianaMateria).toBe(266)
+        expect(c.nTreino).toBe(1753)
+        expect(c.diasPrevisto).toBe(94)
+        expect(c.faixa).toEqual({ de: 48, ate: 187 })
+        expect(c.p1g! * 100).toBeCloseTo(6.2, 1)
+        expect(c.valor2g! * 100).toBeCloseTo(25.9, 1)
+        expect(c.acordoPos! * 100).toBeCloseTo(1.9, 1)
+        expect(c.acordoPre! * 100).toBeCloseTo(1.58, 2)
+        expect(c.medianaMateria).toBe(255)
     })
 
     it('LA + Belém: sem processos de treino, sem previsão', () => {
