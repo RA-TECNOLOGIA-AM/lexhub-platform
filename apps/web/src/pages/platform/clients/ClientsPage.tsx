@@ -11,14 +11,22 @@ import { dataClient } from '../../../services/client.ts'
 import type { PlatformClient } from '../../../types/index.ts'
 import { ClientKpis } from './ClientKpis.tsx'
 import { clientColumns } from './clientColumns.tsx'
-import { kpisOf } from './clientsView.ts'
+import { kpisOf, withFailing } from './clientsView.ts'
 import { SupportPanel } from './SupportPanel.tsx'
 
 // A página: busca os clientes e junta indicadores, tabela e o painel de suporte.
 // Quem vê: Owner/Desenvolvedor da LexGroup e equipe RA. O menu já esconde o item; quem digitar o
 // endereço sem poder recebe 403 do banco (api.list_clients) e cai na mensagem abaixo.
 export function ClientsPage() {
-    const { data, error } = useAsync(() => dataClient.listClients(), [])
+    // A lista vem do Supabase; a contagem de fontes com falha, da API (registro de leituras). Falhou a
+    // contagem = "Sem informação" (withFailing), a página abre do mesmo jeito.
+    const { data, error } = useAsync(async () => {
+        const [list, failing] = await Promise.all([
+            dataClient.listClients(),
+            dataClient.getFailingSources().catch(() => null),
+        ])
+        return withFailing(list, failing)
+    }, [])
     const [notice, setNotice] = useState<string | null>(null)
     const [supportFor, setSupportFor] = useState<PlatformClient | null>(null)
 

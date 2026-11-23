@@ -552,6 +552,16 @@ export function createMockClient(): DataClient {
             return copy(clients)
         },
 
+        // No mock: as fontes fictícias com falha seguida, na LexGroup (as outras organizações não têm fontes).
+        async getFailingSources() {
+            await wait()
+            requireSession()
+            if (!me.user.platform_staff) throw new DataError(403, 'Só a TI da LexGroup vê as fontes dos clientes')
+            const all = sources.units.flatMap((u) => u.sources)
+            const failing = [...new Set(all.filter((s) => s.failures > 0 && s.status !== 'disabled').map((s) => s.id))]
+            return { lexgroup: failing }
+        },
+
         getProtocolo: (query) => dashboardResponse('protocolo-lexpre', query, protocoloFor),
         getPendencias: (query) => dashboardResponse('pendencias-lexpre', query, pendenciasFor),
         // Sem números fictícios: as telas novas mostram 0/—; os números de verdade vêm da API.

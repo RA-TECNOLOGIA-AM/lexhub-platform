@@ -19,14 +19,26 @@ const BILLING: Record<PlatformClient['billing'], Badge> = {
 export const planOf = (c: PlatformClient): Badge => PLAN[c.plan]
 export const billingOf = (c: PlatformClient): Badge => BILLING[c.billing]
 
-// Dados: "Saudável" ou "1 fonte atrasada" / "2 fontes atrasadas".
+// Dados: "Saudável", "1 fonte com falha" / "2 fontes com falha" ou "Sem informação" (a API não respondeu).
 export function dataOf(c: PlatformClient): Badge {
     const n = c.failingSources
+    if (n === null) return { label: 'Sem informação', badge: 'badge neutral' }
     if (n === 0) return { label: 'Saudável', badge: 'badge ok' }
-    return { label: n === 1 ? '1 fonte atrasada' : `${n} fontes atrasadas`, badge: 'badge warn' }
+    return { label: n === 1 ? '1 fonte com falha' : `${n} fontes com falha`, badge: 'badge warn' }
 }
 
-export type ClientKpis = { active: number; onboarding: number; revenue: string; failingSources: number }
+// A contagem de fontes com falha vem da API (GET /sources/failing: a mesma regra da tela Unidades e fontes,
+// a tentativa de leitura mais recente falhou). Organização fora da resposta = nenhuma fonte que conte.
+// failing null (a API não respondeu) = sem informação: nunca a contagem antiga do Supabase, que tratava
+// planilha parada há 20 min como atrasada.
+export function withFailing(data: ClientsResponse, failing: Record<string, string[]> | null): ClientsResponse {
+    return {
+        ...data,
+        clients: data.clients.map((c) => ({ ...c, failingSources: failing ? (failing[c.slug]?.length ?? 0) : null })),
+    }
+}
+
+export type ClientKpis = { active: number; onboarding: number; revenue: string; failingSources: number | null }
 
 // Os 4 indicadores do topo, calculados da lista (não ficam fixos no mock).
 export function kpisOf(data: ClientsResponse): ClientKpis {
@@ -34,7 +46,9 @@ export function kpisOf(data: ClientsResponse): ClientKpis {
         active: data.clients.length,
         onboarding: data.clients.filter((c) => c.plan === 'onboarding').length,
         revenue: data.monthlyRevenue === null ? 'R$ [—]' : fmt.brl(data.monthlyRevenue),
-        failingSources: data.clients.reduce((sum, c) => sum + c.failingSources, 0),
+        failingSources: data.clients.some((c) => c.failingSources === null)
+            ? null
+            : data.clients.reduce((sum, c) => sum + (c.failingSources ?? 0), 0),
     }
 }
 

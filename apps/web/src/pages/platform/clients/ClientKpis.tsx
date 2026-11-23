@@ -10,8 +10,8 @@ export function ClientKpis({ kpis }: { kpis: Kpis }) {
             <Kpi label="Receita mensal" value={kpis.revenue} />
             <Kpi
                 label="Fontes com falha"
-                value={kpis.failingSources}
-                tone={kpis.failingSources > 0 ? 'warn' : undefined}
+                value={kpis.failingSources ?? '—'}
+                tone={(kpis.failingSources ?? 0) > 0 ? 'warn' : undefined}
             />
         </div>
     )

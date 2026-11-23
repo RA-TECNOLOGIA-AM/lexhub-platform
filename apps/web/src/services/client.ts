@@ -141,6 +141,9 @@ export interface DataClient {
     setSourceEnabled(org: string, source: string, enabled: boolean): Promise<DataSource>
     // Plataforma: todas as organizações. Só Owner/Desenvolvedor da LexGroup e equipe RA; os outros recebem 403.
     listClients(): Promise<ClientsResponse>
+    // Fontes com falha de cada organização (slug -> chaves), pela regra da tela Unidades e fontes. Só a TI da
+    // LexGroup (os outros recebem 403). Lê só o registro de leituras da API, nunca os bancos de origem.
+    getFailingSources(): Promise<Record<string, string[]>>
     getProtocolo(query: DashboardQuery): Promise<ProtocoloResponse>
     getPendencias(query: DashboardQuery): Promise<PendenciasResponse>
     // Dados de qualquer dashboard pela key (o formato T é definido na pasta do dashboard).

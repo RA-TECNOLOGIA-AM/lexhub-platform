@@ -21,6 +21,7 @@ type SourcesClient = Pick<
     | 'getSources'
     | 'getSourceDetail'
     | 'getSourcesFreshness'
+    | 'getFailingSources'
     | 'createUnit'
     | 'updateUnit'
     | 'listProductOffices'
@@ -72,6 +73,7 @@ export function createSourcesClient(supabase: SupabaseClient, http: Http): Sourc
             toFreshness(
                 await http.get<FreshnessOut>(`/orgs/${enc(org)}/sources/freshness?keys=${enc(keys.join(','))}`),
             ),
+        getFailingSources: async () => (await http.get<{ orgs: Record<string, string[]> }>('/sources/failing')).orgs,
         createUnit: (org, unit) => call<UnitSources>('create_unit', unitArgs(org, unit)),
         updateUnit: (org, unit) => call<UnitSources>('update_unit', unitArgs(org, unit)),
         listProductOffices: (product) => http.get<ProductOffices>(`/sources/${product}/offices`),

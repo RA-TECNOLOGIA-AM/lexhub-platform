@@ -440,7 +440,9 @@ export type PlatformClient = {
     sub: string // "3 unidades · cliente desde a v1"
     plan: ClientPlan
     seats: { used: number; total: number | null } // total null = sem teto
-    failingSources: number // fontes atrasadas ou com falha agora
+    // Fontes cuja leitura mais recente falhou (a API corrige a contagem do Supabase: clientsView.withFailing).
+    // null = sem informação (a API não respondeu).
+    failingSources: number | null
     billing: 'ok' | 'onboarding_paid' | 'overdue'
 }
 
