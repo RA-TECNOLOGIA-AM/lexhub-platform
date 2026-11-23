@@ -51,6 +51,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, FrozenSet, List, Optional, Tuple
 
 from app.sheets import fetch_sheet
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import resolver_periodo_comparativo
 
 logger = logging.getLogger(__name__)
@@ -1069,7 +1070,7 @@ def _reflexo_financeiro_metricas(
         "total_entradas": total_entradas,
         "valor_receita":  valor_receita,
         "mediana_dias_ajuizamento_ted": (
-            float(statistics.median(dias_ajuizamento_ted)) if dias_ajuizamento_ted else 0.0
+            tempo.mediana(dias_ajuizamento_ted, casas=None)
         ),
         "valor_causa": valor_causa,
         "origem": origem,
@@ -1473,7 +1474,7 @@ def _receita_por_ajuizamento(
     return {
         "entradas":     entradas,
         "receita":      receita,
-        "mediana_dias": float(statistics.median(dias)) if dias else 0.0,
+        "mediana_dias": tempo.mediana(dias, casas=None),
         "por_materia":  por_materia,
         "origem":       origem,
         "por_ano_ted":  por_ano_ted,

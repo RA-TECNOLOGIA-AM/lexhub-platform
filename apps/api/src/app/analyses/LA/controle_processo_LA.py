@@ -15,6 +15,8 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
+from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, parse_datetime_from_db, resolver_periodo_comparativo
 from app.analyses.common import matriz_julgamento as mj
 
@@ -294,6 +296,28 @@ def _duracao_dias_entrada_saida_LA(
     return float(segundos / 86400.0)
 
 
+def _duracoes_permanencia_LA(
+    controle_processo: List[Dict[str, Any]],
+    col_entrada: str,
+    col_saida: str,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+):
+    """V2 (app.analyses.common.tempo): dias (com fração) entre a entrada e a saída da fase, com a mesma regra
+    de `_duracao_dias_entrada_saida_LA` (0 entra, negativo fica fora), amostrados pela data da SAÍDA no
+    período. Usado pela média, pela mediana e pela série mês a mês."""
+    return tempo.duracoes(
+        _base_controle_processo_LA(controle_processo),
+        lambda p: _parse_datetime_controle_LA(_col(p, col_entrada)),
+        lambda p: _parse_datetime_controle_LA(_col(p, col_saida)),
+        de=from_date,
+        ate=to_date,
+        data_periodo=lambda p: _parse_data_controle_LA(_col(p, col_saida)),
+        unidade="dias_fracao",
+        aceita_zero=True,
+    )
+
+
 def _media_dias_permanencia_setor_LA(
     controle_processo: List[Dict[str, Any]],
     col_entrada: str,
@@ -305,17 +329,7 @@ def _media_dias_permanencia_setor_LA(
     Média de dias (entrada → saída), amostrada pelos processos cuja SAÍDA da fase
     caiu no período informado (não pela entrada/ajuizamento).
     """
-    processos = _base_controle_processo_LA(controle_processo)
-    duracoes: List[float] = []
-    for p in processos:
-        if not _col_data_no_intervalo_LA(p, col_saida, from_date, to_date):
-            continue
-        d = _duracao_dias_entrada_saida_LA(p, col_entrada, col_saida)
-        if d is not None:
-            duracoes.append(d)
-    if not duracoes:
-        return 0.0
-    return round(sum(duracoes) / len(duracoes), 2)
+    return tempo.media(_duracoes_permanencia_LA(controle_processo, col_entrada, col_saida, from_date, to_date))
 
 
 def _mediana_dias_permanencia_setor_LA(
@@ -329,26 +343,7 @@ def _mediana_dias_permanencia_setor_LA(
     Mediana de dias (entrada → saída), amostrada pelos processos cuja SAÍDA da fase
     caiu no período informado (não pela entrada/ajuizamento).
     """
-    processos = _base_controle_processo_LA(controle_processo)
-    duracoes: List[float] = []
-    for p in processos:
-        if not _col_data_no_intervalo_LA(p, col_saida, from_date, to_date):
-            continue
-        d = _duracao_dias_entrada_saida_LA(p, col_entrada, col_saida)
-        if d is not None:
-            duracoes.append(d)
-
-    if not duracoes:
-        return 0.0
-
-    duracoes.sort()
-    n = len(duracoes)
-    if n % 2 == 1:
-        mediana = duracoes[n // 2]
-    else:
-        mediana = (duracoes[n // 2 - 1] + duracoes[n // 2]) / 2.0
-
-    return round(float(mediana), 2)
+    return tempo.mediana(_duracoes_permanencia_LA(controle_processo, col_entrada, col_saida, from_date, to_date))
 
 
 # -----------------------------------------------------------------------------
@@ -1194,22 +1189,8 @@ def get_mediana_tempo_dias_fase_execucao_LA(
     )
 
 
-def _periodo_anterior_equivalente_LA(
-    from_date: Optional[date],
-    to_date: Optional[date],
-) -> tuple[Optional[date], Optional[date]]:
-    """
-    Mesmo período um mês civil antes do período informado (ou do mês corrente até
-    hoje, se não houver filtro). Usado para os comparativos "vs mês anterior".
-    """
-    _, _, data_inicio_anterior, data_fim_anterior = resolver_periodo_comparativo(from_date, to_date)
-    return data_inicio_anterior, data_fim_anterior
-
-
 def _comparativo_percentual_LA(atual: float, anterior: float) -> float:
-    if not anterior:
-        return 0.0
-    return round(((atual - anterior) / anterior) * 100, 2)
+    return tempo.variacao_percentual(atual, anterior)
 
 
 def get_comparativo_media_tempo_dias_fase_inicial_LA(
@@ -1218,8 +1199,10 @@ def get_comparativo_media_tempo_dias_fase_inicial_LA(
     to_date: Optional[date] = None,
 ) -> float:
     """Comparativo (%) da média de dias na fase INICIAL vs período anterior equivalente."""
-    inicio_ant, fim_ant = _periodo_anterior_equivalente_LA(from_date, to_date)
-    atual = get_media_tempo_dias_fase_inicial_LA(controle_processo, from_date, to_date)
+    # V2: o período atual também passa pelo resolver (sem período: o mês corrente até hoje, como o
+    # anterior); a v1 usava o from/to cru e, sem filtro, comparava o histórico inteiro com o mês anterior.
+    inicio, fim, inicio_ant, fim_ant = resolver_periodo_comparativo(from_date, to_date)
+    atual = get_media_tempo_dias_fase_inicial_LA(controle_processo, inicio, fim)
     anterior = get_media_tempo_dias_fase_inicial_LA(controle_processo, inicio_ant, fim_ant)
     return _comparativo_percentual_LA(atual, anterior)
 
@@ -1230,8 +1213,10 @@ def get_comparativo_media_tempo_dias_fase_recursal_LA(
     to_date: Optional[date] = None,
 ) -> float:
     """Comparativo (%) da média de dias na fase RECURSAL vs período anterior equivalente."""
-    inicio_ant, fim_ant = _periodo_anterior_equivalente_LA(from_date, to_date)
-    atual = get_media_tempo_dias_fase_recursal_LA(controle_processo, from_date, to_date)
+    # V2: o período atual também passa pelo resolver (sem período: o mês corrente até hoje, como o
+    # anterior); a v1 usava o from/to cru e, sem filtro, comparava o histórico inteiro com o mês anterior.
+    inicio, fim, inicio_ant, fim_ant = resolver_periodo_comparativo(from_date, to_date)
+    atual = get_media_tempo_dias_fase_recursal_LA(controle_processo, inicio, fim)
     anterior = get_media_tempo_dias_fase_recursal_LA(controle_processo, inicio_ant, fim_ant)
     return _comparativo_percentual_LA(atual, anterior)
 
@@ -1242,8 +1227,10 @@ def get_comparativo_media_tempo_dias_fase_execucao_LA(
     to_date: Optional[date] = None,
 ) -> float:
     """Comparativo (%) da média de dias na fase EXECUÇÃO vs período anterior equivalente."""
-    inicio_ant, fim_ant = _periodo_anterior_equivalente_LA(from_date, to_date)
-    atual = get_media_tempo_dias_fase_execucao_LA(controle_processo, from_date, to_date)
+    # V2: o período atual também passa pelo resolver (sem período: o mês corrente até hoje, como o
+    # anterior); a v1 usava o from/to cru e, sem filtro, comparava o histórico inteiro com o mês anterior.
+    inicio, fim, inicio_ant, fim_ant = resolver_periodo_comparativo(from_date, to_date)
+    atual = get_media_tempo_dias_fase_execucao_LA(controle_processo, inicio, fim)
     anterior = get_media_tempo_dias_fase_execucao_LA(controle_processo, inicio_ant, fim_ant)
     return _comparativo_percentual_LA(atual, anterior)
 
@@ -1254,8 +1241,10 @@ def get_comparativo_mediana_tempo_dias_fase_inicial_LA(
     to_date: Optional[date] = None,
 ) -> float:
     """Comparativo (%) da mediana de dias na fase INICIAL vs período anterior equivalente."""
-    inicio_ant, fim_ant = _periodo_anterior_equivalente_LA(from_date, to_date)
-    atual = get_mediana_tempo_dias_fase_inicial_LA(controle_processo, from_date, to_date)
+    # V2: o período atual também passa pelo resolver (sem período: o mês corrente até hoje, como o
+    # anterior); a v1 usava o from/to cru e, sem filtro, comparava o histórico inteiro com o mês anterior.
+    inicio, fim, inicio_ant, fim_ant = resolver_periodo_comparativo(from_date, to_date)
+    atual = get_mediana_tempo_dias_fase_inicial_LA(controle_processo, inicio, fim)
     anterior = get_mediana_tempo_dias_fase_inicial_LA(controle_processo, inicio_ant, fim_ant)
     return _comparativo_percentual_LA(atual, anterior)
 
@@ -1266,8 +1255,10 @@ def get_comparativo_mediana_tempo_dias_fase_recursal_LA(
     to_date: Optional[date] = None,
 ) -> float:
     """Comparativo (%) da mediana de dias na fase RECURSAL vs período anterior equivalente."""
-    inicio_ant, fim_ant = _periodo_anterior_equivalente_LA(from_date, to_date)
-    atual = get_mediana_tempo_dias_fase_recursal_LA(controle_processo, from_date, to_date)
+    # V2: o período atual também passa pelo resolver (sem período: o mês corrente até hoje, como o
+    # anterior); a v1 usava o from/to cru e, sem filtro, comparava o histórico inteiro com o mês anterior.
+    inicio, fim, inicio_ant, fim_ant = resolver_periodo_comparativo(from_date, to_date)
+    atual = get_mediana_tempo_dias_fase_recursal_LA(controle_processo, inicio, fim)
     anterior = get_mediana_tempo_dias_fase_recursal_LA(controle_processo, inicio_ant, fim_ant)
     return _comparativo_percentual_LA(atual, anterior)
 
@@ -1278,8 +1269,10 @@ def get_comparativo_mediana_tempo_dias_fase_execucao_LA(
     to_date: Optional[date] = None,
 ) -> float:
     """Comparativo (%) da mediana de dias na fase EXECUÇÃO vs período anterior equivalente."""
-    inicio_ant, fim_ant = _periodo_anterior_equivalente_LA(from_date, to_date)
-    atual = get_mediana_tempo_dias_fase_execucao_LA(controle_processo, from_date, to_date)
+    # V2: o período atual também passa pelo resolver (sem período: o mês corrente até hoje, como o
+    # anterior); a v1 usava o from/to cru e, sem filtro, comparava o histórico inteiro com o mês anterior.
+    inicio, fim, inicio_ant, fim_ant = resolver_periodo_comparativo(from_date, to_date)
+    atual = get_mediana_tempo_dias_fase_execucao_LA(controle_processo, inicio, fim)
     anterior = get_mediana_tempo_dias_fase_execucao_LA(controle_processo, inicio_ant, fim_ant)
     return _comparativo_percentual_LA(atual, anterior)
 
@@ -1295,28 +1288,20 @@ def _media_dias_permanencia_setor_por_mes_LA(
     só que quebrada mês a mês em vez de um único agregado — usada para acompanhar a
     tendência do tempo médio ao longo dos meses.
     """
-    processos = _base_controle_processo_LA(controle_processo)
-    grouped: Dict[str, Dict[str, Any]] = {}
-    for p in processos:
-        saida = _parse_data_controle_LA(_col(p, col_saida))
-        if saida is None:
-            continue
-        d = _duracao_dias_entrada_saida_LA(p, col_entrada, col_saida)
-        if d is None:
-            continue
-        month_key = f"{saida.year}-{saida.month:02d}"
-        if month_key not in grouped:
-            month_name = f"{_MONTH_NAMES_LA[saida.month - 1]} {saida.year}"
-            grouped[month_key] = {"name": month_name, "total": 0.0, "count": 0}
-        grouped[month_key]["total"] += d
-        grouped[month_key]["count"] += 1
+    def mes(p: Dict[str, Any], _saida: Any) -> Any:
+        d = _parse_data_controle_LA(_col(p, col_saida))
+        return f"{_MONTH_NAMES_LA[d.month - 1]} {d.year}" if d else tempo.FORA
 
-    result = [
-        {"name": v["name"], "value": round(v["total"] / v["count"], 2)}
-        for v in grouped.values()
-        if v["count"] > 0
-    ]
-    return sorted(result, key=lambda x: x["name"])
+    por_mes = tempo.duracoes_por_grupo(
+        _base_controle_processo_LA(controle_processo),
+        lambda p: _parse_datetime_controle_LA(_col(p, col_entrada)),
+        lambda p: _parse_datetime_controle_LA(_col(p, col_saida)),
+        mes,
+        unidade="dias_fracao",
+        aceita_zero=True,
+    )
+    result = [{"name": nome, "value": tempo.media(dias)} for nome, dias in por_mes.items()]
+    return sorted(result, key=ordem_mes)
 
 
 def get_media_tempo_dias_fase_inicial_por_mes_LA(

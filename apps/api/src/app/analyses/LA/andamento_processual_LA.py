@@ -6,6 +6,7 @@ from collections import defaultdict
 from decimal import Decimal
 import statistics
 
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_datetime_from_db, parse_date_from_db
 
 
@@ -151,67 +152,11 @@ def get_andamento_taxa_nao_resolvidos_LA(andamento_processual: List[Dict[str, An
 
 # Retorna a média do tempo de espera
 def get_andamento_media_tempo_espera_LA(andamento_processual: List[Dict[str, Any]]) -> Optional[float]:
-    tempos_espera_horas = []
-    
-    for item in andamento_processual:
-        entrada_str = item.get("ENTRADA") or item.get("entrada")
-        inicio_str = item.get("INICIO_ATENDIMENTO") or item.get("inicio_atendimento")
-        
-        if not entrada_str or not inicio_str:
-            continue
-        
-        try:
-            entrada_dt = parse_datetime_from_db(entrada_str)
-            inicio_dt = parse_datetime_from_db(inicio_str)
-            
-            if not entrada_dt or not inicio_dt:
-                continue
-            
-            # Calcula diferença em horas
-            diferenca = (inicio_dt - entrada_dt).total_seconds() / 3600
-            
-            # Só adiciona se a diferença for positiva (início após entrada)
-            if diferenca >= 0:
-                tempos_espera_horas.append(diferenca)
-        except (ValueError, AttributeError, TypeError):
-            continue
-    
-    if not tempos_espera_horas:
-        return None
-    
-    return round(sum(tempos_espera_horas) / len(tempos_espera_horas), 2)
+    return tempo.media(tempo.duracoes(andamento_processual, tempo.coluna("ENTRADA", com_hora=True), tempo.coluna("INICIO_ATENDIMENTO", com_hora=True), unidade="horas", aceita_zero=True), vazio=None)
 
 # Retorna a mediana do tempo de espera
 def get_andamento_mediana_tempo_espera_LA(andamento_processual: List[Dict[str, Any]]) -> Optional[float]:
-    tempos_espera_horas = []
-    
-    for item in andamento_processual:
-        entrada_str = item.get("ENTRADA") or item.get("entrada")
-        inicio_str = item.get("INICIO_ATENDIMENTO") or item.get("inicio_atendimento")
-        
-        if not entrada_str or not inicio_str:
-            continue
-        
-        try:
-            entrada_dt = parse_datetime_from_db(entrada_str)
-            inicio_dt = parse_datetime_from_db(inicio_str)
-            
-            if not entrada_dt or not inicio_dt:
-                continue
-            
-            # Calcula diferença em horas
-            diferenca = (inicio_dt - entrada_dt).total_seconds() / 3600
-            
-            # Só adiciona se a diferença for positiva (início após entrada)
-            if diferenca >= 0:
-                tempos_espera_horas.append(diferenca)
-        except (ValueError, AttributeError, TypeError):
-            continue
-    
-    if not tempos_espera_horas:
-        return None
-    
-    return round(statistics.median(tempos_espera_horas), 2)
+    return tempo.mediana(tempo.duracoes(andamento_processual, tempo.coluna("ENTRADA", com_hora=True), tempo.coluna("INICIO_ATENDIMENTO", com_hora=True), unidade="horas", aceita_zero=True), vazio=None)
 
 # Retorna o a média do tempo de atendimento do cliente
 def get_andamento_media_tempo_atendimento_LA(andamento_processual: List[Dict[str, Any]]) -> Optional[float]:
@@ -220,35 +165,7 @@ def get_andamento_media_tempo_atendimento_LA(andamento_processual: List[Dict[str
     Tempo de espera = diferença entre INICIO_ATENDIMENTO e ENTRADA.
     Retorna None se não houver dados válidos.
     """
-    tempos_atendimento_horas = []
-    
-    for item in andamento_processual:
-        inicio_str = item.get("INICIO_ATENDIMENTO") or item.get("inicio_atendimento")
-        saida_str = item.get("SAIDA") or item.get("saida")
-        
-        if not inicio_str or not saida_str:
-            continue
-        
-        try:
-            inicio_dt = parse_datetime_from_db(inicio_str)
-            saida_dt = parse_datetime_from_db(saida_str)
-            
-            if not inicio_dt or not saida_dt:
-                continue
-            
-            # Calcula diferença em horas
-            diferenca = (saida_dt - inicio_dt).total_seconds() / 3600
-            
-            # Só adiciona se a diferença for positiva (início após entrada)
-            if diferenca >= 0:
-                tempos_atendimento_horas.append(diferenca)
-        except (ValueError, AttributeError, TypeError):
-            continue
-    
-    if not tempos_atendimento_horas:
-        return None
-    
-    return round(sum(tempos_atendimento_horas) / len(tempos_atendimento_horas), 2)
+    return tempo.media(tempo.duracoes(andamento_processual, tempo.coluna("INICIO_ATENDIMENTO", com_hora=True), tempo.coluna("SAIDA", com_hora=True), unidade="horas", aceita_zero=True), vazio=None)
 
 # Retorna a mediana do tempo de atendimento do cliente
 def get_andamento_mediana_tempo_atendimento_LA(andamento_processual: List[Dict[str, Any]]) -> Optional[float]:
@@ -257,35 +174,7 @@ def get_andamento_mediana_tempo_atendimento_LA(andamento_processual: List[Dict[s
     Tempo de atendimento = diferença entre INICIO_ATENDIMENTO e SAIDA.
     Retorna None se não houver dados válidos.
     """
-    tempos_atendimento_horas = []
-    
-    for item in andamento_processual:
-        inicio_str = item.get("INICIO_ATENDIMENTO") or item.get("inicio_atendimento")  
-        saida_str = item.get("SAIDA") or item.get("saida")
-
-        if not inicio_str or not saida_str:
-            continue
-        
-        try:
-            inicio_dt = parse_datetime_from_db(inicio_str)
-            saida_dt = parse_datetime_from_db(saida_str)
-            
-            if not inicio_dt or not saida_dt:
-                continue
-            
-            # Calcula diferença em horas
-            diferenca = (saida_dt - inicio_dt).total_seconds() / 3600
-            
-            # Só adiciona se a diferença for positiva (início após entrada)
-            if diferenca >= 0:
-                tempos_atendimento_horas.append(diferenca)
-        except (ValueError, AttributeError, TypeError):
-            continue
-    
-    if not tempos_atendimento_horas:
-        return None
-    
-    return round(statistics.median(tempos_atendimento_horas), 2)
+    return tempo.mediana(tempo.duracoes(andamento_processual, tempo.coluna("INICIO_ATENDIMENTO", com_hora=True), tempo.coluna("SAIDA", com_hora=True), unidade="horas", aceita_zero=True), vazio=None)
 
 # Agrupa os andamentos processuais por colaborador e retorna o ranking ordenado por quantidade de andamentos processuais.
 def group_andamento_processual_by_colaborador_LA(andamento_processual: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

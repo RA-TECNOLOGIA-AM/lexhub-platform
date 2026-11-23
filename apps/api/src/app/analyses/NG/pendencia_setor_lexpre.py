@@ -82,6 +82,8 @@ from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal
 
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
+from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, parse_datetime_from_db, resolver_periodo_comparativo, normalizar_filtro_ids, normalizar_filtro_textos
 
 # public.escritorio (lexpre): 1 = NGAM, 2 = LAAM, 3 = LARJ — mesma constante de comercial_lexpre.py.
@@ -580,34 +582,20 @@ def group_nao_resolvidas_por_origem(
 # -----------------------------------------------------------------------------
 
 def _duracoes_dias(visitas: List[Dict[str, Any]]) -> List[float]:
-    duracoes: List[float] = []
-    for v in visitas:
-        if not _is_resolvida(v):
-            continue
-        entrada_dt = _to_datetime(v["entrada"].get("DATA")) if v.get("entrada") else None
-        saida_dt = _to_datetime(v["saida"].get("DATA")) if v.get("saida") else None
-        if not entrada_dt or not saida_dt:
-            continue
-        dias = (saida_dt - entrada_dt).total_seconds() / 86400
-        if dias > 0:
-            duracoes.append(dias)
-    return duracoes
+    return tempo.duracoes(
+        [v for v in visitas if _is_resolvida(v)],
+        lambda v: _to_datetime(v["entrada"].get("DATA")) if v.get("entrada") else None,
+        lambda v: _to_datetime(v["saida"].get("DATA")) if v.get("saida") else None,
+        unidade="dias_fracao",
+    )
 
 
 def get_media_tempo_resolvidos(visitas_periodo: List[Dict[str, Any]]) -> float:
-    duracoes = _duracoes_dias(visitas_periodo)
-    if not duracoes:
-        return 0.0
-    return round(sum(duracoes) / len(duracoes), 2)
+    return tempo.media(_duracoes_dias(visitas_periodo))
 
 
 def get_mediana_tempo_resolvidos(visitas_periodo: List[Dict[str, Any]]) -> float:
-    duracoes = sorted(_duracoes_dias(visitas_periodo))
-    if not duracoes:
-        return 0.0
-    n = len(duracoes)
-    mediana = duracoes[n // 2] if n % 2 == 1 else (duracoes[n // 2 - 1] + duracoes[n // 2]) / 2.0
-    return round(mediana, 2)
+    return tempo.mediana(_duracoes_dias(visitas_periodo))
 
 
 # -----------------------------------------------------------------------------
@@ -631,11 +619,9 @@ def _comparativo_variacao_percentual(
     )
     valor_atual = metrica_fn(_visitas_periodo(visitas, data_inicio_atual, data_fim_atual))
     valor_anterior = metrica_fn(_visitas_periodo(visitas, data_inicio_anterior, data_fim_anterior))
-    if valor_anterior == 0:
-        # Sem base no período anterior (ex.: LA, que só começou a usar o lexpre em
-        # 22/09/2026): crescimento a partir do zero é exibido como +100%.
-        return 100.0 if valor_atual > 0 else 0.0
-    return round(((valor_atual - valor_anterior) / valor_anterior) * 100, 2)
+    # Sem base no período anterior (ex.: LA, que só começou a usar o lexpre em 22/09/2026): crescimento a
+    # partir do zero é exibido como +100%.
+    return tempo.variacao_percentual(valor_atual, valor_anterior, sem_base=100.0)
 
 
 def get_comparativo_pendencias_resolvidas(
@@ -707,7 +693,7 @@ def group_resolvidas_por_mes(visitas_todas: List[Dict[str, Any]]) -> List[Dict[s
         if month_key not in grouped:
             grouped[month_key] = {"name": f"{_MONTH_NAMES[d.month - 1]} {d.year}", "value": 0}
         grouped[month_key]["value"] += 1
-    return [item for item in sorted(grouped.values(), key=lambda x: x["name"])]
+    return [item for item in sorted(grouped.values(), key=ordem_mes)]
 
 
 def get_media_resolvidas_por_funcionario(visitas_periodo: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

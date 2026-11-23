@@ -5,6 +5,8 @@ from datetime import datetime, date
 from collections import defaultdict
 import statistics
 from decimal import Decimal
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
+from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.NG.comercial_geral import _formatar_nome_atendente, get_comissao_base
 
@@ -471,129 +473,30 @@ def group_protocolados_por_sistema(protocolos: List[Dict[str, Any]]) -> List[Dic
 
 # Função auxiliar para extrair os dias
 def _extrair_duracoes_dias(protocolos: List[Dict[str, Any]]) -> List[float]:
-    protocolos_agrupados = _filtrar_protocolos_resolvidos(protocolos)
-    duracoes: List[float] = []
-
-    for p in protocolos_agrupados:
-        try:
-            entrada_str = p.get("ENTRADA") or p.get("entrada")
-            saida_str = p.get("SAIDA") or p.get("saida")
-
-            if not entrada_str or not saida_str:
-                continue
-
-            entrada_date = parse_date_from_db(entrada_str)
-            saida_date = parse_date_from_db(saida_str)
-
-            if not entrada_date or not saida_date:
-                continue
-
-            if isinstance(entrada_date, datetime):
-                entrada_date = entrada_date.date()
-            if isinstance(saida_date, datetime):
-                saida_date = saida_date.date()
-
-            if not isinstance(entrada_date, date) or not isinstance(saida_date, date):
-                continue
-
-            duracao_dias = (saida_date - entrada_date).days
-            if duracao_dias > 0:
-                duracoes.append(float(duracao_dias))
-
-        except (ValueError, AttributeError, TypeError):
-            continue
-
-    return duracoes
+    return tempo.duracoes(_filtrar_protocolos_resolvidos(protocolos), tempo.coluna("ENTRADA"), tempo.coluna("SAIDA"))
 
 # Retorna o tempo médio (em dias) para o processo protocolado no setor, de forma geral.
 def get_media_tempo_protocolado(protocolos: List[Dict[str, Any]]) -> float:
     """Tempo médio (em dias) entre DATA_EXECUCAO e DATA_ENCERRAMENTO."""
-    duracoes = _extrair_duracoes_dias(protocolos)
-
-    if not duracoes:
-        return 0.0
-
-    return round(sum(duracoes) / len(duracoes), 2)
+    return tempo.media(_extrair_duracoes_dias(protocolos))
 
 # Retorna a mediana do tempo (em dias) para o processo protocolado no setor, de forma geral.
 def get_mediana_tempo_protocolado(protocolos: List[Dict[str, Any]]) -> float:
-    duracoes = _extrair_duracoes_dias(protocolos)
-
-    if not duracoes:
-        return 0.0
-
-    duracoes.sort()
-    n = len(duracoes)
-
-    if n % 2 == 1:
-        mediana = duracoes[n // 2]
-    else:
-        mediana = (duracoes[n // 2 - 1] + duracoes[n // 2]) / 2.0
-
-    return round(mediana, 2)
+    return tempo.mediana(_extrair_duracoes_dias(protocolos))
 
 # Função auxiliar para extrair os dias desde a contratacao ate o protocolo.
 def _extrair_duracoes_dias_pre_protocolo(protocolos: List[Dict[str, Any]]) -> List[float]:
-    protocolos_agrupados = _filtrar_protocolos_resolvidos(protocolos)
-    duracoes: List[float] = []
-
-    for p in protocolos_agrupados:
-        try:
-            entrada_str = p.get("DATA_CONTRATACAO") or p.get("data_contratacao")
-            saida_str = p.get("SAIDA") or p.get("saida")
-
-            if not entrada_str or not saida_str:
-                continue
-
-            entrada_date = parse_date_from_db(entrada_str)
-            saida_date = parse_date_from_db(saida_str)
-
-            if not entrada_date or not saida_date:
-                continue
-
-            if isinstance(entrada_date, datetime):
-                entrada_date = entrada_date.date()
-            if isinstance(saida_date, datetime):
-                saida_date = saida_date.date()
-
-            if not isinstance(entrada_date, date) or not isinstance(saida_date, date):
-                continue
-
-            duracao_dias = (saida_date - entrada_date).days
-            if duracao_dias > 0:
-                duracoes.append(float(duracao_dias))
-
-        except (ValueError, AttributeError, TypeError):
-            continue
-
-    return duracoes
+    return tempo.duracoes(_filtrar_protocolos_resolvidos(protocolos), tempo.coluna("DATA_CONTRATACAO"), tempo.coluna("SAIDA"))
 
 # Retorna o tempo médio (em dias) para o processo protocolado no setor, de forma geral.
 def get_media_tempo_contratacao_protocolado(protocolos: List[Dict[str, Any]]) -> float:
     """Tempo médio (em dias) entre DATA_EXECUCAO e DATA_ENCERRAMENTO."""
-    duracoes = _extrair_duracoes_dias_pre_protocolo(protocolos)
-
-    if not duracoes:
-        return 0.0
-
-    return round(sum(duracoes) / len(duracoes), 2)
+    return tempo.media(_extrair_duracoes_dias_pre_protocolo(protocolos))
 
 # Retorna a mediana do tempo (em dias) entre contratação e protocolo.
 def get_mediana_tempo_contratacao_protocolado(protocolos: List[Dict[str, Any]]) -> float:
     """Mediana do tempo (em dias) entre assinatura do contrato (DATA_CONTRATACAO) e protocolo (SAIDA)."""
-    duracoes = _extrair_duracoes_dias_pre_protocolo(protocolos)
-    if not duracoes:
-        return 0.0
-
-    duracoes.sort()
-    n = len(duracoes)
-
-    if n % 2 == 1:
-        mediana = duracoes[n // 2]
-    else:
-        mediana = (duracoes[n // 2 - 1] + duracoes[n // 2]) / 2.0
-
-    return round(mediana, 2)
+    return tempo.mediana(_extrair_duracoes_dias_pre_protocolo(protocolos))
 
 # Retorna o comparativo do tempo médio de contratação até protocolo (vs período anterior equivalente).
 def get_comparativo_tempo_medio_contratacao_protocolado(
@@ -614,10 +517,7 @@ def get_comparativo_tempo_medio_contratacao_protocolado(
     tempo_medio_atual = get_media_tempo_contratacao_protocolado(dados_periodo_atual)
     tempo_medio_anterior = get_media_tempo_contratacao_protocolado(dados_periodo_anterior)
 
-    if tempo_medio_anterior == 0:
-        return 0.0
-    variacao = ((tempo_medio_atual - tempo_medio_anterior) / tempo_medio_anterior) * 100
-    return round(variacao, 2)
+    return tempo.variacao_percentual(tempo_medio_atual, tempo_medio_anterior)
 
 # Retorna o comparativo da mediana de tempo de contratação até protocolo (vs período anterior equivalente).
 def get_comparativo_mediana_tempo_contratacao_protocolado(
@@ -638,10 +538,7 @@ def get_comparativo_mediana_tempo_contratacao_protocolado(
     mediana_atual = get_mediana_tempo_contratacao_protocolado(dados_periodo_atual)
     mediana_anterior = get_mediana_tempo_contratacao_protocolado(dados_periodo_anterior)
 
-    if mediana_anterior == 0:
-        return 0.0
-    variacao = ((mediana_atual - mediana_anterior) / mediana_anterior) * 100
-    return round(variacao, 2)
+    return tempo.variacao_percentual(mediana_atual, mediana_anterior)
 
 # Retorna a média de processos resolvidos por funcionário.
 def get_media_protocolados_por_funcionario(
@@ -724,7 +621,7 @@ def group_protocolados_por_mes(protocolos: List[Dict[str, Any]]) -> List[Dict[st
         except (ValueError, AttributeError, TypeError):
             continue
 
-    return [item for item in sorted(grouped.values(), key=lambda x: x["name"])]  # ou sort por month_key
+    return [item for item in sorted(grouped.values(), key=ordem_mes)]  # ou sort por month_key
 
 def group_valor_causa_protocolados_por_mes(protocolos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Agrupa a soma do valor de causa dos processos Protocolados por Mês."""
@@ -765,7 +662,7 @@ def group_valor_causa_protocolados_por_mes(protocolos: List[Dict[str, Any]]) -> 
 
     return [
         {**item, "value": round(item["value"], 2)}
-        for item in sorted(grouped.values(), key=lambda x: x["name"])
+        for item in sorted(grouped.values(), key=ordem_mes)
     ]
 
 # agrupa processos protocolados por dia.
@@ -1165,10 +1062,7 @@ def get_comparativo_tempo_medio_protocolos_resolvidos(
     dados_periodo_atual = get_media_tempo_protocolado(dados_periodo_atual)
     dados_periodo_anterior = get_media_tempo_protocolado(dados_periodo_anterior)
 
-    if dados_periodo_anterior == 0:
-        return 0.0
-    variacao = ((dados_periodo_atual - dados_periodo_anterior) / dados_periodo_anterior) * 100
-    return round(variacao, 2)
+    return tempo.variacao_percentual(dados_periodo_atual, dados_periodo_anterior)
 
 
 # -----------------------------------------------------------------------------

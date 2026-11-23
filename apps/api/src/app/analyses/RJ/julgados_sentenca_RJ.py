@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.common import matriz_julgamento as mj
 from app.analyses.common.julgados_agravo import eh_processo_agravo, numero_processo
@@ -410,18 +411,8 @@ def _tempo_medio_dias_sentenca_RJ(
     """Média de dias entre DATA_AJUIZAMENTO (distribuição) e DATA_SENTENCA, para
     sentenças do período com ambas as datas válidas (sentença >= ajuizamento)."""
     sentencas = _filtrar_sentenca_no_periodo(processos, from_date, to_date)
-    dias: list[int] = []
-    for row in sentencas:
-        ajuizamento = _get_data_ajuizamento(row)
-        sentenca = _get_data_sentenca(row)
-        if ajuizamento is None or sentenca is None:
-            continue
-        delta = (sentenca - ajuizamento).days
-        if delta >= 0:
-            dias.append(delta)
-    if not dias:
-        return None
-    return round(sum(dias) / len(dias), 1)
+    dias = tempo.duracoes(sentencas, _get_data_ajuizamento, _get_data_sentenca, aceita_zero=True)
+    return tempo.media(dias, casas=1, vazio=None)
 
 
 def _valor_causa_sentencas_procedentes_RJ(
@@ -470,18 +461,8 @@ def _tempo_medio_dias_embargos_sentenca_RJ(
     """Média de dias entre DATA_SENTENCA e a data da sentença de embargos (SENTENCA_EMBARGOS), no mesmo
     recorte da pizza "Resultado dos embargos" (embargo com data no período), só com as duas datas
     válidas e embargo >= sentença."""
-    dias: list[int] = []
-    for row in _filtrar_embargos_sentenca_no_periodo(processos, from_date, to_date):
-        sentenca = _get_data_sentenca(row)
-        embargos = _get_data_embargos_sentenca(row)
-        if sentenca is None or embargos is None:
-            continue
-        delta = (embargos - sentenca).days
-        if delta >= 0:
-            dias.append(delta)
-    if not dias:
-        return None
-    return round(sum(dias) / len(dias), 1)
+    dias = tempo.duracoes(_filtrar_embargos_sentenca_no_periodo(processos, from_date, to_date), _get_data_sentenca, _get_data_embargos_sentenca, aceita_zero=True)
+    return tempo.media(dias, casas=1, vazio=None)
 
 
 def get_kpis_sentenca_julgados_RJ(
@@ -560,11 +541,9 @@ def _comparativo_variacao_percentual_tempo_medio_sentenca_julgados_RJ(
     valor_atual = _tempo_medio_dias_sentenca_RJ(processos, inicio_atual, fim_atual)
     valor_anterior = _tempo_medio_dias_sentenca_RJ(processos, inicio_anterior, fim_anterior)
 
-    if not valor_anterior:
+    if valor_atual is None or not valor_anterior:
         return 0.0
-
-    variacao = ((valor_atual - valor_anterior) / valor_anterior) * 100 if valor_atual is not None else 0.0
-    return round(variacao, 2)
+    return tempo.variacao_percentual(valor_atual, valor_anterior)
 
 
 def _comparativo_variacao_percentual_valor_sentenca_julgados_RJ(
@@ -840,19 +819,10 @@ def _tempo_medio_dias_por_comarca_julgados_RJ(processos: list[dict[str, Any]]) -
     com o escopo estoque/entrada da seção "Estudos de Extinção" — serve de referência estável de
     "quanto tempo uma sentença dessa comarca costuma levar".
     """
-    duracoes: defaultdict[str, list[int]] = defaultdict(list)
-    for row in _base_julgados_RJ(processos):
-        ajuizamento = _get_data_ajuizamento(row)
-        sentenca = _get_data_sentenca(row)
-        if ajuizamento is None or sentenca is None:
-            continue
-        delta = (sentenca - ajuizamento).days
-        if delta >= 0:
-            duracoes[_get_comarca(row)].append(delta)
-    return {
-        nome: round(sum(dias) / len(dias), 1)
-        for nome, dias in duracoes.items()
-    }
+    por_comarca = tempo.duracoes_por_grupo(
+        _base_julgados_RJ(processos), _get_data_ajuizamento, _get_data_sentenca, lambda row, _fim: _get_comarca(row), aceita_zero=True
+    )
+    return {nome: tempo.media(dias, casas=1) for nome, dias in por_comarca.items()}
 
 
 def group_sentenca_extintas_por_comarca_julgados_RJ(

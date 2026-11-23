@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.common import matriz_julgamento as mj
 from app.analyses.common.julgados_agravo import eh_processo_agravo, numero_processo
@@ -481,18 +482,8 @@ def _tempo_medio_dias_acordao_RJ(
 ) -> Optional[float]:
     """Média de dias entre DATA_SENTENCA (1G) e DATA_ACORDAO, para acórdãos do período com ambas
     as datas válidas (acórdão >= sentença)."""
-    dias: list[int] = []
-    for row in _filtrar_acordao_no_periodo(processos, from_date, to_date):
-        sentenca = _get_data_sentenca(row)
-        acordao = _get_data_acordao(row)
-        if sentenca is None or acordao is None:
-            continue
-        delta = (acordao - sentenca).days
-        if delta >= 0:
-            dias.append(delta)
-    if not dias:
-        return None
-    return round(sum(dias) / len(dias), 1)
+    dias = tempo.duracoes(_filtrar_acordao_no_periodo(processos, from_date, to_date), _get_data_sentenca, _get_data_acordao, aceita_zero=True)
+    return tempo.media(dias, casas=1, vazio=None)
 
 
 def _tempo_medio_dias_embargos_acordao_RJ(
@@ -503,18 +494,8 @@ def _tempo_medio_dias_embargos_acordao_RJ(
     """Média de dias entre DATA_ACORDAO e a data do acórdão de embargos (ACORDAO_EMBARGOS), no mesmo
     recorte da pizza "Resultado dos embargos" (embargo com data no período), só com as duas datas
     válidas e embargo >= acórdão."""
-    dias: list[int] = []
-    for row in _filtrar_embargos_acordao_no_periodo(processos, from_date, to_date):
-        acordao = _get_data_acordao(row)
-        embargos = _get_data_embargos_acordao(row)
-        if acordao is None or embargos is None:
-            continue
-        delta = (embargos - acordao).days
-        if delta >= 0:
-            dias.append(delta)
-    if not dias:
-        return None
-    return round(sum(dias) / len(dias), 1)
+    dias = tempo.duracoes(_filtrar_embargos_acordao_no_periodo(processos, from_date, to_date), _get_data_acordao, _get_data_embargos_acordao, aceita_zero=True)
+    return tempo.media(dias, casas=1, vazio=None)
 
 
 def get_kpis_acordao_julgados_RJ(
@@ -687,11 +668,9 @@ def _comparativo_variacao_percentual_tempo_medio_acordao_julgados_RJ(
     valor_atual = _tempo_medio_dias_acordao_RJ(processos, inicio_atual, fim_atual)
     valor_anterior = _tempo_medio_dias_acordao_RJ(processos, inicio_anterior, fim_anterior)
 
-    if not valor_anterior or valor_atual is None:
+    if valor_atual is None or not valor_anterior:
         return 0.0
-
-    variacao = ((valor_atual - valor_anterior) / valor_anterior) * 100
-    return round(variacao, 2)
+    return tempo.variacao_percentual(valor_atual, valor_anterior)
 
 
 def get_comparativos_acordao_julgados_RJ(
@@ -902,16 +881,10 @@ def _uf_por_comarca_julgados_acordao_RJ(processos: list[dict[str, Any]]) -> dict
 def _tempo_medio_dias_por_comarca_acordao_RJ(processos: list[dict[str, Any]]) -> dict[str, float]:
     """Média de dias entre a sentença e o acórdão, por comarca — histórico completo do escritório,
     independente de categoria e do escopo (mesma métrica do card "Tempo médio" do Acórdão)."""
-    duracoes: defaultdict[str, list[int]] = defaultdict(list)
-    for row in _base_julgados_RJ(processos):
-        sentenca = _get_data_sentenca(row)
-        acordao = _get_data_acordao(row)
-        if sentenca is None or acordao is None:
-            continue
-        delta = (acordao - sentenca).days
-        if delta >= 0:
-            duracoes[_get_comarca(row)].append(delta)
-    return {nome: round(sum(d) / len(d), 1) for nome, d in duracoes.items()}
+    por_comarca = tempo.duracoes_por_grupo(
+        _base_julgados_RJ(processos), _get_data_sentenca, _get_data_acordao, lambda row, _fim: _get_comarca(row), aceita_zero=True
+    )
+    return {nome: tempo.media(dias, casas=1) for nome, dias in por_comarca.items()}
 
 
 def group_acordao_improcedentes_por_comarca_julgados_RJ(

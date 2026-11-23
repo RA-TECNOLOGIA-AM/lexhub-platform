@@ -58,6 +58,8 @@ from collections import defaultdict
 from datetime import date, datetime
 from decimal import Decimal
 
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
+from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, parse_datetime_from_db, resolver_periodo_comparativo, normalizar_filtro_ids, normalizar_filtro_textos
 
 # public.escritorio (lexpre): 1 = NGAM, 2 = LAAM, 3 = LARJ — mesma constante de comercial_lexpre.py.
@@ -499,17 +501,15 @@ def _extrair_duracoes_horas(
     saidas: List[Dict[str, Any]],
     entradas_por_demanda: Dict[Any, List[Dict[str, Any]]],
 ) -> List[float]:
-    duracoes: List[float] = []
-    for row in saidas:
-        saida_dt = _to_datetime(row.get("DATA"))
-        entrada = _ultima_entrada_antes_de(row.get("ID_DEMANDA"), saida_dt, entradas_por_demanda)
-        entrada_dt = _to_datetime(entrada.get("DATA")) if entrada else None
-        if not saida_dt or not entrada_dt:
-            continue
-        horas = (saida_dt - entrada_dt).total_seconds() / 3600
-        if horas > 0:
-            duracoes.append(horas)
-    return duracoes
+    def entrada(row: Dict[str, Any]) -> Any:
+        anterior = _ultima_entrada_antes_de(
+            row.get("ID_DEMANDA"), _to_datetime(row.get("DATA")), entradas_por_demanda
+        )
+        return _to_datetime(anterior.get("DATA")) if anterior else None
+
+    return tempo.duracoes(
+        saidas, entrada, lambda row: _to_datetime(row.get("DATA")), unidade="horas"
+    )
 
 
 def get_media_tempo_protocolado(
@@ -517,27 +517,14 @@ def get_media_tempo_protocolado(
     entradas_por_demanda: Dict[Any, List[Dict[str, Any]]],
 ) -> float:
     """Média de dias entre entrada e saída no setor, para demandas protocoladas no período."""
-    duracoes_horas = _extrair_duracoes_horas(saidas_periodo, entradas_por_demanda)
-    if not duracoes_horas:
-        return 0.0
-    return round((sum(duracoes_horas) / len(duracoes_horas)) / 24, 2)
+    return tempo.media(_extrair_duracoes_horas(saidas_periodo, entradas_por_demanda), divisor=24)
 
 
 def get_mediana_tempo_protocolado(
     saidas_periodo: List[Dict[str, Any]],
     entradas_por_demanda: Dict[Any, List[Dict[str, Any]]],
 ) -> float:
-    duracoes_horas = _extrair_duracoes_horas(saidas_periodo, entradas_por_demanda)
-    if not duracoes_horas:
-        return 0.0
-    duracoes_horas.sort()
-    n = len(duracoes_horas)
-    mediana_horas = (
-        duracoes_horas[n // 2]
-        if n % 2 == 1
-        else (duracoes_horas[n // 2 - 1] + duracoes_horas[n // 2]) / 2.0
-    )
-    return round(mediana_horas / 24, 2)
+    return tempo.mediana(_extrair_duracoes_horas(saidas_periodo, entradas_por_demanda), divisor=24)
 
 
 # -----------------------------------------------------------------------------
@@ -554,11 +541,9 @@ def _comparativo_variacao_percentual(
     )
     valor_atual = metrica_fn(data_inicio_atual, data_fim_atual)
     valor_anterior = metrica_fn(data_inicio_anterior, data_fim_anterior)
-    if valor_anterior == 0:
-        # Sem base no período anterior (ex.: LA, que só começou a usar o lexpre em
-        # 22/09/2026): crescimento a partir do zero é exibido como +100%.
-        return 100.0 if valor_atual > 0 else 0.0
-    return round(((valor_atual - valor_anterior) / valor_anterior) * 100, 2)
+    # Sem base no período anterior (ex.: LA, que só começou a usar o lexpre em 22/09/2026): crescimento a
+    # partir do zero é exibido como +100%.
+    return tempo.variacao_percentual(valor_atual, valor_anterior, sem_base=100.0)
 
 
 def _saidas_protocoladas_para_comparativo(protocolo_lexpre: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -687,7 +672,7 @@ def group_protocolados_por_mes(saidas_periodo: List[Dict[str, Any]]) -> List[Dic
         if month_key not in grouped:
             grouped[month_key] = {"name": f"{_MONTH_NAMES[d.month - 1]} {d.year}", "value": 0}
         grouped[month_key]["value"] += 1
-    return [item for item in sorted(grouped.values(), key=lambda x: x["name"])]
+    return [item for item in sorted(grouped.values(), key=ordem_mes)]
 
 
 def group_represados_por_mes(protocolo_lexpre: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -712,7 +697,7 @@ def group_represados_por_mes(protocolo_lexpre: List[Dict[str, Any]]) -> List[Dic
         if month_key not in grouped:
             grouped[month_key] = {"name": f"{_MONTH_NAMES[d.month - 1]} {d.year}", "value": 0}
         grouped[month_key]["value"] += 1
-    return [item for item in sorted(grouped.values(), key=lambda x: x["name"])]
+    return [item for item in sorted(grouped.values(), key=ordem_mes)]
 
 
 def group_protocolados_por_dia(saidas_periodo: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

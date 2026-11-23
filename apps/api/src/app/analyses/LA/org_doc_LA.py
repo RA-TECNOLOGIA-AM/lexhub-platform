@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional, Union
 from datetime import datetime, date
 from collections import defaultdict
 from decimal import Decimal
+from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.LA.comercial_LA import _formatar_nome_atendente
 from app.analyses.LA.protocolo_LA import _converter_valor_causa
@@ -316,64 +317,14 @@ def get_comissionamento_por_funcionario_LA(org_documentos: List[Dict[str, Any]])
 
 # Retorna o tempo médio (em dias) para o processo ser resolvido no setor, de forma geral.
 def get_media_tempo_resolvidos_LA(org_documentos: List[Dict[str, Any]]) -> float:
-    duracoes = _extrair_duracoes_dias(org_documentos)
-
-    if not duracoes:
-        return 0.0
-
-    return round(sum(duracoes) / len(duracoes), 2)
+    return tempo.media(_extrair_duracoes_dias(org_documentos))
 # Função auxiliar para extrair os dias
 def _extrair_duracoes_dias(org_documentos: List[Dict[str, Any]]) -> List[float]:
-    protocolos_agrupados = _filtrar_organizados(org_documentos)
-    duracoes: List[float] = []
-
-    for p in protocolos_agrupados:
-        try:
-            entrada_str = p.get("ENTRADA") or p.get("entrada")
-            saida_str = p.get("SAIDA") or p.get("saida")
-
-            if not entrada_str or not saida_str:
-                continue
-
-            entrada_date = parse_date_from_db(entrada_str)
-            saida_date = parse_date_from_db(saida_str)
-
-            if not entrada_date or not saida_date:
-                continue
-
-            if isinstance(entrada_date, datetime):
-                entrada_date = entrada_date.date()
-            if isinstance(saida_date, datetime):
-                saida_date = saida_date.date()
-
-            if not isinstance(entrada_date, date) or not isinstance(saida_date, date):
-                continue
-
-            duracao_dias = (saida_date - entrada_date).days
-            if duracao_dias > 0:
-                duracoes.append(float(duracao_dias))
-
-        except (ValueError, AttributeError, TypeError):
-            continue
-
-    return duracoes
+    return tempo.duracoes(_filtrar_organizados(org_documentos), tempo.coluna("ENTRADA"), tempo.coluna("SAIDA"))
 
 # Retorna a mediana do tempo (em dias) para o processo ser resolvido no setor, de forma geral.
 def get_mediana_tempo_resolvidos_LA(org_documentos: List[Dict[str, Any]]) -> float:
-    duracoes = _extrair_duracoes_dias(org_documentos)
-
-    if not duracoes:
-        return 0.0
-
-    duracoes.sort()
-    n = len(duracoes)
-
-    if n % 2 == 1:
-        mediana = duracoes[n // 2]
-    else:
-        mediana = (duracoes[n // 2 - 1] + duracoes[n // 2]) / 2.0
-
-    return round(mediana, 2)
+    return tempo.mediana(_extrair_duracoes_dias(org_documentos))
 
 # Retorna a média de processos resolvidos por funcionário.
 def get_media_resolvidos_por_funcionario_LA(org_documentos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
