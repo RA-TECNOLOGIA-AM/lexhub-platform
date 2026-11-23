@@ -17,7 +17,9 @@ function statusFrom(f: SourceFreshness): SourceStatus {
     return 'healthy' // a última tentativa deu certo, seja quando for
 }
 
-function applyOne(source: DataSource, f: SourceFreshness | undefined): DataSource {
+// Uma fonte com a hora do registro (a linha da lista e o topo do modal usam a mesma regra).
+// Sem registro para ela (undefined) = fica como veio do Supabase.
+export function sourceWithFreshness(source: DataSource, f: SourceFreshness | undefined): DataSource {
     if (!f || source.status === 'disabled') return source
     return {
         ...source,
@@ -47,7 +49,7 @@ export function withFreshness(unit: UnitSources, fresh: SourcesFreshness | null)
     if (!fresh) return unit
     return {
         ...unit,
-        sources: unit.sources.map((s) => applyOne(s, fresh[s.id])),
+        sources: unit.sources.map((s) => sourceWithFreshness(s, fresh[s.id])),
         lastFailure: lastFailure(unit, fresh),
     }
 }

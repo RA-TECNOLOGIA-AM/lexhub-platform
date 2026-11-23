@@ -29,6 +29,7 @@ export type DashboardSummary = {
     units: string[]
     source: string
     synced_at: string | null // null = a fonte ainda não sincronizou (cache de 5 min)
+    source_disabled?: boolean // a TI desligou a fonte principal: o card diz "Fonte desligada"
     max_delay_min: number
     // Decididos pelo servidor (regra: colaborador exporta só o próprio setor; admin, dev e controller, qualquer um).
     // Com várias unidades, só vale true se valer em todas (o botão nunca aparece onde a API negaria).

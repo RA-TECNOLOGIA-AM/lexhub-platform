@@ -304,6 +304,8 @@ h1, h2, h3, p { margin: 0; }
 .fresh::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok-dot); flex: none; }
 .fresh.late { color: var(--warn); }
 .fresh.late::before { background: var(--warn-dot); }
+.fresh.off { color: var(--text-muted); }
+.fresh.off::before { background: var(--text-muted); }
 
 /* avatar */
 .av {

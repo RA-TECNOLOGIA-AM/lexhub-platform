@@ -328,6 +328,28 @@ def test_desligar_e_religar_limpa_os_caches_na_hora(client, signer, fx):
     assert client.put(url, json={}, headers=auth(signer)).status_code == 422
 
 
+def test_desligar_religar_e_desconectar_esquecem_a_hora_da_fonte(client, signer, fx):
+    """Unidades e fontes: religada volta como "Aguardando leitura" (não com a hora de antes da pausa)."""
+    import asyncio
+
+    _connected(fx)
+    reads = client.app.state.source_cache.reads
+    url = "/orgs/cliente/sources/pg_mc_000001/enabled"
+
+    for enabled in (False, True):
+        asyncio.run(reads.ok("pg_mc_000001:q", 1_000.0))
+        asyncio.run(reads.ok("lexpre:q", 1_000.0))  # outra fonte fica como estava
+        assert client.put(url, json={"enabled": enabled}, headers=auth(signer)).status_code == 200
+        assert asyncio.run(reads.of_db("pg_mc_000001")) == {}
+        assert asyncio.run(reads.ok_at("lexpre:q")) == 1_000.0
+
+    asyncio.run(reads.ok("pg_mc_000001:q", 1_000.0))
+    assert (
+        client.delete("/orgs/cliente/sources/pg_mc_000001", headers=auth(signer)).status_code == 204
+    )
+    assert asyncio.run(reads.of_db("pg_mc_000001")) == {}
+
+
 def test_so_a_ti_liga_e_desliga(client, signer, fx):
     _connected(fx)
     fx.repo.admins.clear()

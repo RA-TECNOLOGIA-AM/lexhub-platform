@@ -44,6 +44,7 @@ def test_formato_do_card(client, signer, repo, catalog_repo):
                 "units": ["NG"],
                 "source": "LexPre",
                 "synced_at": None,
+                "source_disabled": False,
                 "max_delay_min": 60,
                 "can_export": True,
                 "can_see_commission": True,
@@ -234,3 +235,46 @@ def test_card_usa_o_dado_mais_antigo_entre_as_queries_no_cache(client, signer, r
     cards = client.get("/orgs/lexgroup/dashboards", headers=auth(signer)).json()["available"]
 
     assert cards[0]["synced_at"] == "2025-11-11T14:00:00Z"
+
+
+# --- Fonte desligada no card -----------------------------------------------------------------------
+
+
+class _Disabled:
+    def __init__(self, keys: set[str] | None):
+        self.keys = keys  # None = o banco da plataforma não respondeu
+
+    async def disabled_keys(self) -> set[str]:
+        if self.keys is None:
+            raise ConnectionError("plataforma fora")
+        return self.keys
+
+
+def _cards_with_switch(client, signer, repo, catalog_repo, disabled):
+    from app.source_switch import SourceSwitch
+
+    repo.join(USER_ID)
+    catalog_repo.add(USER_ID, repo.org_id, row())  # protocolo-lexpre: lexpre (do .env)
+    catalog_repo.add(
+        USER_ID,
+        repo.org_id,
+        row(key="meta-anual", title="Meta anual", source="Planilha do financeiro"),
+    )
+    client.app.state.source_switch = SourceSwitch(_Disabled(disabled))
+    r = client.get("/orgs/lexgroup/dashboards", headers=auth(signer))
+    assert r.status_code == 200
+    return {c["key"]: c for c in r.json()["available"]}
+
+
+def test_card_diz_que_a_fonte_dele_esta_desligada(client, signer, repo, catalog_repo):
+    cards = _cards_with_switch(client, signer, repo, catalog_repo, {"sheets_financeiro_ng"})
+
+    assert cards["meta-anual"]["source_disabled"] is True
+    assert cards["protocolo-lexpre"]["source_disabled"] is False
+
+
+def test_sem_a_lista_de_desligadas_o_hub_abre_normal(client, signer, repo, catalog_repo):
+    """O dashboard confere de novo ao abrir (423); o hub nunca cai por causa disso."""
+    cards = _cards_with_switch(client, signer, repo, catalog_repo, None)
+
+    assert not any(c["source_disabled"] for c in cards.values())

@@ -79,6 +79,20 @@ def test_redis_desligado_funciona_so_em_memoria():
     assert run(log.ok_at("lexpre:q")) == 10.0
 
 
+def test_esquecer_apaga_a_fonte_da_memoria_e_do_redis():
+    shared = FakeShared()
+    log = ReadLog(shared)
+    run(log.ok("gs_mc_1:aba", 100.0))
+    run(log.ok("ng:q", 100.0))
+
+    run(log.forget("gs_mc_1"))
+
+    assert run(log.of_db("gs_mc_1")) == {}
+    assert "reads:gs_mc_1" not in shared.data
+    assert run(ReadLog(shared).ok_at("gs_mc_1:aba")) is None  # depois do restart também
+    assert run(log.ok_at("ng:q")) == 100.0
+
+
 def test_redis_so_e_lido_uma_vez_por_banco():
     shared = FakeShared()
     calls = []

@@ -63,6 +63,11 @@ class ReadLog:
         reads[query] = replace(reads.get(query, Read(ok_at=None)), fail_at=at, error=error)
         await self._save(db)
 
+    async def forget(self, db: str) -> None:
+        """Esquece a fonte `db` (desligar, religar ou desconectar): ela volta como "ainda não lida"."""
+        self._by_db[db] = {}
+        await self._shared.delete(f"reads:{db}")
+
     async def ok_at(self, key: str) -> float | None:
         db, query = _split(key)
         read = (await self._db(db)).get(query)
