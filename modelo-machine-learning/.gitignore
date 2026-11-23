@@ -10,3 +10,5 @@ logs/
 # Ambiente
 .venv/
 __pycache__/
+# Resultados arquivados de rodadas anteriores (mesmos dados do estudo)
+resultados_*/

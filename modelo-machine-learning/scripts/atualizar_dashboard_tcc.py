@@ -51,7 +51,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 BASE_DIR = ML_DIR
-SQL_PATH = f"{BASE_DIR}/coorte_sobrevivencia_2_estagios.sql"
+SQL_PATH = f"{BASE_DIR}/sql/coorte_sobrevivencia_2_estagios.sql"
 # 10/11/2026: grava em *_atual. O TCC NAO le estes arquivos - usa a foto congelada em
 # dados/congelado_20261109/ (ver coorte_comum.py). Pra atualizar o estudo de proposito,
 # criar uma nova pasta congelada a partir daqui e apontar coorte_comum.SNAPSHOT_DIR pra ela.
