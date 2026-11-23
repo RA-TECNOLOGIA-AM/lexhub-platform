@@ -112,6 +112,16 @@ const EVENTS: Record<string, Rule> = {
             return join(e.targetName ?? text(m.code), ...changes)
         },
     },
+    'unit.deleted': {
+        kind: 'source',
+        action: 'Excluiu unidade',
+        detail: (e, m) => join(text(m.name) ?? e.targetName, text(m.code)),
+    },
+    'org.closed': {
+        kind: 'access',
+        action: 'Encerrou organização',
+        detail: (_, m) => join(text(m.name), text(m.slug)),
+    },
     'source.office_linked': {
         kind: 'source',
         action: 'Ligou escritório',

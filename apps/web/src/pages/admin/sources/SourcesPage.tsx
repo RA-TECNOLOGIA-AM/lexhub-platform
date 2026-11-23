@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useSearchParams } from 'react-router'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router'
 import { PageHeader } from '../../../components/layout/PageHeader.tsx'
 import { Kpi } from '../../../components/dashboard/Kpi.tsx'
 import { Icon } from '../../../components/ui/Icon.tsx'
@@ -13,6 +13,7 @@ import { UnitNav } from './UnitNav.tsx'
 import { SourceDetailDialog } from './SourceDetailDialog.tsx'
 import { UnitFormDialog } from './UnitFormDialog.tsx'
 import { ConnectSourceDialog } from './ConnectSourceDialog.tsx'
+import { DeleteUnitDialog } from './DeleteUnitDialog.tsx'
 import type { DataSource, ProductKey, UnitInput } from '../../../types/index.ts'
 import { lastFailureLabel, pickUnit, syncNote } from './sourcesView.ts'
 import { withFreshness } from './sourceFreshness.ts'
@@ -24,6 +25,8 @@ type UnitForm = { mode: 'create' } | { mode: 'edit'; unit: UnitInput }
 // A página só junta as peças: busca as fontes, lê a unidade da URL (?unidade=NG) e monta menu, indicadores e lista.
 export function SourcesPage() {
     const { org = '' } = useParams()
+    // Aberta por Clientes (/plataforma/clientes/:org/unidades): a plataforma entra sem ser membro do cliente.
+    const fromPlatform = useLocation().pathname.startsWith('/plataforma/')
     const [version, setVersion] = useState(0) // muda depois de gravar: busca a lista de novo
     const { data, error } = useAsync(() => dataClient.getSources(org), [org, version])
     // A hora de cada fonte vem do cache da API, igual ao card do hub. Falhou = a tela segue com o que o
@@ -38,6 +41,7 @@ export function SourcesPage() {
     const [open, setOpen] = useState<DataSource | null>(null) // a fonte do modal de detalhe
     const [form, setForm] = useState<UnitForm | null>(null)
     const [connecting, setConnecting] = useState(false) // o modal Conectar fonte
+    const [deleting, setDeleting] = useState<{ code: string; name: string } | null>(null) // o modal Excluir unidade
 
     if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
@@ -66,7 +70,8 @@ export function SourcesPage() {
     return (
         <>
             <PageHeader
-                title="Unidades e fontes de dados"
+                title={`${data.orgName} › Unidades e fontes de dados`}
+                badge={fromPlatform ? <span className="badge pro">Plataforma</span> : undefined}
                 description={syncNote()}
                 actions={
                     connect && (
@@ -78,6 +83,11 @@ export function SourcesPage() {
                 }
             />
             <div className="stack">
+                {fromPlatform && (
+                    <Link className="muted small" to="/plataforma/clientes">
+                        ← Voltar para Clientes
+                    </Link>
+                )}
                 {notice && <Notice message={notice} onClose={() => setNotice(null)} />}
                 <div className="sources-cols">
                     <UnitNav
@@ -164,11 +174,34 @@ export function SourcesPage() {
                     onClose={() => setConnecting(false)}
                 />
             )}
+            {deleting && (
+                <DeleteUnitDialog
+                    org={org}
+                    unit={deleting}
+                    onDeleted={() => {
+                        setParams({}, { replace: true })
+                        setVersion((v) => v + 1)
+                        setNotice(
+                            `${deleting.name} foi excluída. Fica arquivada por 30 dias antes de ser apagada de vez.`,
+                        )
+                    }}
+                    onClose={() => setDeleting(null)}
+                />
+            )}
             {form && (
                 <UnitFormDialog
                     mode={form.mode}
                     initial={form.mode === 'edit' ? form.unit : undefined}
                     existingCodes={data.units.map((u) => u.unit.code)}
+                    orgName={data.orgName}
+                    onDelete={
+                        form.mode === 'edit'
+                            ? () => {
+                                  setDeleting({ code: form.unit.code, name: form.unit.name })
+                                  setForm(null)
+                              }
+                            : undefined
+                    }
                     onSave={saveUnit}
                     onClose={() => setForm(null)}
                 />

@@ -8,6 +8,8 @@ type UnitFormDialogProps = {
     mode: 'create' | 'edit'
     initial?: UnitInput // edição: a unidade como está
     existingCodes: string[] // para avisar código repetido antes de enviar
+    orgName: string // em qual organização a unidade nasce (evita criar cliente como unidade)
+    onDelete?: () => void // edição: abre a confirmação de exclusão; sem ele, o botão não aparece
     onSave: (unit: UnitInput) => Promise<void> // grava; se rejeitar, a mensagem aparece no modal
     onClose: () => void
 }
@@ -16,7 +18,15 @@ const EMPTY: UnitInput = { code: '', name: '', timezone: 'America/Manaus' }
 
 // Módulo: o formulário de unidade num modal — criar (nome, código, fuso) ou editar (nome, fuso; o código não muda).
 // Não sabe de API: recebe onSave e mostra o erro que ele devolver.
-export function UnitFormDialog({ mode, initial, existingCodes, onSave, onClose }: UnitFormDialogProps) {
+export function UnitFormDialog({
+    mode,
+    initial,
+    existingCodes,
+    orgName,
+    onDelete,
+    onSave,
+    onClose,
+}: UnitFormDialogProps) {
     const [draft, setDraft] = useState<UnitInput>(initial ?? EMPTY)
     // Enquanto a pessoa não mexe no código, ele acompanha o nome.
     const [codeTouched, setCodeTouched] = useState(mode === 'edit')
@@ -42,12 +52,21 @@ export function UnitFormDialog({ mode, initial, existingCodes, onSave, onClose }
 
     return (
         <Modal
-            title={mode === 'create' ? 'Nova unidade' : `Editar ${initial?.name ?? 'unidade'}`}
-            subtitle={mode === 'create' ? 'A unidade nasce sem fontes; elas são ligadas depois.' : undefined}
+            title={mode === 'create' ? `Nova unidade na ${orgName}` : `Editar ${initial?.name ?? 'unidade'}`}
+            subtitle={
+                mode === 'create'
+                    ? 'A unidade nasce sem fontes; elas são ligadas depois. Cliente novo? Use Clientes › Nova organização.'
+                    : undefined
+            }
             className="unit-dialog"
             onClose={onClose}
             footer={
                 <>
+                    {mode === 'edit' && onDelete && (
+                        <button className="btn btn-danger foot-left" type="button" onClick={onDelete} disabled={saving}>
+                            Excluir unidade
+                        </button>
+                    )}
                     <button className="btn" type="button" onClick={onClose} disabled={saving}>
                         Cancelar
                     </button>

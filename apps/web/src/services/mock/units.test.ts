@@ -4,6 +4,7 @@ import { DataError } from '../errors.ts'
 import { createUnitIn, updateUnitIn } from './units.ts'
 
 const fresh = (): SourcesResponse => ({
+    orgName: 'LexGroup',
     syncEveryMin: 10,
     unitLimit: { used: 1, total: 5 },
     canManageUnits: true,

@@ -4,7 +4,7 @@ import { createAuditClient } from './auditClient.ts'
 import { DataError } from './errors.ts'
 import type { AuditQuery } from '../types/index.ts'
 
-const ALL: AuditQuery = { from: null, to: null, kind: '', actor: '' }
+const ALL: AuditQuery = { from: null, to: null, kind: '', actor: '', unit: '' }
 
 describe('createAuditClient', () => {
     it('chama api.list_audit e traduz cada evento', async () => {
@@ -38,6 +38,7 @@ describe('createAuditClient', () => {
                     p_actions: null,
                     p_exclude_actions: null,
                     p_actor: null,
+                    p_unit: null,
                 },
             },
         ])
@@ -74,6 +75,7 @@ describe('createAuditClient', () => {
             to: '2026-11-20T00:00:00-04:00',
             kind: 'view',
             actor: 'Ana Ribeiro',
+            unit: 'NG',
         }
         await createAuditClient(supabase).getAudit('lexgroup', query)
         expect(calls[0]?.args).toEqual({
@@ -83,6 +85,7 @@ describe('createAuditClient', () => {
             p_actions: ['dashboard.view'],
             p_exclude_actions: null,
             p_actor: 'Ana Ribeiro',
+            p_unit: 'NG',
         })
         const { truncated, actors } = await createAuditClient(s2).getAudit('lexgroup', query)
         expect(truncated).toBe(true)

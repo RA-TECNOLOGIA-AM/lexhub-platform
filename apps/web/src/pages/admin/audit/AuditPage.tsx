@@ -34,15 +34,19 @@ export function AuditPage() {
     const filter = filterFromParams(params)
     const setFilter = (next: AuditFilter) => setParams(paramsFromFilter(next), { replace: true })
 
-    // Período, tipo e pessoa vão para o banco (busca de novo quando mudam). "Nunca acessou" não usa eventos.
-    const { period, de, ate, kind, actor } = filter
-    const never = kind === NEVER
+    // Organização auditada: a da URL ou, para a plataforma, a escolhida no filtro (encerradas também).
+    const audited = filter.org || org
+    const own = audited === org
+    // Período, tipo, pessoa e unidade vão para o banco (busca de novo quando mudam). "Nunca acessou" não usa
+    // eventos e só vale na organização da URL (lê os membros dela).
+    const { period, de, ate, kind, actor, unit } = filter
+    const never = kind === NEVER && own
     const { data, error } = useAsync(
-        () => dataClient.getAudit(org, queryFromFilter({ ...filter, actor: never ? '' : actor })),
-        [org, period, de, ate, kind, never ? '' : actor],
+        () => dataClient.getAudit(audited, queryFromFilter({ ...filter, actor: never ? '' : actor })),
+        [audited, period, de, ate, kind, never ? '' : actor, unit],
     )
     // Aviso de limite fechado vale só para esta consulta: mudou o filtro, volta a aparecer se cortar de novo.
-    const queryKey = [period, de, ate, kind, actor].join('|')
+    const queryKey = [audited, period, de, ate, kind, actor, unit].join('|')
     const [truncatedHiddenFor, setTruncatedHiddenFor] = useState<string | null>(null)
 
     const [exporting, setExporting] = useState(false)
@@ -64,9 +68,9 @@ export function AuditPage() {
         setExporting(true)
         setNotice(null)
         try {
-            await dataClient.logAuditExport(org, filter, count)
+            await dataClient.logAuditExport(audited, filter, count)
             const csv = never ? neverCsv(neverRows) : auditCsv(rows)
-            saveFile(new Blob([csv], { type: 'text/csv;charset=utf-8' }), auditFilename(org))
+            saveFile(new Blob([csv], { type: 'text/csv;charset=utf-8' }), auditFilename(audited))
         } catch (e) {
             setNotice(e instanceof Error ? e.message : 'Não foi possível exportar a auditoria.')
         } finally {
@@ -97,6 +101,10 @@ export function AuditPage() {
                 <AuditFilters
                     value={filter}
                     actors={never ? neverAll.map((r) => r.name) : data.actors}
+                    units={data.units}
+                    orgs={data.orgs}
+                    currentOrg={org}
+                    allowNever={own}
                     onChange={setFilter}
                 />
                 {never ? (

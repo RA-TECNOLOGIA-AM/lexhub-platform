@@ -426,10 +426,19 @@ export type AuditEvent = {
 
 // events: mais recente primeiro. truncated: havia mais eventos no filtro do que o limite (2000) trouxe.
 // actors: quem aparece no período/tipo (sem o filtro de pessoa), para o campo Pessoa.
-export type AuditResponse = { events: AuditEvent[]; truncated: boolean; actors: string[] }
+// units: todas as unidades da organização auditada (deleted = excluída; a auditoria dela continua consultável).
+// orgs: só para Owner/Desenvolvedor da LexGroup e equipe RA (trocam de organização); null para os outros.
+export type AuditResponse = {
+    events: AuditEvent[]
+    truncated: boolean
+    actors: string[]
+    units: { code: string; name: string; deleted: boolean }[]
+    orgs: { slug: string; name: string; closed: boolean }[] | null
+}
 
 // O que a Auditoria pede ao banco: período (ISO; null = sem limite daquele lado), tipo e pessoa ('' = todos).
-export type AuditQuery = { from: string | null; to: string | null; kind: AuditKind | ''; actor: string }
+// unit: código da unidade ('' = todas); o banco acha os eventos ligados a ela.
+export type AuditQuery = { from: string | null; to: string | null; kind: AuditKind | ''; actor: string; unit: string }
 
 // Plataforma (só equipe RA): as organizações clientes.
 export type ClientPlan = PlanKey | 'onboarding' // 'onboarding' = em implantação, antes de assinar um plano
@@ -444,6 +453,18 @@ export type PlatformClient = {
     // null = sem informação (a API não respondeu).
     failingSources: number | null
     billing: 'ok' | 'onboarding_paid' | 'overdue'
+    units: { code: string; name: string }[] // as unidades ativas (cada uma leva para Unidades e fontes)
+    canClose: boolean // false = a dona da plataforma (LexGroup), que nunca é encerrada
+}
+
+// Encerrar organização (api.org_closure_impact): o que some junto, antes de confirmar.
+export type OrgClosureImpact = {
+    slug: string
+    name: string
+    units: number
+    members: number
+    sources: number
+    locked: boolean // dona da plataforma
 }
 
 export type ClientsResponse = {
@@ -579,6 +600,7 @@ export type ConnectInfo = {
 export type SecretInput = { password?: string; url?: string; writerAck: boolean }
 
 export type SourcesResponse = {
+    orgName: string // de qual organização são as unidades (o título da tela)
     syncEveryMin: number // intervalo da sincronização (a tela monta o texto do cabeçalho)
     units: UnitSources[]
     unitLimit: { used: number; total: number } | null // "3 de 5 unidades do plano"; null = o plano não limita
@@ -601,6 +623,17 @@ export type ProductOffices = {
     product: ProductKey
     activityLabel: string // 'movimentações nos últimos 30 dias', 'processos'
     offices: ProductOffice[]
+}
+
+// Excluir unidade (api.unit_deletion_impact): o que vai junto, antes de confirmar.
+export type UnitDeletionImpact = {
+    code: string
+    name: string
+    sources: number
+    dashboards: number
+    members: number // pessoas ligadas à unidade (continuam na organização)
+    locked: boolean // trava da plataforma (NG, LA e RJ da LexGroup): só uma migration libera
+    lastUnit: boolean // a organização precisa de pelo menos uma unidade
 }
 
 // O que o formulário de unidade grava (api.create_unit / api.update_unit). O código só vale na criação.

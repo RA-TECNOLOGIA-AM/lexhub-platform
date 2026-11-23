@@ -22,10 +22,12 @@ import type {
     AuditQuery,
     AuditResponse,
     ClientsResponse,
+    OrgClosureImpact,
     DataSource,
     SourceDetail,
     SourcesFreshness,
     SourcesResponse,
+    UnitDeletionImpact,
     UnitInput,
     UnitSources,
     ProductKey,
@@ -117,7 +119,7 @@ export interface DataClient {
     // Abriu um dashboard (vai para a Auditoria). Quem chama ignora falha: nunca impede o dashboard de abrir.
     logDashboardView(org: string, unit: string, dashboardKey: string): Promise<void>
     // Registra na própria auditoria que ela foi exportada (com o filtro e quantos eventos). Falhou = não baixa.
-    logAuditExport(org: string, filter: { kind: string; actor: string }, rows: number): Promise<void>
+    logAuditExport(org: string, filter: { kind: string; actor: string; unit: string }, rows: number): Promise<void>
     getSources(org: string): Promise<SourcesResponse>
     // Uma fonte vista de uma unidade (o modal). Unidade fora do escopo = 403; fonte que ela não usa = 409.
     getSourceDetail(org: string, unit: string, source: string): Promise<SourceDetail>
@@ -126,6 +128,10 @@ export interface DataClient {
     // Owner/Desenvolvedor: criar unidade e mudar nome/fuso (o código não muda). Regra quebrada = 409 com a mensagem.
     createUnit(org: string, unit: UnitInput): Promise<UnitSources>
     updateUnit(org: string, unit: UnitInput): Promise<UnitSources>
+    // Excluir unidade: arquiva (volta em até 30 dias só pelo suporte), desliga as fontes dela e apaga as senhas.
+    // Travada, última da organização ou nome digitado errado = 409 com a mensagem.
+    getUnitDeletionImpact(org: string, unit: string): Promise<UnitDeletionImpact>
+    deleteUnit(org: string, unit: string, confirmName: string): Promise<void>
     // Conectar fonte (só a TI da LexGroup; os outros recebem 403). A lista vem do banco do produto (API);
     // ligar grava a ref da unidade (Supabase). Escritório já ligado / unidade já ligada = 409 com a mensagem.
     listProductOffices(product: ProductKey): Promise<ProductOffices>
@@ -141,6 +147,9 @@ export interface DataClient {
     setSourceEnabled(org: string, source: string, enabled: boolean): Promise<DataSource>
     // Plataforma: todas as organizações. Só Owner/Desenvolvedor da LexGroup e equipe RA; os outros recebem 403.
     listClients(): Promise<ClientsResponse>
+    // Encerrar organização (some de todas as telas, histórico guardado). A LexGroup nunca.
+    getOrgClosureImpact(org: string): Promise<OrgClosureImpact>
+    closeOrganization(org: string, confirmName: string): Promise<void>
     // Fontes com falha de cada organização (slug -> chaves), pela regra da tela Unidades e fontes. Só a TI da
     // LexGroup (os outros recebem 403). Lê só o registro de leituras da API, nunca os bancos de origem.
     getFailingSources(): Promise<Record<string, string[]>>

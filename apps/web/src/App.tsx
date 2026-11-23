@@ -86,6 +86,8 @@ function App() {
                                             />
                                         ))}
                                     </Route>
+                                    {/* Plataforma: unidades e fontes de qualquer cliente, sem ser membro (o banco confere). */}
+                                    <Route path="/plataforma/clientes/:org/unidades" element={<SourcesPage />} />
                                     {MENU_ITEMS.filter((item) => !item.route.startsWith(ORG_PREFIX)).map((item) => (
                                         <Route key={item.key} path={item.route} element={pageOf(item)} />
                                     ))}

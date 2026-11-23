@@ -60,10 +60,11 @@ export const onboardingAccess: AccessOverview = {
     can_set_org_role: true,
 }
 
-export const onboardingAudit: AuditResponse = { events: [], truncated: false, actors: [] }
+export const onboardingAudit: AuditResponse = { events: [], truncated: false, actors: [], units: [], orgs: null }
 
 // Ainda sem fontes conectadas: só a unidade-sede, vazia.
 export const onboardingSources: SourcesResponse = {
+    orgName: 'Cliente parceiro',
     syncEveryMin: 10,
     unitLimit: { used: 1, total: 1 },
     canManageUnits: true,
