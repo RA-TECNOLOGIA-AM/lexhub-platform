@@ -1,4 +1,4 @@
-import type { SourcesResponse, UnitInput, UnitSources } from '../../types/index.ts'
+import type { SourcesResponse, UnitDeletionImpact, UnitInput, UnitSources } from '../../types/index.ts'
 import { DataError } from '../errors.ts'
 import { validateUnit } from '../../pages/admin/sources/unitForm.ts'
 
@@ -33,4 +33,31 @@ export function updateUnitIn(data: SourcesResponse, input: UnitInput): UnitSourc
     unit.unit = { ...unit.unit, name: input.name.trim() }
     unit.timezone = input.timezone
     return unit
+}
+
+// Excluir unidade no mock, com as travas de api.delete_unit (migration 20261123140000_excluir_unidade_organizacao.sql).
+// locked: as unidades travadas da organização (na LexGroup: NG, LA e RJ).
+export function unitImpactIn(data: SourcesResponse, code: string, locked: string[]): UnitDeletionImpact {
+    const unit = data.units.find((u) => u.unit.code === code)
+    if (!unit) throw new DataError(409, 'Unidade não encontrada.')
+    return {
+        code: unit.unit.code,
+        name: unit.unit.name,
+        sources: unit.sources.length,
+        dashboards: unit.dashboards,
+        members: 0, // o mock não liga membros a unidades
+        locked: locked.includes(code),
+        lastUnit: data.units.length === 1,
+    }
+}
+
+export function deleteUnitIn(data: SourcesResponse, code: string, confirmName: string, locked: string[]): void {
+    const impact = unitImpactIn(data, code, locked)
+    if (impact.locked) throw new DataError(409, `A unidade ${impact.name} não pode ser excluída (trava da plataforma).`)
+    if (impact.lastUnit) throw new DataError(409, 'A organização precisa de pelo menos uma unidade.')
+    if (confirmName.trim().toLowerCase() !== impact.name.trim().toLowerCase()) {
+        throw new DataError(409, 'Digite o nome da unidade para confirmar.')
+    }
+    data.units = data.units.filter((u) => u.unit.code !== code)
+    if (data.unitLimit) data.unitLimit = { ...data.unitLimit, used: data.unitLimit.used - 1 }
 }

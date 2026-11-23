@@ -13,6 +13,7 @@ import { ClientKpis } from './ClientKpis.tsx'
 import { clientColumns } from './clientColumns.tsx'
 import { kpisOf, withFailing } from './clientsView.ts'
 import { SupportPanel } from './SupportPanel.tsx'
+import { CloseOrgDialog } from './CloseOrgDialog.tsx'
 
 // A página: busca os clientes e junta indicadores, tabela e o painel de suporte.
 // Quem vê: Owner/Desenvolvedor da LexGroup e equipe RA. O menu já esconde o item; quem digitar o
@@ -20,15 +21,17 @@ import { SupportPanel } from './SupportPanel.tsx'
 export function ClientsPage() {
     // A lista vem do Supabase; a contagem de fontes com falha, da API (registro de leituras). Falhou a
     // contagem = "Sem informação" (withFailing), a página abre do mesmo jeito.
+    const [version, setVersion] = useState(0) // muda depois de encerrar: busca a lista de novo
     const { data, error } = useAsync(async () => {
         const [list, failing] = await Promise.all([
             dataClient.listClients(),
             dataClient.getFailingSources().catch(() => null),
         ])
         return withFailing(list, failing)
-    }, [])
+    }, [version])
     const [notice, setNotice] = useState<string | null>(null)
     const [supportFor, setSupportFor] = useState<PlatformClient | null>(null)
+    const [closing, setClosing] = useState<PlatformClient | null>(null)
 
     if (error?.status === 403) {
         return (
@@ -72,7 +75,21 @@ export function ClientsPage() {
             <div className="stack">
                 {notice && <Notice message={notice} onClose={() => setNotice(null)} />}
                 <ClientKpis kpis={kpisOf(data)} />
-                <DataTable columns={clientColumns(setSupportFor)} rows={data.clients} rowKey={(c) => c.slug} />
+                <DataTable
+                    columns={clientColumns({ onSupport: setSupportFor, onCloseOrg: setClosing })}
+                    rows={data.clients}
+                    rowKey={(c) => c.slug}
+                />
+                {closing && (
+                    <CloseOrgDialog
+                        client={closing}
+                        onClosed={() => {
+                            setVersion((v) => v + 1)
+                            setNotice(`${closing.name} foi encerrada. O histórico da auditoria fica guardado.`)
+                        }}
+                        onClose={() => setClosing(null)}
+                    />
+                )}
                 {supportFor && (
                     <SupportPanel
                         key={supportFor.slug}

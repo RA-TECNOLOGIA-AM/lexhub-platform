@@ -12,6 +12,7 @@ import type {
     SourcesFreshness,
     SourcesResponse,
     SourceTestResult,
+    UnitDeletionImpact,
     UnitInput,
     UnitSources,
 } from '../types/index.ts'
@@ -24,6 +25,8 @@ type SourcesClient = Pick<
     | 'getFailingSources'
     | 'createUnit'
     | 'updateUnit'
+    | 'getUnitDeletionImpact'
+    | 'deleteUnit'
     | 'listProductOffices'
     | 'linkProductOffice'
     | 'getConnectInfo'
@@ -76,6 +79,11 @@ export function createSourcesClient(supabase: SupabaseClient, http: Http): Sourc
         getFailingSources: async () => (await http.get<{ orgs: Record<string, string[]> }>('/sources/failing')).orgs,
         createUnit: (org, unit) => call<UnitSources>('create_unit', unitArgs(org, unit)),
         updateUnit: (org, unit) => call<UnitSources>('update_unit', unitArgs(org, unit)),
+        getUnitDeletionImpact: (org, unit) =>
+            call<UnitDeletionImpact>('unit_deletion_impact', { p_org: org, p_code: unit }),
+        deleteUnit: async (org, unit, confirmName) => {
+            await call<null>('delete_unit', { p_org: org, p_code: unit, p_confirm: confirmName })
+        },
         listProductOffices: (product) => http.get<ProductOffices>(`/sources/${product}/offices`),
         linkProductOffice: (org, unit, product, ref) =>
             call<UnitSources>('link_product_office', { p_org: org, p_unit: unit, p_product: product, p_ref: ref }),

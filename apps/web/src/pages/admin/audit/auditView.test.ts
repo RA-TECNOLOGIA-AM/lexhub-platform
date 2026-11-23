@@ -18,7 +18,7 @@ import {
 } from './auditView.ts'
 
 const events = audit.events
-const all = { kind: '' as const, actor: '', period: '7' as const, de: '', ate: '' }
+const all = { kind: '' as const, actor: '', unit: '', org: '', period: '7' as const, de: '', ate: '' }
 
 describe('whenLabel', () => {
     it('mostra dia/mês e hora no fuso de Manaus', () => {
@@ -89,18 +89,36 @@ describe('consulta ao banco', () => {
             to: null,
             kind: 'view',
             actor: 'Ana Ribeiro',
+            unit: '',
         })
         expect(queryFromFilter({ ...all, period: '90' }, now).from).toBe('2026-08-21T16:00:00.000Z')
     })
     it('datas livres: do começo do "de" ao fim do "até", no fuso de Manaus', () => {
         const q = queryFromFilter({ ...all, period: 'custom', de: '2026-11-01', ate: '2026-11-30' }, now)
-        expect(q).toEqual({ from: '2026-11-01T00:00:00-04:00', to: '2026-12-01T00:00:00-04:00', kind: '', actor: '' })
+        expect(q).toEqual({
+            from: '2026-11-01T00:00:00-04:00',
+            to: '2026-12-01T00:00:00-04:00',
+            kind: '',
+            actor: '',
+            unit: '',
+        })
     })
     it('ao escolher datas, começa nos últimos 7 dias (dia de Manaus)', () => {
         expect(customRange(new Date('2026-11-20T02:00:00Z'))).toEqual({ de: '2026-11-12', ate: '2026-11-19' })
     })
     it('"Nunca acessou" não filtra eventos por tipo', () => {
         expect(queryFromFilter({ ...all, kind: NEVER }, now).kind).toBe('')
+    })
+})
+
+describe('organização e unidade na URL', () => {
+    it('ida e volta, com o código em maiúsculas e o slug em minúsculas', () => {
+        const f = filterFromParams(new URLSearchParams('unidade=ng&org=Org-Teste'))
+        expect(f).toMatchObject({ unit: 'NG', org: 'org-teste' })
+        expect(paramsFromFilter(f).toString()).toBe('unidade=NG&org=org-teste')
+    })
+    it('a unidade vai para o banco', () => {
+        expect(queryFromFilter({ ...all, unit: 'LA' }).unit).toBe('LA')
     })
 })
 

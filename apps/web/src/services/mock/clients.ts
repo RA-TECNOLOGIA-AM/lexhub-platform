@@ -12,6 +12,12 @@ export const clients: ClientsResponse = {
             seats: { used: 42, total: null }, // Pro sem teto (a LexGroup é a dona da plataforma)
             failingSources: 1,
             billing: 'ok',
+            units: [
+                { code: 'LA_AM', name: 'Luis Albert AM' },
+                { code: 'LA_RJ', name: 'Luis Albert RJ' },
+                { code: 'NG', name: 'Nicolas Gomes' },
+            ],
+            canClose: false, // a dona da plataforma
         },
         {
             slug: 'cliente-parceiro',
@@ -21,6 +27,8 @@ export const clients: ClientsResponse = {
             seats: { used: 6, total: 10 },
             failingSources: 0,
             billing: 'onboarding_paid',
+            units: [{ code: 'CP', name: 'Parceiro · sede' }],
+            canClose: true,
         },
         {
             slug: 'escritorio',
@@ -30,6 +38,11 @@ export const clients: ClientsResponse = {
             seats: { used: 9, total: 10 },
             failingSources: 0,
             billing: 'overdue',
+            units: [
+                { code: 'E1', name: 'Matriz' },
+                { code: 'E2', name: 'Filial' },
+            ],
+            canClose: true,
         },
     ],
 }

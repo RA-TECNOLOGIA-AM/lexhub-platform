@@ -55,7 +55,7 @@ import { preProtocoloFor } from './mock/preProtocolo.ts'
 import { peticionamentoLegadoFor } from './mock/peticionamentoLegado.ts'
 import { protocoloLegadoFor } from './mock/protocoloLegado.ts'
 import { sourceDetailFor } from './mock/sourceDetail.ts'
-import { createUnitIn, updateUnitIn } from './mock/units.ts'
+import { createUnitIn, deleteUnitIn, unitImpactIn, updateUnitIn } from './mock/units.ts'
 import { linkOfficeIn, productOffices } from './mock/offices.ts'
 import {
     changeSecretIn,
@@ -145,6 +145,9 @@ function who() {
         hasAccess: !blocked,
     }
 }
+
+// As unidades da LexGroup que não saem pela tela (app.units.deletion_locked).
+const LOCKED_UNITS = ['NG', 'LA_AM', 'LA_RJ'] // no banco: NG, LA e RJ
 
 // Mesma regra da API: organização de que a pessoa não faz parte = 403.
 // Devolve true para a organização principal (LexGroup), a única com os dados completos do mock.
@@ -404,10 +407,20 @@ export function createMockClient(): DataClient {
                     (!query.to || time(e.at) < time(query.to)) &&
                     (!query.kind || e.kind === query.kind),
             )
+            // O mock não guarda a unidade de cada evento: o filtro de unidade não corta nada aqui.
+            const own = requireOrg(org)
             return copy({
                 events: events.filter((e) => !query.actor || e.actor === query.actor),
                 truncated: false,
                 actors: actorsOf(events),
+                units: (own ? sources : onboardingSources).units.map((u) => ({
+                    code: u.unit.code,
+                    name: u.unit.name,
+                    deleted: false,
+                })),
+                orgs: me.user.platform_staff
+                    ? clients.clients.map((c) => ({ slug: c.slug, name: c.name, closed: false }))
+                    : null,
             })
         },
 
@@ -487,6 +500,20 @@ export function createMockClient(): DataClient {
             return copy(updateUnitIn(requireOrg(org) ? sources : onboardingSources, unit))
         },
 
+        async getUnitDeletionImpact(org, unit) {
+            await wait()
+            requireSession()
+            const own = requireOrg(org)
+            return unitImpactIn(own ? sources : onboardingSources, unit, own ? LOCKED_UNITS : [])
+        },
+
+        async deleteUnit(org, unit, confirmName) {
+            await wait()
+            requireSession()
+            const own = requireOrg(org)
+            deleteUnitIn(own ? sources : onboardingSources, unit, confirmName, own ? LOCKED_UNITS : [])
+        },
+
         // O mock entra como Desenvolvedor da LexGroup: conecta fontes em qualquer organização.
         async listProductOffices(product) {
             await wait()
@@ -550,6 +577,33 @@ export function createMockClient(): DataClient {
             requireSession()
             if (!me.user.platform_staff) throw new DataError(403, 'Só a equipe RA Tecnologia vê os clientes')
             return copy(clients)
+        },
+
+        async getOrgClosureImpact(org) {
+            await wait()
+            requireSession()
+            const client = clients.clients.find((c) => c.slug === org)
+            if (!client) throw new DataError(409, 'Organização não encontrada.')
+            return {
+                slug: client.slug,
+                name: client.name,
+                units: client.units.length,
+                members: client.seats.used,
+                sources: 0,
+                locked: !client.canClose,
+            }
+        },
+
+        async closeOrganization(org, confirmName) {
+            await wait()
+            requireSession()
+            const client = clients.clients.find((c) => c.slug === org)
+            if (!client) throw new DataError(409, 'Organização não encontrada.')
+            if (!client.canClose) throw new DataError(409, 'A organização dona da plataforma não pode ser encerrada.')
+            if (confirmName.trim().toLowerCase() !== client.name.trim().toLowerCase()) {
+                throw new DataError(409, 'Digite o nome da organização para confirmar.')
+            }
+            clients.clients = clients.clients.filter((c) => c.slug !== org)
         },
 
         // No mock: as fontes fictícias com falha seguida, na LexGroup (as outras organizações não têm fontes).

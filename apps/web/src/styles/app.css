@@ -649,6 +649,40 @@ button.org:hover {
 .btn-danger {
     color: var(--danger);
 }
+.btn-danger.solid {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+.btn-danger.solid:disabled {
+    opacity: 0.5;
+}
+.delete-impact {
+    margin: 0;
+    padding-left: 18px;
+}
+/* Rodapé do modal de unidade: "Excluir unidade" à esquerda, Cancelar/Salvar à direita */
+.foot-left {
+    margin-right: auto;
+}
+/* Clientes: as unidades da organização, cada uma leva para Unidades e fontes */
+.client-units {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 4px;
+}
+.client-unit {
+    font-size: 12px;
+    padding: 1px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-2, inherit);
+    text-decoration: none;
+}
+.client-unit:hover {
+    border-color: var(--accent, currentColor);
+}
 /* Liga/desliga da fonte: em destaque no detalhe (pausa reversível) */
 .source-power {
     display: flex;

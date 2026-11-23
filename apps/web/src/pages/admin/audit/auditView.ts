@@ -86,6 +86,8 @@ export type AuditPeriod = keyof typeof PERIODS
 export type AuditFilter = {
     kind: AuditKind | typeof NEVER | '' // '' = todos
     actor: string // '' = todas
+    unit: string // código da unidade; '' = todas
+    org: string // organização auditada (só a plataforma troca); '' = a da URL
     period: AuditPeriod
     de: string
     ate: string
@@ -112,6 +114,8 @@ export function filterFromParams(params: URLSearchParams): AuditFilter {
     return {
         kind: known ? (kind as AuditFilter['kind']) : '',
         actor: params.get('pessoa') ?? '',
+        unit: (params.get('unidade') ?? '').toUpperCase(),
+        org: (params.get('org') ?? '').toLowerCase(),
         period: valid ? (period as AuditPeriod) : '7',
         de: valid && period === 'custom' ? de : '',
         ate: valid && period === 'custom' ? ate : '',
@@ -127,6 +131,8 @@ export function paramsFromFilter(f: AuditFilter): URLSearchParams {
     }
     if (f.kind) params.set('tipo', f.kind)
     if (f.actor) params.set('pessoa', f.actor)
+    if (f.unit) params.set('unidade', f.unit)
+    if (f.org) params.set('org', f.org)
     return params
 }
 
@@ -142,16 +148,17 @@ export function customRange(now = new Date()): { de: string; ate: string } {
 // O que pedir ao banco: o período vira instantes; "Nunca acessou" não é um tipo de evento (busca todos).
 export function queryFromFilter(f: AuditFilter, now = new Date()): AuditQuery {
     const kind = f.kind === NEVER ? '' : f.kind
-    const actor = f.actor
+    const { actor, unit } = f
     if (f.period === 'custom') {
         return {
             from: `${f.de}T00:00:00${MANAUS_OFFSET}`,
             to: `${nextDay(f.ate)}T00:00:00${MANAUS_OFFSET}`,
             kind,
             actor,
+            unit,
         }
     }
-    return { from: new Date(now.getTime() - Number(f.period) * DAY_MS).toISOString(), to: null, kind, actor }
+    return { from: new Date(now.getTime() - Number(f.period) * DAY_MS).toISOString(), to: null, kind, actor, unit }
 }
 
 // --- Nunca acessou: membros que nunca entraram e convites ainda não aceitos ---

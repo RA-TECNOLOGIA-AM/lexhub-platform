@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { DataClient } from './client.ts'
 import { createRpc } from './rpc.ts'
 import { actionFilter, toAuditEvent } from './auditEvents.ts'
-import type { RawAuditEvent } from '../types/index.ts'
+import type { AuditResponse, RawAuditEvent } from '../types/index.ts'
 
 type AuditClient = Pick<DataClient, 'getAudit' | 'logAuditExport' | 'logDashboardView'>
 
@@ -14,14 +14,27 @@ export function createAuditClient(supabase: SupabaseClient): AuditClient {
         // Período, tipo e pessoa vão para o banco: a resposta já vem filtrada (até 2000 eventos), com a lista de
         // pessoas do período (para o campo Pessoa). Banco antigo sem truncated/actors: false / [].
         async getAudit(org, query) {
-            const res = await call<{ events: RawAuditEvent[]; truncated?: boolean; actors?: string[] }>('list_audit', {
+            const res = await call<{
+                events: RawAuditEvent[]
+                truncated?: boolean
+                actors?: string[]
+                units?: AuditResponse['units']
+                orgs?: AuditResponse['orgs']
+            }>('list_audit', {
                 p_org: org,
                 p_from: query.from,
                 p_to: query.to,
                 ...actionFilter(query.kind),
                 p_actor: query.actor || null,
+                p_unit: query.unit || null,
             })
-            return { events: res.events.map(toAuditEvent), truncated: res.truncated ?? false, actors: res.actors ?? [] }
+            return {
+                events: res.events.map(toAuditEvent),
+                truncated: res.truncated ?? false,
+                actors: res.actors ?? [],
+                units: res.units ?? [],
+                orgs: res.orgs ?? null,
+            }
         },
         // Abriu um dashboard: o banco ignora repetição da mesma pessoa/dashboard/unidade em menos de 5 min.
         async logDashboardView(org, unit, dashboardKey) {
@@ -33,6 +46,7 @@ export function createAuditClient(supabase: SupabaseClient): AuditClient {
                 p_kind: filter.kind,
                 p_actor: filter.actor,
                 p_rows: rows,
+                p_unit: filter.unit || null,
             })
         },
     }
