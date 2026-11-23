@@ -30,9 +30,11 @@ em `apps/api/src/app/source_queries.py`, query `tcc_sobrevivencia_processual`).
 cd modelo-machine-learning
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt   # versões fixadas em 10/11/2026
 
-# Os dados não ficam no Git (a coorte tem um processo por linha). Coloque a foto congelada em dados/ —
-# por exemplo, apontando para a pasta antiga:
-ln -s "/home/luiz/lexhub_project/TCC - Luiz/dados" dados
+# Os dados não ficam no Git (a coorte tem um processo por linha). Copie a pasta dados/ e as backups_fases_*
+# (usadas pela etapa 13, histórico de versões) da pasta antiga. Copie em vez de criar link: o pipeline
+# regrava dados/ e sobrescreveria os resultados da v1.
+cp -a "/home/luiz/lexhub_project/TCC - Luiz/dados" dados
+cp -a "/home/luiz/lexhub_project/TCC - Luiz"/backups_* .
 # (ou use outra pasta inteira do estudo: export LEXHUB_ML_DIR=/caminho/da/pasta)
 
 .venv/bin/python scripts/rodar_pipeline.py --listar          # as etapas numeradas
@@ -46,5 +48,14 @@ Variáveis:
 - `LEXHUB_ML_DIR` — a pasta do estudo (com `dados/`, onde também saem `logs/` e os PDFs). Padrão: esta pasta.
 - `LEXHUB_API_ENV` — o `.env` com o acesso ao LexFlow, para os scripts que reextraem dados. Padrão: `apps/api/.env`.
 
-A foto congelada em uso está em `coorte_comum.SNAPSHOT_DIR` (`dados/congelado_20261110`, com `manifesto.json` e o
-hash conferido a cada carga). Para atualizar o estudo, crie uma nova foto e troque essa constante.
+A foto congelada em uso está em `coorte_comum.SNAPSHOT_DIR` (`dados/congelado_20261119`, com `manifesto.json` e o
+hash conferido a cada carga). A foto **final do texto do TCC** é a `congelado_20261110` (hoje a `SNAPSHOT_ANTERIOR`):
+para reproduzir os números do TCC, volte `SNAPSHOT_DIR` para ela. Com essa foto, a v2 gera o JSON da página
+idêntico ao da v1 (conferido em 19/11/2026).
+
+Para atualizar o estudo com dados novos:
+
+1. `scripts/atualizar_dashboard_tcc.py` e depois `scripts/fase6_datas_merito.py` (gravam `dados/*_atual.parquet`).
+2. Copie os dois `*_atual.parquet` para `dados/congelado_AAAAMMDD/` (sem o `_atual`) e escreva o `manifesto.json`
+   com o sha256 de cada um e a `data_referencia` (o "hoje" do estudo); use o de uma foto anterior como modelo.
+3. Troque `SNAPSHOT_DIR` (e `SNAPSHOT_ANTERIOR`) em `coorte_comum.py` e rode o pipeline.

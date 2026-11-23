@@ -21,11 +21,14 @@ BASE_DIR = ML_DIR
 # atualizar_dashboard_tcc.py reextraia e sobrescrevia a coorte (rodou em 21 e 26/10), o que
 # faria qualquer reprocessamento divergir dos PDFs. Agora o cron grava em *_atual e o TCC so
 # le daqui; o hash e conferido a cada carga (manifesto.json).
-SNAPSHOT_DIR = f"{BASE_DIR}/dados/congelado_20261110"  # foto FINAL (10/11/2026); a de 09/11 e a SNAPSHOT_ANTERIOR
+# 19/11/2026 (v2): retreino com a foto de 19/11. A foto FINAL do TCC (10/11) virou a anterior;
+# para reproduzir os numeros do texto do TCC, volte SNAPSHOT_DIR para congelado_20261110
+# (e SNAPSHOT_ANTERIOR para congelado_20261109).
+SNAPSHOT_DIR = f"{BASE_DIR}/dados/congelado_20261119"
 COORTE_PATH = f"{SNAPSHOT_DIR}/coorte_sobrevivencia.parquet"
-# foto anterior (09/11/2026), mantida para o apendice de qualidade comparar o efeito das
+# foto anterior, mantida para o apendice de qualidade comparar o efeito das
 # correcoes feitas na origem entre as duas fotos
-SNAPSHOT_ANTERIOR = f"{BASE_DIR}/dados/congelado_20261109"
+SNAPSHOT_ANTERIOR = f"{BASE_DIR}/dados/congelado_20261110"
 
 
 def _data_referencia(pasta):

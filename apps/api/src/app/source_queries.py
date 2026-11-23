@@ -3336,6 +3336,13 @@ QUERIES["tcc_sobrevivencia_processual"] = {
         -- 09/11/2026: so NG (20) e LA/AM (21), igual a coorte do TCC - RJ (27) saiu
         -- do estudo e do dashboard; id 3 e escritorio de teste.
         and p.id_escritorio_assinante in (20, 21)
+        -- 06/11/2026 (igual a coorte do TCC): agravo fora da coorte (processo proprio no LexFlow,
+        -- nao e acao). Agravo = CNJ com 20 digitos e origem (4 ultimos) 0000/9000/9001/9002.
+        and not (
+          length(regexp_replace(coalesce(p.numero_processo, ''), '[^0-9]', '', 'g')) = 20
+          and right(regexp_replace(coalesce(p.numero_processo, ''), '[^0-9]', '', 'g'), 4)
+              in ('0000', '9000', '9001', '9002')
+        )
     ),
     base_valida as (
       select * from base
