@@ -70,6 +70,19 @@ class ExportOption:
 
 
 @dataclass(frozen=True)
+class ExportPart:
+    """Uma parte de um relatório que junta outros num arquivo só (v1: /execucao_geral/export, "Os dois juntos").
+
+    Os campos dela chegam com o prefixo (`condenacao.numero_processo`); parte sem nenhum campo escolhido fica de
+    fora do arquivo. XLSX: uma aba por parte; CSV: um .zip com um CSV por parte (CSV não tem aba)."""
+
+    prefix: str  # prefixo dos campos desta parte ('condenacao')
+    sheet_name: str  # aba no XLSX ("Execução Condenação")
+    csv_name: str  # CSV dentro do .zip ("execucao_condenacao.csv")
+    spec: "ExportSpec"  # o relatório desta parte (campos, rótulos e linhas)
+
+
+@dataclass(frozen=True)
 class ExportSpec:
     """Exportação de um dashboard, como na v1 (`_CAMPOS_EXPORT_*`, `_LABELS_EXPORT_*`, `_rows_*_export`)."""
 
@@ -89,6 +102,9 @@ class ExportSpec:
     sheet_order: tuple[str, ...] = ()
     # Nome da aba para um valor longo (o Excel corta em 31 caracteres), ex.: "Data do acórdão (mérito lançado)".
     sheet_titles: dict[str, str] = field(default_factory=dict)
+    # Relatório que junta outros num arquivo só (ver ExportPart). Com partes, fields/labels são os das partes com
+    # o prefixo; a rota busca as linhas de cada parte (rows devolve as de todas juntas, marcadas com a parte).
+    parts: tuple[ExportPart, ...] = ()
 
 
 @dataclass(frozen=True)

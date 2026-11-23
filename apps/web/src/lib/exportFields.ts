@@ -2,10 +2,17 @@
 // Cada dashboard declara os seus (cópia da lista do servidor, como na v1); a janela só desenha.
 
 export type ExportField = { slug: string; label: string } // slug = o nome que a API espera em ?campos=
-export type ExportGroup = { group: string; fields: ExportField[] }
+// block: o bloco do grupo num relatório com partes (ex.: 'Condenação' e 'Acordos' no "Os dois juntos" do Execução
+// Estratégico); cada bloco tem o seu "Selecionar todos" na janela, como na v1.
+export type ExportGroup = { group: string; fields: ExportField[]; block?: string }
 // Uma escolha da exportação além dos campos (ex.: o recorte entrada/saida/total da Execução, ?criterio=).
 // A primeira opção é a padrão, como no servidor (ExportOption).
-export type ExportOptionDef = { key: string; label: string; choices: { value: string; label: string }[] }
+// note: a explicação da escolha, embaixo dela na janela (ex.: o que o "Relatório personalizado" ignora).
+export type ExportOptionDef = {
+    key: string
+    label: string
+    choices: { value: string; label: string; note?: string }[]
+}
 // Um relatório do dashboard: key null = o principal; outra = ?relatorio=<key> (ex.: as Atividades dos Acordos).
 export type ExportReport = { key: string | null; title: string; groups: ExportGroup[]; options?: ExportOptionDef[] }
 

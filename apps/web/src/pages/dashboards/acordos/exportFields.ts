@@ -5,7 +5,7 @@ import { RECORTE } from '../execucao/exportFields.ts'
 // da janela da v1 (ExecucaoAcordosExportDialog): os processos (com o recorte) e as atividades da seção (com a
 // visão Concluídas / Por prazo). Mudou no servidor? Muda aqui também (dashboards/execucao_export.py).
 
-const camposProcessos: ExportGroup[] = [
+export const camposProcessos: ExportGroup[] = [
     {
         group: 'Identificação',
         fields: [

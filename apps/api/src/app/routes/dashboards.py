@@ -288,17 +288,32 @@ async def dashboard_export(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
     ctx = replace(ctx, export_options=opcoes)
 
-    rows = await _run(module, memo.no_pedido(spec.rows(ctx)))
-    headers, data = export.table(spec, slugs, rows)
-    if fmt == "xlsx":
-        aba = spec.sheet_name_por_unidade.get(ctx.unit_ref, spec.sheet_name)
-        body = (
-            export.to_xlsx_por_aba(spec, slugs, rows, aba)
-            if spec.sheet_by
-            else export.to_xlsx(headers, data, aba)
-        )
+    media_type, ext = export.FORMATS[fmt], fmt
+    if spec.parts:
+        # Um arquivo com as partes (v1: /execucao_geral/export): uma aba de cada no XLSX, um .zip de CSVs no CSV.
+        abas = []
+        for parte, campos_parte in export.split_parts(spec, slugs):
+            linhas = await _run(module, memo.no_pedido(parte.spec.rows(ctx)))
+            abas.append((parte, *export.table(parte.spec, campos_parte, linhas), len(linhas)))
+        total_linhas = sum(a[3] for a in abas)
+        if fmt == "xlsx":
+            body = export.to_xlsx_abas([(p.sheet_name, h, d) for p, h, d, _ in abas])
+        else:
+            body = export.to_zip([(p.csv_name, export.to_csv(h, d)) for p, h, d, _ in abas])
+            media_type, ext = export.ZIP, "zip"
     else:
-        body = export.to_csv(headers, data)
+        rows = await _run(module, memo.no_pedido(spec.rows(ctx)))
+        total_linhas = len(rows)
+        headers, data = export.table(spec, slugs, rows)
+        if fmt == "xlsx":
+            aba = spec.sheet_name_por_unidade.get(ctx.unit_ref, spec.sheet_name)
+            body = (
+                export.to_xlsx_por_aba(spec, slugs, rows, aba)
+                if spec.sheet_by
+                else export.to_xlsx(headers, data, aba)
+            )
+        else:
+            body = export.to_csv(headers, data)
 
     await audit.insert_audit(
         audit_entry(
@@ -318,15 +333,15 @@ async def dashboard_export(
                 "format": fmt,
                 **({"relatorio": relatorio} if relatorio else {}),
                 **({"opcoes": opcoes} if opcoes else {}),
-                "rows": len(rows),
+                "rows": total_linhas,
             },
         )
     )
     name = export.filename(
-        access.dashboard_key, access.unit_code, fmt, [relatorio or "", *opcoes.values()]
+        access.dashboard_key, access.unit_code, ext, [relatorio or "", *opcoes.values()]
     )
     return Response(
         content=body,
-        media_type=export.FORMATS[fmt],
+        media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="{name}"'},
     )
