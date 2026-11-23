@@ -286,7 +286,12 @@ def test_ttl_no_redis_maior_para_queries_pesadas():
         await cache.get("ng:outra", origin.fetch)
 
     run(go())
-    assert fake.ttls == {"t:ng:comercial_geral_NG": 600, "t:ng:outra": 300}
+    # + a chave pequena do registro de leituras (a hora do hub e da tela de fontes, app/read_log.py)
+    assert fake.ttls == {
+        "t:ng:comercial_geral_NG": 600,
+        "t:ng:outra": 300,
+        "t:reads:ng": 7 * 86_400,
+    }
 
 
 def test_valor_estranho_no_redis_e_ignorado():

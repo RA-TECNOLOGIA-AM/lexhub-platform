@@ -453,7 +453,10 @@ export type SourceKind = 'database' | 'flow' | 'finance' | 'sheet' // define o �
 // pending = falta autorizar (ex.: Conta Azul); waiting = conectada, mas ainda não sincronizou nenhuma vez;
 // no_dashboards = conectada, mas nenhum dashboard ligado na unidade usa a fonte (o analista liga depois);
 // disabled = a TI da LexGroup desligou a fonte (pausa: o segredo fica salvo, a API não lê)
-export type SourceStatus = 'healthy' | 'late' | 'pending' | 'waiting' | 'no_dashboards' | 'disabled'
+// Com a hora do registro de leituras da API (sourceFreshness.ts): on_open = ainda não lida;
+// failing = a tentativa mais recente de ler falhou
+export type SourceStatus =
+    'healthy' | 'late' | 'pending' | 'waiting' | 'on_open' | 'failing' | 'no_dashboards' | 'disabled'
 // Como a API conecta na fonte (app.data_sources.connector)
 export type SourceConnector = 'lexpre' | 'lexflow' | 'internal' | 'postgres' | 'mysql' | 'sheets'
 // product = contratado pela organização (LexFlow, LexPre); connection = conectada por uma unidade (banco, planilha)
@@ -471,7 +474,17 @@ export type DataSource = {
     rows: number | null // linhas na última sincronização; null = não se aplica
     failures: number // falhas seguidas (0 = nenhuma)
     status: SourceStatus // decidido pelo servidor
+    cacheMin?: number // só quando a hora veio do cache da API (sourceFreshness.ts): quanto a leitura vale
 }
+
+// A hora de uma fonte no cache da API (GET /orgs/{org}/sources/freshness): o mesmo dado do card do hub.
+export type SourceFreshness = {
+    fetchedAt: string | null // ISO da leitura mais recente; null = ninguém abriu um dashboard dela ainda
+    cacheMin: number
+    error: string | null // tipo do erro, se a busca falhou depois da última leitura
+    errorAt: string | null
+}
+export type SourcesFreshness = Record<string, SourceFreshness> // chave da fonte -> hora
 
 export type UnitSources = {
     unit: Unit

@@ -24,6 +24,7 @@ import type {
     ClientsResponse,
     DataSource,
     SourceDetail,
+    SourcesFreshness,
     SourcesResponse,
     UnitInput,
     UnitSources,
@@ -120,6 +121,8 @@ export interface DataClient {
     getSources(org: string): Promise<SourcesResponse>
     // Uma fonte vista de uma unidade (o modal). Unidade fora do escopo = 403; fonte que ela não usa = 409.
     getSourceDetail(org: string, unit: string, source: string): Promise<SourceDetail>
+    // A hora de cada fonte no cache da API, o mesmo dado do card do hub (só memória: não consulta os bancos).
+    getSourcesFreshness(org: string, keys: string[]): Promise<SourcesFreshness>
     // Owner/Desenvolvedor: criar unidade e mudar nome/fuso (o código não muda). Regra quebrada = 409 com a mensagem.
     createUnit(org: string, unit: UnitInput): Promise<UnitSources>
     updateUnit(org: string, unit: UnitInput): Promise<UnitSources>

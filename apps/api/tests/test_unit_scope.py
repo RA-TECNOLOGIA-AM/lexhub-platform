@@ -178,12 +178,12 @@ def test_recorte_de_query_de_outro_banco_e_erro():
 
 def test_card_do_hub_considera_o_recorte_mais_novo():
     cache = SourceCache(MemoryStore(), ttl=300, clock=lambda: 1000.0)
-    assert _query_fetched_at(cache, "lexflow", "execucao_LA") is None
+    assert run(_query_fetched_at(cache, "lexflow", "execucao_LA")) is None
     cache._store.set("lexflow:execucao_LA@20", Entry(data=[], fetched_at=500.0))
     cache._store.set("lexflow:execucao_LA@21", Entry(data=[], fetched_at=700.0))
-    assert _query_fetched_at(cache, "lexflow", "execucao_LA") == 700.0
+    assert run(_query_fetched_at(cache, "lexflow", "execucao_LA")) == 700.0
     cache._store.set("lexpre:q", Entry(data=[], fetched_at=600.0))
-    assert _query_fetched_at(cache, "lexpre", "q") == 600.0
+    assert run(_query_fetched_at(cache, "lexpre", "q")) == 600.0
 
 
 # --- Casca: a rota de dados e a de exportação pedem o recorte da unidade da tela --------------------

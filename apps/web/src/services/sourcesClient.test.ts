@@ -58,6 +58,22 @@ describe('createSourcesClient', () => {
         expect(calls[2][2]).toEqual(input)
     })
 
+    it('getSourcesFreshness pede ao cache da API só as fontes da tela e devolve em camelCase', async () => {
+        const { http, paths } = fakeHttp({
+            sources: {
+                lexflow: { fetched_at: '2026-11-23T11:49:00Z', ttl_min: 15, error: null, error_at: null },
+            },
+        })
+        const { supabase, calls } = fakeSupabase({ data: {} })
+        const client = createSourcesClientWith(supabase, http)
+
+        expect(await client.getSourcesFreshness('lexgroup', ['lexflow', 'sheets_financeiro_ng'])).toEqual({
+            lexflow: { fetchedAt: '2026-11-23T11:49:00Z', cacheMin: 15, error: null, errorAt: null },
+        })
+        expect(paths).toEqual(['/orgs/lexgroup/sources/freshness?keys=lexflow%2Csheets_financeiro_ng'])
+        expect(calls).toEqual([])
+    })
+
     it('linkProductOffice chama api.link_product_office com os nomes do banco', async () => {
         const { supabase, calls } = fakeSupabase({ data: {} })
         await createSourcesClient(supabase).linkProductOffice('cliente', 'C1', 'lexflow', '27')

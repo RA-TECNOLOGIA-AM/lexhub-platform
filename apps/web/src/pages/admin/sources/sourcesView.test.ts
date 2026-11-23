@@ -45,8 +45,9 @@ const unit = (code: string, over: Partial<UnitSources> = {}): UnitSources => ({
 })
 
 describe('sourcesView', () => {
-    it('monta o texto do cabeçalho com o intervalo do servidor', () => {
-        expect(syncNote(5)).toContain('a cada 5 minutos')
+    it('cabeçalho: diz como a leitura funciona de verdade (ao abrir + cache), sem intervalo fixo', () => {
+        expect(syncNote()).toContain('quando alguém abre um dashboard')
+        expect(syncNote()).not.toMatch(/a cada \d+ minutos/)
     })
 
     it('resume linhas no padrão brasileiro', () => {
@@ -100,6 +101,16 @@ describe('sourcesView', () => {
     it('fonte que ainda não sincronizou: aguardando', () => {
         expect(statusOf('waiting')).toEqual({ label: 'Aguardando sync', badge: 'badge neutral' })
         expect(whenLabel(source({ syncedAt: null, status: 'waiting' }), NOW)).toBe('Nunca sincronizada')
+    })
+
+    it('hora vinda do cache da API: mostra o tempo de cache; sem leitura ainda = atualiza ao abrir', () => {
+        expect(statusOf('on_open')).toEqual({ label: 'Aguardando leitura', badge: 'badge neutral' })
+        expect(statusOf('failing')).toEqual({ label: 'Com falha', badge: 'badge warn' })
+        expect(whenLabel(source({ syncedAt: ago(11), cacheMin: 15 }), NOW)).toBe('há 11 min · cache de 15 min')
+        expect(whenLabel(source({ syncedAt: ago(11), cacheMin: 15, failures: 1, status: 'late' }), NOW)).toBe(
+            'há 11 min · 1 falha seguida',
+        )
+        expect(whenLabel(source({ syncedAt: null, status: 'on_open' }), NOW)).toBe('Ainda não lida')
     })
 
     it('fonte ligada sem dashboard na unidade: aguardando dashboards', () => {

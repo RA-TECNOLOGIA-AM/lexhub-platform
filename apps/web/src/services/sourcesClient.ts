@@ -9,6 +9,7 @@ import type {
     ProductOffices,
     SheetTab,
     SourceDetail,
+    SourcesFreshness,
     SourcesResponse,
     SourceTestResult,
     UnitInput,
@@ -19,6 +20,7 @@ type SourcesClient = Pick<
     DataClient,
     | 'getSources'
     | 'getSourceDetail'
+    | 'getSourcesFreshness'
     | 'createUnit'
     | 'updateUnit'
     | 'listProductOffices'
@@ -40,6 +42,22 @@ const unitArgs = (org: string, unit: UnitInput) => ({
     p_timezone: unit.timezone,
 })
 
+// Resposta de GET /orgs/{org}/sources/freshness (app/routes/source_freshness.py).
+type FreshnessOut = {
+    sources: Record<
+        string,
+        { fetched_at: string | null; ttl_min: number; error: string | null; error_at: string | null }
+    >
+}
+
+const toFreshness = (out: FreshnessOut): SourcesFreshness =>
+    Object.fromEntries(
+        Object.entries(out.sources).map(([key, f]) => [
+            key,
+            { fetchedAt: f.fetched_at, cacheMin: f.ttl_min, error: f.error, errorAt: f.error_at },
+        ]),
+    )
+
 // Módulo: Unidades e fontes. Ler e ligar escritório pelo Supabase (schema api); o que fala com o banco
 // do produto ou da operação (lista de escritórios, testar e salvar, trocar senha) pela API em Python.
 // As funções devolvem só o que quem chama vê (Owner/Desenvolvedor: todas as unidades; Gestor/Controller: as dele).
@@ -50,6 +68,10 @@ export function createSourcesClient(supabase: SupabaseClient, http: Http): Sourc
         getSources: (org) => call<SourcesResponse>('list_sources', { p_org: org }),
         getSourceDetail: (org, unit, source) =>
             call<SourceDetail>('source_detail', { p_org: org, p_unit: unit, p_source: source }),
+        getSourcesFreshness: async (org, keys) =>
+            toFreshness(
+                await http.get<FreshnessOut>(`/orgs/${enc(org)}/sources/freshness?keys=${enc(keys.join(','))}`),
+            ),
         createUnit: (org, unit) => call<UnitSources>('create_unit', unitArgs(org, unit)),
         updateUnit: (org, unit) => call<UnitSources>('update_unit', unitArgs(org, unit)),
         listProductOffices: (product) => http.get<ProductOffices>(`/sources/${product}/offices`),
