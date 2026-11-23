@@ -15,6 +15,7 @@ import { UnitFormDialog } from './UnitFormDialog.tsx'
 import { ConnectSourceDialog } from './ConnectSourceDialog.tsx'
 import type { DataSource, ProductKey, UnitInput } from '../../../types/index.ts'
 import { lastFailureLabel, pickUnit, syncNote } from './sourcesView.ts'
+import { withFreshness } from './sourceFreshness.ts'
 import { timezoneLabel } from './unitForm.ts'
 
 // O formulário aberto: criar, ou editar a unidade que está na tela.
@@ -25,6 +26,13 @@ export function SourcesPage() {
     const { org = '' } = useParams()
     const [version, setVersion] = useState(0) // muda depois de gravar: busca a lista de novo
     const { data, error } = useAsync(() => dataClient.getSources(org), [org, version])
+    // A hora de cada fonte vem do cache da API, igual ao card do hub. Falhou = a tela segue com o que o
+    // Supabase devolveu (nunca derruba a página).
+    const keys = data ? [...new Set(data.units.flatMap((u) => u.sources.map((s) => s.id)))].sort() : []
+    const { data: freshness } = useAsync(
+        () => (keys.length ? dataClient.getSourcesFreshness(org, keys) : Promise.resolve(null)),
+        [org, keys.join(',')],
+    )
     const [params, setParams] = useSearchParams()
     const [notice, setNotice] = useState<string | null>(null)
     const [open, setOpen] = useState<DataSource | null>(null) // a fonte do modal de detalhe
@@ -34,7 +42,8 @@ export function SourcesPage() {
     if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
 
-    const current = pickUnit(data.units, params.get('unidade'))
+    const picked = pickUnit(data.units, params.get('unidade'))
+    const current = picked && withFreshness(picked, freshness)
     const pickUnitCode = (code: string) => setParams({ unidade: code }, { replace: true })
 
     async function saveUnit(unit: UnitInput) {
@@ -58,7 +67,7 @@ export function SourcesPage() {
         <>
             <PageHeader
                 title="Unidades e fontes de dados"
-                description={syncNote(data.syncEveryMin)}
+                description={syncNote()}
                 actions={
                     connect && (
                         <button className="btn btn-primary" type="button" onClick={connect}>

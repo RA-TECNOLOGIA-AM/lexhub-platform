@@ -448,6 +448,24 @@ export function createMockClient(): DataClient {
             return copy(requireOrg(org) ? sources : onboardingSources)
         },
 
+        // No mock, a "hora do cache" é a syncedAt das fontes fictícias (a API real lê a memória do processo).
+        async getSourcesFreshness(org, keys) {
+            await wait()
+            requireSession()
+            const all = (requireOrg(org) ? sources : onboardingSources).units.flatMap((u) => u.sources)
+            return Object.fromEntries(
+                keys.map((key) => {
+                    const s = all.find((x) => x.id === key)
+                    const fetchedAt = s?.syncedAt ?? null
+                    const error = s && s.failures > 0 ? 'SourceUnavailable' : null
+                    return [
+                        key,
+                        { fetchedAt, cacheMin: key === 'lexflow' ? 15 : 5, error, errorAt: error ? fetchedAt : null },
+                    ]
+                }),
+            )
+        },
+
         async getSourceDetail(org, unit, source) {
             await wait()
             requireSession()

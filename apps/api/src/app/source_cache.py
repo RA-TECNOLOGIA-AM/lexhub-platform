@@ -40,6 +40,7 @@ from typing import Any, Protocol
 from app.cache import CacheService, NullCache
 from app.dashboards.base import SourceFetcher
 from app.logs import seconds
+from app.read_log import ReadLog
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,7 @@ class SourceCache:
         ttl_by_db: Mapping[str, float] | None = None,
         probe_dbs: Collection[str] = (),
         stats_every: float = 3600,
+        reads: ReadLog | None = None,
     ):
         self._store = store
         # Resumo no log do que saiu dos bancos (egress), a cada `stats_every` s: banco -> contadores.
@@ -165,6 +167,9 @@ class SourceCache:
         self._stale_max_age = stale_max_age
         self._clock = clock
         self._shared: CacheService = shared or NullCache()
+        # Quando cada chave foi lida do banco (ou falhou), em memória e no Redis: a hora do hub e da
+        # tela de fontes sobrevive a deploy/reload, como os dados (app/read_log.py).
+        self.reads: ReadLog = reads or ReadLog(self._shared)
         self._shared_ttl: TtlFor = shared_ttl or (lambda key: int(self.ttl_of(key)))
         self._swr = stale_while_revalidate
         self._locks: dict[str, asyncio.Lock] = {}
@@ -181,6 +186,12 @@ class SourceCache:
         """Quando o dado dessa chave veio do banco (None = ainda não buscado)."""
         entry = self._store.get(key)
         return entry.fetched_at if entry is not None else None
+
+    async def last_read(self, key: str) -> float | None:
+        """Quando o dado da chave veio do banco: a memória ou, depois de um restart, o registro no
+        Redis (o mais novo dos dois). Não busca nada no banco."""
+        times = [t for t in (self.fetched_at(key), await self.reads.ok_at(key)) if t is not None]
+        return max(times, default=None)
 
     def ttl_of(self, key: str) -> float:
         """Validade da chave 'banco:query': a do banco (`ttl_by_db`) ou a padrão."""
@@ -340,6 +351,7 @@ class SourceCache:
             logger.warning(
                 "%s: falhou após %s (%s)", key, seconds(self._clock() - started), error_name(exc)
             )
+            await self.reads.failed(key, self._clock(), error_name(exc))  # nunca levanta
             raise
         if data is None and base is None:
             # Busca condicional que não devolveu linhas sem ter com o que comparar: não deveria
@@ -360,6 +372,7 @@ class SourceCache:
         await self._shared.set(
             key, entry, self._shared_ttl(key)
         )  # nunca levanta (ver app/cache.py)
+        await self.reads.ok(key, entry.fetched_at)
         if data is None:
             logger.info(
                 "%s: sem mudança, nada baixado; conferido em %s (vale por %s)",

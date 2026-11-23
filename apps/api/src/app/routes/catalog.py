@@ -33,7 +33,7 @@ async def list_dashboards(
     rows, upcoming = await asyncio.gather(
         repo.list_available(access.user.user_id, access.org_id), repo.list_upcoming()
     )
-    return build_catalog(rows, upcoming, synced_from_cache(cache, {r.key for r in rows}))
+    return build_catalog(rows, upcoming, await synced_from_cache(cache, {r.key for r in rows}))
 
 
 class EnabledIn(BaseModel):
@@ -67,10 +67,11 @@ async def set_dashboard_enabled(
     return EnabledOut(unit=unit_code, dashboard=dashboard_key, enabled=enabled)
 
 
-def synced_from_cache(cache: SourceCache, keys: set[str]) -> dict[str, datetime]:
+async def synced_from_cache(cache: SourceCache, keys: set[str]) -> dict[str, datetime]:
     """Card -> quando veio do banco o dado MAIS ANTIGO que ele tem no cache. Nenhuma query no cache: fica de
     fora (null, "Atualiza ao abrir").
 
+    A hora vem da memória ou, depois de um deploy/reload, do registro no Redis (app/read_log.py).
     Só as queries que estão no cache contam: sem o aquecedor no LexFlow e no LexPre, e com as queries de todas
     as unidades em `module.queries` (o Recursal tem 12), exigir todas deixava o card quase sempre sem hora.
     """
@@ -79,21 +80,19 @@ def synced_from_cache(cache: SourceCache, keys: set[str]) -> dict[str, datetime]
         module = DASHBOARDS.get(key)
         if module is None or not module.queries:
             continue
-        times = [
-            t
-            for q in module.queries
-            if (t := _query_fetched_at(cache, module.source_db, q)) is not None
-        ]
+        found = [await _query_fetched_at(cache, module.source_db, q) for q in module.queries]
+        times = [t for t in found if t is not None]
         if times:
             out[key] = datetime.fromtimestamp(min(times), UTC)
     return out
 
 
-def _query_fetched_at(cache: SourceCache, db: str, query: str) -> float | None:
+async def _query_fetched_at(cache: SourceCache, db: str, query: str) -> float | None:
     """Quando a query veio do banco: a inteira ou, se for o caso, o recorte mais novo de alguma unidade
     (app/unit_scope.py). O card é do dashboard, não de uma unidade: mostra a sincronização mais recente."""
     names = [query]
     if db == "lexflow" and query in UNIT_COLUMN:
         names += [scoped_name(query, e) for e in ESCRITORIO_POR_UNIDADE.values()]
-    times = [t for n in names if (t := cache.fetched_at(f"{db}:{n}")) is not None]
+    found = [await cache.last_read(f"{db}:{n}") for n in names]
+    times = [t for t in found if t is not None]
     return max(times, default=None)

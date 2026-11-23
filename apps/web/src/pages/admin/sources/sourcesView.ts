@@ -3,9 +3,10 @@ import { timeAgo } from '../../../lib/format.ts'
 
 // Módulo: as regras de texto e cor da tela Unidades e fontes, sem React (testadas em sourcesView.test.ts).
 
-// Texto do cabeçalho: o intervalo vem do servidor (o cache de 5 min), nunca fixo na tela.
-export const syncNote = (minutes: number): string =>
-    `As fontes são sincronizadas a cada ${minutes} minutos para a base central da organização. ` +
+// Texto do cabeçalho: como a API lê de verdade (ao abrir, com cache por fonte; o tempo de cada uma
+// aparece na linha dela), sem prometer sincronização agendada.
+export const syncNote = (): string =>
+    'As fontes são lidas quando alguém abre um dashboard e ficam em cache por alguns minutos. ' +
     'Senhas e links das fontes ficam cifrados e nunca voltam para a tela.'
 
 const SOURCE_STATUS: Record<SourceStatus, { label: string; badge: string }> = {
@@ -13,6 +14,8 @@ const SOURCE_STATUS: Record<SourceStatus, { label: string; badge: string }> = {
     late: { label: 'Atrasada', badge: 'badge warn' },
     pending: { label: 'Autorizar', badge: 'badge info' },
     waiting: { label: 'Aguardando sync', badge: 'badge neutral' },
+    on_open: { label: 'Aguardando leitura', badge: 'badge neutral' },
+    failing: { label: 'Com falha', badge: 'badge warn' },
     no_dashboards: { label: 'Aguardando dashboards', badge: 'badge info' },
     disabled: { label: 'Desligada', badge: 'badge off' },
 }
@@ -59,10 +62,15 @@ const compact = new Intl.NumberFormat('pt-BR', { notation: 'compact' })
 // O Intl separa '18' e 'mil' com espaço não separável (\u00A0); trocamos por espaço comum.
 export const rowsLabel = (rows: number): string => `${compact.format(rows).replace(/\s/g, ' ')} linhas`
 // A linha do meio de cada fonte: 'há 4 min · 18 mil linhas', 'há 3 h · 2 falhas seguidas', 'Ainda não autorizada'.
+// Com a hora do registro da API (cacheMin): 'há 11 min · cache de 15 min' ou 'Ainda não lida'.
 export function whenLabel(source: DataSource, now: number = Date.now()): string {
-    if (source.syncedAt === null) return source.status === 'pending' ? 'Ainda não autorizada' : 'Nunca sincronizada'
+    if (source.syncedAt === null) {
+        if (source.status === 'pending') return 'Ainda não autorizada'
+        return source.status === 'on_open' ? 'Ainda não lida' : 'Nunca sincronizada'
+    }
     const parts = [timeAgo(source.syncedAt, now)]
     if (source.failures > 0) parts.push(plural(source.failures, 'falha seguida', 'falhas seguidas'))
+    else if (source.cacheMin !== undefined) parts.push(`cache de ${source.cacheMin} min`)
     else if (source.rows !== null) parts.push(rowsLabel(source.rows))
     return parts.join(' · ')
 }

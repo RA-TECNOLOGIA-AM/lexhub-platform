@@ -26,6 +26,7 @@ from app.routes import (
     hub,
     me,
     source_connections,
+    source_freshness,
     sources,
 )
 from app.source_cache import MemoryStore, SourceCache, shared_ttl_covering, ttl_by_query
@@ -205,6 +206,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboards.router)
     app.include_router(device_auth.router)
     app.include_router(sources.router)
+    app.include_router(source_freshness.router)
     app.include_router(source_connections.platform)
     app.include_router(source_connections.org)
     return app
