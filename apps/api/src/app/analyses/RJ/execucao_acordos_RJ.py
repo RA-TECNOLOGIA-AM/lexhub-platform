@@ -25,6 +25,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Optional
 
+from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db
@@ -146,6 +147,7 @@ def _processo_na_fase_acordo(item: dict[str, Any]) -> bool:
     return id_fase is not None and int(id_fase) == ID_FASE_ACORDO
 
 
+@memo.por_pedido()
 def _base_execucao_acordos_RJ(execucao: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Universo histórico de Execução de Acordos LA: ``ID_ESCRITORIO == 20``, com
@@ -175,6 +177,7 @@ def _base_execucao_acordos_RJ(execucao: list[dict[str, Any]]) -> list[dict[str, 
     return base
 
 
+@memo.por_pedido()
 def _filtrar_em_execucao_acordos_RJ(execucao: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Retorna somente os processos ainda na fase de Acordo hoje (``ID_FASE == 30``),
@@ -271,6 +274,7 @@ def _tem_etiqueta_acordo(item: dict[str, Any]) -> bool:
     return bool(item.get("TEM_ETIQUETA_ACORDO"))
 
 
+@memo.por_pedido()
 def _filtrar_entrada_execucao_acordos_RJ_no_periodo(
     execucao: list[dict[str, Any]],
     from_date: Optional[date] = None,
@@ -306,6 +310,7 @@ def _filtrar_entrada_execucao_acordos_RJ_no_periodo(
     return filtrados
 
 
+@memo.por_pedido()
 def _filtrar_saida_execucao_acordos_RJ_no_periodo(
     execucao: list[dict[str, Any]],
     from_date: Optional[date] = None,
@@ -1071,6 +1076,7 @@ def filter_execucao_acordos_RJ_por_sentenca(
 # 6 - Análise temporal
 # =============================================================================
 
+@memo.por_pedido()
 def _extrair_duracoes_dias(
     execucao: list[dict[str, Any]],
     from_date: Optional[date] = None,
@@ -1500,6 +1506,7 @@ def _classificar_situacao_exec_rj(
     }
 
 
+@memo.por_pedido()
 def _filtrar_ag_encerrados_no_periodo_rj(
     agendamentos: list[dict[str, Any]],
     from_date: Optional[date] = None,

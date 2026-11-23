@@ -12,6 +12,7 @@ import asyncio
 import logging
 import time
 from contextvars import ContextVar
+from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.LA.julgados_sentenca_LA import (
     CATEGORIAS_1G_VALIDAS_JULGADOS_LA,
     JulgadosSentencaFiltrosLA,
@@ -136,7 +137,7 @@ from typing import (
     Tuple,
     Union,
 )
-from app.analyses.situacao_processo import aplicar_filtro_situacao_processo
+from app.analyses.situacao_processo import _situacoes_processo_ctx, aplicar_filtro_situacao_processo
 from app.sources import SourceUnavailable  # V2: fonte fora do ar vira 503 na casca
 
 # V2: fonte do banco de origem (no lugar de fetch_data_with_cache da v1). A casca passa a fonte do
@@ -149,6 +150,7 @@ def usar_fonte(fonte):
     return _fonte_ctx.set(fonte)
 
 
+@memo.por_pedido(contexto=(_fonte_ctx, _situacoes_processo_ctx), copiar=False)
 async def _fetch_v2(query_name: str) -> List[Dict[str, Any]]:
     return aplicar_filtro_situacao_processo(query_name, await _fonte_ctx.get().fetch(query_name))
 

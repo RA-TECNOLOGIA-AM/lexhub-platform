@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 
 from app.access import AccessRepo, DashboardAccess, audit_entry, get_repo, require_dashboard
+from app.analyses.common import memo
 from app.config import get_settings
 from app.dashboards import DASHBOARDS, export
 from app.dashboards.base import (
@@ -228,7 +229,10 @@ async def dashboard_data(
     # o resultado guardado, sem calcular de novo (app/result_memo.py).
     data = await _run(
         module,
-        ctx.remember(("resposta", ctx.period, filters_key(ctx.filters)), lambda: module.build(ctx)),
+        ctx.remember(
+            ("resposta", ctx.period, filters_key(ctx.filters)),
+            lambda: memo.no_pedido(module.build(ctx)),
+        ),
     )
 
     meta = {
@@ -284,7 +288,7 @@ async def dashboard_export(
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=str(exc)) from None
     ctx = replace(ctx, export_options=opcoes)
 
-    rows = await _run(module, spec.rows(ctx))
+    rows = await _run(module, memo.no_pedido(spec.rows(ctx)))
     headers, data = export.table(spec, slugs, rows)
     if fmt == "xlsx":
         aba = spec.sheet_name_por_unidade.get(ctx.unit_ref, spec.sheet_name)

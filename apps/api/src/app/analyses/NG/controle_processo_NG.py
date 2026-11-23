@@ -16,6 +16,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
+from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, parse_datetime_from_db, resolver_periodo_comparativo
@@ -304,6 +305,7 @@ def _duracao_dias_entrada_saida_NG(
     return float(segundos / 86400.0)
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _duracoes_permanencia_NG(
     controle_processo: List[Dict[str, Any]],
     col_entrada: str,
@@ -357,6 +359,7 @@ def _mediana_dias_permanencia_setor_NG(
 # -----------------------------------------------------------------------------
 # 1 - Função auxiliar base (todas as outras devem partir daqui)
 # -----------------------------------------------------------------------------
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _base_controle_processo_NG(controle_processo: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Base do dashboard NG: mantém apenas linhas cujo ID_ESCRITORIO == 20.
@@ -371,6 +374,7 @@ def _base_controle_processo_NG(controle_processo: List[Dict[str, Any]]) -> List[
     return base
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _filtrar_controle_processo_por_id_fase_NG(
     controle_processo: List[Dict[str, Any]],
     id_fase: int,
@@ -379,6 +383,7 @@ def _filtrar_controle_processo_por_id_fase_NG(
     return [p for p in processos if _to_int(_col(p, _COL_ID_FASE)) == id_fase]
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _filtrar_controle_processo_log_inicial_indeferida_NG(
     controle_processo: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
@@ -387,6 +392,7 @@ def _filtrar_controle_processo_log_inicial_indeferida_NG(
     return [p for p in processos if _truthy_flag_NG(_col(p, _COL_LOG_TEVE_SUBFASE_INICIAL_INDEFERIDA))]
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _filtrar_controle_processo_log_recursal_nao_provido_NG(
     controle_processo: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
@@ -395,6 +401,7 @@ def _filtrar_controle_processo_log_recursal_nao_provido_NG(
     return [p for p in processos if _truthy_flag_NG(_col(p, _COL_LOG_TEVE_SUBFASE_RECURSO_NAO_PROVIDO))]
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _filtrar_controle_processo_fase_transito_julgado_NG(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -425,6 +432,7 @@ def _get_id_merito_2g(p: Dict[str, Any]) -> Optional[int]:
     return mj.resolver_id_merito_2g(novo, _col(p, _COL_STATUS_2G))
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _filtrar_extintos_com_merito_NG(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -446,6 +454,7 @@ def _filtrar_extintos_com_merito_NG(
     ]
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _filtrar_extintos_com_merito_2g_NG(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -466,6 +475,7 @@ def _filtrar_extintos_com_merito_2g_NG(
     ]
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _filtrar_extintos_sem_merito_NG(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -486,6 +496,7 @@ def _filtrar_extintos_sem_merito_NG(
     ]
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _filtrar_extintos_sem_merito_2g_NG(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -1013,6 +1024,7 @@ def get_valor_causa_acordao_total_extintos_sem_merito_2g_NG(
 # -----------------------------------------------------------------------------
 # Taxa de provimento (2º grau)
 # -----------------------------------------------------------------------------
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _filtrar_acordaos_2g_NG(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -1520,6 +1532,7 @@ _COL_LOG_ID_PROCESSO = "ID_PROCESSO"
 _COL_LOG_DATA = "DATA"
 
 
+@memo.por_pedido(contexto=(_escritorio_ctx,))
 def _base_log_subfase_NG(log_subfase: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Mantém apenas linhas do escritório NG (``ID_ESCRITORIO`` == 20)."""
     return [

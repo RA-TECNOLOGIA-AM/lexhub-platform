@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
+from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import parse_date_from_db, resolver_periodo_comparativo
 from app.analyses.common import matriz_julgamento as mj
@@ -347,6 +348,7 @@ def filtrar_sentencas_julgados_RJ(
 # Base por escritório
 # =============================================================================
 
+@memo.por_pedido()
 def _base_julgados_RJ(processos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Base padrão das análises Julgados RJ: ``ID_ESCRITORIO`` == 27, sem agravos
     (ver :func:`~app.analyses.common.julgados_agravo.eh_processo_agravo`)."""
@@ -359,6 +361,7 @@ def _base_julgados_RJ(processos: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+@memo.por_pedido()
 def _filtrar_sentenca_no_periodo(
     processos: list[dict[str, Any]],
     from_date: Optional[date] = None,
@@ -370,6 +373,7 @@ def _filtrar_sentenca_no_periodo(
     ]
 
 
+@memo.por_pedido()
 def _filtrar_embargos_sentenca_no_periodo(
     processos: list[dict[str, Any]],
     from_date: Optional[date] = None,
