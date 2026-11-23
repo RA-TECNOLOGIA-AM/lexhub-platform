@@ -9,6 +9,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Optional
 
+from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db
@@ -96,6 +97,7 @@ def _campos_extras(item: dict[str, Any], coluna: str) -> dict[str, Any]:
     return campos
 
 
+@memo.por_pedido()
 def _eventos_incontroverso(item: dict[str, Any]) -> list[dict[str, Any]]:
     """
     Incontroversos do processo, em ordem: o 1º pelos campos fixos e o 2º/3º pelos campos
@@ -207,6 +209,7 @@ def _to_int(value: Any) -> Optional[int]:
         return None
 
 
+@memo.por_pedido()
 def _base_execucao(execucao: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Base padrão das análises de Execução NG: ID_ESCRITORIO == 20, deduplicado por
@@ -320,11 +323,13 @@ def _processo_fase_financeiro(item: dict[str, Any]) -> bool:
 # 2 - Queries de filtragem
 # =============================================================================
 
+@memo.por_pedido()
 def _filtrar_em_execucao(execucao: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Retorna somente os processos na fase de Execução (ID_FASE == 12)."""
     return [e for e in _base_execucao(execucao) if _processo_em_execucao(e)]
 
 
+@memo.por_pedido()
 def _filtrar_por_data_execucao(
     execucao: list[dict[str, Any]],
     from_date: date,
@@ -337,6 +342,7 @@ def _filtrar_por_data_execucao(
     ]
 
 
+@memo.por_pedido()
 def _filtrar_entrada_execucao_no_periodo(
     execucao: list[dict[str, Any]],
     from_date: Optional[date] = None,
@@ -368,6 +374,7 @@ def _filtrar_entrada_execucao_no_periodo(
     return filtrados
 
 
+@memo.por_pedido()
 def _filtrar_saida_no_periodo(
     execucao: list[dict[str, Any]],
     from_date: Optional[date] = None,
@@ -405,6 +412,7 @@ def _filtrar_saida_no_periodo(
     return filtrados
 
 
+@memo.por_pedido()
 def _filtrar_saida_incontroverso_no_periodo(
     execucao: list[dict[str, Any]],
     from_date: Optional[date] = None,
@@ -1657,6 +1665,7 @@ def group_execucao_por_ano_ajuizamento_NG(
 # 6 - Análise temporal
 # =============================================================================
 
+@memo.por_pedido()
 def _extrair_duracoes_dias(
     execucao: list[dict[str, Any]],
     from_date: Optional[date] = None,
@@ -1959,6 +1968,7 @@ def _classificar_situacao_exec_ng(
     }
 
 
+@memo.por_pedido()
 def _filtrar_ag_encerrados_no_periodo_ng(
     agendamentos: list[dict[str, Any]],
     from_date: Optional[date] = None,

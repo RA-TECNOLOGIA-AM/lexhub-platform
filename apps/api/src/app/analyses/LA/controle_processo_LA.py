@@ -15,6 +15,7 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
+from app.analyses.common import memo  # V2: cache por pedido (a mesma conta uma vez por pedido)
 from app.analyses.common import tempo  # V2: média/mediana de tempo num módulo só
 from app.utils import ordem_mes  # V2: séries mês a mês em ordem cronológica
 from app.utils import parse_date_from_db, parse_datetime_from_db, resolver_periodo_comparativo
@@ -296,6 +297,7 @@ def _duracao_dias_entrada_saida_LA(
     return float(segundos / 86400.0)
 
 
+@memo.por_pedido()
 def _duracoes_permanencia_LA(
     controle_processo: List[Dict[str, Any]],
     col_entrada: str,
@@ -349,6 +351,7 @@ def _mediana_dias_permanencia_setor_LA(
 # -----------------------------------------------------------------------------
 # 1 - Função auxiliar base (todas as outras devem partir daqui)
 # -----------------------------------------------------------------------------
+@memo.por_pedido()
 def _base_controle_processo_LA(controle_processo: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Base do dashboard LA: mantém apenas linhas cujo ID_ESCRITORIO == 21.
@@ -363,6 +366,7 @@ def _base_controle_processo_LA(controle_processo: List[Dict[str, Any]]) -> List[
     return base
 
 
+@memo.por_pedido()
 def _filtrar_controle_processo_por_id_fase_LA(
     controle_processo: List[Dict[str, Any]],
     id_fase: int,
@@ -371,6 +375,7 @@ def _filtrar_controle_processo_por_id_fase_LA(
     return [p for p in processos if _to_int(_col(p, _COL_ID_FASE)) == id_fase]
 
 
+@memo.por_pedido()
 def _filtrar_controle_processo_log_inicial_indeferida_LA(
     controle_processo: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
@@ -379,6 +384,7 @@ def _filtrar_controle_processo_log_inicial_indeferida_LA(
     return [p for p in processos if _truthy_flag_LA(_col(p, _COL_LOG_TEVE_SUBFASE_INICIAL_INDEFERIDA))]
 
 
+@memo.por_pedido()
 def _filtrar_controle_processo_log_recursal_nao_provido_LA(
     controle_processo: List[Dict[str, Any]],
 ) -> List[Dict[str, Any]]:
@@ -387,6 +393,7 @@ def _filtrar_controle_processo_log_recursal_nao_provido_LA(
     return [p for p in processos if _truthy_flag_LA(_col(p, _COL_LOG_TEVE_SUBFASE_RECURSO_NAO_PROVIDO))]
 
 
+@memo.por_pedido()
 def _filtrar_controle_processo_fase_transito_julgado_LA(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -417,6 +424,7 @@ def _get_id_merito_2g(p: Dict[str, Any]) -> Optional[int]:
     return mj.resolver_id_merito_2g(novo, _col(p, _COL_STATUS_2G))
 
 
+@memo.por_pedido()
 def _filtrar_extintos_com_merito_LA(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -438,6 +446,7 @@ def _filtrar_extintos_com_merito_LA(
     ]
 
 
+@memo.por_pedido()
 def _filtrar_extintos_com_merito_2g_LA(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -458,6 +467,7 @@ def _filtrar_extintos_com_merito_2g_LA(
     ]
 
 
+@memo.por_pedido()
 def _filtrar_extintos_sem_merito_LA(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -478,6 +488,7 @@ def _filtrar_extintos_sem_merito_LA(
     ]
 
 
+@memo.por_pedido()
 def _filtrar_extintos_sem_merito_2g_LA(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -1001,6 +1012,7 @@ def get_valor_causa_acordao_total_extintos_sem_merito_2g_LA(
 # -----------------------------------------------------------------------------
 
 
+@memo.por_pedido()
 def _filtrar_acordaos_2g_LA(
     controle_processo: List[Dict[str, Any]],
     *,
@@ -1474,6 +1486,7 @@ _COL_LOG_ID_PROCESSO = "ID_PROCESSO"
 _COL_LOG_DATA = "DATA"
 
 
+@memo.por_pedido()
 def _base_log_subfase_LA(log_subfase: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Mantém apenas linhas do escritório LA (``ID_ESCRITORIO`` == 21)."""
     return [p for p in log_subfase if _to_int(_col(p, _COL_ID_ESCRITORIO)) == _ID_ESCRITORIO_LA]
