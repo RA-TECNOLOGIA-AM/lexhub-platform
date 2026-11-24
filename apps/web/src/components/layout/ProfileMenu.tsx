@@ -1,10 +1,8 @@
-import { useRef, useState, type ChangeEvent } from 'react'
-import { useAuth } from '../../contexts/auth-context.ts'
+import { useRef, useState } from 'react'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
-import { AVATAR_ACCEPT, avatarFileError, toAvatarBlob } from '../../lib/avatarImage.ts'
+import { useAvatarUpload } from '../../hooks/useAvatarUpload.ts'
 import { dataClient } from '../../services/client.ts'
-import { DataError, toDataError } from '../../services/errors.ts'
 import type { User } from '../../types/index.ts'
 import { Avatar } from '../ui/Avatar.tsx'
 
@@ -13,16 +11,13 @@ type ProfileMenuProps = {
 }
 
 // Módulo: o avatar no canto direito da topbar e o cartão de perfil que ele abre (mesmo popover do Período).
-// O e-mail vem da sessão (é o do login); o resto vem do /me. Só a foto é editável aqui.
+// O e-mail vem da sessão (é o do login); o resto vem do /me. Só a foto é editável aqui (useAvatarUpload).
 export function ProfileMenu({ user }: ProfileMenuProps) {
-    const { setAvatarPath } = useAuth()
     const [open, setOpen] = useState(false)
-    const [busy, setBusy] = useState(false)
-    const [error, setError] = useState<string | null>(null)
     const root = useRef<HTMLDivElement>(null)
     const button = useRef<HTMLButtonElement>(null)
-    const fileInput = useRef<HTMLInputElement>(null)
     const email = useAsync(() => dataClient.getSessionEmail(), [])
+    const photo = useAvatarUpload()
 
     useDismiss({
         open,
@@ -32,38 +27,8 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
     })
 
     function toggle() {
-        setError(null)
+        photo.clearError()
         setOpen((o) => !o)
-    }
-
-    // Faz a troca (ou a remoção) e mostra o erro no cartão, sem fechar.
-    async function run(action: () => Promise<string | null>) {
-        setBusy(true)
-        setError(null)
-        try {
-            setAvatarPath(await action())
-        } catch (err) {
-            setError(toDataError(err).message)
-        } finally {
-            setBusy(false)
-        }
-    }
-
-    function onPick(e: ChangeEvent<HTMLInputElement>) {
-        const file = e.target.files?.[0]
-        e.target.value = '' // escolher a mesma foto de novo também dispara
-        if (!file) return
-        const invalid = avatarFileError(file)
-        if (invalid) {
-            setError(invalid)
-            return
-        }
-        void run(async () => {
-            const image = await toAvatarBlob(file).catch(() => {
-                throw new DataError(0, 'Não foi possível ler esta foto.')
-            })
-            return dataClient.uploadMyAvatar(image)
-        })
     }
 
     const rows = [
@@ -94,8 +59,8 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
                             type="button"
                             title="Trocar foto"
                             aria-label="Trocar foto"
-                            disabled={busy}
-                            onClick={() => fileInput.current?.click()}
+                            disabled={photo.busy}
+                            onClick={photo.choose}
                         >
                             <Avatar user={user} className="profile-face" />
                         </button>
@@ -106,32 +71,23 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
                                 <button
                                     className="linkbtn small"
                                     type="button"
-                                    disabled={busy}
-                                    onClick={() => fileInput.current?.click()}
+                                    disabled={photo.busy}
+                                    onClick={photo.choose}
                                 >
-                                    {busy ? 'Salvando…' : 'Trocar foto'}
+                                    {photo.busy ? 'Salvando…' : 'Trocar foto'}
                                 </button>
-                                {user.avatar_path && !busy && (
-                                    <button
-                                        className="linkbtn small"
-                                        type="button"
-                                        onClick={() =>
-                                            void run(async () => {
-                                                await dataClient.removeMyAvatar()
-                                                return null
-                                            })
-                                        }
-                                    >
+                                {user.avatar_path && !photo.busy && (
+                                    <button className="linkbtn small" type="button" onClick={photo.remove}>
                                         Remover
                                     </button>
                                 )}
                             </span>
                         </span>
-                        <input ref={fileInput} type="file" accept={AVATAR_ACCEPT} hidden onChange={onPick} />
+                        <input {...photo.input} />
                     </div>
-                    {error && (
+                    {photo.error && (
                         <p className="small profile-error" role="alert">
-                            {error}
+                            {photo.error}
                         </p>
                     )}
                     <dl className="profile-rows">

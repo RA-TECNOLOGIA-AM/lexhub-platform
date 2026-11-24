@@ -5,15 +5,33 @@
         <link rel="icon" type="image/svg+xml" href="/logo-justica.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>LexHub</title>
-        <!-- Tema antes do React (senão a tela pisca clara ao abrir). Mesma regra de src/lib/theme.ts. -->
+        <!-- Aparência antes do React (senão a tela pisca com o tema errado ao abrir). Lê a cópia que
+             src/lib/appearance.ts grava: { prefs, light: {variáveis}, dark: {variáveis} }.
+             Sem cópia nova, o modo antigo ('lexhub.theme'); sem nada, o do sistema. Nunca lança. -->
         <script>
-            try {
-                var t = localStorage.getItem('lexhub.theme')
-                if (t !== 'light' && t !== 'dark') {
-                    t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+            ;(function () {
+                var root = document.documentElement
+                var cache = null
+                var mode = null
+                try {
+                    cache = JSON.parse(localStorage.getItem('lexhub.appearance') || 'null')
+                    mode = cache && cache.prefs ? cache.prefs.mode : localStorage.getItem('lexhub.theme')
+                } catch (e) {}
+                if (mode !== 'light' && mode !== 'dark') {
+                    try {
+                        mode = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+                    } catch (e) {
+                        mode = 'light'
+                    }
                 }
-                document.documentElement.dataset.theme = t
-            } catch (e) {}
+                root.dataset.theme = mode
+                var vars = cache && cache[mode]
+                if (vars && typeof vars === 'object') {
+                    for (var name in vars) {
+                        if (name.indexOf('--') === 0) root.style.setProperty(name, String(vars[name]))
+                    }
+                }
+            })()
         </script>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

@@ -32,7 +32,7 @@ import {
     sources,
     testUsers,
 } from './mock/index.ts'
-import type { DashboardCatalog, DashboardQuery, Meta, PlatformClient } from '../types/index.ts'
+import type { Appearance, DashboardCatalog, DashboardQuery, Meta, PlatformClient } from '../types/index.ts'
 import { metaFor } from './mock/helpers.ts'
 import { orgDocumentosLegadoFor } from './mock/orgDocumentosLegado.ts'
 import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
@@ -85,6 +85,18 @@ const lastViews = new Map<string, number>()
 
 // Foto de perfil do mock (data URL), no localStorage.
 const AVATAR_KEY = 'lexhub.mock.avatar'
+// Aparência do mock (o que a API guardaria em app.profiles), no localStorage como JSON.
+const APPEARANCE_KEY = 'lexhub.mock.appearance'
+const NO_APPEARANCE: Appearance = { mode: null, light: null, dark: null, accent: null }
+
+function storedMockAppearance(): Appearance {
+    try {
+        const saved = JSON.parse(localStorage.getItem(APPEARANCE_KEY) ?? 'null') as Partial<Appearance> | null
+        return { ...NO_APPEARANCE, ...saved }
+    } catch {
+        return { ...NO_APPEARANCE }
+    }
+}
 
 // Favoritos: ficam no localStorage (sobrevivem a fechar a aba, como na API ficarão no banco).
 const FAVORITES_KEY = 'lexhub.mock.favorites'
@@ -280,6 +292,7 @@ export function createMockClient(): DataClient {
             if (!found) throw new DataError(403, 'Você não faz parte desta organização')
             const result = copy(found)
             result.user.avatar_path = localStorage.getItem(AVATAR_KEY)
+            result.user.appearance = storedMockAppearance()
             return result
         },
 
@@ -718,6 +731,11 @@ export function createMockClient(): DataClient {
             localStorage.removeItem(AVATAR_KEY)
         },
         avatarUrl: (path) => path,
+        async setMyAppearance(appearance) {
+            await wait()
+            requireSession()
+            localStorage.setItem(APPEARANCE_KEY, JSON.stringify(appearance))
+        },
 
         // Mesmas regras da API: sessão, organização, unidade liberada e can_export; registra na Auditoria.
         // No mock o arquivo é sempre CSV (gerar XLSX exige biblioteca); com a API, vem o formato pedido.

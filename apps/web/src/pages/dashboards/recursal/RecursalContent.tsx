@@ -397,7 +397,7 @@ export function RecursalContent({ data, filters = {}, onFiltersChange }: Content
                                     r.provimento.pct >= 100
                                         ? 'var(--warn-dot)'
                                         : r.provimento.pct >= 70
-                                          ? 'var(--accent)'
+                                          ? 'var(--chart-brand)'
                                           : 'var(--danger)'
                                 }
                                 marker={70}

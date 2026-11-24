@@ -43,6 +43,16 @@ class UnitRow:
 
 
 @dataclass(frozen=True)
+class AppearanceRow:
+    """Aparência escolhida em Configurações (app.profiles.theme_*). Tudo None = sem escolha."""
+
+    mode: str | None = None  # 'light' | 'dark'; None = segue o sistema
+    light: str | None = None  # id do tema claro (ex.: 'light-github'); None = Claro Padrão
+    dark: str | None = None  # id do tema escuro (ex.: 'dark-dracula'); None = Escuro Padrão
+    accent: str | None = None  # 'tema' | id de cor | '#rrggbb'; None = Do tema
+
+
+@dataclass(frozen=True)
 class MembershipRow:
     full_name: str
     role_name: str  # papel na organização ("Desenvolvedor", "Membro"...)
@@ -51,6 +61,7 @@ class MembershipRow:
     teams: tuple[str, ...] = ()  # setores (app.membership_teams) para o cartão de perfil
     offices: tuple[str, ...] = ()  # escritórios em que tem cargo (app.membership_units)
     avatar_path: str | None = None  # foto de perfil no bucket 'avatars' (app.profiles)
+    appearance: AppearanceRow = AppearanceRow()  # tema escolhido (app.profiles), igual em toda org
 
 
 class MeRepo(Protocol):
@@ -59,6 +70,13 @@ class MeRepo(Protocol):
 
 
 # --- Resposta (tipo Me do front) -------------------------------------------
+
+
+class AppearanceOut(BaseModel):
+    mode: str | None
+    light: str | None
+    dark: str | None
+    accent: str | None
 
 
 class UserOut(BaseModel):
@@ -71,6 +89,7 @@ class UserOut(BaseModel):
     teams: list[str]  # setores, ex.: ["Tecnologia"]
     offices: list[str]  # escritórios em que tem cargo, ex.: ["ESCRITÓRIO MASTER"]
     avatar_path: str | None  # caminho no bucket público 'avatars'; o front monta a URL
+    appearance: AppearanceOut  # tema salvo na conta; o front valida os ids (lib/themeEngine.ts)
 
 
 class OrgOut(BaseModel):
@@ -145,6 +164,12 @@ def build_me(
             teams=list(m.teams),
             offices=list(m.offices),
             avatar_path=m.avatar_path,
+            appearance=AppearanceOut(
+                mode=m.appearance.mode,
+                light=m.appearance.light,
+                dark=m.appearance.dark,
+                accent=m.appearance.accent,
+            ),
         ),
         org=org_out(current),
         units=[UnitOut(code=u.code, name=u.name) for u in m.units],
@@ -188,7 +213,8 @@ select o.id::text as id, o.slug, o.name,
                join app.units u on u.id = mu.unit_id and u.active
               where mu.membership_id = m.id
               order by u.name) as offices,
-       p.avatar_path
+       p.avatar_path,
+       p.theme_mode, p.theme_light, p.theme_dark, p.theme_accent
   from app.memberships m
   join app.organizations o on o.id = m.org_id and o.active
   join app.roles r         on r.key = m.role_key
@@ -224,6 +250,12 @@ class PgMeRepo:
                     teams=tuple(r["teams"]),
                     offices=tuple(r["offices"]),
                     avatar_path=r["avatar_path"],
+                    appearance=AppearanceRow(
+                        mode=r["theme_mode"],
+                        light=r["theme_light"],
+                        dark=r["theme_dark"],
+                        accent=r["theme_accent"],
+                    ),
                 ),
             )
             for r in rows

@@ -5,6 +5,7 @@ import { createHttp } from './http.ts'
 import { createMockClient } from './mockClient.ts'
 import { createSupabaseAuth } from './supabase.ts'
 import type {
+    Appearance,
     DashboardCatalog,
     DashboardQuery,
     Me,
@@ -184,6 +185,8 @@ export interface DataClient {
     removeMyAvatar(): Promise<void>
     // URL pública da foto a partir do avatar_path do /me.
     avatarUrl(path: string): string
+    // Aparência de quem está logado (Configurações → Aparência): grava os 4 campos de uma vez.
+    setMyAppearance(appearance: Appearance): Promise<void>
 }
 
 // mock = dados fictícios; api = Supabase Auth (login) + API V2 (dados). Escolha em VITE_DATA_SOURCE.

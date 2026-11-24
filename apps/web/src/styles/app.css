@@ -378,8 +378,8 @@
 }
 button.org {
     width: 100%;
-    border: 1px solid var(--chip);
-    color: #fff;
+    border: 1px solid var(--side-line);
+    color: var(--side-strong);
     font: inherit;
     text-align: left;
     cursor: pointer;
@@ -398,7 +398,7 @@ button.org:hover {
     flex-direction: column;
     gap: 2px;
     padding: 6px;
-    border: 1px solid var(--chip);
+    border: 1px solid var(--side-line);
     border-radius: var(--r-md);
     background: var(--side-hover);
 }
@@ -408,7 +408,7 @@ button.org:hover {
     color: var(--side-label);
 }
 .org-menu .nav {
-    color: #e7e9ec;
+    color: var(--side-item);
     white-space: normal;
 }
 
@@ -1558,7 +1558,7 @@ div.org {
     height: 36px;
     border-radius: var(--r-md);
     background: var(--side-bg);
-    color: #fff;
+    color: var(--side-strong);
     flex: none;
 }
 .doc-h2 {
@@ -2437,7 +2437,7 @@ div.org {
 :root {
     --num: 'JetBrains Mono', var(--mono); /* números, códigos e selos */
     /* Pizza (muitas categorias): 10 cores distintas e um cinza para "Outras". */
-    --pie-1: var(--accent);
+    --pie-1: var(--chart-brand);
     --pie-2: #3f7bd9;
     --pie-3: #2e9d6a;
     --pie-4: #8a5cc9;
@@ -2448,7 +2448,7 @@ div.org {
     --pie-9: #5b6fd1;
     --pie-10: #7a9a2a;
     --pie-rest: #a3a3a3;
-    --chart-1: var(--accent); /* série principal (laranja da marca) */
+    --chart-1: var(--chart-brand); /* série principal (laranja da marca, fixo: não segue o tema) */
     --chart-3: #3f7bd9;
     --chart-4: #2e9d6a;
     --chart-5: #8a5cc9;
@@ -3006,7 +3006,7 @@ div.org {
     font-weight: 700;
 }
 .col-accent .chart-val {
-    fill: var(--accent);
+    fill: var(--chart-brand);
     font-size: 15px;
 }
 .chart-in {
@@ -3041,7 +3041,7 @@ div.org {
     fill-opacity: 0.25;
 }
 .chart-partial {
-    fill: var(--accent);
+    fill: var(--chart-brand);
     font-size: 12px;
     font-weight: 700;
 }
@@ -3257,8 +3257,8 @@ button.barlist-hit[aria-pressed='true'] .barlist-name {
     border-radius: var(--r-sm);
     background: linear-gradient(
         90deg,
-        color-mix(in srgb, var(--bar-cor, var(--accent)) 85%, #000),
-        var(--bar-cor, var(--accent))
+        color-mix(in srgb, var(--bar-cor, var(--chart-brand)) 85%, #000),
+        var(--bar-cor, var(--chart-brand))
     );
 }
 .barlist-v {
@@ -5045,7 +5045,7 @@ button.at-name:hover {
     inset: 0 auto 0 0;
     width: var(--w);
     border-radius: inherit;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 80%, black), var(--accent));
+    background: linear-gradient(90deg, color-mix(in srgb, var(--chart-brand) 80%, black), var(--chart-brand));
     animation: ma-encher 1.2s cubic-bezier(0.33, 1, 0.68, 1);
 }
 .ma-marco {
@@ -6055,7 +6055,7 @@ body {
 }
 .brand-toggle:hover {
     background: var(--side-hover);
-    color: #fff;
+    color: var(--side-strong);
 }
 .brand-toggle-logo,
 .brand-toggle-icon {
@@ -6655,7 +6655,7 @@ body {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--tone, var(--accent));
+    background: var(--tone, var(--chart-brand));
 }
 .tk-barra i {
     position: absolute;
@@ -6836,7 +6836,7 @@ body {
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #ffd34d));
+    background: linear-gradient(90deg, var(--chart-brand), color-mix(in srgb, var(--chart-brand) 55%, #ffd34d));
 }
 .tk-trilho.verde span {
     background: linear-gradient(90deg, var(--ok-dot), color-mix(in srgb, var(--ok-dot) 60%, #2dd4bf));
@@ -8757,7 +8757,7 @@ button.profile-btn:disabled {
 .cp-sub-barra {
     height: 14px;
     border-radius: var(--r-sm);
-    background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 85%, #000), var(--accent));
+    background: linear-gradient(90deg, color-mix(in srgb, var(--chart-brand) 85%, #000), var(--chart-brand));
 }
 .cp-sub-qtd {
     font-size: var(--fs-xs);
