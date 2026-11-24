@@ -62,15 +62,21 @@ def para_valor(valor: Any, *, remover_nbsp: bool = True) -> float:
 
 def para_valor_digitos(valor: Any) -> float:
     """Valor monetário -> float, com a regra da Execução, Acordos e Recursal da v1: vírgula vira ponto e só
-    ficam dígitos e pontos. Com separador de milhar em texto ("1.234,56") o resultado é 0.0, como na v1 (do
-    banco o valor chega como número). None ou inválido -> 0.0."""
+    ficam dígitos e pontos. None ou inválido -> 0.0.
+
+    V2: separador de milhar em texto. Com "." e "," juntos ("1.234,56") o ponto é milhar; com mais de um ponto e
+    sem vírgula ("1.234.567"), também. Na v1 os dois viravam 0.0. Os formatos gravados hoje pelo LexFlow ("1234.56",
+    "1234", "470,50") dão o mesmo resultado de antes."""
     if valor is None:
         return 0.0
     try:
         if isinstance(valor, (Decimal, int, float)):
             return float(valor)
         if isinstance(valor, str):
-            limpo = valor.strip().replace(",", ".")
+            limpo = valor.strip()
+            if ("," in limpo and "." in limpo) or ("," not in limpo and limpo.count(".") > 1):
+                limpo = limpo.replace(".", "")
+            limpo = limpo.replace(",", ".")
             limpo = "".join(c for c in limpo if c.isdigit() or c == ".")
             return float(limpo) if limpo else 0.0
         return float(str(valor).replace(",", "."))
