@@ -195,6 +195,19 @@ const PATHS = {
             <circle cx="12" cy="12" r="3" />
         </>
     ),
+    minus: <path d="M5 12h14" />,
+    zoomIn: (
+        <>
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3M11 8v6M8 11h6" />
+        </>
+    ),
+    rotateCcw: (
+        <>
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+        </>
+    ),
     camera: (
         <>
             <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />

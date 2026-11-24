@@ -4,6 +4,7 @@ import { useAvatarUpload } from '../../hooks/useAvatarUpload.ts'
 import { dataClient } from '../../services/client.ts'
 import { Avatar } from '../ui/Avatar.tsx'
 import { Icon } from '../ui/Icon.tsx'
+import { AvatarCropDialog } from './AvatarCropDialog.tsx'
 
 // Módulo: Configurações → Perfil. Mostra quem está logado; só a foto é editável aqui.
 // Nome, cargo, setor e escritório são do administrador (Membros/Acesso); o e-mail é o do login.
@@ -40,6 +41,7 @@ export function ProfileSection() {
                         <Icon name="camera" size={15} />
                     </button>
                     <input {...photo.input} />
+                    {photo.crop && <AvatarCropDialog {...photo.crop} />}
                 </span>
                 <span className="settings-profile-id">
                     <strong className="settings-profile-name">{user.name}</strong>
