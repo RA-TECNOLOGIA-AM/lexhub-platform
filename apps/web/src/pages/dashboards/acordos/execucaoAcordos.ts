@@ -1,5 +1,7 @@
 import type { Point } from '../../../types/index.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
+import type { DadoFaltando } from '../julgados-acordaos/types.ts'
+import { camposFaltando } from '../execucao/execucao.ts'
 import { nomeNaUnidade, unidadeAcordos, type Unidade } from '../execucao/unidade.ts'
 import {
     comarcas,
@@ -35,6 +37,9 @@ export type Acordos = {
     estoqueInicial: number | null
     tre: number | null
     semValor: { total: number; processos: string[] } // sem valor de alçada final (o aviso da v1)
+    // V2: os acordos de agora com campo do cadastro em branco (sem o filtro de período), um item por campo: a faixa
+    // "Atenção" da Execução Condenação, com os campos do acordo (app/dashboards/acordos_campos.py).
+    camposFaltando: DadoFaltando[]
     // Seção 03: distribuições (histórico todo)
     valorPorSubfase: Point[]
     porSubfase: Point[]
@@ -94,6 +99,7 @@ export function lerAcordos(data: V1GenericoResponse): Acordos {
             total: n('total_valor_alcada_final_vazio_acordos_NG') ?? 0,
             processos: processosSemValor(s('total_valor_alcada_final_vazio_acordos_NG_detalhe')),
         },
+        camposFaltando: camposFaltando((data as Record<string, unknown>).campos_faltando),
         valorPorSubfase: pontos(d('valor_execucao_acordos_por_subfase_NG')),
         porSubfase: pontos(d('execucao_acordos_por_subfase_NG')),
         porSentenca: pontos(d('execucao_acordos_por_sentenca_NG')),

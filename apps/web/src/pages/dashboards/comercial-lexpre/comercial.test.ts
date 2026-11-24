@@ -8,7 +8,9 @@ import {
     metaDoPeriodo,
     hojeEmManaus,
     progressoMeta,
+    projecaoPrevia,
     ritmoMeta,
+    taxaCancelamento,
     somarPorNome,
     rotuloCanal,
     trimestreDe,
@@ -121,6 +123,14 @@ describe('ritmoMeta (ritmo da meta anual)', () => {
         expect(r.faltam).toBe(30_744_411)
         expect(Math.round(r.novaMedia ?? 0)).toBe(809_063)
         expect(r.variacao).toBeCloseTo(0.0937, 4)
+        expect(r.dias).toBeCloseTo(-3.56, 2) // 2.634.822 ÷ 739.726 por dia
+        expect(r.status).toBe('ligeiramente_atrasado')
+    })
+
+    it('status: atrasado a partir de 2 p.p., adiantado no ritmo ou à frente, atingida sem faltar nada', () => {
+        expect(ritmoMeta(200_000_000, 270_000_000, 2026, '2026-11-23').status).toBe('atrasado')
+        expect(ritmoMeta(250_000_000, 270_000_000, 2026, '2026-11-23').status).toBe('adiantado')
+        expect(ritmoMeta(270_000_000, 270_000_000, 2026, '2026-11-23').status).toBe('atingida')
     })
 
     it('ano bissexto, ano que não começou e ano que acabou', () => {
@@ -136,5 +146,29 @@ describe('ritmoMeta (ritmo da meta anual)', () => {
     it('hoje em Manaus (UTC−4), não no fuso do navegador', () => {
         expect(hojeEmManaus(new Date('2026-11-24T03:30:00Z'))).toBe('2026-11-23')
         expect(hojeEmManaus(new Date('2026-11-24T04:30:00Z'))).toBe('2026-11-24')
+    })
+})
+
+describe('taxaCancelamento (card Cancelados)', () => {
+    it('canceladas ÷ fechadas no período, em %', () => {
+        expect(taxaCancelamento(38, 747)).toBeCloseTo(5.087, 3)
+        expect(taxaCancelamento(0, 10)).toBe(0)
+    })
+    it('sem ação fechada não há base: null', () => {
+        expect(taxaCancelamento(5, 0)).toBeNull()
+        expect(taxaCancelamento(Number.NaN, 10)).toBeNull()
+    })
+})
+
+describe('projecaoPrevia (prévia dos represados no Ritmo da meta)', () => {
+    it('quanto do que falta a prévia cobre e onde o ano iria parar', () => {
+        const p = projecaoPrevia(3_463_828, { realizado: 239_255_589, faltam: 30_744_411 }, 270_000_000)
+        expect(p.cobreFalta).toBeCloseTo(11.27, 2)
+        expect(p.pctComPrevia).toBeCloseTo(89.9, 1)
+        expect(p.fechaMeta).toBe(false)
+    })
+    it('prévia maior que o que falta fecha a meta; meta já atingida não tem o que cobrir', () => {
+        expect(projecaoPrevia(50, { realizado: 60, faltam: 40 }, 100).fechaMeta).toBe(true)
+        expect(projecaoPrevia(10, { realizado: 100, faltam: 0 }, 100).cobreFalta).toBeNull()
     })
 })

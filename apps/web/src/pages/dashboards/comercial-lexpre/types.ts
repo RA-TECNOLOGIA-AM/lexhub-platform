@@ -5,6 +5,17 @@ export type RubricaValor = { rubrica: string; acoes: number; valor_am: number; t
 
 // Resposta do dashboard Comercial (LexPre): os campos da v1 (ComercialLexpreNGResponse) que a tela usa +
 // `opcoes_filtro` e `meta_inteligente` (novos na V2). Comparativos em % vs mês anterior.
+// V2: a prévia do que ainda pode ser protocolado (dashboards/comercial_lexpre.py, previa_represados): o ticket médio
+// protocolado dos últimos 3 meses (de `de` até `ate`, hoje) × os represados agora nos 4 setores do Pré-protocolo.
+export type PreviaRepresados = {
+    de: string
+    ate: string
+    ticket_medio: number
+    represados: { pendencias: number; org_documentos: number; peticionamento: number; protocolo: number }
+    total_represados: number
+    valor: number
+}
+
 export type ComercialLexpreResponse = {
     meta: Meta
     stats: {
@@ -74,6 +85,7 @@ export type ComercialLexpreResponse = {
     // somado no front. No ano de 2026 (Meta anual) e por atendente no período (Meta por Atendente; chave =
     // primeiro nome, a mesma do LexPre). null = sem legado ligado ou fora do ar.
     valor_causa_protocolado_legado?: number | null
+    previa_represados?: PreviaRepresados
     valor_causa_protocolado_por_atendente_legado?: Record<string, number>
     opcoes_filtro: {
         atendentes: string[]

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { acordosFilters } from './filters.ts'
 import { lerAcordos } from './execucaoAcordos.ts'
+import { avisosCamposFaltando } from '../execucao/execucao.ts'
 
 const meta = { unit: 'NG', from: '2026-11-01', to: '2026-11-17', source: 'LexFlow', synced_at: null, timezone: 'x' }
 
@@ -96,5 +97,25 @@ describe('filtros dos Acordos', () => {
             acordosFilters(resposta as never).length,
         )
         expect(acordosFilters({ meta })).toEqual([])
+    })
+})
+
+describe('campos em branco dos Acordos (faixa "Atenção")', () => {
+    it('lê os itens da API e o aviso fala em acordo, com os campos do acordo', () => {
+        const a = lerAcordos({
+            meta: {} as never,
+            stats: {},
+            campos_faltando: [
+                { numero_processo: '1', campo: 'Data do acordo fechado' },
+                { numero_processo: '2', campo: 'Data do acordo fechado' },
+                { numero_processo: '3', campo: 'Valor de alçada final' },
+                { numero_processo: '', campo: 'UF' },
+            ],
+        } as never)
+        expect(a.camposFaltando).toHaveLength(3)
+        expect(avisosCamposFaltando(a.camposFaltando, 'em acordo')).toEqual([
+            'Existem 2 processo(s) em acordo sem a data do acordo fechado!',
+            'Existem 1 processo(s) em acordo sem o valor de alçada final!',
+        ])
     })
 })

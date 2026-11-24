@@ -64,8 +64,8 @@ function semValorProcessos(v: unknown): string[] {
         .filter(Boolean)
 }
 
-// Os itens {numero_processo, campo} da API; o que vier sem número ou sem campo fica de fora.
-function camposFaltando(v: unknown): DadoFaltando[] {
+// Os itens {numero_processo, campo} da API; o que vier sem número ou sem campo fica de fora. (Também nos Acordos.)
+export function camposFaltando(v: unknown): DadoFaltando[] {
     if (!Array.isArray(v)) return []
     return v.flatMap((x) => {
         const r = (x ?? {}) as Record<string, unknown>
@@ -75,7 +75,7 @@ function camposFaltando(v: unknown): DadoFaltando[] {
     })
 }
 
-// Como cada campo aparece na frase do aviso ("sem a data da execução").
+// Como cada campo aparece na frase do aviso ("sem a data da execução"); os três últimos são dos Acordos.
 const NO_AVISO: Record<string, string> = {
     'Valor da execução': 'o valor da execução',
     'Data da execução': 'a data da execução',
@@ -88,12 +88,15 @@ const NO_AVISO: Record<string, string> = {
     Vara: 'a vara',
     UF: 'a UF',
     Subfase: 'a subfase',
+    'Valor de alçada final': 'o valor de alçada final',
+    'Data do acordo fechado': 'a data do acordo fechado',
 }
 
 // Os avisos da faixa "Atenção", do campo com mais processos ao com menos (o mesmo padrão dos Julgados).
-export function avisosCamposFaltando(itens: DadoFaltando[]): string[] {
+// onde: como a frase chama a base ('em execução'; nos Acordos, 'em acordo').
+export function avisosCamposFaltando(itens: DadoFaltando[], onde = 'em execução'): string[] {
     return contarPorCampo(itens).map(
-        ([campo, n]) => `Existem ${fmt.int(n)} processo(s) em execução sem ${NO_AVISO[campo] ?? `o campo "${campo}"`}!`,
+        ([campo, n]) => `Existem ${fmt.int(n)} processo(s) ${onde} sem ${NO_AVISO[campo] ?? `o campo "${campo}"`}!`,
     )
 }
 

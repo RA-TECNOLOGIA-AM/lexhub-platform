@@ -11,7 +11,8 @@ da v1 (generico_v1.nome_na_unidade).
 
 from dataclasses import replace
 
-from app.dashboards import execucao_export, generico_v1
+from app.dashboards import acordos_campos, execucao_export, generico_v1
+from app.dashboards.base import DashboardContext
 from app.unit_scope import com_recorte
 
 _MODULO = generico_v1.modulo(
@@ -48,11 +49,23 @@ _MODULO = generico_v1.modulo(
     ),
 )
 
-# A exportação da v1 (execucao_export.py).
+
+async def build(ctx: DashboardContext) -> dict:
+    """O cálculo da v1 + os acordos com campo em branco (V2: a faixa "Atenção", como na Execução Condenação)."""
+    body = await _MODULO.build(ctx)
+    body[acordos_campos.CHAVE] = await acordos_campos.lista(ctx)
+    return body
+
+
+# A exportação da v1 (execucao_export.py) e, na V2, o relatório dos campos em branco (uma aba por campo).
 MODULE = replace(
     _MODULO,
+    build=build,
     export=execucao_export.ACORDOS,
-    export_reports={"atividades": execucao_export.ATIVIDADES_ACORDOS},
+    export_reports={
+        "atividades": execucao_export.ATIVIDADES_ACORDOS,
+        acordos_campos.RELATORIO: acordos_campos.RELATORIO_SPEC,
+    },
 )
 
 # Só as linhas da unidade da tela nas queries que trazem todos os escritórios (app/unit_scope.py).
