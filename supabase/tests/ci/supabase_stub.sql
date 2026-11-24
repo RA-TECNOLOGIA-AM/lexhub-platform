@@ -34,6 +34,8 @@ create table auth.sessions (
   user_id    uuid not null references auth.users (id) on delete cascade,
   created_at timestamptz,
   updated_at timestamptz,
+  not_after  timestamptz,
+  refreshed_at timestamp, -- sem fuso (UTC), como no Supabase
   ip         inet,
   user_agent text
 );

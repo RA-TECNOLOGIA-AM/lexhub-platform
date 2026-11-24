@@ -1,6 +1,7 @@
 import type { DataClient, DeviceSession } from './client.ts'
 import { actorsOf } from '../pages/admin/audit/auditView.ts'
 import { DataError } from './errors.ts'
+import { createMockDevices } from './mockDevices.ts'
 import {
     addAuditEvent,
     EXPORT_LABELS,
@@ -135,6 +136,7 @@ function catalogForDev(): DashboardCatalog {
 }
 
 // Membros do mock: a lista muda com os convites (volta ao original no F5).
+const mockDevices = createMockDevices()
 const memberStore = createMembersStore({ name: me.user.name, email: '' })
 // Acesso do mock: grava na mesma loja de Membros.
 const accessStore = createAccessStore(memberStore)
@@ -277,9 +279,18 @@ export function createMockClient(): DataClient {
             sessionStorage.removeItem(SESSION_KEY)
         },
 
-        // No mock não há outros aparelhos: só confirma.
+        // No mock, os outros aparelhos são os de mockDevices.ts.
         async signOutOthers() {
             await wait()
+            mockDevices.revokeOthers()
+        },
+        async listMySessions() {
+            await wait()
+            return mockDevices.list()
+        },
+        async revokeMySession(id) {
+            await wait()
+            mockDevices.revoke(id)
         },
         async isSessionAlive() {
             return sessionStorage.getItem(SESSION_KEY) !== null

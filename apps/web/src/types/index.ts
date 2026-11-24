@@ -402,6 +402,16 @@ export type AccessOverview = {
     can_set_org_role: boolean // pode tornar alguém Desenvolvedor (Owner/Desenvolvedor)
 }
 
+// Uma sessão da conta (Configurações → Dispositivos), de api.list_my_sessions. current = este aparelho.
+export type AccountSession = {
+    id: string
+    createdAt: string
+    lastActiveAt: string
+    userAgent: string | null
+    ip: string | null
+    current: boolean
+}
+
 // O que a pessoa gere nesta organização (api.my_admin_permissions): o menu esconde o que não for dela.
 // sources = vê a aba Unidades e fontes (Owner/Desenvolvedor: todas; Gestor/Controller: as próprias unidades).
 // audit = vê a Auditoria (Owner/Desenvolvedor). billing = vê Plano e cobrança (Owner/Desenvolvedor e equipe RA).

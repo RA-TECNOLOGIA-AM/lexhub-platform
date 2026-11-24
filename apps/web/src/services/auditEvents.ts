@@ -37,6 +37,11 @@ const EVENTS: Record<string, Rule> = {
         action: 'Entrou',
         detail: (_, m) => join(describeUserAgent(text(m.userAgent)), text(m.ip)),
     },
+    'auth.session_revoked': {
+        kind: 'login',
+        action: 'Desconectou um aparelho',
+        detail: (_, m) => join(describeUserAgent(text(m.userAgent)), text(m.ip)),
+    },
     'audit.export': {
         kind: 'export',
         action: 'Exportou a auditoria',

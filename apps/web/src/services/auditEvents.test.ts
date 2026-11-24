@@ -127,6 +127,15 @@ describe('exportação da auditoria', () => {
 })
 
 describe('actionFilter', () => {
+    it('desconectou um aparelho: tipo Entradas, com navegador e IP', () => {
+        const e = toAuditEvent(
+            raw({ action: 'auth.session_revoked', metadata: { ip: '10.0.0.2', userAgent: 'python-httpx/0.27.0' } }),
+        )
+        expect(e.kind).toBe('login')
+        expect(e.action).toBe('Desconectou um aparelho')
+        expect(e.detail).toBe('TV (QR) · 10.0.0.2')
+    })
+
     it('um tipo: o banco traz só os eventos dele', () => {
         expect(actionFilter('view')).toEqual({ p_actions: ['dashboard.view'], p_exclude_actions: null })
         expect(actionFilter('export').p_actions).toEqual(expect.arrayContaining(['dashboard.export', 'audit.export']))

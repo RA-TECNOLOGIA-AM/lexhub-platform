@@ -317,6 +317,24 @@ const PATHS = {
             <path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" />
         </>
     ),
+    monitor: (
+        <>
+            <rect x="2.5" y="4" width="19" height="12.5" rx="1.5" />
+            <path d="M8.5 20.5h7M12 16.5v4" />
+        </>
+    ),
+    phone: (
+        <>
+            <rect x="6.5" y="2.5" width="11" height="19" rx="2" />
+            <path d="M11 18.5h2" />
+        </>
+    ),
+    tv: (
+        <>
+            <rect x="2.5" y="6.5" width="19" height="13" rx="1.5" />
+            <path d="M8 2.5l4 4 4-4" />
+        </>
+    ),
     qr: (
         <>
             <rect x="3.5" y="3.5" width="6" height="6" rx="1" />
