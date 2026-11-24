@@ -25,6 +25,33 @@ describe('createHttp', () => {
         expect(new Headers(calls[0].init?.headers).get('Authorization')).toBe('Bearer tok')
     })
 
+    it('getHeaders vai em toda chamada e é lido a cada uma', async () => {
+        const calls: Call[] = []
+        let id = 'a'
+        const http = createHttp({
+            baseUrl: 'http://api.test',
+            getToken: async () => 'tok',
+            getHeaders: () => ({ 'X-Support-Session': id }),
+            fetch: fakeFetch(200, {}, calls),
+        })
+        await http.get('/x')
+        id = 'b'
+        await http.post('/y', {})
+        expect(new Headers(calls[0].init?.headers).get('X-Support-Session')).toBe('a')
+        expect(new Headers(calls[1].init?.headers).get('X-Support-Session')).toBe('b')
+    })
+
+    it('sem getHeaders não manda cabeçalho extra', async () => {
+        const calls: Call[] = []
+        const http = createHttp({
+            baseUrl: 'http://api.test',
+            getToken: async () => 'tok',
+            fetch: fakeFetch(200, {}, calls),
+        })
+        await http.get('/x')
+        expect(new Headers(calls[0].init?.headers).has('X-Support-Session')).toBe(false)
+    })
+
     it('sem sessão não manda Authorization', async () => {
         const calls: Call[] = []
         const http = createHttp({

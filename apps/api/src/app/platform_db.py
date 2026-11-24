@@ -26,7 +26,7 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import asyncpg
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
 from app.config import Settings
@@ -154,3 +154,11 @@ async def database_unavailable(request: Request, exc: Exception) -> JSONResponse
 def install_error_handlers(app: FastAPI) -> None:
     for exc_type in UNAVAILABLE_ERRORS:
         app.add_exception_handler(exc_type, database_unavailable)
+
+
+def get_db_pool(request: Request) -> asyncpg.Pool:
+    """Pool do banco da V2 (DATABASE_URL). Sem banco configurado, a rota responde 503."""
+    pool = getattr(request.app.state, "db_pool", None)
+    if pool is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, detail="Banco indisponível")
+    return pool

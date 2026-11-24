@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DataError } from './errors.ts'
 import { withSessionCache } from './sessionCache.ts'
 import type { DataClient } from './client.ts'
 import type { DashboardCatalog } from '../types/index.ts'
@@ -62,6 +63,8 @@ function fakeClient() {
             return 'signed-in'
         },
         async signOut() {},
+        async startSupport() {},
+        async endSupport() {},
     } as unknown as DataClient
     return { client, state }
 }
@@ -94,6 +97,36 @@ describe('withSessionCache', () => {
         state.failWrite = true
         await expect(cached.setDashboardEnabled('lexgroup', 'NG', key, false)).rejects.toThrow('falhou')
         expect((await cached.listDashboards('lexgroup')).available[0].disabled_units).toBeUndefined()
+    })
+
+    it('entrar e sair do modo suporte limpa o guardado', async () => {
+        const { client, state } = fakeClient()
+        const cached = withSessionCache(client, 1000, () => 0)
+        await cached.listDashboards('lexgroup')
+        await cached.startSupport('lexgroup', 'm1', 'motivo')
+        await cached.listDashboards('lexgroup')
+        expect(state.calls.catalog).toBe(2)
+        await cached.endSupport('lexgroup', 's1')
+        await cached.listDashboards('lexgroup')
+        expect(state.calls.catalog).toBe(3)
+    })
+
+    it('support_expired (409) limpa o guardado e o erro sobe', async () => {
+        const { client, state } = fakeClient()
+        const cached = withSessionCache(
+            {
+                ...client,
+                getDashboardData: async () => Promise.reject(new DataError(409, 'support_expired')),
+            } as DataClient,
+            1000,
+            () => 0,
+        )
+        await cached.listDashboards('lexgroup')
+        await expect(cached.getDashboardData('k', { org: 'lexgroup', unit: 'NG' } as never)).rejects.toThrow(
+            'support_expired',
+        )
+        await cached.listDashboards('lexgroup')
+        expect(state.calls.catalog).toBe(2)
     })
 
     it('cada organização tem o seu', async () => {

@@ -15,7 +15,7 @@ import asyncpg
 from fastapi import Depends
 from pydantic import BaseModel
 
-from app.access import get_db_pool
+from app.platform_db import get_db_pool
 
 # Permissões (app.role_permissions) que decidem o que a pessoa pode fazer.
 SEE_ALL_ORG = "org.dashboards.all"  # owner, admin: todas as unidades

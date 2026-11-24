@@ -124,8 +124,16 @@ export const NAV_SECTIONS: NavSection[] = [
 // Itens que a pessoa vê numa seção. perms null = ainda carregando: esconde os que exigem permissão
 // (melhor aparecer um instante depois do que piscar para quem não gere).
 // staff = equipe RA: vê os itens da Plataforma que não pedem permissão (ex.: Pedidos de acesso).
+// support = modo suporte (vendo como um membro): só o que não pede permissão nem é da plataforma
+// (Dashboards e Documentação); quem pede segue com as permissões dele, mas o modo é só leitura.
 // Seção sem nenhum item visível some do menu.
-export function visibleItems(section: NavSection, perms: AdminPermissions | null, staff = false): NavItem[] {
+export function visibleItems(
+    section: NavSection,
+    perms: AdminPermissions | null,
+    staff = false,
+    support = false,
+): NavItem[] {
+    if (support) return section.platformOnly ? [] : section.items.filter((item) => !item.requires)
     return section.items.filter((item) =>
         item.requires ? perms?.[item.requires] === true : !section.platformOnly || staff,
     )
@@ -136,7 +144,9 @@ export function visibleItems(section: NavSection, perms: AdminPermissions | null
 // Esconder por erro tiraria o item até de Owner/Desenvolvedor.
 export function menuPermissions(data: AdminPermissions | null, error: unknown): AdminPermissions | null {
     if (data) return data
-    return error ? { access: true, members: true, sources: true, audit: true, billing: true, clients: true } : null
+    return error
+        ? { access: true, members: true, sources: true, audit: true, billing: true, clients: true, support: false }
+        : null
 }
 
 export const pathOf = (item: NavItem, org: string) => item.route.replace(':org', org)

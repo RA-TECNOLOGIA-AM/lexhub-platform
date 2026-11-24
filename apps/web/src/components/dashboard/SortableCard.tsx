@@ -6,13 +6,15 @@ type SortableCardProps = {
     id: string // a key do dashboard
     section: string // em qual seção o card está
     children: ReactNode // o card de verdade (DashboardCard), que não sabe que é arrastável
+    disabled?: boolean // não arrasta (ex.: modo suporte, só leitura)
 }
 
 // Módulo: embrulha um card para ele poder ser arrastado e reordenado.
-export function SortableCard({ id, section, children }: SortableCardProps) {
+export function SortableCard({ id, section, children, disabled = false }: SortableCardProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id,
         data: { section },
+        disabled,
         attributes: { roleDescription: 'card arrastável' },
     })
 

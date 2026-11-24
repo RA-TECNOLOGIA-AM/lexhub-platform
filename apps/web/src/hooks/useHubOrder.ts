@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { dataClient } from '../services/client.ts'
 import { moveKey } from '../lib/hubOrder.ts'
+import { getSupport } from '../lib/supportSession.ts'
 import { useAsync } from './useAsync.ts'
 
 // Módulo: a ordem dos cards do hub da pessoa numa organização.
 // Parâmetro: a organização. Devolve: ready, order (keys salvas) e move(keys, active, over).
 // Esconde: de onde vem (dataClient) e a troca otimista (o card muda na hora; se salvar falhar, volta).
+// Modo suporte: lê a ordem do membro, mas move não faz nada (só leitura; a tela desliga o arrastar).
 export function useHubOrder(org: string) {
     // Sem ordem salva (ou se falhar) o hub usa a ordem do catálogo: não vale mostrar erro por isso.
     const { data, loading } = useAsync(() => dataClient.getHubOrder(org).catch(() => [] as string[]), [org])
@@ -16,6 +18,7 @@ export function useHubOrder(org: string) {
 
     // keys = a ordem completa que está na tela; move `active` para o lugar de `over` e salva.
     function move(keys: string[], active: string, over: string) {
+        if (getSupport()) return
         const next = moveKey(keys, active, over)
         if (next === keys) return // soltou no mesmo lugar: nada a salvar
         const previous = order

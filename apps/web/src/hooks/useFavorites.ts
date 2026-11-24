@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { dataClient } from '../services/client.ts'
 import { withViewTransition } from '../lib/viewTransition.ts'
+import { getSupport } from '../lib/supportSession.ts'
 
 // Módulo: os favoritos do usuário logado numa organização.
 // Parâmetro: a organização. Devolve: ready, isFavorite(key) e toggle(key).
 // Esconde: de onde vêm (dataClient) e a troca otimista (a estrela muda na hora; se falhar, volta).
+// Modo suporte: lê os favoritos do membro, mas toggle não faz nada (só leitura; a tela esconde a estrela).
 export function useFavorites(org: string) {
     const [keys, setKeys] = useState<string[] | null>(null) // null = ainda carregando
     // A lista mais recente, sem esperar o React desenhar: com a animação, o estado só muda no
@@ -30,6 +32,7 @@ export function useFavorites(org: string) {
     }, [org])
 
     function toggle(key: string) {
+        if (getSupport()) return
         const favorite = !latest.current.includes(key)
         const apply = (add: boolean) => {
             const others = latest.current.filter((k) => k !== key)

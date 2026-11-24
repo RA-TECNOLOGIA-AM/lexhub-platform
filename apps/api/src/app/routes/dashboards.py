@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response,
 
 from app.access import AccessRepo, DashboardAccess, audit_entry, get_repo, require_dashboard
 from app.analyses.common import memo
+from app.clock import get_now
 from app.config import get_settings
 from app.dashboards import DASHBOARDS, export
 from app.dashboards.base import (
@@ -29,6 +30,7 @@ from app.sources import (
     get_source_factory,
     get_source_refs_repo,
 )
+from app.support import ViewedLog, get_viewed_log
 from app.unit_scope import scope_source
 
 router = APIRouter(prefix="/orgs/{org_slug}/units/{unit_code}/dashboards", tags=["dashboards"])
@@ -73,7 +75,11 @@ def get_today() -> Today:
 async def _deny(
     request: Request, audit: AccessRepo, access: DashboardAccess, reason: str, detail: str
 ):
-    """403 auditado, com o motivo (ex.: 'own_sem_vinculo', 'sem_permissao_exportar')."""
+    """403 auditado, com o motivo (ex.: 'own_sem_vinculo', 'sem_permissao_exportar').
+
+    Em modo suporte não audita: dashboard.access_denied sairia em nome do membro, que não pediu nada."""
+    if access.support is not None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail=detail)
     await audit.insert_audit(
         audit_entry(
             request,
@@ -214,10 +220,15 @@ async def dashboard_data(
     audit: Annotated[AccessRepo, Depends(get_repo)],
     today: Annotated[Today, Depends(get_today)],
     unit_scope: Annotated[bool, Depends(get_unit_scope)],
+    now: Annotated[datetime, Depends(get_now)],
+    viewed: Annotated[ViewedLog, Depends(get_viewed_log)],
     start: Annotated[date | None, Query(alias="from")] = None,
     end: Annotated[date | None, Query(alias="to")] = None,
 ):
-    """Dados de um dashboard numa unidade: período, filtros da v1, `meta` e o que o módulo calcula."""
+    """Dados de um dashboard numa unidade: período, filtros da v1, `meta` e o que o módulo calcula.
+
+    Em modo suporte, os dados são os do membro, sem exportar, e o que foi aberto vai para a auditoria
+    (support.viewed)."""
     module, ctx = await _prepare(
         request, access, refs, sources, audit, today, start, end, unit_scope
     )
@@ -246,8 +257,50 @@ async def dashboard_data(
     # Quem não gere a unidade vê só a própria comissão: precisa saber quem a pessoa é na fonte.
     own_ref = None
     if module.commission_fields and not access.can_see_commission:
+        # Em suporte, access.user já é o membro: a comissão é a dele.
         own_ref = await refs.member_ref(access.user.user_id, access.org_id, ctx.source_db)
-    return shape_response(module, data, meta, access.can_see_commission, own_ref)
+    body = shape_response(module, data, meta, access.can_see_commission, own_ref)
+    if access.support is not None:
+        await _support_viewed(request, audit, viewed, access, now)
+        body = _without_export(body)
+    return body
+
+
+async def _support_viewed(
+    request: Request, audit: AccessRepo, viewed: ViewedLog, access: DashboardAccess, now: datetime
+) -> None:
+    """support.viewed em nome de quem pede, no máximo 1 vez por sessão + unidade + dashboard a cada
+    5 min (recarregar ou trocar o filtro não enche a auditoria)."""
+    ctx = access.support
+    if not viewed.first_in_window((ctx.session_id, access.unit_code, access.dashboard_key), now):
+        return
+    await audit.insert_audit(
+        audit_entry(
+            request,
+            ctx.actor,
+            "support.viewed",
+            org_id=access.org_id,
+            target_type="membership",
+            target_id=ctx.target_membership_id,
+            metadata={
+                "session": ctx.session_id,
+                "unit": access.unit_code,
+                "dashboard": access.dashboard_key,
+            },
+        )
+    )
+
+
+def _without_export(body: dict[str, Any]) -> dict[str, Any]:
+    """Modo suporte: `can_export` falso onde aparecer (no corpo, no `meta` ou num resumo do primeiro
+    nível). Copia o que muda: o resto pode ser o resultado guardado no result_memo, de todos."""
+    out = dict(body)
+    if "can_export" in out:
+        out["can_export"] = False
+    for name, value in body.items():
+        if isinstance(value, dict) and "can_export" in value:
+            out[name] = {**value, "can_export": False}
+    return out
 
 
 @router.get("/{dashboard_key}/export")

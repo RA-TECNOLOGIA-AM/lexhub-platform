@@ -32,7 +32,15 @@ import {
     sources,
     testUsers,
 } from './mock/index.ts'
-import type { Appearance, DashboardCatalog, DashboardQuery, Meta, PlatformClient } from '../types/index.ts'
+import type {
+    Appearance,
+    DashboardCatalog,
+    DashboardQuery,
+    Meta,
+    PlatformClient,
+    SupportSession,
+} from '../types/index.ts'
+import { getSupport } from '../lib/supportSession.ts'
 import { metaFor } from './mock/helpers.ts'
 import { orgDocumentosLegadoFor } from './mock/orgDocumentosLegado.ts'
 import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
@@ -194,7 +202,27 @@ async function dashboardResponse<T extends { meta: Meta }>(
     const data = build(query.unit, query)
     data.meta.from = query.from ?? data.meta.from
     data.meta.to = query.to ?? data.meta.to
+    logSupportView(dashboardKey, query.unit)
     return data
+}
+
+// Modo suporte, como a API: quem abre um dashboard como o membro gera 'Abriu dashboard em suporte'
+// (uma vez por sessão/unidade/dashboard a cada 5 min). Fora do modo, não faz nada.
+const supportViews = new Map<string, number>()
+function logSupportView(dashboardKey: string, unit: string) {
+    const session = getSupport()
+    if (!session) return
+    const key = `${session.sessionId}/${unit}/${dashboardKey}`
+    if (Date.now() - (supportViews.get(key) ?? 0) < 5 * 60_000) return
+    supportViews.set(key, Date.now())
+    const name = catalog.available.find((d) => d.key === dashboardKey)?.title ?? dashboardKey
+    addAuditEvent({
+        actor: 'Você',
+        email: sessionStorage.getItem(SESSION_KEY) || null,
+        kind: 'support',
+        action: 'Abriu dashboard em suporte',
+        detail: `${name} (${unit}) · como ${session.member.name}`,
+    })
 }
 
 // Dashboards que têm resposta fictícia completa no mock (key -> montagem).
@@ -227,7 +255,7 @@ const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unk
 }
 
 export function createMockClient(): DataClient {
-    return {
+    const base: Omit<DataClient, 'startSupport' | 'endSupport' | 'listHiddenForMember'> = {
         // Confere contra os usuários de teste de mock/users.ts (o Supabase fará isso de verdade).
         async signIn(email, password) {
             await wait()
@@ -299,6 +327,7 @@ export function createMockClient(): DataClient {
         async listDashboards(org) {
             await wait()
             requireSession()
+            if (getSupport()) return copy(supportCatalog())
             return copy(requireOrg(org) ? catalogForDev() : emptyCatalog)
         },
 
@@ -395,7 +424,15 @@ export function createMockClient(): DataClient {
         async getMyAdminPermissions(org) {
             requireSession()
             requireOrg(org)
-            return { access: true, members: true, sources: true, audit: true, billing: true, clients: true }
+            return {
+                access: true,
+                members: true,
+                sources: true,
+                audit: true,
+                billing: true,
+                clients: true,
+                support: true,
+            }
         },
 
         async updateMemberAccess(org, memberId, update) {
@@ -771,4 +808,128 @@ export function createMockClient(): DataClient {
             }
         },
     }
+
+    // Entrar e sair do modo suporte (no mock não há API: só guarda a sessão).
+    const supportMethods: Pick<DataClient, 'startSupport' | 'endSupport' | 'listHiddenForMember'> = {
+        // Um exemplo de cada motivo comum, para a tela do suporte ter o que mostrar.
+        async listHiddenForMember(_org, _sessionId, unit) {
+            await wait()
+            const visible = new Set(supportCatalog().available.map((d) => d.key))
+            return catalog.available
+                .filter((d) => d.units.includes(unit) && !visible.has(d.key))
+                .slice(0, 3)
+                .map((d, i) => ({
+                    key: d.key,
+                    title: d.title,
+                    area: d.area,
+                    reason: i === 0 ? 'dashboard_off' : 'no_sector_rule',
+                }))
+        },
+        async startSupport(org, membershipId, reason) {
+            await wait()
+            requireSession()
+            // O membro de verdade da lista do mock (nome, foto e as unidades em que tem cargo).
+            const found = memberStore.list().members.find((m) => m.id === membershipId)
+            const codes = new Set(found?.units.map((u) => u.code) ?? [])
+            const session: SupportSession = {
+                sessionId: `mock-support-${Date.now()}`,
+                org,
+                expiresAt: new Date(Date.now() + 60 * 60_000).toISOString(),
+                reason,
+                member: {
+                    membershipId,
+                    name: found?.name ?? 'Membro (suporte)',
+                    avatarPath: found?.avatar_path ?? null,
+                    roleLabel: 'Membro',
+                    units: codes.size ? me.units.filter((u) => codes.has(u.code)) : me.units.slice(0, 1),
+                },
+            }
+            addAuditEvent({
+                actor: 'Você',
+                email: sessionStorage.getItem(SESSION_KEY) || null,
+                kind: 'support',
+                action: 'Iniciou suporte',
+                detail: `como ${session.member.name}: ${reason}`,
+            })
+            return session
+        },
+        async endSupport() {
+            const session = getSupport()
+            if (!session) return
+            addAuditEvent({
+                actor: 'Você',
+                email: sessionStorage.getItem(SESSION_KEY) || null,
+                kind: 'support',
+                action: 'Encerrou suporte',
+                detail: `${session.member.name} · saiu`,
+            })
+        },
+    }
+
+    // Com sessão de suporte: vencimento simulado (localStorage) e escritas negadas, como a API.
+    return withSupportRules({ ...base, ...supportMethods })
+}
+
+const EXPIRED_KEY = 'lexhub.mock.supportExpired'
+const SUPPORT_WRITES = new Set<keyof DataClient>([
+    'setDashboardEnabled',
+    'setFavorite',
+    'setHubOrder',
+    'inviteMembers',
+    'setMemberStatus',
+    'revokeInvitation',
+    'updateMemberAccess',
+    'setTeamGroups',
+    'createUnit',
+    'updateUnit',
+    'deleteUnit',
+    'restoreUnit',
+    'linkProductOffice',
+    'connectSource',
+    'changeSourceSecret',
+    'disconnectSource',
+    'setSourceEnabled',
+    'closeOrganization',
+    'reopenOrganization',
+    'uploadMyAvatar',
+    'removeMyAvatar',
+    'setMyAppearance',
+    'approveAccessRequest',
+    'rejectAccessRequest',
+    'requestAccess',
+    'markNotificationsRead',
+])
+
+// O catálogo reduzido de um membro: 2 dashboards, sem exportar nem ligar/desligar.
+function supportCatalog(): DashboardCatalog {
+    return {
+        ...catalog,
+        available: catalog.available.slice(0, 2).map((d) => ({ ...d, can_export: false, can_toggle: false })),
+    }
+}
+
+// Quem está em suporte vem de getSupport() (sessionStorage): recarregar a aba não perde o modo.
+// Funções síncronas (avatarUrl) ficam de fora: precisam continuar devolvendo valor, não Promise.
+const SYNC_METHODS = new Set<string>(['avatarUrl'])
+
+function withSupportRules(client: DataClient): DataClient {
+    const wrapped = { ...client } as Record<string, unknown>
+    for (const [name, fn] of Object.entries(client)) {
+        if (typeof fn !== 'function' || SYNC_METHODS.has(name) || name === 'startSupport' || name === 'endSupport') {
+            continue
+        }
+        wrapped[name] = (...args: unknown[]) => {
+            if (getSupport()) {
+                if (localStorage.getItem(EXPIRED_KEY) === '1') {
+                    localStorage.removeItem(EXPIRED_KEY)
+                    return Promise.reject(new DataError(409, 'support_expired'))
+                }
+                if (SUPPORT_WRITES.has(name as keyof DataClient)) {
+                    return Promise.reject(new DataError(403, 'support_read_only'))
+                }
+            }
+            return (fn as (...a: unknown[]) => unknown).apply(wrapped, args)
+        }
+    }
+    return wrapped as unknown as DataClient
 }

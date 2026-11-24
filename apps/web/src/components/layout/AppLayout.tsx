@@ -3,6 +3,7 @@ import { ErrorBoundary } from '../states/ErrorBoundary.tsx'
 import { LoadingState } from '../states/LoadingState.tsx'
 import { Link, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
+import { useSupport } from '../../contexts/support-context.ts'
 import { Avatar } from '../ui/Avatar.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { NotificationsBell } from './NotificationsBell.tsx'
@@ -13,6 +14,8 @@ import { ThemeToggle } from './ThemeToggle.tsx'
 import { SettingsButton } from '../settings/SettingsButton.tsx'
 import { FullscreenToggle } from './FullscreenToggle.tsx'
 import { SidebarToggle } from './SidebarToggle.tsx'
+import { SupportBanner } from './SupportBanner.tsx'
+import { Notice } from '../ui/Notice.tsx'
 import { TopbarSlotContext } from './topbar-slot.ts'
 import { activeItem, menuPermissions, NAV_SECTIONS, pathOf, visibleItems } from '../../navigation.ts'
 import { useAsync } from '../../hooks/useAsync.ts'
@@ -43,6 +46,9 @@ export function AppLayout() {
     const transitionArea = useTransitionArea()
     const { pathname } = useLocation()
     const { me, signOut } = useAuth()
+    // Modo suporte (vendo como um membro): faixa no topo, menu só com o Espaço de trabalho, unidades do membro.
+    // Configurações, notificações e perfil continuam sendo de quem pede.
+    const { session: support, notice: supportNotice, clearNotice } = useSupport()
     // Selo de pedidos de acesso pendentes: só a equipe RA busca.
     const pending = usePendingRequests(!!me?.user.platform_staff)
     // Avisa a cada minuto que a pessoa está com o LexHub aberto (Membros → "Online agora").
@@ -81,17 +87,23 @@ export function AppLayout() {
     }
 
     return (
-        <div className="app" data-menu={menuOpen ? 'open' : undefined} data-side={collapsed ? 'collapsed' : undefined}>
+        <div
+            className="app"
+            data-menu={menuOpen ? 'open' : undefined}
+            data-side={collapsed ? 'collapsed' : undefined}
+            data-support={support ? '' : undefined}
+        >
             <aside className="side" aria-label="Navegação principal">
                 <div className="brand">
                     <SidebarToggle collapsed={collapsed} onToggle={toggleSide} />
                     <span className="brand-name">LexHub</span>
                 </div>
+                {/* Em suporte não troca de organização (a sessão vale só nesta): só ela na lista, sem "Criar". */}
                 <OrgSwitcher
                     current={org}
-                    orgs={me.orgs}
-                    units={me.units}
-                    canCreate={user.platform_staff}
+                    orgs={support ? me.orgs.filter((o) => o.slug === org.slug) : me.orgs}
+                    units={support?.member.units ?? me.units}
+                    canCreate={!support && user.platform_staff}
                     onNavigate={closeMenu}
                     onOpen={() => setCollapsed(false)}
                 />
@@ -101,7 +113,7 @@ export function AppLayout() {
                 <div className="side-nav">
                     {NAV_SECTIONS.map((section) => ({
                         section,
-                        items: visibleItems(section, perms, user.platform_staff),
+                        items: visibleItems(section, perms, user.platform_staff, !!support),
                     }))
                         .filter(({ items }) => items.length > 0)
                         .map(({ section, items }) => (
@@ -160,6 +172,7 @@ export function AppLayout() {
 
             {/* Troca de página: a logo da transição cobre só esta coluna, abaixo da topbar (ver PageTransitionProvider). */}
             <div className="main" ref={transitionArea}>
+                <SupportBanner />
                 <header className="topbar">
                     <button
                         ref={menuButton}
@@ -187,6 +200,7 @@ export function AppLayout() {
                 </header>
 
                 <main className="content">
+                    {supportNotice && <Notice message={supportNotice} onClose={clearNotice} />}
                     <TopbarSlotContext value={{ start: topbarStart, end: topbarEnd }}>
                         {/* Páginas carregadas sob demanda (lazy): o "carregando" fica só no miolo. */}
                         <ErrorBoundary resetKey={pathname}>

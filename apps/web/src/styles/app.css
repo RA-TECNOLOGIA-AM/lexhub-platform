@@ -9204,3 +9204,69 @@ span.profile-btn {
         display: none;
     }
 }
+
+/* ---------- Modo suporte: faixa "Vendo como" (cor de aviso, fixa no topo, acima da topbar) ---------- */
+.app[data-support] {
+    --support-bar-h: 44px;
+}
+.support-bar {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--support-bar-h);
+    padding: 6px 28px;
+    background: var(--warn-bg);
+    border-bottom: 1px solid var(--warn-line);
+    color: var(--warn);
+    font-size: var(--fs-sm);
+}
+.app[data-support] .topbar {
+    top: var(--support-bar-h);
+}
+.support-av {
+    width: 28px;
+    height: 28px;
+}
+.support-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.support-short {
+    display: none;
+}
+.support-exit {
+    flex: none;
+}
+.support-ro {
+    align-self: center;
+}
+@media (max-width: 860px) {
+    .support-bar {
+        padding: 6px 16px;
+    }
+    .support-full {
+        display: none;
+    }
+    .support-short {
+        display: inline;
+    }
+}
+
+/* Modo suporte: "Dashboards ocultos para Fulano" no fim do hub (recolhido por padrão). */
+.hidden-for-member summary {
+    cursor: pointer;
+    margin: 0;
+}
+.hidden-list {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}

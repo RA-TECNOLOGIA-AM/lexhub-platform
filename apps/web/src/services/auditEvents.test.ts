@@ -146,7 +146,45 @@ describe('actionFilter', () => {
 })
 
 describe('kindOptions', () => {
-    it('tipos com evento em ordem alfabética, sem Suporte, com Outros no fim', () => {
-        expect(kindOptions()).toEqual(['view', 'login', 'export', 'access', 'source', 'other'])
+    it('tipos com evento em ordem alfabética, com Suporte, com Outros no fim', () => {
+        expect(kindOptions()).toEqual(['view', 'login', 'export', 'access', 'support', 'source', 'other'])
+    })
+})
+
+describe('modo suporte', () => {
+    const member = { targetType: 'membership', targetId: 'm1', targetName: 'Bruna Lima' }
+
+    it('iniciou: com quem e o motivo', () => {
+        const e = toAuditEvent(
+            raw({ action: 'support.started', ...member, metadata: { session: 's1', reason: '#4521' } }),
+        )
+        expect(e).toMatchObject({ kind: 'support', action: 'Iniciou suporte', detail: 'como Bruna Lima: #4521' })
+    })
+
+    it('abriu dashboard: dashboard, unidade e como quem', () => {
+        const e = toAuditEvent(
+            raw({
+                action: 'support.viewed',
+                ...member,
+                metadata: { session: 's1', unit: 'NG', dashboard: 'comercial' },
+            }),
+        )
+        expect(e).toMatchObject({ kind: 'support', action: 'Abriu dashboard em suporte' })
+        expect(e.detail).toBe('comercial (NG) · como Bruna Lima')
+    })
+
+    it('encerrou: saiu ou venceu', () => {
+        const ended = (end_reason: string) =>
+            toAuditEvent(raw({ action: 'support.ended', ...member, metadata: { session: 's1', end_reason } }))
+        expect(ended('exit')).toMatchObject({
+            kind: 'support',
+            action: 'Encerrou suporte',
+            detail: 'Bruna Lima · saiu',
+        })
+        expect(ended('expired').detail).toBe('Bruna Lima · venceu')
+    })
+
+    it('filtro Suporte traz os três eventos', () => {
+        expect(actionFilter('support').p_actions).toEqual(['support.started', 'support.viewed', 'support.ended'])
     })
 })

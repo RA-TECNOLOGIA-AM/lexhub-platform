@@ -52,12 +52,15 @@ export function MembersPage() {
         return () => clearInterval(timer)
     }, [])
     const { data, error } = useAsync(() => dataClient.listMembers(org), [org, version])
+    // Modo suporte ("Ver como este membro"): só para quem tem a permissão. Falhou = sem o botão.
+    const canSupport = useAsync(() => dataClient.getMyAdminPermissions(org), [org]).data?.support === true
     // Busca a lista de novo a cada minuto (com a aba visível): quem entrou ou saiu aparece sem recarregar.
     useAutoRefresh(60_000, () => setVersion((v) => v + 1), data)
 
     const [params, setParams] = useSearchParams()
     const filter = filterFromParams(params)
-    const picked = params.get('pessoa')
+    // ?m=<id> (volta do modo suporte) também abre a gaveta daquela pessoa.
+    const picked = params.get('pessoa') ?? params.get('m')
     // replace: digitar na busca não enche o histórico do "voltar" com uma entrada por letra.
     function setUrl(next: MemberFilter, pessoa: string | null) {
         const p = paramsFromFilter(next)
@@ -152,6 +155,7 @@ export function MembersPage() {
                         units={data.units}
                         teams={data.teams}
                         isSelf={open.kind === 'member' && open.member.email === sessionEmail}
+                        canSupport={canSupport}
                         accessHref={
                             open.kind === 'member'
                                 ? `/${org}/admin/acesso?pessoa=${open.member.id}`

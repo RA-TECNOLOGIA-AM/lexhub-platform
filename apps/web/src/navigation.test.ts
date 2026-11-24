@@ -4,8 +4,16 @@ import { menuPermissions, NAV_SECTIONS, visibleItems } from './navigation.ts'
 const admin = NAV_SECTIONS.find((s) => s.title === 'Administração')!
 const keys = (perms: Parameters<typeof visibleItems>[1]) => visibleItems(admin, perms).map((i) => i.key)
 
-const ALL = { access: true, members: true, sources: true, audit: true, billing: true, clients: true }
-const NONE = { access: false, members: false, sources: false, audit: false, billing: false, clients: false }
+const ALL = { access: true, members: true, sources: true, audit: true, billing: true, clients: true, support: true }
+const NONE = {
+    access: false,
+    members: false,
+    sources: false,
+    audit: false,
+    billing: false,
+    clients: false,
+    support: false,
+}
 
 describe('visibleItems', () => {
     it('Acesso só aparece para quem gere acesso (Owner, Desenvolvedor, Gestor, Controller)', () => {
@@ -37,6 +45,7 @@ describe('visibleItems', () => {
             audit: false,
             billing: false,
             clients: false,
+            support: false,
         }
         expect(keys(controller)).toContain('unidades')
         expect(keys(controller)).not.toContain('membros')
@@ -60,11 +69,32 @@ describe('Plataforma', () => {
 
 describe('menuPermissions', () => {
     it('se a consulta falhar (ex.: função ainda não aplicada no banco), mostra os itens: a página protege sozinha', () => {
-        expect(menuPermissions(null, new Error('function api.my_admin_permissions does not exist'))).toEqual(ALL)
+        expect(menuPermissions(null, new Error('function api.my_admin_permissions does not exist'))).toEqual({
+            ...ALL,
+            support: false, // o modo suporte nunca aparece na dúvida
+        })
     })
     it('com resposta, usa a resposta; carregando, null', () => {
-        const some = { access: false, members: true, sources: false, audit: false, billing: false, clients: false }
+        const some = {
+            access: false,
+            members: true,
+            sources: false,
+            audit: false,
+            billing: false,
+            clients: false,
+            support: false,
+        }
         expect(menuPermissions(some, null)).toEqual(some)
         expect(menuPermissions(null, null)).toBeNull()
+    })
+})
+
+describe('modo suporte', () => {
+    it('em suporte, o menu mostra só Dashboards e Documentação (mesmo para quem gere tudo e é da equipe RA)', () => {
+        const keys = NAV_SECTIONS.flatMap((s) => visibleItems(s, ALL, true, true)).map((i) => i.key)
+        expect(keys).toEqual(['dashboards', 'documentacao'])
+    })
+    it('fora do suporte, nada muda', () => {
+        expect(visibleItems(admin, ALL, false, false).map((i) => i.key)).toEqual(keys(ALL))
     })
 })

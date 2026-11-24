@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
+import { useSupportSession } from '../../contexts/support-context.ts'
+import { HiddenForMember } from './HiddenForMember.tsx'
 import { DashboardCard } from '../../components/dashboard/DashboardCard.tsx'
 import { HubDnd, type HubDrop } from '../../components/dashboard/HubDnd.tsx'
 import { SortableCard } from '../../components/dashboard/SortableCard.tsx'
@@ -30,6 +32,7 @@ const VIEW_OPTIONS: { value: HubView; label: string; icon: 'grid' | 'list' }[] =
 ]
 const MIGRATING = 'Os dashboards desta área estão sendo migrados da v1.'
 const FAV_HINT = 'Arraste um card para cá ou toque na estrela para favoritar.'
+const FAV_HINT_SUPPORT = 'Nenhum favorito. Somente leitura no modo suporte.'
 
 export function HubPage() {
     const { org = '' } = useParams()
@@ -39,8 +42,12 @@ export function HubPage() {
     const [changed, setChanged] = useState<{ org: string; catalog: DashboardCatalog } | null>(null)
     const catalog = changed?.org === org ? changed.catalog : loaded
     const [searchParams] = useSearchParams()
+    // Modo suporte: as unidades são as do membro; favoritar, arrastar e ligar/desligar somem (só leitura).
+    const support = useSupportSession()
+    const readOnly = !!support
+    const units = support?.member.units ?? me?.units ?? []
     // A unidade do seletor da barra lateral: a da URL, ou a lembrada na sessão (null = todas as unidades).
-    const unit = hubUnit(searchParams.get('unidade'), rememberedUnit(org), me?.units ?? [])
+    const unit = hubUnit(searchParams.get('unidade'), rememberedUnit(org), units)
     const query = searchParams.get(SEARCH_PARAM) ?? '' // texto da busca do topo ('' = sem busca)
     const favorites = useFavorites(org)
     const hubOrder = useHubOrder(org)
@@ -80,6 +87,7 @@ export function HubPage() {
     // O que fazer ao soltar um card: na mesma seção, reordena; de uma área para Favoritos, favorita
     // (e põe onde caiu). Qualquer outro caso (ex.: Favoritos -> área) é ignorado: desfavoritar é pela estrela.
     function handleDrop({ active, from, over, to }: HubDrop) {
+        if (readOnly) return
         if (to === FAVORITES && from !== FAVORITES) favorites.toggle(active)
         else if (to !== from) return
         // Ordem completa (todas as unidades): o filtro da tela não pode apagar a posição dos outros cards.
@@ -102,15 +110,15 @@ export function HubPage() {
 
     // Um card do hub, arrastável dentro da sua seção.
     const card = (section: string) => (d: DashboardSummary) => (
-        <SortableCard key={d.key} id={d.key} section={section}>
+        <SortableCard key={d.key} id={d.key} section={section} disabled={readOnly}>
             <DashboardCard
                 org={org}
                 unit={unit ?? d.units[0]}
                 dashboard={d}
                 favorite={favorites.isFavorite(d.key)}
-                onToggleFavorite={() => favorites.toggle(d.key)}
+                onToggleFavorite={readOnly ? undefined : () => favorites.toggle(d.key)}
                 showUnits={!unit}
-                onSetEnabled={(unitCode, enabled) => setEnabled(d.key, unitCode, enabled)}
+                onSetEnabled={readOnly ? undefined : (unitCode, enabled) => setEnabled(d.key, unitCode, enabled)}
             />
         </SortableCard>
     )
@@ -131,8 +139,7 @@ export function HubPage() {
                 <div className="stack" style={{ gap: 6 }}>
                     <p className="muted">
                         {count} para você em {me?.org.name}
-                        {unit ? ` · ${unitName(unit, me?.units ?? [])}` : ''}. Troque a unidade no seletor da barra
-                        lateral.
+                        {unit ? ` · ${unitName(unit, units)}` : ''}. Troque a unidade no seletor da barra lateral.
                     </p>
                 </div>
             </section>
@@ -171,7 +178,9 @@ export function HubPage() {
                                     {favs.length > 0 ? (
                                         favs.map(card(FAVORITES))
                                     ) : (
-                                        <p className="card drop-hint muted small">{FAV_HINT}</p>
+                                        <p className="card drop-hint muted small">
+                                            {readOnly ? FAV_HINT_SUPPORT : FAV_HINT}
+                                        </p>
                                     )}
                                 </SortableSection>
                             )}
@@ -197,7 +206,11 @@ export function HubPage() {
                                     title={FAVORITES}
                                     ids={favs.map((d) => d.key)}
                                     acceptsOthers
-                                    empty={<p className="board-hint muted small">{FAV_HINT}</p>}
+                                    empty={
+                                        <p className="board-hint muted small">
+                                            {readOnly ? FAV_HINT_SUPPORT : FAV_HINT}
+                                        </p>
+                                    }
                                 >
                                     {favs.map(card(FAVORITES))}
                                 </BoardColumn>
@@ -214,6 +227,9 @@ export function HubPage() {
                     )}
                 </div>
             </HubDnd>
+
+            {/* Modo suporte: o que o membro não vê nesta unidade, e por quê. */}
+            {support && unit && <HiddenForMember org={org} session={support} unit={unit} />}
 
             {catalog.upcoming.length > 0 && (
                 <section className="stack" aria-labelledby="soon-title">

@@ -56,6 +56,28 @@ const EVENTS: Record<string, Rule> = {
         action: 'Abriu dashboard',
         detail: (e, m) => join(e.targetName ?? e.targetId, text(m.unit)),
     },
+    // Modo suporte: o ator é quem pediu (Owner/Dev); o alvo (targetName) é o membro visto.
+    'support.started': {
+        kind: 'support',
+        action: 'Iniciou suporte',
+        detail: (e, m) =>
+            `como ${e.targetName ?? e.targetId ?? 'membro'}${text(m.reason) ? `: ${text(m.reason)}` : ''}`,
+    },
+    'support.viewed': {
+        kind: 'support',
+        action: 'Abriu dashboard em suporte',
+        detail: (e, m) =>
+            join(
+                text(m.dashboard) && `${text(m.dashboard)}${text(m.unit) ? ` (${text(m.unit)})` : ''}`,
+                `como ${e.targetName ?? e.targetId ?? 'membro'}`,
+            ),
+    },
+    'support.ended': {
+        kind: 'support',
+        action: 'Encerrou suporte',
+        detail: (e, m) =>
+            join(e.targetName ?? e.targetId, { exit: 'saiu', expired: 'venceu' }[text(m.end_reason) ?? ''] ?? null),
+    },
     'dashboard.export': {
         kind: 'export',
         action: 'Exportou dados',
@@ -192,7 +214,6 @@ const EVENTS: Record<string, Rule> = {
 }
 
 // Opções do filtro "Tipo de evento": só os tipos que algum evento usa, em ordem alfabética, com "Outros" no fim.
-// 'support' só aparece quando existir o modo suporte (support.opened / support.closed).
 export const kindOptions = (): AuditKind[] => [
     ...[...new Set(Object.values(EVENTS).map((r) => r.kind))].sort((a, b) =>
         KIND[a].label.localeCompare(KIND[b].label, 'pt-BR'),

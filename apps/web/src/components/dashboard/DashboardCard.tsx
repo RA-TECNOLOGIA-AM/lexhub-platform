@@ -10,7 +10,8 @@ type DashboardCardProps = {
     unit: string // em qual unidade o cartão abre o dashboard
     dashboard: DashboardSummary
     favorite: boolean
-    onToggleFavorite: () => void // o card só avisa o clique; quem guarda é quem usa o card
+    // O card só avisa o clique; quem guarda é quem usa o card. Sem ele (modo suporte, só leitura): sem estrela.
+    onToggleFavorite?: () => void
     showUnits?: boolean // etiquetas das unidades (só em "Todas as unidades"; com uma escolhida, não repete o filtro)
     // Só o Desenvolvedor (dashboard.can_toggle): liga/desliga numa unidade. Quem usa o card grava e atualiza a tela.
     onSetEnabled?: (unit: string, enabled: boolean) => Promise<void>
@@ -40,15 +41,17 @@ export function DashboardCard({
                     {dashboard.title}
                 </PageTransitionLink>
                 <span className="dcard-actions">
-                    <button
-                        type="button"
-                        className="fav-btn"
-                        aria-label={`Favoritar ${dashboard.title}`}
-                        aria-pressed={favorite}
-                        onClick={onToggleFavorite}
-                    >
-                        <Icon name="star" />
-                    </button>
+                    {onToggleFavorite && (
+                        <button
+                            type="button"
+                            className="fav-btn"
+                            aria-label={`Favoritar ${dashboard.title}`}
+                            aria-pressed={favorite}
+                            onClick={onToggleFavorite}
+                        >
+                            <Icon name="star" />
+                        </button>
+                    )}
                     {dashboard.can_toggle && onSetEnabled && (
                         <DashboardSwitchMenu
                             title={dashboard.title}

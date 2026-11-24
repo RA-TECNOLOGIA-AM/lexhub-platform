@@ -205,6 +205,91 @@ def hub_repo() -> FakeHubPrefsRepo:
     return FakeHubPrefsRepo()
 
 
+class FakeSupportRepo:
+    """Sessões de suporte em memória: quem pode, membros por organização e as sessões."""
+
+    def __init__(self):
+        self.allowed: set[str] = set()  # user_ids com org.dashboards.all
+        self.members: dict[tuple[str, str], dict] = {}  # (org_id, membership_id) -> membro ativo
+        self.sessions: dict[str, object] = {}
+        self.ended: dict[str, str] = {}  # session_id -> end_reason
+        self.reasons: dict[str, str] = {}  # session_id -> motivo gravado
+        self.hidden_rows: dict[tuple[str, str], list] = {}  # (unit_code, user_id) -> HiddenRow
+
+    def add_member(self, org_id: str, user_id: str, name: str = "Ana Souza") -> str:
+        membership_id = str(uuid.uuid4())
+        self.members[(org_id, membership_id)] = {
+            "membership_id": membership_id,
+            "user_id": user_id,
+            "name": name,
+            "avatar_path": None,
+            "role_label": "Gestor",
+            "units": [{"code": "NG", "name": "Núcleo de Gestão"}],
+        }
+        return membership_id
+
+    async def can_support(self, user_id, org_id):
+        return user_id in self.allowed
+
+    async def hidden(self, org_id, unit_code, member_user_id):
+        return self.hidden_rows.get((unit_code, member_user_id), [])
+
+    async def member(self, org_id, membership_id):
+        return self.members.get((org_id, membership_id))
+
+    async def start(self, org_id, actor, member, reason):
+        from dataclasses import replace
+        from datetime import UTC, datetime, timedelta
+
+        from app.support import SupportSession
+
+        previous = next(
+            (s for s in self.sessions.values() if s.actor_user_id == actor and s.ended_at is None),
+            None,
+        )
+        if previous is not None:
+            why = "expired" if previous.expires_at <= datetime.now(UTC) else "exit"
+            previous = replace(previous, ended_at=datetime.now(UTC), end_reason=why)
+            self.sessions[previous.id] = previous
+            self.ended[previous.id] = why
+        session = SupportSession(
+            id=str(uuid.uuid4()),
+            org_id=org_id,
+            actor_user_id=actor,
+            target_user_id=member["user_id"],
+            target_membership_id=member["membership_id"],
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
+            ended_at=None,
+            replaced=previous,
+        )
+        self.sessions[session.id] = session
+        self.reasons[session.id] = reason
+        return session
+
+    async def get(self, session_id):
+        return self.sessions.get(session_id)
+
+    async def end(self, session_id, end_reason):
+        from dataclasses import replace
+        from datetime import UTC, datetime
+
+        session = self.sessions.get(session_id)
+        if session is None or session.ended_at is not None:
+            return None
+        if session.expires_at <= datetime.now(UTC):
+            end_reason = "expired"
+        self.sessions[session_id] = replace(
+            session, ended_at=datetime.now(UTC), end_reason=end_reason
+        )
+        self.ended[session_id] = end_reason
+        return end_reason
+
+
+@pytest.fixture
+def support_repo() -> FakeSupportRepo:
+    return FakeSupportRepo()
+
+
 class FakeSource:
     """Banco de origem em memória: query_name -> linhas; guarda o que foi buscado."""
 
@@ -251,7 +336,7 @@ def sources() -> FakeSources:
 
 
 @pytest.fixture
-def client(signer, repo, me_repo, catalog_repo, hub_repo, sources):
+def client(signer, repo, me_repo, catalog_repo, hub_repo, support_repo, sources):
     from app.access import get_repo
     from app.auth import TokenVerifier, get_verifier
     from app.catalog import get_catalog_repo
@@ -261,6 +346,7 @@ def client(signer, repo, me_repo, catalog_repo, hub_repo, sources):
     from app.me import get_me_repo
     from app.routes.dashboards import get_today
     from app.sources import get_source_factory, get_source_refs_repo
+    from app.support import get_support_repo
 
     get_settings.cache_clear()
     app = create_app()
@@ -270,6 +356,7 @@ def client(signer, repo, me_repo, catalog_repo, hub_repo, sources):
     app.dependency_overrides[get_me_repo] = lambda: me_repo
     app.dependency_overrides[get_catalog_repo] = lambda: catalog_repo
     app.dependency_overrides[get_hub_prefs_repo] = lambda: hub_repo
+    app.dependency_overrides[get_support_repo] = lambda: support_repo
     app.dependency_overrides[get_source_refs_repo] = lambda: sources
     app.dependency_overrides[get_source_factory] = lambda: sources.factory
     app.dependency_overrides[get_today] = lambda: lambda tz: TODAY

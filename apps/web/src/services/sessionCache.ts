@@ -1,5 +1,6 @@
 import type { DataClient } from './client.ts'
 import type { DashboardCatalog, DashboardQuery, Meta } from '../types/index.ts'
+import { DataError } from './errors.ts'
 import { withEnabled } from '../lib/dashboardSwitch.ts'
 
 type Entry<T> = { at: number; value: Promise<T> }
@@ -64,7 +65,7 @@ export function withSessionCache(client: DataClient, ttlMs = 5 * 60_000, now: ()
         return data
     }
 
-    return {
+    const cached: DataClient = {
         ...client,
 
         getDashboardData: <T extends { meta: Meta }>(key: string, query: DashboardQuery) =>
@@ -114,5 +115,37 @@ export function withSessionCache(client: DataClient, ttlMs = 5 * 60_000, now: ()
             clearAll()
             await client.setDeviceSession(session)
         },
+
+        // Entrar/sair do modo suporte troca quem a API enxerga: o guardado era de outra visão.
+        async startSupport(org, membershipId, reason) {
+            const session = await client.startSupport(org, membershipId, reason)
+            clearAll()
+            return session
+        },
+
+        async endSupport(org, sessionId) {
+            await client.endSupport(org, sessionId)
+            clearAll()
+        },
     }
+
+    // A sessão de suporte venceu (409 support_expired): o guardado era da visão do membro. O erro sobe
+    // como veio; quem sai do modo e avisa a pessoa é o provider (Tarefa 5).
+    const expired = (err: unknown) =>
+        err instanceof DataError && err.status === 409 && err.message === 'support_expired'
+    const guarded = { ...cached } as Record<string, unknown>
+    for (const [name, fn] of Object.entries(cached)) {
+        if (typeof fn !== 'function') continue
+        guarded[name] = (...args: unknown[]) => {
+            const result = (fn as (...a: unknown[]) => unknown).apply(guarded, args)
+            if (result instanceof Promise) {
+                return result.catch((err: unknown) => {
+                    if (expired(err)) clearAll()
+                    throw err
+                })
+            }
+            return result
+        }
+    }
+    return guarded as unknown as DataClient
 }
