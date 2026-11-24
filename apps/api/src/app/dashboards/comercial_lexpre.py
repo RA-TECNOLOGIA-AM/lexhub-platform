@@ -164,9 +164,6 @@ from app.analyses.NG.comissao_lexpre import (
     get_desconto_cancelamentos_periodo_anterior as get_desconto_cancelamentos_periodo_anterior_lexpre,
 )
 from app.analyses.NG.comissao_lexpre import (
-    listar_demandas_canceladas_desconto as listar_demandas_canceladas_desconto_lexpre,
-)
-from app.analyses.NG.comissao_lexpre import (
     get_fator_multiplicador as get_fator_multiplicador_lexpre,
 )
 from app.analyses.NG.comissao_lexpre import (
@@ -174,6 +171,9 @@ from app.analyses.NG.comissao_lexpre import (
 )
 from app.analyses.NG.comissao_lexpre import (
     get_rubricas_total_tabela as get_rubricas_total_tabela_lexpre,
+)
+from app.analyses.NG.comissao_lexpre import (
+    listar_demandas_canceladas_desconto as listar_demandas_canceladas_desconto_lexpre,
 )
 from app.analyses.NG.ml.meta_inteligente import calcular_meta_inteligente_por_atendente
 from app.analyses.NG.protocolo import (
