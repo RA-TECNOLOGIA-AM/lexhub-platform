@@ -101,6 +101,143 @@ export const DOC_ENTRIES: DocEntry[] = [
         dashboards: ['julgados-acordaos'],
         offices: ['NG', 'LA', 'LARJ'],
     },
+    {
+        slug: 'protocolo-ng',
+        title: 'Protocolo — NG e LARJ',
+        description:
+            'Indicadores, represados, valor de causa, comissão por processo e comissão com Fator Multiplicador por estado.',
+        dashboards: ['protocolo'],
+        units: ['NG', 'RJ', 'LARJ', 'LA_RJ'],
+        offices: ['NG', 'LARJ'],
+    },
+    {
+        slug: 'protocolo-la',
+        title: 'Protocolo — LA',
+        description: 'Status CONCLUIDO e PROTOCOLO e a comissão escalonada por taxa de resolução.',
+        dashboards: ['protocolo'],
+        units: ['LA', 'LAAM', 'LA_AM'],
+        offices: ['LA'],
+    },
+    {
+        slug: 'pendencias-ng',
+        title: 'Pendências — NG e LARJ',
+        description: 'Ciclo de vida, indicadores, taxas, reajuizamento e comissionamento.',
+        dashboards: ['pendencias'],
+        units: ['NG', 'RJ', 'LARJ', 'LA_RJ'],
+        offices: ['NG', 'LARJ'],
+    },
+    {
+        slug: 'pendencias-la',
+        title: 'Pendências — LA',
+        description: 'Lógica própria, com status diferentes do NG e o conceito de resolvido via ORG DOC.',
+        dashboards: ['pendencias'],
+        units: ['LA', 'LAAM', 'LA_AM'],
+        offices: ['LA'],
+    },
+    {
+        slug: 'org-documentos-ng',
+        title: 'Organização de Documentos — NG e LARJ',
+        description: 'Represados, indicadores do período e comissionamento por valor de causa.',
+        dashboards: ['org-documentos'],
+        units: ['NG', 'RJ', 'LARJ', 'LA_RJ'],
+        offices: ['NG', 'LARJ'],
+    },
+    {
+        slug: 'org-documentos-la',
+        title: 'Organização de Documentos — LA',
+        description: 'Status próprios, campo PET_AUTO para manual/automático e comissionamento.',
+        dashboards: ['org-documentos'],
+        units: ['LA', 'LAAM', 'LA_AM'],
+        offices: ['LA'],
+    },
+    {
+        slug: 'peticionamento-ng',
+        title: 'Peticionamento — NG e LARJ',
+        description: 'Filtro especial por DATA_CONFECCAO, manual × automático e comissão por Massa e ESPECIFICA.',
+        dashboards: ['peticionamento'],
+        units: ['NG', 'RJ', 'LARJ', 'LA_RJ'],
+        offices: ['NG', 'LARJ'],
+    },
+    {
+        slug: 'peticionamento-la',
+        title: 'Peticionamento — LA',
+        description: "Terminologia 'confeccionados', filtro por SAIDA e a métrica de retorno do Protocolo.",
+        dashboards: ['peticionamento'],
+        units: ['LA', 'LAAM', 'LA_AM'],
+        offices: ['LA'],
+    },
+    {
+        slug: 'pendencias-intermediarias-ng',
+        title: 'Pendências Intermediárias — NG',
+        description:
+            'Setor PENDÊNCIA, dilação encaminhada para MANIFESTAÇÃO - ELABORAR DILAÇÃO e as faixas Ouro/Prata/Bronze.',
+        dashboards: ['pendencias-intermediarias'],
+        units: ['NG', 'RJ', 'LARJ', 'LA_RJ'],
+        offices: ['NG'],
+    },
+    {
+        slug: 'pendencias-intermediarias-la',
+        title: 'Pendências Intermediárias — LA',
+        description: 'Indicadores do período e a Taxa de Dilação com faixas Ouro/Prata/Bronze.',
+        dashboards: ['pendencias-intermediarias'],
+        units: ['LA', 'LAAM', 'LA_AM'],
+        offices: ['LA'],
+    },
+    {
+        slug: 'emendas-manifestacoes-ng',
+        title: 'Emendas e Manifestações — NG',
+        description: 'Setor menor que o da LA, comissão em valor fixo sem faixa e filtro de UF.',
+        dashboards: ['emendas-manifestacoes'],
+        units: ['NG', 'RJ', 'LARJ', 'LA_RJ'],
+        offices: ['NG'],
+    },
+    {
+        slug: 'emendas-manifestacoes-la',
+        title: 'Emendas e Manifestações — LA',
+        description: 'Classificação de atividades e comissionamento por faixa de agenda cumprida (85%/97%).',
+        dashboards: ['emendas-manifestacoes'],
+        units: ['LA', 'LAAM', 'LA_AM'],
+        offices: ['LA'],
+    },
+    {
+        slug: 'replicas-la',
+        title: 'Réplicas — LA',
+        description: 'Taxa de Procedência (1G) e comissionamento fixo de R$ 1,50 por peça concluída.',
+        dashboards: ['replicas'],
+        offices: ['LA'],
+    },
+    {
+        slug: 'julgados-sentencas',
+        title: 'Julgados — Sentenças',
+        description:
+            'Classificação de mérito do 1º grau, motivo das extinções, tempo médio até a sentença, embargos e reversão, e por que a maioria dos processos não tem juiz preenchido.',
+        dashboards: ['julgados-sentencas'],
+        offices: ['NG', 'LA'],
+    },
+    {
+        slug: 'marketing-lexpre',
+        title: 'Marketing (LexPre)',
+        description:
+            'Perfil e triagem dos clientes, Facebook Ads, fechamento de campanhas, análise de aquisição e indicadores do canal pago e orgânico.',
+        dashboards: ['marketing-lexpre'],
+        offices: ['NG', 'LA'],
+    },
+    {
+        slug: 'execucao-estrategico',
+        title: 'Execução Estratégico Geral',
+        description:
+            'Condenação e Acordos somados, filtros de Escopo, UF, Comarca, Matéria e Subfase (também por clique no gráfico) e o Relatório Personalizado. LARJ não tem a seção Confecção CS.',
+        dashboards: ['execucao-estrategico'],
+        offices: ['NG', 'LA', 'LARJ'],
+    },
+    {
+        slug: 'sobrevivencia-processual',
+        title: 'Sobrevivência Processual',
+        description:
+            'Como cada número é calculado: censura, mediana de Kaplan-Meier, a precedência entre acordo, sentença e acórdão e o estágio de pagamento.',
+        dashboards: ['sobrevivencia-processual'],
+        offices: ['NG', 'LA'],
+    },
 ]
 
 // As documentações que a pessoa vê: só as dos dashboards que ela pode abrir (mesma regra da v1).
@@ -139,4 +276,41 @@ export const GUIDE_ENTRIES: GuideEntry[] = [
 // Título de qualquer guia (de uso ou de dashboard) pelo slug. null = não existe.
 export function guideOrDoc(slug: string): { title: string } | null {
     return GUIDE_ENTRIES.find((g) => g.slug === slug) ?? DOC_ENTRIES.find((d) => d.slug === slug) ?? null
+}
+
+export type DocGroup = { area: string; docs: DocEntry[] }
+
+// Os guias agrupados pela área do dashboard (a mesma do hub: Comercial, Pré-protocolo, Jurídico...), na ordem
+// em que as áreas aparecem no catálogo. Guia de dashboard sem área no catálogo vai para "Outros".
+export function groupDocs(docs: DocEntry[], dashboards: { key: string; area: string }[]): DocGroup[] {
+    const groups: DocGroup[] = []
+    for (const doc of docs) {
+        const area = dashboards.find((d) => doc.dashboards.includes(d.key))?.area || 'Outros'
+        const group = groups.find((g) => g.area === area)
+        if (group) group.docs.push(doc)
+        else groups.push({ area, docs: [doc] })
+    }
+    const order = (area: string) => {
+        const i = dashboards.findIndex((d) => d.area === area)
+        return i < 0 ? Number.MAX_SAFE_INTEGER : i
+    }
+    return groups.sort((a, b) => order(a.area) - order(b.area))
+}
+
+// Busca do índice: título, descrição ou área contêm o texto (sem diferença de maiúsculas e acentos); e,
+// com uma unidade escolhida, só os guias dela.
+const fold = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+
+export function filterDocs(groups: DocGroup[], query: string, office: string | null): DocGroup[] {
+    const q = fold(query.trim())
+    return groups
+        .map((g) => ({
+            area: g.area,
+            docs: g.docs.filter(
+                (d) =>
+                    (!office || d.offices.includes(office)) &&
+                    (!q || fold(`${d.title} ${d.description} ${g.area}`).includes(q)),
+            ),
+        }))
+        .filter((g) => g.docs.length > 0)
 }

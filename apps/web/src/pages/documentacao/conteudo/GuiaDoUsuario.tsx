@@ -5,6 +5,8 @@ import {
     DocGrid,
     DocPage,
     DocSection,
+    DocSteps,
+    type DocStep,
     DocTable,
     InfoBox,
     WatchBox,
@@ -54,6 +56,86 @@ const PROBLEMS = [
     ['Em construção', 'O dashboard ainda está sendo trazido da versão antiga. Ele aparece quando ficar pronto.'],
 ]
 
+const ENTRAR: DocStep[] = [
+    {
+        title: 'Peça o convite',
+        body: (
+            <p>
+                No 1º acesso, peça o convite à equipe do LexHub informando o seu <strong>e-mail corporativo</strong> (o
+                do escritório, ex.: nome@lexgroup.com.br).
+            </p>
+        ),
+    },
+    {
+        title: 'Entre com a conta corporativa',
+        body: (
+            <p>
+                Clique em <strong>"Entrar com conta corporativa"</strong> e escolha a conta Google convidada. Se
+                preferir, use <strong>"ou com e-mail e senha"</strong>, preencha <strong>E-mail</strong> e{' '}
+                <strong>Senha</strong> e clique em <strong>"Entrar"</strong>.
+            </p>
+        ),
+    },
+    {
+        title: 'Escolha a unidade',
+        body: <p>No alto do menu lateral, troque entre as unidades que você vê (NG, LAAM, LARJ...).</p>,
+    },
+]
+
+const TV: DocStep[] = [
+    {
+        title: 'Na TV',
+        body: (
+            <p>
+                Na tela de login, clique em <strong>"Entrar com QR Code"</strong>. Aparecem um QR Code e um código de 8
+                letras (ex.: ABCD-EFGH).
+            </p>
+        ),
+    },
+    {
+        title: 'No celular',
+        body: (
+            <p>
+                Escaneie o QR Code com o celular em que você já está logado. Ou, no computador, use o ícone{' '}
+                <strong>"Conectar uma TV"</strong> no rodapé do menu lateral e digite o código.
+            </p>
+        ),
+    },
+    {
+        title: 'Autorize',
+        body: (
+            <p>
+                Confira se o código é o mesmo da TV e clique em <strong>"Autorizar TV"</strong>. A TV entra sozinha.
+            </p>
+        ),
+    },
+]
+
+const EXPORTAR: DocStep[] = [
+    {
+        title: 'Filtre antes',
+        body: <p>Ajuste o período e os filtros: a exportação usa exatamente o que está na tela.</p>,
+    },
+    {
+        title: 'Escolha os campos',
+        body: (
+            <p>
+                Clique em <strong>"Exportar"</strong> e marque os campos que quer no relatório (
+                <strong>"Selecionar todos"</strong> / <strong>"Desmarcar todos"</strong>).
+            </p>
+        ),
+    },
+    {
+        title: 'Baixe',
+        body: (
+            <p>
+                Clique em <strong>"Exportar XLSX"</strong> (abre no Excel) ou <strong>"Exportar CSV"</strong> (texto
+                simples, para outros sistemas).
+            </p>
+        ),
+    },
+]
+
 const SYSTEM_OPTIONS: { value: KeySystem; label: string }[] = [
     { value: 'windows', label: 'Windows' },
     { value: 'mac', label: 'Mac' },
@@ -75,7 +157,7 @@ function Shortcuts() {
 export function GuiaDoUsuarioDoc() {
     return (
         <DocPage
-            kicker="Documentação · Primeiros passos"
+            kicker="Primeiros passos"
             title="Como usar o LexHub"
             toc={TOC}
             intro={
@@ -86,26 +168,7 @@ export function GuiaDoUsuarioDoc() {
             }
         >
             <DocSection id="entrar" title="Entrar no LexHub" subtitle="Só entra quem foi convidado" icon="key">
-                <DocGrid>
-                    <DocCard title="1º acesso: solicite o convite">
-                        <p>
-                            Peça o convite à equipe do LexHub informando o seu <strong>e-mail corporativo</strong> (o do
-                            escritório, ex.: nome@lexgroup.com.br). Assim que ele for liberado, você já pode entrar.
-                        </p>
-                    </DocCard>
-                    <DocCard title="Com a conta corporativa (recomendado)">
-                        <p>
-                            Clique em <strong>"Entrar com conta corporativa"</strong> e escolha a sua conta Google da
-                            empresa. É a mesma conta que recebeu o convite.
-                        </p>
-                    </DocCard>
-                    <DocCard title="Com e-mail e senha">
-                        <p>
-                            Abaixo de <strong>"ou com e-mail e senha"</strong>, preencha <strong>E-mail</strong> e{' '}
-                            <strong>Senha</strong> e clique em <strong>"Entrar"</strong>.
-                        </p>
-                    </DocCard>
-                </DocGrid>
+                <DocSteps steps={ENTRAR} />
                 <InfoBox>
                     O convite vale só para o e-mail informado: entre sempre com ele. E-mail pessoal (Gmail, Hotmail,
                     etc.) não é liberado. Se recebeu um link de convite, abra-o e entre pela tela{' '}
@@ -119,26 +182,7 @@ export function GuiaDoUsuarioDoc() {
                 subtitle="Para deixar um dashboard aberto na TV da sala, sem digitar senha nela"
                 icon="tv"
             >
-                <DocGrid>
-                    <DocCard title="1. Na TV">
-                        <p>
-                            Na tela de login, clique em <strong>"Entrar com QR Code"</strong>. Aparecem um QR Code e um
-                            código de 8 letras (ex.: ABCD-EFGH).
-                        </p>
-                    </DocCard>
-                    <DocCard title="2. No celular">
-                        <p>
-                            Escaneie o QR Code com o celular em que você já está logado. Ou, no computador, use o ícone{' '}
-                            <strong>"Conectar uma TV"</strong> no rodapé do menu lateral e digite o código.
-                        </p>
-                    </DocCard>
-                    <DocCard title="3. Autorizar">
-                        <p>
-                            Confira se o código é o mesmo da TV e clique em <strong>"Autorizar TV"</strong>. A TV entra
-                            sozinha.
-                        </p>
-                    </DocCard>
-                </DocGrid>
+                <DocSteps steps={TV} />
                 <InfoBox>
                     O login da TV vale por 24 horas. O QR Code se renova sozinho a cada poucos minutos; se demorar, use
                     o código novo.
@@ -293,23 +337,7 @@ export function GuiaDoUsuarioDoc() {
                 subtitle="Planilha com os dados do dashboard"
                 icon="download"
             >
-                <DocGrid>
-                    <DocCard title="1. Filtre antes">
-                        <p>Ajuste o período e os filtros: a exportação usa exatamente o que está na tela.</p>
-                    </DocCard>
-                    <DocCard title="2. Escolha os campos">
-                        <p>
-                            Clique em <strong>"Exportar"</strong> e marque os campos que quer no relatório (
-                            <strong>"Selecionar todos"</strong> / <strong>"Desmarcar todos"</strong>).
-                        </p>
-                    </DocCard>
-                    <DocCard title="3. Baixe">
-                        <p>
-                            Clique em <strong>"Exportar XLSX"</strong> (abre no Excel) ou{' '}
-                            <strong>"Exportar CSV"</strong> (texto simples, para outros sistemas).
-                        </p>
-                    </DocCard>
-                </DocGrid>
+                <DocSteps steps={EXPORTAR} />
                 <InfoBox>
                     O botão <strong>"Exportar"</strong> só aparece nos dashboards que o seu cargo pode exportar (em
                     geral, os do seu setor). Toda exportação fica registrada. Se o botão estiver apagado com{' '}

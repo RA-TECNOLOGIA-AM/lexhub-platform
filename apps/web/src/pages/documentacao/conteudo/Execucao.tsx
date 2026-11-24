@@ -67,7 +67,7 @@ export function ExecucaoDoc() {
                 </InfoBox>
 
                 <DocCard title="Dois recortes que parecem iguais, mas não são">
-                    <DocGrid>
+                    <div className="doc-versus">
                         <div className="stack" style={{ gap: 6 }}>
                             <span>
                                 <span className="badge ok">"AINDA EM EXECUÇÃO HOJE"</span>
@@ -77,16 +77,30 @@ export function ExecucaoDoc() {
                                 (cards da seção Indicadores)
                             </p>
                         </div>
+                        <span className="doc-versus-sign" role="img" aria-label="é diferente de">
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M5 9h14M5 15h14M16 4L8 20" />
+                            </svg>
+                        </span>
                         <div className="stack" style={{ gap: 6 }}>
                             <span>
-                                <span className="badge info">≠ "ENTROU/SAIU NO PERÍODO"</span>
+                                <span className="badge info">"ENTROU/SAIU NO PERÍODO"</span>
                             </span>
                             <p className="muted small">
                                 Gráfico "Entradas na Execução por Mês" e "Valor Saída Execução Mês a Mês" — olham só a
                                 data, sem exigir que o processo continue em Execução hoje
                             </p>
                         </div>
-                    </DocGrid>
+                    </div>
                     <p>
                         <strong>Exemplo prático:</strong> um processo que entrou em Execução em março e já saiu para o
                         Financeiro em abril aparece no gráfico "Entradas na Execução por Mês" (março), mas{' '}
