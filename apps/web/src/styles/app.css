@@ -417,6 +417,11 @@ button.org:hover {
     flex: 0 0 30px;
     object-fit: contain;
     border-radius: 6px;
+    /* Logos com fundo branco não "estouram" no modo escuro: um contorno discreto fecha o quadrado. */
+    box-shadow: 0 0 0 1px var(--side-line);
+}
+.org-unit-logo.is-empty {
+    box-shadow: none;
 }
 
 /* Unidades e fontes: unidades à esquerda, indicadores e fontes à direita (no celular, um embaixo do outro).

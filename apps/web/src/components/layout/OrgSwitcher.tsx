@@ -3,7 +3,7 @@ import { matchPath, useLocation, useSearchParams } from 'react-router'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 import { orgInitials } from '../../lib/orgs.ts'
 import { hubUnit, rememberUnit, rememberedUnit, unitChoices, unitsWithDashboards } from '../../lib/activeUnit.ts'
-import { unitName } from '../../lib/units.ts'
+import { unitLogo, unitName } from '../../lib/units.ts'
 import type { Org, Unit } from '../../types/index.ts'
 import { Icon } from '../ui/Icon.tsx'
 import { useDismiss } from '../../hooks/useDismiss.ts'
@@ -20,6 +20,12 @@ type OrgSwitcherProps = {
 }
 
 const DASHBOARD_ROUTE = '/:org/:unit/dashboards/:dashboardKey'
+
+// A logo da unidade na lista; sem logo, um espaço do mesmo tamanho (se reserve) ou nada. Decorativa: o nome vem ao lado.
+function UnitLogo({ src, reserve }: { src: string | null; reserve: boolean }) {
+    if (src) return <img className="org-unit-logo" src={src} alt="" aria-hidden="true" width={30} height={30} />
+    return reserve ? <span className="org-unit-logo is-empty" aria-hidden="true" /> : null
+}
 
 // Módulo: o seletor da barra lateral: organização + unidade. Trocar é só navegar (a URL manda).
 // - Num dashboard: as unidades em que ele está liberado; trocar abre o mesmo dashboard na outra unidade.
@@ -62,12 +68,8 @@ export function OrgSwitcher({ current, orgs, units, canCreate, onNavigate, onOpe
             ? `/${current.slug}/${code}/dashboards/${dashboardKey}${search}`
             : `/${current.slug}/dashboards${code ? `?unidade=${code}` : ''}`
 
-    const unitLogo = (code: string | null) => {
-        if (code === 'NG') return '/logo_ng.jpg'
-        if (code === 'LA' || code === 'LAAM') return '/logo_laam.svg'
-        if (code === 'RJ' || code === 'LARJ') return '/logo_larj.jpg'
-        return null
-    }
+    // Se alguma unidade tem logo, as que não têm ("Todas as unidades") ganham um espaço vazio: os nomes alinham.
+    const anyLogo = choices.some((c) => unitLogo(c.code))
 
     function choose(code: string | null) {
         rememberUnit(current.slug, code)
@@ -123,9 +125,7 @@ export function OrgSwitcher({ current, orgs, units, canCreate, onNavigate, onOpe
                             aria-current={c.code === unit ? 'true' : undefined}
                             onClick={() => choose(c.code)}
                         >
-                            {unitLogo(c.code) && (
-                                <img className="org-unit-logo" src={unitLogo(c.code)!} alt="" aria-hidden="true" />
-                            )}
+                            <UnitLogo src={unitLogo(c.code)} reserve={anyLogo} />
                             <span className="org-text">
                                 <span>{c.label}</span>
                             </span>
