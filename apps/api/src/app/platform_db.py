@@ -24,6 +24,7 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 from typing import Any
+from urllib.parse import urlparse
 
 import asyncpg
 from fastapi import FastAPI, Request
@@ -46,6 +47,21 @@ UNAVAILABLE_ERRORS: tuple[type[Exception], ...] = (OSError, asyncpg.PostgresConn
 PoolFactory = Callable[..., Awaitable[Any]]
 
 
+def url_modo_transacao(url: str) -> str:
+    """A 5432 do pooler do Supabase é modo sessão: cada cliente ocupa uma vaga e o teto é 15
+    (`EMAXCONNSESSION`). O pool daqui já desliga prepared statements para o modo transação, então
+    a mesma URL na 6543 não estoura esse teto."""
+    host = urlparse(url).hostname or ""
+    porta_sessao = f"@{host}:5432"
+    if host.endswith("pooler.supabase.com") and porta_sessao in url:
+        logger.warning(
+            "Banco da plataforma: URL na porta 5432 (modo sessão, teto de 15 clientes); "
+            "conectando na 6543 (modo transação)"
+        )
+        return url.replace(porta_sessao, f"@{host}:6543", 1)
+    return url
+
+
 async def open_platform_pool(
     settings: Settings,
     *,
@@ -63,7 +79,7 @@ async def open_platform_pool(
     for attempt in range(1, PLATFORM_DB_ATTEMPTS + 1):
         try:
             pool = await create_pool(
-                settings.DATABASE_URL,
+                url_modo_transacao(settings.DATABASE_URL),
                 min_size=settings.PLATFORM_DB_POOL_MIN_SIZE,
                 max_size=settings.PLATFORM_DB_POOL_MAX_SIZE,
                 max_inactive_connection_lifetime=MAX_INACTIVE_CONNECTION_LIFETIME,

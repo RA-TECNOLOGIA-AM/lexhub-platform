@@ -355,6 +355,15 @@ class ComercialLexpreComissionamentoAtendenteRow(BaseModel):
     comissao_com_fm: float = 0.0
     desconto_cancelamentos: float = 0.0
 
+class ComercialLexpreDemandaCanceladaDesconto(BaseModel):
+    """Uma matéria cujo VALOR_AM entra no desconto: assinada antes do período e cancelada dentro dele."""
+    atendente: str
+    materia: str
+    cliente: str = ""
+    motivo: str = ""
+    data_cancelamento: str
+    desconto: float = 0.0
+
 # v1: dashboard_routes.py:14912
 class ComercialLexpreNGStats(BaseModel):
     total_leads: int = 0
@@ -428,6 +437,8 @@ class ComercialLexpreNGStats(BaseModel):
     # Base do botão "Gerar comissão (PDF)" — réplica do PDF legado (uma linha por
     # atendente), com a coluna extra `desconto_cancelamentos` (ver comissao_lexpre.py).
     comissionamento_por_atendente: List[ComercialLexpreComissionamentoAtendenteRow] = []
+    # Detalhe do desconto, uma matéria por linha, para o PDF imprimir embaixo da comissão.
+    demandas_canceladas_desconto: List[ComercialLexpreDemandaCanceladaDesconto] = []
 
 # v1: dashboard_routes.py:14986
 class ComercialLexpreNGResponse(BaseModel):

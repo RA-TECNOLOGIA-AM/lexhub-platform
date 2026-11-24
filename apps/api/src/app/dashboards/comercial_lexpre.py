@@ -164,6 +164,9 @@ from app.analyses.NG.comissao_lexpre import (
     get_desconto_cancelamentos_periodo_anterior as get_desconto_cancelamentos_periodo_anterior_lexpre,
 )
 from app.analyses.NG.comissao_lexpre import (
+    listar_demandas_canceladas_desconto as listar_demandas_canceladas_desconto_lexpre,
+)
+from app.analyses.NG.comissao_lexpre import (
     get_fator_multiplicador as get_fator_multiplicador_lexpre,
 )
 from app.analyses.NG.comissao_lexpre import (
@@ -215,6 +218,7 @@ from app.analyses.v1_routes import (
     ChartDataPoint,
     ComercialLexpreCanalStat,
     ComercialLexpreComissionamentoAtendenteRow,
+    ComercialLexpreDemandaCanceladaDesconto,
     ComercialLexpreFilaPreProtocoloItem,
     ComercialLexpreNGResponse,
     ComercialLexpreNGStats,
@@ -333,6 +337,14 @@ async def build(ctx: DashboardContext, escopo_proprio: bool = False) -> dict:
     )
     cancelamentos_raw = await ctx.source.fetch("audit_log_demandas_canceladas_lexpre_NG")
     desconto_cancelamentos = get_desconto_cancelamentos_periodo_anterior_lexpre(
+        rows,
+        cancelamentos_raw,
+        from_date,
+        to_date,
+        mapa_rubricas_reunidas,
+        mapa_valor_rubrica_associada,
+    )
+    demandas_canceladas_desconto = listar_demandas_canceladas_desconto_lexpre(
         rows,
         cancelamentos_raw,
         from_date,
@@ -531,6 +543,10 @@ async def build(ctx: DashboardContext, escopo_proprio: bool = False) -> dict:
             comissionamento_por_atendente=[
                 ComercialLexpreComissionamentoAtendenteRow(**x)
                 for x in comissionamento_por_atendente
+            ],
+            demandas_canceladas_desconto=[
+                ComercialLexpreDemandaCanceladaDesconto(**x)
+                for x in demandas_canceladas_desconto
             ],
         )
     )

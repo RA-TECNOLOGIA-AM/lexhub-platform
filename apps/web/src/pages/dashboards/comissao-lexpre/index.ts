@@ -6,6 +6,9 @@ import { comercialFilters } from '../comercial-lexpre/filters.ts'
 import { ComissaoLexpreContent } from './ComissaoLexpreContent.tsx'
 import type { ComissaoLexpreResponse } from './types.ts'
 
+const dataBr = (iso: string) =>
+    /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : iso || '—'
+
 // O dashboard Comissão Comercial (LexPre): de onde vêm os dados e como mostrar.
 export const comissaoLexpre: DashboardModule<ComissaoLexpreResponse> = {
     key: 'comissao-lexpre',
@@ -28,5 +31,27 @@ export const comissaoLexpre: DashboardModule<ComissaoLexpreResponse> = {
         ],
         rows: data.stats.comissionamento_por_atendente ?? [],
         sortBy: 'comissao_com_fm',
+        details: {
+            title: 'Demandas canceladas',
+            breakBefore: false,
+            warning:
+                'Assinadas em período anterior e canceladas neste. O desconto é o valor da matéria, sem o fator multiplicador.',
+            columns: [
+                { key: 'materia', label: 'Matéria' },
+                { key: 'cliente', label: 'Cliente' },
+                { key: 'data_cancelamento', label: 'Cancelado em' },
+                { key: 'motivo', label: 'Motivo' },
+                { key: 'atendente', label: 'Atendente comercial' },
+                { key: 'desconto', label: 'Desconto', format: fmt.brl, sum: true },
+            ],
+            rows: (data.stats.demandas_canceladas_desconto ?? []).map((d) => ({
+                materia: d.materia,
+                cliente: d.cliente,
+                data_cancelamento: dataBr(d.data_cancelamento),
+                motivo: d.motivo,
+                atendente: d.atendente,
+                desconto: d.desconto,
+            })),
+        },
     }),
 }

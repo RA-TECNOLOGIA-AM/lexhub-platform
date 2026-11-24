@@ -242,6 +242,19 @@ export function comercialFor(unit: string, query?: DashboardQuery): ComercialLex
                 comissao_com_fm: RANKING[i] * 26,
                 desconto_cancelamentos: i === 0 ? 120 : 0,
             })),
+            demandas_canceladas_desconto:
+                k === 1
+                    ? [
+                          {
+                              atendente: 'Isabelle',
+                              materia: 'MORA',
+                              cliente: 'Cliente Exemplo',
+                              motivo: 'Cliente desistiu',
+                              data_cancelamento: '2026-11-10',
+                              desconto: 13,
+                          },
+                      ]
+                    : [],
         },
         meta_inteligente: { '3': metaInteligente(3), '6': metaInteligente(6), '12': metaInteligente(12) },
         // O legado entra inteiro (sem os filtros), como na v1.

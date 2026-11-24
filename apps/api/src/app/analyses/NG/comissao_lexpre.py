@@ -210,6 +210,57 @@ def get_rubricas_total_tabela(
     return linhas
 
 
+def _itens_desconto_cancelamento(
+    rows: List[Dict[str, Any]],
+    cancelamentos: List[Dict[str, Any]],
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    mapa_reunidas: Optional[Dict[int, List[str]]] = None,
+    mapa_valor_associada: Optional[Dict[str, float]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Cada matéria que entra no desconto de cancelamento tardio: demanda assinada antes
+    de `from_date` e cancelada entre `from_date` e `to_date`. Rubrica reunida vira uma
+    linha por componente (o VALOR_AM é o da associada). Sem período, lista vazia.
+    """
+    if not from_date or not to_date:
+        return []
+
+    por_demanda: Dict[Any, Dict[str, Any]] = {}
+    for row in rows or []:
+        id_demanda = row.get("ID_DEMANDA")
+        if id_demanda is None or id_demanda in por_demanda:
+            continue
+        por_demanda[id_demanda] = row
+
+    itens: List[Dict[str, Any]] = []
+    for cancelamento in cancelamentos or []:
+        data_cancelamento = _to_date(cancelamento.get("DATA_CANCELAMENTO"))
+        if not data_cancelamento:
+            continue
+        if data_cancelamento < from_date or data_cancelamento > to_date:
+            continue
+        row = por_demanda.get(cancelamento.get("ID_DEMANDA"))
+        if row is None or not _is_assinado(row):
+            continue
+        data_assinatura = _to_date(row.get("DATA_ASSINATURA"))
+        if not data_assinatura or data_assinatura >= from_date:
+            continue
+        nome = _formatar_nome_atendente(row.get("ATENDENTE"))
+        cliente = str(row.get("CLIENTE") or "").strip() or "—"
+        motivo = str(cancelamento.get("MOTIVO_CANCELAMENTO") or "").strip() or "—"
+        for _sub_id, nome_componente in _expandir_ids_para_contagem(row, mapa_reunidas):
+            itens.append({
+                "atendente": nome,
+                "materia": nome_componente,
+                "cliente": cliente,
+                "motivo": motivo,
+                "data_cancelamento": data_cancelamento,
+                "desconto": _valor_am_por_componente(row, nome_componente, mapa_valor_associada),
+            })
+    return itens
+
+
 def _desconto_cancelamentos_por_atendente(
     rows: List[Dict[str, Any]],
     cancelamentos: List[Dict[str, Any]],
@@ -226,33 +277,42 @@ def _desconto_cancelamentos_por_atendente(
 
     Sem `from_date`/`to_date` definidos, retorna vazio (sem desconto — ver função acima).
     """
-    if not from_date or not to_date:
-        return {}
-
-    por_demanda: Dict[Any, Dict[str, Any]] = {}
-    for row in rows or []:
-        id_demanda = row.get("ID_DEMANDA")
-        if id_demanda is None or id_demanda in por_demanda:
-            continue
-        por_demanda[id_demanda] = row
-
     resultado: Dict[str, float] = defaultdict(float)
-    for cancelamento in cancelamentos or []:
-        data_cancelamento = _to_date(cancelamento.get("DATA_CANCELAMENTO"))
-        if not data_cancelamento:
-            continue
-        if data_cancelamento < from_date or data_cancelamento > to_date:
-            continue
-        row = por_demanda.get(cancelamento.get("ID_DEMANDA"))
-        if row is None or not _is_assinado(row):
-            continue
-        data_assinatura = _to_date(row.get("DATA_ASSINATURA"))
-        if not data_assinatura or data_assinatura >= from_date:
-            continue
-        nome = _formatar_nome_atendente(row.get("ATENDENTE"))
-        for _sub_id, nome_componente in _expandir_ids_para_contagem(row, mapa_reunidas):
-            resultado[nome] += _valor_am_por_componente(row, nome_componente, mapa_valor_associada)
+    for item in _itens_desconto_cancelamento(
+        rows, cancelamentos, from_date, to_date, mapa_reunidas, mapa_valor_associada
+    ):
+        resultado[item["atendente"]] += item["desconto"]
     return {nome: round(valor, 2) for nome, valor in resultado.items()}
+
+
+def listar_demandas_canceladas_desconto(
+    rows: List[Dict[str, Any]],
+    cancelamentos: List[Dict[str, Any]],
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None,
+    mapa_reunidas: Optional[Dict[int, List[str]]] = None,
+    mapa_valor_associada: Optional[Dict[str, float]] = None,
+) -> List[Dict[str, Any]]:
+    """
+    As mesmas matérias de `_desconto_cancelamentos_por_atendente`, uma linha cada, para o
+    PDF da comissão: matéria, cliente, dia do cancelamento, motivo e atendente comercial. A soma
+    de `desconto` por atendente é a coluna "Desconto (cancelamento)".
+    """
+    linhas = [
+        {
+            "atendente": item["atendente"],
+            "materia": item["materia"],
+            "cliente": item["cliente"],
+            "motivo": item["motivo"],
+            "data_cancelamento": item["data_cancelamento"].isoformat(),
+            "desconto": round(float(item["desconto"]), 2),
+        }
+        for item in _itens_desconto_cancelamento(
+            rows, cancelamentos, from_date, to_date, mapa_reunidas, mapa_valor_associada
+        )
+    ]
+    linhas.sort(key=lambda x: (x["data_cancelamento"], x["atendente"], x["materia"], x["cliente"]))
+    return linhas
 
 
 def get_desconto_cancelamentos_periodo_anterior(

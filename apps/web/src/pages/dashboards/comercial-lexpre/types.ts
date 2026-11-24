@@ -78,6 +78,15 @@ export type ComercialLexpreResponse = {
             comissao_com_fm: number
             desconto_cancelamentos: number
         }[]
+        // Matérias que compõem o desconto: assinadas antes e canceladas neste período.
+        demandas_canceladas_desconto?: {
+            atendente: string
+            materia: string
+            cliente: string
+            motivo: string
+            data_cancelamento: string // AAAA-MM-DD
+            desconto: number
+        }[]
     }
     // Novo na V2 (o card "Meta Inteligente por Atendente" da v1), por janela de histórico: '3', '6', '12' meses.
     meta_inteligente?: Record<string, MetaInteligente>

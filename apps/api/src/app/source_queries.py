@@ -238,8 +238,13 @@ QUERIES: dict[str, dict] = {
         SELECT
             al.entidade_id AS "ID_DEMANDA",
             al.created_at AS "DATA_CANCELAMENTO",
-            al.escritorio_id AS "ESCRITORIO_ID"
+            al.escritorio_id AS "ESCRITORIO_ID",
+            me.descricao AS "MOTIVO_CANCELAMENTO"
         FROM public.audit_log al
+        LEFT JOIN public.demandas d
+            ON d.id = al.entidade_id
+        LEFT JOIN public.motivo_encerramento me
+            ON me.id = d.motivo_cancelamento_id
         WHERE al.entidade = 'demanda'
           AND al.acao = 'demanda.cancelada'
         """,
@@ -251,6 +256,8 @@ QUERIES: dict[str, dict] = {
         # RMC fechado no fim de agosto, cliente cancela em setembro — o valor precisa
         # ser descontado da comissão de setembro, não retroagir sobre agosto, que já
         # foi pago). entidade_id é o id de public.demandas (entidade = 'demanda').
+        # MOTIVO_CANCELAMENTO é a descrição do catálogo (motivo_encerramento) apontado por
+        # demandas.motivo_cancelamento_id — o motivo gravado na demanda cancelada.
         "description": "Eventos de cancelamento de demanda (banco lexpre), usados para desconto de comissão por cancelamento tardio.",
         "params": [],
     },

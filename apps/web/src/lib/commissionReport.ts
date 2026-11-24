@@ -19,8 +19,15 @@ export type CommissionTable = {
     sortBy: string // coluna que ordena (maior primeiro), em geral a comissão
     title?: string // título próprio do relatório (senão, "Comissão — <dashboard>")
     notes?: string[] // linhas embaixo do período (ex.: a meta de qualidade do Recursal)
-    // Uma segunda tabela, numa página nova, na ordem recebida (ex.: o detalhamento dos descontos do Recursal).
-    details?: { title: string; warning?: string; columns: CommissionColumn[]; rows: Record<string, CommissionCell>[] }
+    // Uma segunda tabela, na ordem recebida (ex.: o detalhamento dos descontos do Recursal).
+    // breakBefore padrão true: página nova. false: embaixo da tabela principal, na mesma folha.
+    details?: {
+        title: string
+        warning?: string
+        breakBefore?: boolean
+        columns: CommissionColumn[]
+        rows: Record<string, CommissionCell>[]
+    }
 }
 
 export type CommissionReport = CommissionTable & {
@@ -47,17 +54,30 @@ function cell(col: CommissionColumn, v: CommissionCell): string {
     return `<td class="n">${v === null || v === undefined ? '—' : esc(col.format(num(v)))}</td>`
 }
 
-// A segunda tabela (opcional), numa página nova.
+function linhaTotal(columns: CommissionColumn[], rows: Record<string, CommissionCell>[]): string {
+    return columns
+        .map((c, i) => {
+            if (i === 0) return '<td>Total</td>'
+            if (!c.sum || !c.format) return '<td></td>'
+            return `<td class="n">${esc(c.format(rows.reduce((sum, row) => sum + num(row[c.key]), 0)))}</td>`
+        })
+        .join('')
+}
+
+// A segunda tabela (opcional). Por padrão numa página nova; breakBefore false deixa embaixo da principal.
 function detalhes(r: CommissionReport): string {
     const d = r.details
     if (!d || d.rows.length === 0) return ''
     const head = d.columns.map((c) => `<th${c.format ? ' class="n"' : ''}>${esc(c.label)}</th>`).join('')
     const body = d.rows.map((row) => `<tr>${d.columns.map((c) => cell(c, row[c.key])).join('')}</tr>`).join('')
+    const total = d.columns.some((c) => c.sum) ? `<tfoot><tr>${linhaTotal(d.columns, d.rows)}</tr></tfoot>` : ''
+    const quebra = d.breakBefore === false ? ' continua' : ''
+    const titulo = d.breakBefore === false ? 'h2' : 'h1'
     return `
-<section class="detalhes">
-<h1>${esc(d.title)}</h1>
+<section class="detalhes${quebra}">
+<${titulo}>${esc(d.title)}</${titulo}>
 ${d.warning ? `<p class="aviso">${esc(d.warning)}</p>` : ''}
-<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody>${total}</table>
 </section>`
 }
 
@@ -70,13 +90,7 @@ export function commissionHtml(r: CommissionReport): string {
     )
     const head = r.columns.map((c) => `<th${c.format ? ' class="n"' : ''}>${esc(c.label)}</th>`).join('')
     const body = rows.map((row) => `<tr>${r.columns.map((c) => cell(c, row[c.key])).join('')}</tr>`).join('')
-    const total = r.columns
-        .map((c, i) => {
-            if (i === 0) return '<td>Total</td>'
-            if (!c.sum || !c.format) return '<td></td>'
-            return `<td class="n">${esc(c.format(rows.reduce((sum, row) => sum + num(row[c.key]), 0)))}</td>`
-        })
-        .join('')
+    const total = linhaTotal(r.columns, rows)
     const gerado = r.generatedAt.toLocaleString('pt-BR')
     return `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8" /><title>${esc(r.title)} · ${esc(r.unit)}</title>
@@ -92,6 +106,8 @@ export function commissionHtml(r: CommissionReport): string {
   tfoot td { font-weight: 700; border-top: 2px solid #15181d; border-bottom: 0; }
   .foot { margin-top: 20px; color: #8a93a0; font-size: 10px; }
   .detalhes { page-break-before: always; }
+  .detalhes.continua { page-break-before: auto; break-before: auto; margin-top: 28px; }
+  .detalhes h2 { font-size: 14px; margin: 0 0 8px; }
   .aviso { color: #92400e; margin: 4px 0 12px; }
 </style></head><body>
 <h1>${esc(r.title)}</h1>
