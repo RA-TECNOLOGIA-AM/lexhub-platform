@@ -10,6 +10,7 @@ import { OrgSwitcher } from './OrgSwitcher.tsx'
 import { ProfileMenu } from './ProfileMenu.tsx'
 import { SearchBox } from './SearchBox.tsx'
 import { ThemeToggle } from './ThemeToggle.tsx'
+import { SettingsButton } from '../settings/SettingsButton.tsx'
 import { FullscreenToggle } from './FullscreenToggle.tsx'
 import { SidebarToggle } from './SidebarToggle.tsx'
 import { TopbarSlotContext } from './topbar-slot.ts'
@@ -178,6 +179,7 @@ export function AppLayout() {
                     <NotificationsBell staff={user.platform_staff} pending={pending} onNavigate={closeMenu} />
                     <FullscreenToggle />
                     <ThemeToggle />
+                    <SettingsButton />
                     <ProfileMenu user={user} />
                 </header>
 

@@ -55,6 +55,17 @@ describe('createProfileClient', () => {
         expect(log.removed).toEqual(['u1/atual.webp'])
     })
 
+    it('salva a aparência numa chamada só, com os 4 campos', async () => {
+        const { client, log } = fake()
+        await client.setMyAppearance({ mode: 'dark', light: null, dark: 'dark-nord', accent: '#2563eb' })
+        expect(log.rpc).toEqual([
+            {
+                fn: 'set_my_appearance',
+                args: { p_mode: 'dark', p_light: null, p_dark: 'dark-nord', p_accent: '#2563eb' },
+            },
+        ])
+    })
+
     it('monta a URL pública', () => {
         expect(fake().client.avatarUrl('u1/a.webp')).toBe('https://x/avatars/u1/a.webp')
     })

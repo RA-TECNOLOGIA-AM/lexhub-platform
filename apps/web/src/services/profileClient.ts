@@ -3,7 +3,7 @@ import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
 import { createRpc } from './rpc.ts'
 
-type ProfileClient = Pick<DataClient, 'uploadMyAvatar' | 'removeMyAvatar' | 'avatarUrl'>
+type ProfileClient = Pick<DataClient, 'uploadMyAvatar' | 'removeMyAvatar' | 'avatarUrl' | 'setMyAppearance'>
 
 const BUCKET = 'avatars'
 
@@ -44,5 +44,9 @@ export function createProfileClient(supabase: SupabaseClient): ProfileClient {
             await removeOld(await call<string | null>('set_my_avatar', { p_path: null }))
         },
         avatarUrl: (path) => bucket().getPublicUrl(path).data.publicUrl,
+        // Aparência: api.set_my_appearance grava os 4 campos na linha de quem está logado.
+        async setMyAppearance({ mode, light, dark, accent }) {
+            await call<null>('set_my_appearance', { p_mode: mode, p_light: light, p_dark: dark, p_accent: accent })
+        },
     }
 }

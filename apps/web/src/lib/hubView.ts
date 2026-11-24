@@ -23,7 +23,7 @@ export function storeHubView(view: HubView, storage: Pick<Storage, 'setItem'> | 
 
 // Cor de cada coluna do quadro (variáveis do tokens/app.css, que já mudam no tema escuro).
 const AREA_COLORS: Record<string, string> = {
-    Favoritos: 'var(--accent)',
+    Favoritos: 'var(--chart-brand)', // cor da marca, fixa (não segue a cor de destaque)
     Comercial: 'var(--pie-2)',
     'Pré-protocolo': 'var(--pie-4)',
     Tecnologia: 'var(--pie-7)',

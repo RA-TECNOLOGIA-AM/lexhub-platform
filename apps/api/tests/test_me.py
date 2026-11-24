@@ -1,4 +1,4 @@
-from app.me import MembershipRow, OrgRow, UnitRow, initials
+from app.me import AppearanceRow, MembershipRow, OrgRow, UnitRow, initials
 from conftest import USER_ID
 
 LEXGROUP = OrgRow(id="org-1", slug="lexgroup", name="LexGroup", unit_count=3)
@@ -48,6 +48,7 @@ def test_admin_formato_completo(client, signer, me_repo):
             "teams": [],
             "offices": [],
             "avatar_path": None,
+            "appearance": {"mode": None, "light": None, "dark": None, "accent": None},
         },
         "org": {"slug": "lexgroup", "name": "LexGroup", "sub": "3 unidades"},
         "units": [
@@ -150,6 +151,26 @@ def test_setores_e_escritorios_do_perfil(client, signer, me_repo):
     assert user["teams"] == ["Tecnologia"]
     assert user["offices"] == ["ESCRITÓRIO MASTER"]
     assert user["avatar_path"] == f"{USER_ID}/foto.webp"
+
+
+def test_aparencia_salva_na_conta(client, signer, me_repo):
+    m = MembershipRow(
+        full_name="Luís Tápia",
+        role_name="Membro",
+        permissions=NENHUMA,
+        units=(),
+        appearance=AppearanceRow(
+            mode="dark", light="light-github", dark="dark-dracula", accent="azul"
+        ),
+    )
+    me_repo.add(USER_ID, LEXGROUP, m)
+    user = client.get("/me", headers=auth(signer)).json()["user"]
+    assert user["appearance"] == {
+        "mode": "dark",
+        "light": "light-github",
+        "dark": "dark-dracula",
+        "accent": "azul",
+    }
 
 
 def test_platform_staff_vem_do_app_metadata(client, signer, me_repo):

@@ -11,6 +11,19 @@ export type User = {
     teams: string[] // setores (app.membership_teams), para o cartão de perfil
     offices: string[] // escritórios em que tem cargo (app.membership_units)
     avatar_path: string | null // foto de perfil (bucket 'avatars'); a URL sai de dataClient.avatarUrl
+    appearance: Appearance // tema salvo na conta (Configurações → Aparência); vale em todo aparelho
+}
+
+export type ThemeMode = 'light' | 'dark'
+
+// A aparência escolhida pela pessoa (app.profiles.theme_*). null = sem escolha naquele campo:
+// mode null segue o sistema; light/dark null = Claro/Escuro Padrão; accent null = "Do tema".
+// accent: 'tema' | id de cor pronta (ex.: 'azul') | '#rrggbb'. Ids desconhecidos caem no padrão no front.
+export type Appearance = {
+    mode: ThemeMode | null
+    light: string | null
+    dark: string | null
+    accent: string | null
 }
 
 export type Org = { slug: string; name: string; sub: string }

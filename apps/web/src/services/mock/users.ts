@@ -11,6 +11,7 @@ const user: User = {
     teams: ['Tecnologia'],
     offices: ['ESCRITÓRIO MASTER'],
     avatar_path: null,
+    appearance: { mode: null, light: null, dark: null, accent: null },
 }
 
 // As organizações de que essa pessoa faz parte (as mesmas do protótipo).

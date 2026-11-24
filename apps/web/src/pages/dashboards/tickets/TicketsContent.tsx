@@ -185,7 +185,7 @@ export function TicketsContent({ data, filters = {}, onFiltersChange }: ContentP
                                 series={[
                                     {
                                         label: 'Em aberto',
-                                        color: 'var(--accent)',
+                                        color: 'var(--chart-brand)',
                                         values: t.abertosPorServidor.map((p) => p.value),
                                     },
                                 ]}
@@ -372,7 +372,7 @@ export function TicketsContent({ data, filters = {}, onFiltersChange }: ContentP
                                 series={[
                                     {
                                         label: 'Encerrados por dia',
-                                        color: 'var(--accent)',
+                                        color: 'var(--chart-brand)',
                                         values: top5.map((p) => p.value),
                                     },
                                 ]}
