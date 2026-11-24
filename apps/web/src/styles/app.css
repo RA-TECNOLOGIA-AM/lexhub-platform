@@ -5074,12 +5074,172 @@ button.at-name:hover {
 }
 .ma-rodape {
     display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    align-items: center;
     justify-content: space-between;
     font-size: var(--fs-sm);
     color: var(--text-muted);
 }
 .ma-rodape strong {
     color: var(--text);
+}
+/* Ritmo da meta: o traço do "esperado hoje" na barra, a pílula que abre o modal e a legenda do traço */
+.ma-esperado {
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    left: var(--w);
+    width: 3px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: var(--text);
+    opacity: 0.85;
+}
+.ma-clicavel {
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+.ma-clicavel:hover {
+    border-color: var(--border-hover);
+}
+.ma-clicavel:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.ma-ritmo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.ma-ritmo strong {
+    color: var(--text);
+}
+.ma-progresso {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+.ma-ritmo-dif {
+    font-weight: 700;
+}
+.ma-ritmo.atrasado .ma-ritmo-dif {
+    color: var(--danger);
+}
+.ma-ritmo.adiantado .ma-ritmo-dif {
+    color: var(--ok);
+}
+.ma-legenda-esperado {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 8px;
+}
+.ma-legenda-esperado > span {
+    width: 3px;
+    height: 12px;
+    border-radius: 2px;
+    background: var(--text);
+}
+
+/* Modal "Ritmo da meta" */
+.ritmo-modal {
+    width: min(760px, calc(100vw - 32px));
+}
+.ritmo {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    line-height: 1.5;
+}
+.ritmo p {
+    margin: 0;
+}
+.ritmo-esperado {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+.ritmo-esperado strong {
+    font-size: var(--fs-xl);
+}
+.ritmo-chip {
+    padding: 2px 8px;
+    border-radius: var(--r-pill);
+    font-size: var(--fs-xs);
+}
+.ritmo-chip.ok {
+    background: var(--ok-bg);
+    color: var(--ok);
+}
+.ritmo-titulo {
+    margin: 8px 0 0;
+    font-size: var(--fs-lg);
+    font-weight: 600;
+}
+.ritmo-cards {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.ritmo-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+}
+.ritmo-card strong {
+    font-size: var(--fs-lg);
+}
+.ritmo-card.deficit strong {
+    color: var(--danger);
+}
+.ritmo-card.superavit strong {
+    color: var(--ok);
+}
+.ritmo-barras {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.ritmo-barra-linha {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--fs-sm);
+}
+.ritmo-barra {
+    position: relative;
+    height: 10px;
+    margin-bottom: 6px;
+    border-radius: var(--r-pill);
+    background: var(--surface-3);
+    overflow: hidden;
+}
+.ritmo-barra::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--w);
+    border-radius: inherit;
+}
+.ritmo-barra.esperado::after {
+    background: var(--ok-dot);
+}
+.ritmo-barra.realizado::after {
+    background: var(--chart-brand);
+}
+.ritmo-destaque td {
+    font-weight: 700;
+}
+@media (max-width: 560px) {
+    .ritmo-cards {
+        grid-template-columns: 1fr;
+    }
 }
 @keyframes ma-encher {
     from {

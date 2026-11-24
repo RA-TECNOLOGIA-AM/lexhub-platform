@@ -343,17 +343,18 @@ export function EstrategicoContent({ data, filters = {}, onFiltersChange }: Cont
                             />
                         }
                     >
+                        {/* Todas as matérias com fatia e rótulo próprios (sem agrupar em "Outras"), como a Distribuição por
+                            rubrica do Comercial; sem largura para os rótulos (celular), a legenda embaixo. */}
                         <PieChart
                             items={materias}
                             size={240}
-                            max={8}
                             labels
-                            labelsTwoLines
+                            legendWhenNarrow
                             format={modoMateria === 'valor_entrada' ? fmt.brlShort : fmt.int}
                             centerFormat={modoMateria === 'valor_entrada' ? fmt.eixo : undefined}
                             centerLabel={modoMateria === 'valor_entrada' ? 'valor de entrada' : 'processos'}
                             selected={filters.materia}
-                            onSelect={alternar && ((v) => v !== 'Outras' && alternar('materia', v))}
+                            onSelect={alternar && ((v) => alternar('materia', v))}
                             selectLabel="Filtrar pela matéria"
                         />
                     </ChartCard>

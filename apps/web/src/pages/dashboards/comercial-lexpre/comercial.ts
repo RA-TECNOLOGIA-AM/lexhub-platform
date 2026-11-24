@@ -106,6 +106,71 @@ export function progressoMeta(valor: number, meta: number): { pct: number; falta
     return { pct, faltam: Math.max(0, meta - v) }
 }
 
+// ---------- Ritmo da meta anual (a mesma regra do dashboard Meta anual: linear pelos dias do calendário) ----------
+
+export type RitmoMeta = {
+    ano: number
+    hoje: string // 'aaaa-mm-dd' (no fuso de Manaus)
+    realizado: number
+    diasNoAno: number // 365 ou 366
+    decorridos: number // dias do ano até hoje, contando hoje (0 se o ano ainda não começou; o ano todo se já acabou)
+    restantes: number // dias depois de hoje até 31/12
+    mediaPlanejada: number // meta ÷ dias do ano
+    esperado: number // o que deveria estar protocolado até hoje: média planejada × dias decorridos
+    pctEsperado: number // esperado ÷ meta (0–100)
+    pctRealizado: number // realizado ÷ meta (sem teto: pode passar de 100)
+    diferenca: number // realizado − esperado (negativo = atrasado, o déficit)
+    pontos: number // pctRealizado − pctEsperado, em pontos percentuais
+    faltam: number // meta − realizado (nunca negativo)
+    novaMedia: number | null // o que falta ÷ dias restantes; null = o ano acabou
+    variacao: number | null // novaMedia ÷ média planejada − 1 (0,094 = 9,4% acima do planejado)
+}
+
+const bissexto = (ano: number) => (ano % 4 === 0 && ano % 100 !== 0) || ano % 400 === 0
+
+// Dia do ano (1 = 1º/jan) de um 'aaaa-mm-dd', sem fuso (as datas são do calendário).
+function diaDoAno(iso: string): number {
+    const [a, m, d] = iso.slice(0, 10).split('-').map(Number)
+    return Math.round((Date.UTC(a, m - 1, d) - Date.UTC(a, 0, 1)) / 86_400_000) + 1
+}
+
+// A meta distribuída linearmente pelos dias do ano (como o "Esperado = meta × % dos dias do ano" do Meta anual):
+// quanto já deveria estar protocolado hoje, a diferença para o realizado e a média diária para fechar o ano.
+export function ritmoMeta(realizado: number, meta: number, ano: number, hoje: string): RitmoMeta {
+    const v = Number.isFinite(realizado) ? Math.max(0, realizado) : 0
+    const diasNoAno = bissexto(ano) ? 366 : 365
+    const anoHoje = Number(hoje.slice(0, 4))
+    const decorridos = anoHoje < ano ? 0 : anoHoje > ano ? diasNoAno : Math.min(diaDoAno(hoje), diasNoAno)
+    const restantes = diasNoAno - decorridos
+    const mediaPlanejada = meta > 0 ? meta / diasNoAno : 0
+    const esperado = mediaPlanejada * decorridos
+    const pct = (x: number) => (meta > 0 ? (x / meta) * 100 : 0)
+    const faltam = Math.max(0, meta - v)
+    const novaMedia = restantes > 0 ? faltam / restantes : null
+    return {
+        ano,
+        hoje: hoje.slice(0, 10),
+        realizado: v,
+        diasNoAno,
+        decorridos,
+        restantes,
+        mediaPlanejada,
+        esperado,
+        pctEsperado: pct(esperado),
+        pctRealizado: pct(v),
+        diferenca: v - esperado,
+        pontos: pct(v) - pct(esperado),
+        faltam,
+        novaMedia,
+        variacao: novaMedia !== null && mediaPlanejada > 0 ? novaMedia / mediaPlanejada - 1 : null,
+    }
+}
+
+// Hoje no fuso de Manaus ('aaaa-mm-dd'): o dia do calendário da empresa, não o do navegador.
+export function hojeEmManaus(agora: Date = new Date()): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Manaus' }).format(agora)
+}
+
 // Chave de um nome para juntar os bancos: sem caixa, acento e espaços sobrando ('MARIA ' = 'Maria' = 'María').
 const chaveNome = (nome: string) =>
     nome

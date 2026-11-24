@@ -6,7 +6,9 @@ import {
     linhasMeta,
     mediaDaColuna,
     metaDoPeriodo,
+    hojeEmManaus,
     progressoMeta,
+    ritmoMeta,
     somarPorNome,
     rotuloCanal,
     trimestreDe,
@@ -96,5 +98,43 @@ describe('somarPorNome (LexPre + legado)', () => {
     })
     it('sem legado, igual ao LexPre', () => {
         expect(somarPorNome({ Ana: 10 })).toEqual({ Ana: 10 })
+    })
+})
+
+describe('ritmoMeta (ritmo da meta anual)', () => {
+    // O exemplo do modal: R$ 270 mi em 2026, hoje 23/11/2026, R$ 239.255.589 realizados.
+    const r = ritmoMeta(239_255_589, 270_000_000, 2026, '2026-11-23')
+
+    it('esperado até hoje: linear pelos dias do ano, contando hoje', () => {
+        expect(r.diasNoAno).toBe(365)
+        expect(r.decorridos).toBe(327)
+        expect(r.restantes).toBe(38)
+        expect(Math.round(r.mediaPlanejada)).toBe(739_726)
+        expect(Math.round(r.esperado)).toBe(241_890_411)
+        expect(r.pctEsperado).toBeCloseTo(89.59, 2)
+    })
+
+    it('comparativo com o realizado e o ritmo para fechar o ano', () => {
+        expect(r.pctRealizado).toBeCloseTo(88.61, 2)
+        expect(Math.round(r.diferenca)).toBe(-2_634_822)
+        expect(r.pontos).toBeCloseTo(-0.98, 2)
+        expect(r.faltam).toBe(30_744_411)
+        expect(Math.round(r.novaMedia ?? 0)).toBe(809_063)
+        expect(r.variacao).toBeCloseTo(0.0937, 4)
+    })
+
+    it('ano bissexto, ano que não começou e ano que acabou', () => {
+        expect(ritmoMeta(0, 366, 2028, '2028-12-31')).toMatchObject({ diasNoAno: 366, decorridos: 366, restantes: 0 })
+        expect(ritmoMeta(0, 100, 2027, '2026-11-23')).toMatchObject({ decorridos: 0, esperado: 0, restantes: 365 })
+        expect(ritmoMeta(10, 100, 2025, '2026-01-05')).toMatchObject({
+            decorridos: 365,
+            novaMedia: null,
+            variacao: null,
+        })
+    })
+
+    it('hoje em Manaus (UTC−4), não no fuso do navegador', () => {
+        expect(hojeEmManaus(new Date('2026-11-24T03:30:00Z'))).toBe('2026-11-23')
+        expect(hojeEmManaus(new Date('2026-11-24T04:30:00Z'))).toBe('2026-11-24')
     })
 })
