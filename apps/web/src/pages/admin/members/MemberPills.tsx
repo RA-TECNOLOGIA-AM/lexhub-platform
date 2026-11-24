@@ -1,7 +1,8 @@
 import { Icon } from '../../../components/ui/Icon.tsx'
 import type { Unit } from '../../../types/index.ts'
+import { MemberAvatar } from './MemberAvatar.tsx'
 import {
-    initialsOf,
+    isOnline,
     lastSeenText,
     nameOf,
     noteOf,
@@ -50,9 +51,7 @@ export function MemberPills({ rows, units, unit, now, onOpen }: MemberPillsProps
                         onClick={() => onOpen(row)}
                     >
                         <span className="mem-pill-person" role="cell">
-                            <span className={row.kind === 'invitation' ? 'av waiting' : 'av mem-av'}>
-                                {initialsOf(row)}
-                            </span>
+                            <MemberAvatar row={row} now={now} />
                             <span className="mem-pill-name">
                                 <strong>{nameOf(row)}</strong>
                                 <span className="muted small">
@@ -71,9 +70,12 @@ export function MemberPills({ rows, units, unit, now, onOpen }: MemberPillsProps
                         <span role="cell">
                             <span className={strong ? 'mem-chip strong' : 'mem-chip'}>{role.label}</span>
                         </span>
-                        <span className="mem-pill-cell muted" role="cell">
+                        <span
+                            className={isOnline(row, now) ? 'mem-pill-cell mem-online' : 'mem-pill-cell muted'}
+                            role="cell"
+                        >
                             <Icon name="clock" size={14} />
-                            <span>{lastSeenText(row)}</span>
+                            <span>{lastSeenText(row, now)}</span>
                         </span>
                         <span className="mem-pill-end" role="cell">
                             <span className={status.badge}>{status.label}</span>

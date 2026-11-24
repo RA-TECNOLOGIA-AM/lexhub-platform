@@ -1,7 +1,8 @@
 import { Icon } from '../../../components/ui/Icon.tsx'
 import type { Unit } from '../../../types/index.ts'
+import { MemberAvatar } from './MemberAvatar.tsx'
 import {
-    initialsOf,
+    isOnline,
     lastSeenText,
     nameOf,
     noteOf,
@@ -35,9 +36,7 @@ export function MemberCards({ rows, units, unit, now, onOpen }: MemberCardsProps
                     <li key={rowKey(row)}>
                         <button type="button" className="card mem-card" onClick={() => onOpen(row)}>
                             <span className="mem-card-head">
-                                <span className={row.kind === 'invitation' ? 'av waiting' : 'av mem-av'}>
-                                    {initialsOf(row)}
-                                </span>
+                                <MemberAvatar row={row} now={now} />
                                 <span className="mem-card-name">
                                     <strong>{nameOf(row)}</strong>
                                     <span className="muted small">
@@ -59,9 +58,11 @@ export function MemberCards({ rows, units, unit, now, onOpen }: MemberCardsProps
                                     <Icon name="layers" size={14} />
                                     <span>{sectorsText(row)}</span>
                                 </span>
-                                <span className="mem-card-fact muted">
+                                <span
+                                    className={isOnline(row, now) ? 'mem-card-fact mem-online' : 'mem-card-fact muted'}
+                                >
                                     <Icon name="clock" size={14} />
-                                    <span>{lastSeenText(row)}</span>
+                                    <span>{lastSeenText(row, now)}</span>
                                 </span>
                             </span>
                         </button>

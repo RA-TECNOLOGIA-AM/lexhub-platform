@@ -103,6 +103,8 @@ export interface DataClient {
     revokeInvitation(id: string): Promise<void>
     // Logo depois do login: convites pendentes do e-mail verificado viram associação. Devolve quantos.
     acceptMyInvitations(): Promise<number>
+    // "Estou aqui": grava last_seen_at de quem está logado (Membros mostra quem está online).
+    touchPresence(): Promise<void>
     setFavorite(org: string, dashboardKey: string, favorite: boolean): Promise<void>
     // Ordem dos cards do hub da pessoa: uma lista de keys para o hub inteiro ([] = ordem do catálogo).
     getHubOrder(org: string): Promise<string[]>

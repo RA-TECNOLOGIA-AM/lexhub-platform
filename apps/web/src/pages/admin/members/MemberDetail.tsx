@@ -4,10 +4,12 @@ import { toDataError } from '../../../services/errors.ts'
 import type { MemberTeam, Unit } from '../../../types/index.ts'
 import { CopyLink } from './CopyLink.tsx'
 import { inviteLink } from './invite.ts'
+import { MemberAvatar } from './MemberAvatar.tsx'
 import {
     firstUnitOf,
     hasUnitAccess,
-    initialsOf,
+    isOnline,
+    lastSeenText,
     nameOf,
     noteOf,
     ROLE_LABEL,
@@ -63,15 +65,22 @@ export function MemberDetail({ row, units, teams, isSelf, accessHref, onSetStatu
         <section className="card acc-detail" aria-label={`Detalhes de ${nameOf(row)}`}>
             <header className="acc-detail-head">
                 <div className="acc-person">
-                    <span className={row.kind === 'invitation' ? 'av acc-av waiting' : 'av acc-av'}>
-                        {initialsOf(row)}
-                    </span>
+                    <MemberAvatar row={row} now={now} className="acc-av" />
                     <div style={{ minWidth: 0 }}>
                         <div className="row" style={{ gap: 8 }}>
                             <h2 className="h2 acc-person-name">{nameOf(row)}</h2>
                             <span className={status.badge}>{status.label}</span>
                         </div>
                         <span className="muted small acc-person-email">{noteOf(row, now)}</span>
+                        {row.kind === 'member' && (
+                            <span
+                                className={
+                                    isOnline(row, now) ? 'small mem-presence mem-online' : 'muted small mem-presence'
+                                }
+                            >
+                                {lastSeenText(row, now)}
+                            </span>
+                        )}
                     </div>
                 </div>
                 <div className="row" style={{ flexWrap: 'nowrap' }}>

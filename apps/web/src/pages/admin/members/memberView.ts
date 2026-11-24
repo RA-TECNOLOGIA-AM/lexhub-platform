@@ -221,10 +221,31 @@ export function unitsText(row: MemberRow, units: Unit[]): string {
 export const sectorsText = (row: MemberRow) =>
     (row.kind === 'member' ? row.member.teams : row.invitation.teams).join(', ') || '—'
 
-// Data do último acesso (dd/mm/aaaa); convite e quem nunca entrou: "Nunca acessou".
-export function lastSeenText(row: MemberRow): string {
+// --- Presença: quem está com o LexHub aberto avisa a cada minuto (usePresenceHeartbeat) ---
+// Sem aviso há mais que isso: deixa de estar online (folga para um aviso atrasado ou perdido).
+export const ONLINE_MS = 3 * 60_000
+const MINUTE = 60_000
+const HOUR = 60 * MINUTE
+const DAY = 24 * HOUR
+
+export const isOnline = (row: MemberRow, now: Date): boolean =>
+    row.kind === 'member' &&
+    row.member.status === 'active' &&
+    !!row.member.last_seen_at &&
+    now.getTime() - new Date(row.member.last_seen_at).getTime() < ONLINE_MS
+
+// "Online agora" · "Visto há 12 min" · "Visto há 3 h" · "Visto há 2 dias" · "Visto em 05/10/2026" (30+ dias)
+// · "Nunca acessou" (convite ou sem registro).
+export function lastSeenText(row: MemberRow, now: Date): string {
     if (row.kind === 'invitation' || !row.member.last_seen_at) return 'Nunca acessou'
-    return new Date(row.member.last_seen_at).toLocaleDateString('pt-BR')
+    if (isOnline(row, now)) return 'Online agora'
+    const seen = new Date(row.member.last_seen_at)
+    const ago = Math.max(0, now.getTime() - seen.getTime())
+    if (ago < HOUR) return `Visto há ${Math.max(1, Math.floor(ago / MINUTE))} min`
+    if (ago < DAY) return `Visto há ${Math.floor(ago / HOUR)} h`
+    const days = Math.floor(ago / DAY)
+    if (days < 30) return `Visto há ${days} ${days === 1 ? 'dia' : 'dias'}`
+    return `Visto em ${seen.toLocaleDateString('pt-BR')}`
 }
 
 // --- Como a lista aparece (pílulas ou cards), lembrado no localStorage deste navegador ---

@@ -285,7 +285,8 @@ export type Member = {
     extra_groups: { unit: string; slug: string }[]
     extra_dashboards: { unit: string; key: string }[]
     status: MemberStatus
-    last_seen_at: string | null
+    last_seen_at: string | null // último sinal de vida (login ou o aviso de presença a cada minuto)
+    avatar_path?: string | null // foto de perfil (bucket 'avatars'); ausente = iniciais
     security: string | null // 'Google' quando já entrou pelo Google
 }
 

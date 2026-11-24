@@ -342,6 +342,8 @@ export function createMockClient(): DataClient {
         },
 
         // Como api.accept_my_invitations: convites do e-mail da sessão viram membro ativo.
+        async touchPresence() {},
+
         async acceptMyInvitations() {
             const email = sessionStorage.getItem(SESSION_KEY)
             return email ? memberStore.accept(email) : 0

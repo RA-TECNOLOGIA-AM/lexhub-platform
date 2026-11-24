@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router'
 import { Icon } from '../../../components/ui/Icon.tsx'
 import { PageHeader } from '../../../components/layout/PageHeader.tsx'
@@ -10,6 +10,7 @@ import { Segmented } from '../../../components/ui/Segmented.tsx'
 import { dataClient } from '../../../services/client.ts'
 import type { InviteRequest } from '../../../types/index.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
+import { useAutoRefresh } from '../../../hooks/useAutoRefresh.ts'
 import { InvitePanel } from './InvitePanel.tsx'
 import { MemberDetail } from './MemberDetail.tsx'
 import { MemberFilters } from './MemberFilters.tsx'
@@ -44,8 +45,15 @@ export function MembersPage() {
     const [version, setVersion] = useState(0)
     const [inviting, setInviting] = useState(false)
     const [layout, setLayout] = useState(() => storedMembersLayout())
-    const [now] = useState(() => new Date()) // para "vence em N dias"
+    // Relógio da tela: "vence em N dias" e a presença ("Online agora", "Visto há 5 min") andam sozinhos.
+    const [now, setNow] = useState(() => new Date())
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 30_000)
+        return () => clearInterval(timer)
+    }, [])
     const { data, error } = useAsync(() => dataClient.listMembers(org), [org, version])
+    // Busca a lista de novo a cada minuto (com a aba visível): quem entrou ou saiu aparece sem recarregar.
+    useAutoRefresh(60_000, () => setVersion((v) => v + 1), data)
 
     const [params, setParams] = useSearchParams()
     const filter = filterFromParams(params)
