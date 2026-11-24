@@ -8487,10 +8487,9 @@ button.profile-btn:disabled {
     object-fit: cover;
     display: block;
 }
-.profile-photo-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 2px;
+/* Avatar do cartão do popover: só mostra (a foto se troca em Configurações). */
+span.profile-btn {
+    cursor: default;
 }
 .profile-error {
     margin: 0;
