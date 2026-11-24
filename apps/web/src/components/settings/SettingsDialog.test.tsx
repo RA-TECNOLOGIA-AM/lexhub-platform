@@ -55,9 +55,10 @@ describe('SettingsDialog', () => {
 
     it('não mostra o que ainda não existe (nem Notificações, que fica fora)', () => {
         const html = render()
-        for (const item of ['Notificações', 'Dispositivos', 'Companhias', 'Organização']) {
+        for (const item of ['Notificações', 'Companhias', 'Organização']) {
             expect(html).not.toContain(item)
         }
+        expect(html).toContain('Dispositivos')
     })
 
     it('Perfil: nome, cargo, setores e escritórios só para leitura; foto com botão de câmera', () => {

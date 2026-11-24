@@ -7,6 +7,7 @@ import { supportHeaders } from '../lib/supportSession.ts'
 import { createMockClient } from './mockClient.ts'
 import { createSupabaseAuth } from './supabase.ts'
 import type {
+    AccountSession,
     Appearance,
     DashboardCatalog,
     DashboardQuery,
@@ -86,6 +87,9 @@ export interface DataClient {
     // A sessão deste aparelho ainda existe no servidor? false = foi derrubada (ex.: por outro aparelho).
     // Erro de rede responde true: na dúvida, não tira a pessoa.
     isSessionAlive(): Promise<boolean>
+    // Dispositivos: as sessões da própria conta (a atual primeiro) e derrubar uma delas (nunca a atual).
+    listMySessions(): Promise<AccountSession[]>
+    revokeMySession(id: string): Promise<void>
     // E-mail de quem está logado (null = sem sessão). Serve à tela "sem acesso", quando o /me dá 403.
     getSessionEmail(): Promise<string | null>
     getSessionAccessToken(): Promise<string | null>

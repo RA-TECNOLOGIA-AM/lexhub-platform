@@ -1,10 +1,11 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { Icon, type IconName } from '../ui/Icon.tsx'
 import { AppearanceSection } from './AppearanceSection.tsx'
+import { DevicesSection } from './DevicesSection.tsx'
 import { ProfileSection } from './ProfileSection.tsx'
 import './settings.css'
 
-export type SettingsSectionId = 'perfil' | 'aparencia'
+export type SettingsSectionId = 'perfil' | 'aparencia' | 'dispositivos'
 
 type SettingsSection = {
     id: SettingsSectionId
@@ -15,7 +16,7 @@ type SettingsSection = {
     render: () => ReactNode
 }
 
-// As seções, na ordem do menu. Seção nova = um item aqui (Dispositivos, Companhias... quando existirem).
+// As seções, na ordem do menu. Seção nova = um item aqui.
 const SECTIONS: SettingsSection[] = [
     {
         id: 'perfil',
@@ -32,6 +33,14 @@ const SECTIONS: SettingsSection[] = [
         icon: 'palette',
         group: 'Minha conta',
         render: () => <AppearanceSection />,
+    },
+    {
+        id: 'dispositivos',
+        label: 'Dispositivos',
+        title: 'Dispositivos',
+        icon: 'monitor',
+        group: 'Minha conta',
+        render: () => <DevicesSection />,
     },
 ]
 

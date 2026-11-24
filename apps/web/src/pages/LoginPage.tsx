@@ -20,6 +20,12 @@ function internalPath(value: string | null | undefined): string | null {
     }
 }
 
+// Avisos que outras telas mandam pelo ?estado= ao trazer a pessoa de volta ao login.
+const LOGIN_NOTICE: Record<string, string> = {
+    'sessao-expirada': 'Sua sessão expirou. Entre de novo para continuar.',
+    desconectado: 'Você foi desconectado em outro aparelho.',
+}
+
 // Entrada: Google (principal) ou e-mail + senha, e entrada por convite (?convite=<token>).
 // ?estado=sessao-expirada = veio de um 401 da API.
 // Logado sem organização (403 no /me): o card vira "sem acesso" (NoAccessCard).
@@ -37,9 +43,7 @@ export function LoginPage() {
     const transitionStarted = useRef(false)
     // Volta do Google com erro (ex.: e-mail sem convite, barrado pelo hook do Supabase): mensagem fixa.
     const [error, setError] = useState(
-        () =>
-            oauthErrorMessage(location.search, location.hash) ??
-            (params.get('estado') === 'sessao-expirada' ? 'Sua sessão expirou. Entre de novo para continuar.' : ''),
+        () => oauthErrorMessage(location.search, location.hash) ?? LOGIN_NOTICE[params.get('estado') ?? ''] ?? '',
     )
 
     const from =

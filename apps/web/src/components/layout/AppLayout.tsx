@@ -1,4 +1,4 @@
-import { Suspense, useRef, useState } from 'react'
+import { Suspense, useCallback, useRef, useState } from 'react'
 import { ErrorBoundary } from '../states/ErrorBoundary.tsx'
 import { LoadingState } from '../states/LoadingState.tsx'
 import { Link, Outlet, useLocation } from 'react-router'
@@ -23,6 +23,7 @@ import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useSidebarCollapsed } from '../../hooks/useSidebarCollapsed.ts'
 import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
 import { usePresenceHeartbeat } from '../../hooks/usePresenceHeartbeat.ts'
+import { tvSession } from '../../contexts/tvSession.ts'
 import { dataClient } from '../../services/client.ts'
 import { env } from '../../services/env.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
@@ -51,8 +52,16 @@ export function AppLayout() {
     const { session: support, notice: supportNotice, clearNotice } = useSupport()
     // Selo de pedidos de acesso pendentes: só a equipe RA busca.
     const pending = usePendingRequests(!!me?.user.platform_staff)
-    // Avisa a cada minuto que a pessoa está com o LexHub aberto (Membros → "Online agora").
-    usePresenceHeartbeat(!!me)
+    // Avisa a cada minuto que a pessoa está com o LexHub aberto (Membros → "Online agora") e confere se a
+    // sessão não foi derrubada em outro aparelho (Configurações → Dispositivos): se foi, sai e vai ao login.
+    // Na TV quem cuida disso é o watchTvSession (volta para a tela do QR).
+    const onSessionGone = useCallback(() => {
+        if (tvSession.active()) return
+        void signOut()
+            .catch(() => {})
+            .finally(() => window.location.replace('/login?estado=desconectado'))
+    }, [signOut])
+    usePresenceHeartbeat(!!me, onSessionGone)
     // O que a pessoa gere nesta organização: esconde Acesso de Colaborador/Leitor.
     // Se a consulta falhar, o menu mostra tudo (ver menuPermissions): a página já protege sozinha.
     const orgSlug = me?.org.slug ?? ''
