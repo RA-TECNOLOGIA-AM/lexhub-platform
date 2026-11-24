@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExportButton } from '../components/dashboard/ExportButton.tsx'
 import { logViewOnce } from '../hooks/useLogDashboardView.ts'
 import { getSupport, onSupportExpired, setSupport, supportValidFor } from '../lib/supportSession.ts'
+import { memoryStorage } from '../lib/memoryStorage.ts'
 import { DataError } from '../services/errors.ts'
 import { withSupportExpiry } from '../services/supportExpiry.ts'
 import type { SupportSession } from '../types/index.ts'
@@ -24,7 +25,10 @@ const BEFORE = Date.parse('2026-11-24T14:30:00Z')
 const AFTER = Date.parse('2026-11-24T15:00:01Z')
 
 describe('modo suporte', () => {
-    beforeEach(() => setSupport(null))
+    beforeEach(() => {
+        vi.stubGlobal('sessionStorage', memoryStorage()) // o Node 24 (CI) não tem
+        setSupport(null)
+    })
     afterEach(() => setSupport(null))
 
     describe('409 support_expired (withSupportExpiry)', () => {

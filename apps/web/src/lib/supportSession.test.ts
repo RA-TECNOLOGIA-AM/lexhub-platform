@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SupportSession } from '../types/index.ts'
+import { memoryStorage } from './memoryStorage.ts'
 
 const session: SupportSession = {
     sessionId: 's1',
@@ -17,7 +18,7 @@ const session: SupportSession = {
 
 describe('supportSession', () => {
     beforeEach(() => {
-        sessionStorage.clear()
+        vi.stubGlobal('sessionStorage', memoryStorage()) // o Node 24 (CI) não tem
         vi.resetModules()
     })
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockClient } from './mockClient.ts'
 import { setSupport } from '../lib/supportSession.ts'
+import { memoryStorage } from '../lib/memoryStorage.ts'
 import { DataError } from './errors.ts'
 import type { SupportSession } from '../types/index.ts'
 
@@ -14,8 +15,8 @@ const session: SupportSession = {
 
 describe('mockClient em modo suporte', () => {
     beforeEach(() => {
-        sessionStorage.clear()
-        // Ambiente node: localStorage falso, em memória.
+        // Ambiente node: sessionStorage e localStorage falsos, em memória (o Node 24 do CI não tem).
+        vi.stubGlobal('sessionStorage', memoryStorage())
         const store = new Map<string, string>()
         vi.stubGlobal('localStorage', {
             getItem: (k: string) => store.get(k) ?? null,
