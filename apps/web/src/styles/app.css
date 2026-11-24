@@ -2022,6 +2022,28 @@ div.org {
     background: var(--accent-soft);
     color: var(--accent);
 }
+/* Foto (ou iniciais) + bolinha verde de "online" no canto de baixo. */
+.mem-av-wrap {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+}
+.mem-online-dot {
+    position: absolute;
+    right: -1px;
+    bottom: -1px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--ok-dot);
+    box-shadow: 0 0 0 2px var(--surface, #fff);
+}
+.mem-online {
+    color: var(--ok);
+}
+.mem-presence {
+    display: block;
+}
 .mem-card-name {
     display: flex;
     flex-direction: column;

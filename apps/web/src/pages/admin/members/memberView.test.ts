@@ -16,6 +16,7 @@ import {
     storeMembersLayout,
     MEMBERS_LAYOUT_KEY,
     lastSeenText,
+    isOnline,
     unitsText,
     unitViewOf,
     firstUnitOf,
@@ -147,10 +148,33 @@ describe('colunas da lista', () => {
     })
     it('setores e último acesso', () => {
         expect(sectorsText(row('bruno'))).toBe('Comercial')
-        expect(lastSeenText(row('gabriel'))).toBe('Nunca acessou')
+        const now = new Date()
+        expect(lastSeenText(row('gabriel'), now)).toBe('Nunca acessou')
         const never = { kind: 'member' as const, member: { ...members.members[0], last_seen_at: null } }
-        expect(lastSeenText(never)).toBe('Nunca acessou')
-        expect(lastSeenText(row('ana'))).toMatch(/^\d{2}\/\d{2}\/\d{4}$/)
+        expect(lastSeenText(never, now)).toBe('Nunca acessou')
+    })
+
+    describe('presença', () => {
+        const now = new Date('2026-11-24T15:00:00Z')
+        const seen = (msAgo: number, status: 'active' | 'disabled' = 'active') => ({
+            kind: 'member' as const,
+            member: { ...members.members[0], status, last_seen_at: new Date(now.getTime() - msAgo).toISOString() },
+        })
+        const MIN = 60_000
+        it('online até 3 min sem aviso', () => {
+            expect(isOnline(seen(2 * MIN), now)).toBe(true)
+            expect(lastSeenText(seen(2 * MIN), now)).toBe('Online agora')
+            expect(isOnline(seen(3 * MIN), now)).toBe(false)
+            expect(isOnline(seen(MIN, 'disabled'), now)).toBe(false)
+            expect(isOnline(row('gabriel'), now)).toBe(false)
+        })
+        it('há quanto tempo', () => {
+            expect(lastSeenText(seen(12 * MIN), now)).toBe('Visto há 12 min')
+            expect(lastSeenText(seen(3 * 60 * MIN), now)).toBe('Visto há 3 h')
+            expect(lastSeenText(seen(26 * 60 * MIN), now)).toBe('Visto há 1 dia')
+            expect(lastSeenText(seen(5 * 24 * 60 * MIN), now)).toBe('Visto há 5 dias')
+            expect(lastSeenText(seen(40 * 24 * 60 * MIN), now)).toMatch(/^Visto em \d{2}\/\d{2}\/\d{4}$/)
+        })
     })
 })
 

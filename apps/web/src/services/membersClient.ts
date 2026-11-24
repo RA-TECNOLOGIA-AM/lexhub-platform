@@ -5,7 +5,7 @@ import type { InviteResult, Member, MembersResponse } from '../types/index.ts'
 
 type MembersClient = Pick<
     DataClient,
-    'listMembers' | 'inviteMembers' | 'setMemberStatus' | 'revokeInvitation' | 'acceptMyInvitations'
+    'listMembers' | 'inviteMembers' | 'setMemberStatus' | 'revokeInvitation' | 'acceptMyInvitations' | 'touchPresence'
 >
 
 // Módulo: Membros pelo Supabase (funções do schema api, sem passar pela API em Python).
@@ -29,5 +29,8 @@ export function createMembersClient(supabase: SupabaseClient): MembersClient {
             await call('revoke_invitation', { p_id: id })
         },
         acceptMyInvitations: () => call<number>('accept_my_invitations'),
+        async touchPresence() {
+            await call('touch_presence')
+        },
     }
 }

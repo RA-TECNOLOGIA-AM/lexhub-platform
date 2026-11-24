@@ -19,6 +19,7 @@ import { useAsync } from '../../hooks/useAsync.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useSidebarCollapsed } from '../../hooks/useSidebarCollapsed.ts'
 import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
+import { usePresenceHeartbeat } from '../../hooks/usePresenceHeartbeat.ts'
 import { dataClient } from '../../services/client.ts'
 import { env } from '../../services/env.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
@@ -44,6 +45,8 @@ export function AppLayout() {
     const { me, signOut } = useAuth()
     // Selo de pedidos de acesso pendentes: só a equipe RA busca.
     const pending = usePendingRequests(!!me?.user.platform_staff)
+    // Avisa a cada minuto que a pessoa está com o LexHub aberto (Membros → "Online agora").
+    usePresenceHeartbeat(!!me)
     // O que a pessoa gere nesta organização: esconde Acesso de Colaborador/Leitor.
     // Se a consulta falhar, o menu mostra tudo (ver menuPermissions): a página já protege sozinha.
     const orgSlug = me?.org.slug ?? ''

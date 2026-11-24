@@ -39,6 +39,7 @@ export const members: MembersResponse = {
             extra_dashboards: [],
             status: 'active',
             last_seen_at: daysFromNow(0),
+            avatar_path: '/login-bg.jpg', // o mock devolve o caminho como URL
             security: 'Google',
         },
         {
