@@ -42,6 +42,8 @@ export type OrgDocumentosLexpreResponse = {
     }[]
     // Novo na V2 (o modal da v1): por matéria reunida (pacote), as demandas com o cliente e as rubricas.
     rubricas_reunidas?: RubricaReunida[]
+    // KPIs do período: LexPre; ou legado (NG / LARJ / LAAM) quando o período não tem resolvidos no LexPre.
+    fonte_indicadores?: 'lexpre' | 'legado'
     opcoes_filtro: {
         materias: string[]
         funcionarios: string[]

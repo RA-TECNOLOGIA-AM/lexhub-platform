@@ -20,6 +20,8 @@ export type PeticionamentoLexpreResponse = {
         comparativo_mediana_tempo_peticionado: number | null
         // Situação atual do setor (totais, não dependem do período).
         represados: number // "Não peticionados"
+        // Só quando os KPIs vêm do legado NG/RJ (existia na página antiga; a LA não tinha).
+        processos_em_revisao?: number | null
         retorno_org_doc: number
         retorno_pendencia: number
         comparativo_retorno_org_doc: number | null
@@ -52,6 +54,8 @@ export type PeticionamentoLexpreResponse = {
     // Novo na V2 (o modal da v1): por matéria reunida (pacote), as demandas resolvidas no período ou represadas
     // agora, com o cliente e as rubricas que compõem cada uma. Já com os filtros da página.
     rubricas_reunidas?: RubricaReunida[]
+    // KPIs do período: LexPre; legado (só legado); ou misto (LexPre + legado no mesmo período).
+    fonte_indicadores?: 'lexpre' | 'legado' | 'misto'
     opcoes_filtro: {
         materias: string[]
         funcionarios: string[]

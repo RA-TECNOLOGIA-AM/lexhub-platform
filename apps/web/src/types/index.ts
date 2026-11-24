@@ -196,6 +196,9 @@ export type ProtocoloResponse = {
         comparativo_mediana_tempo_protocolado: number | null
         // Situação atual: não dependem do período.
         represados: number
+        // Só quando os KPIs vêm do legado NG/RJ (reajuizamento da página antiga).
+        protocolados_de_reajuizamento?: number | null
+        represados_de_reajuizamento?: number | null
         devolvido_peticionamento: number
         devolvido_org_doc: number
         devolvido_pendencia: number
@@ -218,6 +221,8 @@ export type ProtocoloResponse = {
     protocolados_no_prazo: { taxa: number; comparativo: number | null } | null // taxa em %
     metas: { tempo_medio_dias: number; no_prazo_pct: number; protocolados_por_funcionario: number } | null
     pendencias_mais_antigas: { processo: string; etapa: string; responsavel: string; dias_parado: number }[] | null
+    // KPIs do período: LexPre; legado; ou misto (LexPre + legado no mesmo período).
+    fonte_indicadores?: 'lexpre' | 'legado' | 'misto'
     opcoes_filtro: {
         materias: string[]
         funcionarios: string[]

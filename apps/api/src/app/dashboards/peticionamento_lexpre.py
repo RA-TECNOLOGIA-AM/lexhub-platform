@@ -169,6 +169,11 @@ from app.analyses.v1_routes import (
 )
 from app.dashboards.base import DashboardContext, DashboardModule, ExportSpec
 from app.dashboards.opcoes_lexpre import opcoes_filtro_setor
+from app.dashboards.peticionamento_lexpre_legado import (
+    EXTRA_QUERIES,
+    buscar_peticionamento_legado,
+    misturar_legado_no_corpo,
+)
 from app.dashboards.rubricas_reunidas import componentes_por_demanda, rubricas_reunidas
 
 QUERIES = ("log_setor_demanda_lexpre_NG", "demanda_rubrica_reunida_lexpre_NG")
@@ -417,10 +422,16 @@ async def build(ctx: DashboardContext) -> dict:
         ),
         normalizar=_normalizar_materia,
     )
+    corpo = response.model_dump()
+    fonte_indicadores = "lexpre"
+    legado = await buscar_peticionamento_legado(ctx)
+    if legado:
+        fonte_indicadores = misturar_legado_no_corpo(corpo, legado)
     return {
-        **response.model_dump(),
+        **corpo,
         "opcoes_filtro": opcoes,
         "rubricas_reunidas": reunidas,
+        "fonte_indicadores": fonte_indicadores,
     }
 
 
@@ -493,6 +504,8 @@ MODULE = DashboardModule(
     source_label="LexPre",
     build=build,
     queries=QUERIES,
+    # Peticionamento legado: NG e LARJ (RJ) no banco ng; LAAM (LA) no laadv.
+    extra_queries=EXTRA_QUERIES,
     # Mesmos parâmetros da v1 (GET /peticionamento-lexpre).
     filters={"materia": str, "funcionario": str, "area_atuacao_id": int, "uf": str},
     commission_fields=("comissionamento_por_funcionario",),
