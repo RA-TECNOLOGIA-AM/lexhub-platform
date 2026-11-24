@@ -6,8 +6,6 @@ import { MapaComarcas } from '../../../components/charts/MapaComarcas.tsx'
 import { useWidth } from '../../../components/charts/useWidth.ts'
 import { Pill } from '../../../components/dashboard/StatCard.tsx'
 import { DataTable } from '../../../components/ui/DataTable.tsx'
-import { Icon } from '../../../components/ui/Icon.tsx'
-import { Modal } from '../../../components/ui/Modal.tsx'
 import { Segmented } from '../../../components/ui/Segmented.tsx'
 import { seriesByYear } from '../../../lib/charts.ts'
 import { fmt } from '../../../lib/format.ts'
@@ -141,40 +139,6 @@ export function ComarcaCard({
                 rotuloItem={rotuloItem}
             />
         </ChartCard>
-    )
-}
-
-// O aviso da v1 de processos sem valor ("Existem N processos com valor da execução vazios!"), com a lista.
-export function SemValorAviso({ total, processos, campo }: { total: number; processos: string[]; campo: string }) {
-    const [aberto, setAberto] = useState(false)
-    if (total <= 0) return null
-    return (
-        <>
-            <div className="card fe-aviso small ex-aviso">
-                <Icon name="alert" size={16} />
-                <span>
-                    Existem <strong className="num">{fmt.int(total)}</strong> processos com {campo} vazio.
-                </span>
-                {processos.length > 0 && (
-                    <button type="button" className="btn ex-aviso-btn" onClick={() => setAberto(true)}>
-                        Ver processos
-                    </button>
-                )}
-            </div>
-            {aberto && (
-                <Modal
-                    title="Processos sem valor"
-                    subtitle={`${fmt.int(processos.length)} processo(s) com ${campo} vazio no LexFlow`}
-                    onClose={() => setAberto(false)}
-                >
-                    <ul className="ex-lista-simples num">
-                        {processos.map((p, i) => (
-                            <li key={`${p}-${i}`}>{numeroCnj(p)}</li>
-                        ))}
-                    </ul>
-                </Modal>
-            )}
-        </>
     )
 }
 

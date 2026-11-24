@@ -4265,6 +4265,15 @@ button.fpcard-who:focus-visible {
     display: flex;
     justify-content: center;
 }
+/* Comercial · Cancelados: a taxa de cancelamento como legenda, embaixo do comparativo (como os cards dos Tickets). */
+.cap-cancelados .mini-below {
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+.cap-taxa strong {
+    color: var(--danger);
+}
 /* Comparativo em duas linhas: a porcentagem e, embaixo, "vs mês anterior". */
 .delta-stack {
     display: inline-flex;
@@ -5144,9 +5153,24 @@ button.at-name:hover {
     background: var(--text);
 }
 
-/* Modal "Ritmo da meta" */
+/* Modal "Ritmo da meta": três números, a barra do ano, o ritmo necessário e a conclusão */
 .ritmo-modal {
-    width: min(760px, calc(100vw - 32px));
+    width: min(960px, calc(100vw - 32px));
+}
+.ritmo-head {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.ritmo-selo {
+    padding: 2px 10px;
+    border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
+    border-radius: var(--r-pill);
+    background: color-mix(in srgb, var(--tone) 14%, transparent);
+    color: var(--tone-text);
+    font-size: var(--fs-xs);
+    font-weight: 600;
 }
 .ritmo {
     display: flex;
@@ -5157,35 +5181,215 @@ button.at-name:hover {
 .ritmo p {
     margin: 0;
 }
-.ritmo-esperado {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-}
-.ritmo-esperado strong {
-    font-size: var(--fs-xl);
-}
-.ritmo-chip {
-    padding: 2px 8px;
-    border-radius: var(--r-pill);
-    font-size: var(--fs-xs);
-}
-.ritmo-chip.ok {
-    background: var(--ok-bg);
-    color: var(--ok);
-}
-.ritmo-titulo {
-    margin: 8px 0 0;
-    font-size: var(--fs-lg);
-    font-weight: 600;
-}
 .ritmo-cards {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 12px;
 }
 .ritmo-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 18px;
+}
+.ritmo-card-l {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.ritmo-card-v {
+    margin-top: 6px;
+    font-size: var(--fs-xl);
+    font-weight: 700;
+}
+.ritmo-card-pe {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--divider);
+}
+.ritmo-card.deficit {
+    border-color: color-mix(in srgb, var(--c-danger) 45%, var(--border));
+    background: color-mix(in srgb, var(--c-danger) 8%, var(--surface));
+}
+.ritmo-card.deficit .ritmo-card-v {
+    color: var(--danger);
+}
+.ritmo-card.superavit .ritmo-card-v {
+    color: var(--ok);
+}
+.ritmo-dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+}
+.ritmo-dot.quadrado {
+    border-radius: 2px;
+}
+.ritmo-dot.esperado {
+    background: var(--ok-dot);
+}
+.ritmo-dot.realizado {
+    background: var(--chart-brand);
+}
+.ritmo-dot.deficit {
+    background: var(--c-danger);
+}
+.ritmo-chip {
+    padding: 2px 8px;
+    border: 1px solid color-mix(in srgb, var(--tone, var(--text-muted)) 50%, transparent);
+    border-radius: var(--r-sm);
+    background: color-mix(in srgb, var(--tone, var(--text-muted)) 12%, transparent);
+    color: var(--tone-text, var(--text));
+    font-size: var(--fs-xs);
+    font-weight: 600;
+}
+.ritmo-ano {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 18px;
+}
+.ritmo-ano-topo,
+.ritmo-ano-pe {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+}
+.ritmo-ano-pe strong {
+    color: var(--text);
+}
+.ritmo-legenda {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: var(--fs-sm);
+}
+.ritmo-traco {
+    width: 2px;
+    height: 14px;
+    margin-left: 6px;
+    border-radius: 2px;
+    background: var(--ok-dot);
+}
+.ritmo-trilho {
+    position: relative;
+    height: 12px;
+    margin-top: 18px;
+    border-radius: var(--r-pill);
+    background: var(--surface-3);
+}
+.ritmo-preenchido {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--w);
+    border-radius: inherit;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--chart-brand) 80%, black), var(--chart-brand));
+}
+.ritmo-marca {
+    position: absolute;
+    top: -6px;
+    bottom: -6px;
+    left: var(--w);
+    width: 3px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: var(--ok-dot);
+}
+.ritmo-marca-tag {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0 6px;
+    border-radius: var(--r-sm);
+    background: var(--ok-bg);
+    color: var(--ok);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    white-space: nowrap;
+}
+.ritmo-titulo {
+    margin: 6px 0 0;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.ritmo-grade {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    gap: 12px;
+}
+.ritmo-bloco {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px 18px;
+}
+.ritmo-cal {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ritmo-cal-topo {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+.ritmo-cal-barra {
+    position: relative;
+    height: 8px;
+    border-radius: var(--r-pill);
+    background: var(--surface-3);
+    overflow: hidden;
+}
+.ritmo-cal-barra::after {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--w);
+    border-radius: inherit;
+    background: var(--c-info);
+}
+.ritmo-info {
+    color: var(--c-info);
+    font-weight: 600;
+}
+.ritmo-restante {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid var(--divider);
+}
+.ritmo-restante > span:first-child {
+    display: flex;
+    flex-direction: column;
+}
+.ritmo-restante strong {
+    font-size: var(--fs-lg);
+}
+.ritmo-medias {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.ritmo-media {
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -5193,51 +5397,98 @@ button.at-name:hover {
     border: 1px solid var(--border);
     border-radius: var(--r-md);
 }
-.ritmo-card strong {
+.ritmo-media strong {
     font-size: var(--fs-lg);
 }
-.ritmo-card.deficit strong {
-    color: var(--danger);
+.ritmo-media.nova.acima {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+    background: var(--accent-soft);
 }
-.ritmo-card.superavit strong {
+.ritmo-media.nova.acima .ritmo-card-l,
+.ritmo-media.nova.acima .small {
+    color: var(--accent);
+}
+.ritmo-media.nova.abaixo .small {
     color: var(--ok);
 }
-.ritmo-barras {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-.ritmo-barra-linha {
+.ritmo-aceleracao {
     display: flex;
     justify-content: space-between;
-    font-size: var(--fs-sm);
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--divider);
 }
-.ritmo-barra {
-    position: relative;
-    height: 10px;
-    margin-bottom: 6px;
-    border-radius: var(--r-pill);
-    background: var(--surface-3);
-    overflow: hidden;
+.ritmo-previa {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px;
 }
-.ritmo-barra::after {
-    content: '';
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: var(--w);
-    border-radius: inherit;
+.ritmo-previa-setores {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
-.ritmo-barra.esperado::after {
-    background: var(--ok-dot);
+.ritmo-previa-setores .ritmo-card-l strong {
+    color: var(--text);
+    font-size: var(--fs-md);
 }
-.ritmo-barra.realizado::after {
-    background: var(--chart-brand);
+.ritmo-previa-lista {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 14px;
 }
-.ritmo-destaque td {
-    font-weight: 700;
+.ritmo-previa-setor {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--divider);
 }
-@media (max-width: 560px) {
-    .ritmo-cards {
+.ritmo-pode-entrar {
+    border-color: color-mix(in srgb, var(--ok-dot) 50%, var(--border));
+    background: var(--ok-bg);
+}
+.ritmo-pode-entrar .ritmo-card-l,
+.ritmo-pode-entrar .small {
+    color: var(--ok);
+}
+.ritmo-previa-op {
+    font-size: var(--fs-xl);
+    font-weight: 300;
+}
+@media (max-width: 760px) {
+    .ritmo-previa {
+        grid-template-columns: 1fr;
+    }
+    .ritmo-previa-op {
+        display: none;
+    }
+}
+.ritmo-conclusao {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 18px;
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+.ritmo-neg {
+    color: var(--danger);
+    font-weight: 600;
+}
+.ritmo-pos {
+    color: var(--ok);
+    font-weight: 600;
+}
+.ritmo-alerta {
+    color: var(--accent);
+    font-weight: 600;
+}
+@media (max-width: 760px) {
+    .ritmo-cards,
+    .ritmo-grade,
+    .ritmo-medias {
         grid-template-columns: 1fr;
     }
 }

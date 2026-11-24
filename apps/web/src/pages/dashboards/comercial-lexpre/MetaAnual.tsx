@@ -4,6 +4,7 @@ import { CountUp } from '../../../components/ui/CountUp.tsx'
 import { Icon } from '../../../components/ui/Icon.tsx'
 import { fmt } from '../../../lib/format.ts'
 import { hojeEmManaus, progressoMeta, ritmoMeta } from './comercial.ts'
+import type { PreviaRepresados } from './types.ts'
 import { RitmoMetaModal } from './RitmoMetaModal.tsx'
 
 type MetaAnualProps = {
@@ -11,6 +12,7 @@ type MetaAnualProps = {
     legado: number | null // o mesmo no banco legado (antes da migração); null = sem legado ligado/fora do ar
     meta: number
     ano: number
+    previa?: PreviaRepresados // V2: o que ainda pode ser protocolado (ticket médio de 3 meses × represados)
 }
 
 const MARCOS = [25, 50, 75]
@@ -21,7 +23,7 @@ const inteiro = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 })
 // Como na v1, soma o LexPre com o banco legado. O ritmo (V2): a meta distribuída linearmente pelos dias do ano diz
 // quanto já deveria estar protocolado hoje — um traço na barra e, à direita, o esperado e a diferença. O card inteiro
 // abre o modal com o detalhe (o "i" só explica).
-export function MetaAnual({ lexpre, legado, meta, ano }: MetaAnualProps) {
+export function MetaAnual({ lexpre, legado, meta, ano, previa }: MetaAnualProps) {
     const valor = lexpre + (legado ?? 0)
     const { pct, faltam } = progressoMeta(valor, meta)
     const r = ritmoMeta(valor, meta, ano, hojeEmManaus())
@@ -142,7 +144,7 @@ export function MetaAnual({ lexpre, legado, meta, ano }: MetaAnualProps) {
                 </div>
             </section>
             {/* Fora do card: um clique dentro do modal (até o de fechar) não pode chegar ao clique do card. */}
-            {ritmoAberto && <RitmoMetaModal r={r} meta={meta} onClose={() => setRitmoAberto(false)} />}
+            {ritmoAberto && <RitmoMetaModal r={r} meta={meta} previa={previa} onClose={() => setRitmoAberto(false)} />}
         </>
     )
 }

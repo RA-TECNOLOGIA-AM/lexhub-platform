@@ -57,6 +57,7 @@ export function ComercialLexpreContent({
                 <MetaAnual
                     lexpre={s.valor_causa_protocolado_ano}
                     legado={data.valor_causa_protocolado_legado ?? null}
+                    previa={data.previa_represados}
                     meta={META_ANUAL}
                     ano={s.ano_meta ?? Number(referencia.slice(0, 4))}
                 />

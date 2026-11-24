@@ -6,6 +6,7 @@ import { topN } from '../../../lib/charts.ts'
 import { fmt } from '../../../lib/format.ts'
 import type { WithComparison } from '../../../types/index.ts'
 import { share } from '../setor/setor.ts'
+import { taxaCancelamento } from './comercial.ts'
 import type { ComercialLexpreResponse } from './types.ts'
 
 // Os 8 canais de origem dos contratos, na ordem da v1 (campo `clientes_<slug>` da API).
@@ -24,6 +25,7 @@ const CANAIS: { slug: string; label: string; icon: IconName }[] = [
 export function CaptacaoSection({ stats: s }: { stats: ComercialLexpreResponse['stats'] }) {
     const canal = (slug: string) => s[`clientes_${slug}` as keyof typeof s] as WithComparison | undefined
     const contratos = s.clientes_todos.total
+    const taxaCanc = taxaCancelamento(s.demandas_canceladas.total, s.acoes_fechadas.total)
     const principalCanal = topN(
         CANAIS.map((c) => ({ name: c.label, value: canal(c.slug)?.total ?? 0 })),
         1,
@@ -79,14 +81,21 @@ export function CaptacaoSection({ stats: s }: { stats: ComercialLexpreResponse['
                     tone="danger"
                     value={<CountUp value={s.demandas_canceladas.total} format={fmt.int} />}
                     below={
-                        <DeltaPill
-                            value={s.demandas_canceladas.comparativo}
-                            betterWhenDown
-                            suffix="vs mês anterior"
-                            plain
-                        />
+                        <>
+                            <DeltaPill
+                                value={s.demandas_canceladas.comparativo}
+                                betterWhenDown
+                                suffix="vs mês anterior"
+                                plain
+                            />
+                            {taxaCanc !== null && (
+                                <span className="cap-taxa muted small">
+                                    Taxa de cancelamento <strong className="num">{fmt.pct(taxaCanc)}</strong>
+                                </span>
+                            )}
+                        </>
                     }
-                    hint="Demandas canceladas no período."
+                    hint="Demandas canceladas no período. Taxa de cancelamento = ações canceladas ÷ ações fechadas no período."
                 />
                 <MiniStat
                     className="cap-aproveitamento"

@@ -43,8 +43,13 @@ def _texto(v: Any) -> str:
     return "" if _vazio(v) else str(v).strip()
 
 
-def itens(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Um item por (processo, campo vazio), com o contexto que ajuda a achar o processo na planilha."""
+def itens(
+    rows: list[dict[str, Any]], campos: tuple[tuple[str, str], ...] = CAMPOS
+) -> list[dict[str, Any]]:
+    """Um item por (processo, campo vazio), com o contexto que ajuda a achar o processo na planilha.
+
+    `campos`: (informação faltando, coluna) — os da Execução Condenação por padrão; os Acordos têm os seus
+    (acordos_campos.py)."""
     out: list[dict[str, Any]] = []
     for row in rows:
         numero = _texto(row.get("NUMERO_PROCESSO")) or _texto(row.get("id") or row.get("ID"))
@@ -55,7 +60,7 @@ def itens(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "uf": _texto(row.get("UF")),
             "subfase": _texto(row.get("SUBFASE")),
         }
-        for nome, coluna in CAMPOS:
+        for nome, coluna in campos:
             if _vazio(row.get(coluna)):
                 out.append({**contexto, "campo": nome})
     return out

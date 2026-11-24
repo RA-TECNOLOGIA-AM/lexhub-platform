@@ -99,6 +99,22 @@ export function mediaDaColuna(linhas: LinhaAtendente[], coluna: string): number 
     return valores.length ? valores.reduce((a, b) => a + b, 0) / valores.length : 0
 }
 
+// A prévia dos represados contra a meta: quanto do que falta ela cobre e onde o ano iria parar se tudo entrasse.
+export function projecaoPrevia(valorPrevia: number, r: Pick<RitmoMeta, 'realizado' | 'faltam'>, meta: number) {
+    const v = Number.isFinite(valorPrevia) ? Math.max(0, valorPrevia) : 0
+    return {
+        cobreFalta: r.faltam > 0 ? (v / r.faltam) * 100 : null, // % do que falta para a meta
+        pctComPrevia: meta > 0 ? ((r.realizado + v) / meta) * 100 : 0, // realizado + prévia, em % da meta
+        fechaMeta: v >= r.faltam,
+    }
+}
+
+// Taxa de cancelamento do período (V2): ações canceladas ÷ ações fechadas, em %. Sem ação fechada: null (sem base).
+export function taxaCancelamento(cancelados: number, fechadas: number): number | null {
+    if (!Number.isFinite(cancelados) || !Number.isFinite(fechadas) || fechadas <= 0) return null
+    return (Math.max(0, cancelados) / fechadas) * 100
+}
+
 // Progresso da meta anual: % atingido (0–100, como a v1) e quanto falta (nunca negativo).
 export function progressoMeta(valor: number, meta: number): { pct: number; faltam: number } {
     const v = Number.isFinite(valor) ? Math.max(0, valor) : 0
@@ -124,7 +140,13 @@ export type RitmoMeta = {
     faltam: number // meta − realizado (nunca negativo)
     novaMedia: number | null // o que falta ÷ dias restantes; null = o ano acabou
     variacao: number | null // novaMedia ÷ média planejada − 1 (0,094 = 9,4% acima do planejado)
+    dias: number // a diferença em dias de média planejada (positivo = adiantado, negativo = atrasado)
+    status: StatusRitmo
 }
+
+// Onde o time está contra o esperado: atingiu a meta, adiantado (ou no ritmo), um pouco atrás (menos de 2 p.p.) ou
+// atrasado.
+export type StatusRitmo = 'atingida' | 'adiantado' | 'ligeiramente_atrasado' | 'atrasado'
 
 const bissexto = (ano: number) => (ano % 4 === 0 && ano % 100 !== 0) || ano % 400 === 0
 
@@ -163,6 +185,15 @@ export function ritmoMeta(realizado: number, meta: number, ano: number, hoje: st
         faltam,
         novaMedia,
         variacao: novaMedia !== null && mediaPlanejada > 0 ? novaMedia / mediaPlanejada - 1 : null,
+        dias: mediaPlanejada > 0 ? (v - esperado) / mediaPlanejada : 0,
+        status:
+            faltam === 0
+                ? 'atingida'
+                : v >= esperado
+                  ? 'adiantado'
+                  : pct(esperado) - pct(v) < 2
+                    ? 'ligeiramente_atrasado'
+                    : 'atrasado',
     }
 }
 

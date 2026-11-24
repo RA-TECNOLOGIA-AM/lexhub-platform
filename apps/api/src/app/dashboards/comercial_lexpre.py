@@ -11,8 +11,10 @@ da V2 exporta uma aba só.
 Novo na V2: `opcoes_filtro` (antes dos filtros).
 """
 
-from datetime import datetime
+import calendar
+from datetime import date, datetime
 from typing import Any  # Optional: anotação do corpo da v1 (_canal_stat)
+from zoneinfo import ZoneInfo
 
 from fastapi import HTTPException
 
@@ -219,6 +221,7 @@ from app.analyses.v1_routes import (
     ComercialLexpreRatioStat,
     ComercialLexpreValorCausaPorAtendenteItem,
 )
+from app.dashboards import pre_protocolo
 from app.dashboards.base import DashboardContext, DashboardModule, ExportSpec
 from app.dashboards.identidade_v1 import get_atendente_vinculado, is_gestor_ou_desenvolvedor
 from app.database import SourceUnavailable
@@ -715,12 +718,76 @@ async def export_rows(ctx: DashboardContext, escopo_proprio: bool = False) -> li
     return registros
 
 
+# --- V2: prévia do que ainda pode ser protocolado (modal "Ritmo da meta" do card Meta <ano>) ---
+
+# Represados de cada setor do Pré-protocolo: o campo do `stats` de cada módulo LexPre (os mesmos números da
+# seção "Represados por setor" do Pré-protocolo, setores.ts).
+CAMPO_REPRESADOS = {
+    "pendencias": "pendencias_nao_resolvidas",
+    "org_documentos": "represados",
+    "peticionamento": "represados",
+    "protocolo": "represados",
+}
+MESES_TICKET_PREVIA = 3
+
+
+def hoje_manaus() -> date:
+    return datetime.now(ZoneInfo("America/Manaus")).date()
+
+
+def meses_antes(d: date, meses: int) -> date:
+    """O mesmo dia `meses` meses civis antes; dia que não existe no mês vira o último (31/05 - 3 = 28/02)."""
+    total = d.year * 12 + d.month - 1 - meses
+    ano, mes = divmod(total, 12)
+    mes += 1
+    return date(ano, mes, min(d.day, calendar.monthrange(ano, mes)[1]))
+
+
+def _numero(stats: Any, campo: str) -> int:
+    v = stats.get(campo) if isinstance(stats, dict) else getattr(stats, campo, None)
+    return int(v) if isinstance(v, (int, float)) else 0
+
+
+async def previa_represados(ctx: DashboardContext, hoje: date | None = None) -> dict[str, Any]:
+    """Quanto ainda pode ser protocolado: o ticket médio protocolado dos últimos 3 meses (de hoje para trás, o
+    escritório inteiro, sem os filtros da página, como a meta) × os processos represados nos 4 setores do
+    Pré-protocolo agora (Pendência, Org. Documentos, Peticionamento e Protocolo, acumulados, sem data)."""
+    hoje = hoje or hoje_manaus()
+    de = meses_antes(hoje, MESES_TICKET_PREVIA)
+    rows = filter_comercial_lexpre_por_escritorio_ng(
+        await ctx.source.fetch("comercial_lexpre_NG"), escritorio_id=int(ctx.unit_ref)
+    )
+    ticket = get_ticket_medio_protocolado_lexpre(rows, de, hoje)
+    setores = await pre_protocolo.build(ctx)
+    represados = {
+        setor: _numero((setores.get(setor) or {}).get("stats"), campo)
+        for setor, campo in CAMPO_REPRESADOS.items()
+    }
+    total = sum(represados.values())
+    return {
+        "de": de.isoformat(),
+        "ate": hoje.isoformat(),
+        "ticket_medio": ticket,
+        "represados": represados,
+        "total_represados": total,
+        "valor": round(ticket * total, 2),
+    }
+
+
+async def build_comercial(ctx: DashboardContext) -> dict:
+    """O Comercial (LexPre) da v1 + a prévia dos represados (V2). A Comissão Comercial usa só o `build`."""
+    body = await build(ctx)
+    body["previa_represados"] = await previa_represados(ctx)
+    return body
+
+
 MODULE = DashboardModule(
     key="comercial-lexpre",
     source_db="lexpre",
     source_label="LexPre",
-    build=build,
-    queries=QUERIES,
+    build=build_comercial,
+    # + as buscas do Pré-protocolo (os represados da prévia), para o aquecedor do cache.
+    queries=tuple(dict.fromkeys((*QUERIES, *pre_protocolo.MODULE.queries))),
     extra_queries={db: (query,) for db, (_, query, _) in LEGADO.items()},
     # Mesmos parâmetros da v1 (GET /comercial-lexpre).
     filters={

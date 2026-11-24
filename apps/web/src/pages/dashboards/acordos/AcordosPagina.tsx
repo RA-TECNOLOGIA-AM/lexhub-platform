@@ -13,7 +13,9 @@ import type { ContentProps } from '../types.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
 import { AtividadesSection } from '../execucao/AtividadesSection.tsx'
 import { DiligenciasSection } from '../execucao/DiligenciasSection.tsx'
-import { ComarcaCard, MesAMes, ProcessosTabela, SemValorAviso, TreCard } from '../execucao/partes.tsx'
+import { ComarcaCard, MesAMes, ProcessosTabela, TreCard } from '../execucao/partes.tsx'
+import { avisosCamposFaltando } from '../execucao/execucao.ts'
+import { DadosFaltando } from '../julgados-acordaos/DadosFaltando.tsx'
 import { lerAcordos } from './execucaoAcordos.ts'
 
 const valor = (v: number | null, format: (n: number) => string) =>
@@ -42,7 +44,16 @@ export function AcordosPagina({ data, filters = {}, onFiltersChange }: ContentPr
 
     return (
         <div className="dsecs">
-            <SemValorAviso total={a.semValor.total} processos={a.semValor.processos} campo="valor de alçada final" />
+            {/* A faixa "Atenção" da Execução Condenação, com os dados do acordo: os acordos de agora (sem o período) com
+                campo em branco; o modal baixa o relatório para preencher, uma aba por campo. Inclui o "valor de alçada
+                final" do aviso da v1. */}
+            <DadosFaltando
+                avisos={avisosCamposFaltando(a.camposFaltando, 'em acordo')}
+                itens={a.camposFaltando}
+                base="processos em acordo"
+                relatorio="campos-faltando"
+                filters={filters}
+            />
 
             <DashSection
                 index={1}
