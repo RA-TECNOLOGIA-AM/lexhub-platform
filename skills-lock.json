@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "genjutsu": {
+      "source": "genjutsu.athevon.dev",
+      "sourceType": "well-known",
+      "computedHash": "ffbd56b8fed6a5ce617d9314f72987243c90cd9840af29ed2815ca25f190c500"
+    }
+  }
+}

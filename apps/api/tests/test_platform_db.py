@@ -12,6 +12,7 @@ from app.platform_db import (
     keep_warm,
     open_platform_pool,
     ping_connections,
+    url_modo_transacao,
 )
 
 BASE = {"SUPABASE_URL": "https://x.supabase.co", "SUPABASE_PUBLISHABLE_KEY": "pk"}
@@ -44,6 +45,15 @@ def test_pool_da_plataforma_tem_tempo_limite_proprio_e_conexoes_minimas():
     # Abaixo dos 350 s em que o balanceador da AWS corta conexão TCP ociosa.
     assert seen["max_inactive_connection_lifetime"] == MAX_INACTIVE_CONNECTION_LIFETIME < 350
     assert seen["statement_cache_size"] == 0  # pooler em modo transaction
+
+
+def test_pooler_em_modo_sessao_passa_para_o_modo_transacao():
+    url = "postgresql://postgres.ref:senha@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
+    assert url_modo_transacao(url).endswith("pooler.supabase.com:6543/postgres")
+    # Banco direto e a 6543 ficam como estão.
+    direto = "postgresql://u:p@10.0.0.1:5432/ng"
+    assert url_modo_transacao(direto) == direto
+    assert url_modo_transacao(URL) == URL
 
 
 def test_sem_database_url_nao_abre_pool():

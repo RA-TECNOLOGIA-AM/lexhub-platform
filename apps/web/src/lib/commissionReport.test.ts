@@ -45,4 +45,45 @@ describe('commissionHtml', () => {
     it('sem linhas: avisa no lugar da tabela', () => {
         expect(commissionHtml({ ...base, rows: [] })).toContain('Sem comissão no período.')
     })
+
+    it('detalhe sem quebra de página fica embaixo da comissão', () => {
+        const html = commissionHtml({
+            ...base,
+            rows: [{ funcionario: 'Isabelle', qtd: 1, valor_comissao: 13 }],
+            details: {
+                title: 'Demandas canceladas',
+                breakBefore: false,
+                columns: [
+                    { key: 'materia', label: 'Matéria' },
+                    { key: 'data', label: 'Cancelado em' },
+                    { key: 'atendente', label: 'Atendente comercial' },
+                    { key: 'desconto', label: 'Desconto', format: fmt.brl, sum: true },
+                ],
+                rows: [{ materia: 'MORA', data: '10/11/2026', atendente: 'Isabelle', desconto: 13 }],
+            },
+        })
+        expect(html).toContain('<section class="detalhes continua">')
+        expect(html).toContain('<h2>Demandas canceladas</h2>')
+        expect(html).toContain('MORA')
+        expect(html).toContain('10/11/2026')
+        expect(html).toContain('Isabelle')
+        const fimDaComissao = html.indexOf('</tfoot>')
+        const secao = html.indexOf('<section class="detalhes continua">')
+        expect(secao).toBeGreaterThan(fimDaComissao)
+        expect(html.indexOf('Demandas canceladas')).toBeLessThan(html.indexOf('Gerado pelo LexHub'))
+    })
+
+    it('sem demandas canceladas, a segunda tabela não aparece', () => {
+        const html = commissionHtml({
+            ...base,
+            rows: [{ funcionario: 'Ana', qtd: 1, valor_comissao: 1 }],
+            details: {
+                title: 'Demandas canceladas',
+                breakBefore: false,
+                columns: [{ key: 'materia', label: 'Matéria' }],
+                rows: [],
+            },
+        })
+        expect(html).not.toContain('Demandas canceladas')
+    })
 })
