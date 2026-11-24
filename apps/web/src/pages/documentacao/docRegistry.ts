@@ -118,3 +118,25 @@ export function docFor(entries: DocEntry[], dashboard: string, unit: string): Do
     const matches = entries.filter((e) => e.dashboards.includes(dashboard))
     return matches.find((e) => e.units?.includes(unit)) ?? matches.find((e) => !e.units) ?? null
 }
+
+// Guias de uso do LexHub (como entrar, achar e ler um dashboard...). Não dependem de dashboard:
+// todo mundo vê. Ficam no topo do índice, antes dos guias dos dashboards.
+export type GuideEntry = {
+    slug: string // endereço: /:org/documentacao/:slug (não pode repetir um slug de DOC_ENTRIES)
+    title: string
+    description: string
+}
+
+export const GUIDE_ENTRIES: GuideEntry[] = [
+    {
+        slug: 'guia-do-usuario',
+        title: 'Como usar o LexHub',
+        description:
+            'Primeiros passos: entrar, escolher a unidade, achar e ler um dashboard, filtrar, exportar e deixar o app do seu jeito.',
+    },
+]
+
+// Título de qualquer guia (de uso ou de dashboard) pelo slug. null = não existe.
+export function guideOrDoc(slug: string): { title: string } | null {
+    return GUIDE_ENTRIES.find((g) => g.slug === slug) ?? DOC_ENTRIES.find((d) => d.slug === slug) ?? null
+}

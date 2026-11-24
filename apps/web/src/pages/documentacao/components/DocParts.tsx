@@ -18,10 +18,20 @@ type DocPageProps = {
     toc: TocItem[] // "Neste guia": âncoras das seções
     children: ReactNode // seções (DocSection) e avisos (InfoBox) logo abaixo do cabeçalho
     header?: ReactNode // avisos do cabeçalho (antes do sumário)
+    kicker?: string // linha acima do título (guia de dashboard ou guia de uso)
 }
 
 // A página: voltar, título, introdução, unidades, sumário e as seções.
-export function DocPage({ title, intro, tags = [], note, toc, header, children }: DocPageProps) {
+export function DocPage({
+    title,
+    intro,
+    tags = [],
+    note,
+    toc,
+    header,
+    kicker = 'Documentação · Dashboard',
+    children,
+}: DocPageProps) {
     const { org = '' } = useParams()
     return (
         <article className="doc stack" style={{ gap: 28 }}>
@@ -31,7 +41,7 @@ export function DocPage({ title, intro, tags = [], note, toc, header, children }
                     Documentação
                 </PageTransitionLink>
                 <div className="stack" style={{ gap: 8 }}>
-                    <p className="doc-kicker">Documentação · Dashboard</p>
+                    <p className="doc-kicker">{kicker}</p>
                     <h1 className="h1">{title}</h1>
                     <p className="doc-intro">{intro}</p>
                 </div>
