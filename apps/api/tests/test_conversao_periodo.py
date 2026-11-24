@@ -41,9 +41,12 @@ def test_para_valor_pt_br():
 def test_para_valor_digitos_como_na_v1():
     assert conversao.para_valor_digitos("470,50") == 470.5
     assert conversao.para_valor_digitos("R$ 99") == 99.0
-    assert (
-        conversao.para_valor_digitos("1.234,56") == 0.0
-    )  # separador de milhar em texto: 0, como na v1
+    # milhar em texto (na v1 virava 0)
+    assert conversao.para_valor_digitos("1.234,56") == 1234.56
+    assert conversao.para_valor_digitos("R$ 1.234.567,89") == 1234567.89
+    assert conversao.para_valor_digitos("1.234.567") == 1234567.0
+    # formato gravado hoje pelo LexFlow: igual a antes
+    assert conversao.para_valor_digitos("1234.56") == 1234.56
     assert conversao.para_valor_digitos(Decimal("1234.56")) == 1234.56
 
 
