@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DOC_ENTRIES, docFor, visibleDocs } from './docRegistry.ts'
+import { DOC_ENTRIES, GUIDE_ENTRIES, docFor, guideOrDoc, visibleDocs } from './docRegistry.ts'
 
 describe('visibleDocs', () => {
     it('só as documentações dos dashboards que a pessoa abre', () => {
@@ -26,8 +26,16 @@ describe('docFor', () => {
         expect(docFor(DOC_ENTRIES, 'nps', 'NG')).toBeNull()
     })
 
-    it('todo slug é único', () => {
-        const slugs = DOC_ENTRIES.map((d) => d.slug)
+    it('todo slug é único (guias de uso e de dashboards juntos)', () => {
+        const slugs = [...GUIDE_ENTRIES, ...DOC_ENTRIES].map((d) => d.slug)
         expect(new Set(slugs).size).toBe(slugs.length)
+    })
+})
+
+describe('guideOrDoc', () => {
+    it('acha guia de uso e guia de dashboard; slug desconhecido = null', () => {
+        expect(guideOrDoc('guia-do-usuario')?.title).toBe('Como usar o LexHub')
+        expect(guideOrDoc('acordos')?.title).toBe('Execução Acordos')
+        expect(guideOrDoc('nao-existe')).toBeNull()
     })
 })
