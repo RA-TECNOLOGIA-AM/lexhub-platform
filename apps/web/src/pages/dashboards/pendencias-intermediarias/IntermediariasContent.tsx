@@ -12,9 +12,9 @@ import {
 // A atividade que entra na dilação, como a nota do card da v1 (NG: todas menos SANAR PENDÊNCIA 1G; LA: as duas de
 // documentos).
 const NOTA_DILACAO = {
-    NG: 'Atividades do setor, exceto Sanar Pendência 1G',
+    NG: 'Atividades do setor e Emenda - Solicitar Docs com Cliente, exceto Sanar Pendência 1G',
     LA: 'Solicitar Docs do Cliente · Solicitar Docs de Hipossuficiência do Cliente para Recurso',
-    RJ: 'Atividades do setor, exceto Sanar Pendência 1G', // a regra do NG
+    RJ: 'Atividades do setor e Emenda - Solicitar Docs com Cliente, exceto Sanar Pendência 1G', // a regra do NG
 }
 
 // Pendências Intermediárias (NG e LA): a seção única da página da v1 no layout da V2, com a troca Por prazo |
