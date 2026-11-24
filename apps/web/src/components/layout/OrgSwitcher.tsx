@@ -62,6 +62,13 @@ export function OrgSwitcher({ current, orgs, units, canCreate, onNavigate, onOpe
             ? `/${current.slug}/${code}/dashboards/${dashboardKey}${search}`
             : `/${current.slug}/dashboards${code ? `?unidade=${code}` : ''}`
 
+    const unitLogo = (code: string | null) => {
+        if (code === 'NG') return '/logo_ng.jpg'
+        if (code === 'LA' || code === 'LAAM') return '/logo_laam.svg'
+        if (code === 'RJ' || code === 'LARJ') return '/logo_larj.jpg'
+        return null
+    }
+
     function choose(code: string | null) {
         rememberUnit(current.slug, code)
         setOpen(false)
@@ -116,6 +123,14 @@ export function OrgSwitcher({ current, orgs, units, canCreate, onNavigate, onOpe
                             aria-current={c.code === unit ? 'true' : undefined}
                             onClick={() => choose(c.code)}
                         >
+                            {unitLogo(c.code) && (
+                                <img
+                                    className="org-unit-logo"
+                                    src={unitLogo(c.code)!}
+                                    alt=""
+                                    aria-hidden="true"
+                                />
+                            )}
                             <span className="org-text">
                                 <span>{c.label}</span>
                             </span>
