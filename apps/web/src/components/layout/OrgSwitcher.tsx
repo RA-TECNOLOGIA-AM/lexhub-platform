@@ -124,12 +124,7 @@ export function OrgSwitcher({ current, orgs, units, canCreate, onNavigate, onOpe
                             onClick={() => choose(c.code)}
                         >
                             {unitLogo(c.code) && (
-                                <img
-                                    className="org-unit-logo"
-                                    src={unitLogo(c.code)!}
-                                    alt=""
-                                    aria-hidden="true"
-                                />
+                                <img className="org-unit-logo" src={unitLogo(c.code)!} alt="" aria-hidden="true" />
                             )}
                             <span className="org-text">
                                 <span>{c.label}</span>
