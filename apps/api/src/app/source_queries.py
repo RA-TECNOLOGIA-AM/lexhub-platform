@@ -3488,7 +3488,7 @@ QUERIES["tcc_sobrevivencia_processual"] = {
 }
 
 
-# v1: queries.py:3534, "agendamentos_setor_intermediarias_NG" (copiada em 19/11/2026). pendencias_intermediarias_NG, pendencias_intermediarias_LA.
+# v1: queries.py:3534, "agendamentos_setor_intermediarias_NG" (copiada em 19/11/2026; V2: + a atividade de Emenda). pendencias_intermediarias_NG, pendencias_intermediarias_LA.
 QUERIES["agendamentos_setor_intermediarias_NG"] = {
         "database": "lexflow",
         "query": """
@@ -3504,6 +3504,7 @@ QUERIES["agendamentos_setor_intermediarias_NG"] = {
             v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
             v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
             CASE
+                WHEN v.setor_atividade_nome = 'EMENDA - SOLICITAR DOCS COM CLIENTE' THEN v.setor_atividade_nome
                 WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
                 THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
                 ELSE v.setor_atividade_nome
@@ -3517,9 +3518,15 @@ QUERIES["agendamentos_setor_intermediarias_NG"] = {
         LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
         LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
         WHERE v.id_escritorio_assinante = 20
-          AND v.setor_atividade_nome LIKE 'PENDÊNCIA - %'
+          AND (v.setor_atividade_nome LIKE 'PENDÊNCIA - %'
+               OR v.setor_atividade_nome = 'EMENDA - SOLICITAR DOCS COM CLIENTE')
         """,
-        "description": "Agendamentos do setor PENDÊNCIA (NG) via vw_dashboard_agendamentos_detalhados.",
+        "description": (
+            "Agendamentos do setor PENDÊNCIA (NG) via vw_dashboard_agendamentos_detalhados. V2 (24/11/2026): "
+            "mais a atividade 'EMENDA - SOLICITAR DOCS COM CLIENTE' (setor EMENDA), com o nome inteiro para não "
+            "se misturar com a 'SOLICITAR DOCS COM CLIENTE' do setor PENDÊNCIA; encerrada como Não Cumprido, "
+            "também agenda dilação (a regra da NG é por exclusão: só SANAR PENDÊNCIA 1G não agenda)."
+        ),
         "params": []
     }
 
@@ -3636,6 +3643,7 @@ QUERIES["agendamentos_setor_intermediarias_RJ"] = {
             v.id_usuario_encerramento                       AS "ID_USUARIO_ENCERRAMENTO",
             v.nome_usuario_encerramento                     AS "FUNCIONARIO_ENCERRAMENTO",
             CASE
+                WHEN v.setor_atividade_nome = 'EMENDA - SOLICITAR DOCS COM CLIENTE' THEN v.setor_atividade_nome
                 WHEN POSITION(' - ' IN v.setor_atividade_nome) > 0
                 THEN SUBSTRING(v.setor_atividade_nome FROM POSITION(' - ' IN v.setor_atividade_nome) + 3)
                 ELSE v.setor_atividade_nome
@@ -3649,9 +3657,13 @@ QUERIES["agendamentos_setor_intermediarias_RJ"] = {
         LEFT JOIN public.processo ps ON ps.id = CAST(v.processo_id AS INTEGER)
         LEFT JOIN public.situacao sit ON sit.id = ps.id_situacao
         WHERE v.id_escritorio_assinante = 27
-          AND v.setor_atividade_nome LIKE 'PENDÊNCIA - %'
+          AND (v.setor_atividade_nome LIKE 'PENDÊNCIA - %'
+               OR v.setor_atividade_nome = 'EMENDA - SOLICITAR DOCS COM CLIENTE')
         """,
-        "description": "Agendamentos do setor PENDÊNCIA (RJ) via vw_dashboard_agendamentos_detalhados.",
+        "description": (
+            "Agendamentos do setor PENDÊNCIA (RJ) via vw_dashboard_agendamentos_detalhados, mais a atividade "
+            "'EMENDA - SOLICITAR DOCS COM CLIENTE', como no NG (24/11/2026)."
+        ),
         "params": []
     }
 

@@ -57,7 +57,9 @@ def test_rj_usa_a_rota_do_ng_com_as_queries_do_rj():
         "agendamentos_setor_intermediarias_NG",
         m.QUERIES_RJ["agendamentos_setor_intermediarias_NG"],
     )
+    # A mesma do NG (com a atividade de Emenda nos dois, 24/11/2026), só com o escritório trocado.
     assert QUERIES[setor_rj]["query"].replace("= 27", "= 20") == QUERIES[setor_ng]["query"]
+    assert "EMENDA - SOLICITAR DOCS COM CLIENTE" in QUERIES[setor_rj]["query"]
     # dilação do RJ (decisão de 19/11/2026): ELABORAR DILAÇÃO, como o NG, e também MANIFESTAR DILAÇÃO DE PRAZO
     dilacao_rj = QUERIES[m.QUERIES_RJ["agendamentos_dilacao_prazo_intermediarias_NG"]]["query"]
     assert "id_escritorio_assinante = 27" in dilacao_rj
