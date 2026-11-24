@@ -8,7 +8,8 @@ export const env = {
     apiUrl: (import.meta.env.VITE_BASE_API_URL ?? '') as string,
     supabaseUrl: (import.meta.env.VITE_SUPABASE_URL ?? '') as string,
     supabaseAnonKey: (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '') as string,
-    siteUrl: (import.meta.env.VITE_SITE_URL ?? window.location.origin) as string,
+    // Sem window (testes em Node, CI sem .env.local): vazio em vez de quebrar a importação.
+    siteUrl: (import.meta.env.VITE_SITE_URL ?? (typeof window === 'undefined' ? '' : window.location.origin)) as string,
 }
 
 // Falha cedo e com mensagem clara quando falta uma variável obrigatória do modo escolhido.
