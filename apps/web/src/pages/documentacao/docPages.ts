@@ -18,4 +18,36 @@ export const DOC_PAGES: Record<string, ComponentType> = {
     'recursal-ng': lazyNamed(() => import('./conteudo/RecursalNG.tsx'), 'RecursalNGDoc'),
     'recursal-la': lazyNamed(() => import('./conteudo/RecursalLA.tsx'), 'RecursalLADoc'),
     'julgados-acordaos': lazyNamed(() => import('./conteudo/JulgadosAcordaos.tsx'), 'JulgadosAcordaosDoc'),
+    'protocolo-ng': lazyNamed(() => import('./conteudo/ProtocoloNG.tsx'), 'ProtocoloNGDoc'),
+    'protocolo-la': lazyNamed(() => import('./conteudo/ProtocoloLA.tsx'), 'ProtocoloLADoc'),
+    'pendencias-ng': lazyNamed(() => import('./conteudo/PendenciasNG.tsx'), 'PendenciasNGDoc'),
+    'pendencias-la': lazyNamed(() => import('./conteudo/PendenciasLA.tsx'), 'PendenciasLADoc'),
+    'org-documentos-ng': lazyNamed(() => import('./conteudo/OrgDocumentosNG.tsx'), 'OrgDocumentosNGDoc'),
+    'org-documentos-la': lazyNamed(() => import('./conteudo/OrgDocumentosLA.tsx'), 'OrgDocumentosLADoc'),
+    'peticionamento-ng': lazyNamed(() => import('./conteudo/PeticionamentoNG.tsx'), 'PeticionamentoNGDoc'),
+    'peticionamento-la': lazyNamed(() => import('./conteudo/PeticionamentoLA.tsx'), 'PeticionamentoLADoc'),
+    'pendencias-intermediarias-ng': lazyNamed(
+        () => import('./conteudo/PendenciasIntermediariasNG.tsx'),
+        'PendenciasIntermediariasNGDoc',
+    ),
+    'pendencias-intermediarias-la': lazyNamed(
+        () => import('./conteudo/PendenciasIntermediariasLA.tsx'),
+        'PendenciasIntermediariasLADoc',
+    ),
+    'emendas-manifestacoes-ng': lazyNamed(
+        () => import('./conteudo/EmendasManifestacoesNG.tsx'),
+        'EmendasManifestacoesNGDoc',
+    ),
+    'emendas-manifestacoes-la': lazyNamed(
+        () => import('./conteudo/EmendasManifestacoesLA.tsx'),
+        'EmendasManifestacoesLADoc',
+    ),
+    'replicas-la': lazyNamed(() => import('./conteudo/ReplicasLA.tsx'), 'ReplicasLADoc'),
+    'julgados-sentencas': lazyNamed(() => import('./conteudo/JulgadosSentencas.tsx'), 'JulgadosSentencasDoc'),
+    'marketing-lexpre': lazyNamed(() => import('./conteudo/MarketingLexpre.tsx'), 'MarketingLexpreDoc'),
+    'execucao-estrategico': lazyNamed(() => import('./conteudo/ExecucaoEstrategico.tsx'), 'ExecucaoEstrategicoDoc'),
+    'sobrevivencia-processual': lazyNamed(
+        () => import('./conteudo/SobrevivenciaProcessual.tsx'),
+        'SobrevivenciaProcessualDoc',
+    ),
 }
