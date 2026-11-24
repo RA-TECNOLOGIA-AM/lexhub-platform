@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { useSupport } from '../../../contexts/support-context.ts'
 import { toDataError } from '../../../services/errors.ts'
 import type { MemberTeam, Unit } from '../../../types/index.ts'
 import { CopyLink } from './CopyLink.tsx'
 import { inviteLink } from './invite.ts'
 import { MemberAvatar } from './MemberAvatar.tsx'
+import { SupportReasonDialog } from './SupportReasonDialog.tsx'
 import {
+    canViewAs,
     firstUnitOf,
     hasUnitAccess,
     isOnline,
@@ -24,6 +27,7 @@ type MemberDetailProps = {
     teams: MemberTeam[] // para dar nome aos setores de cada unidade
     isSelf: boolean // a própria pessoa não se desativa
     accessHref: string // onde se editam cargos, setores e exceções (aba Acesso)
+    canSupport: boolean // quem vê pode usar o modo suporte (Owner/Dev: my_admin_permissions.support)
     onSetStatus: (status: 'active' | 'disabled') => Promise<void>
     onRevoke: () => Promise<void>
 }
@@ -33,12 +37,38 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 // Módulo: o detalhe de uma pessoa (ou convite) em Membros — cabeçalho com a situação e as ações
 // (Desativar/Reativar ou Cancelar convite), abas por unidade e, na unidade escolhida, cargo, setores
 // e exceções só para leitura. Editar fica na aba Acesso (accessHref). Quem usa remonta pelo key.
-export function MemberDetail({ row, units, teams, isSelf, accessHref, onSetStatus, onRevoke }: MemberDetailProps) {
+export function MemberDetail({
+    row,
+    units,
+    teams,
+    isSelf,
+    accessHref,
+    canSupport,
+    onSetStatus,
+    onRevoke,
+}: MemberDetailProps) {
     const codes = units.map((u) => u.code)
     const [unit, setUnit] = useState(() => firstUnitOf(row, codes, teams))
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [now] = useState(() => new Date())
+    const support = useSupport()
+    // Modo suporte: o modal do motivo aberto, iniciando e o erro da API (ex.: 403 se a permissão mudou).
+    const [asking, setAsking] = useState(false)
+    const [starting, setStarting] = useState(false)
+    const [supportError, setSupportError] = useState<string | null>(null)
+
+    async function startSupport(reason: string) {
+        if (row.kind !== 'member') return
+        setStarting(true)
+        setSupportError(null)
+        try {
+            await support.start(row.member.id, row.member.name, reason) // vai para o hub do membro
+        } catch (err) {
+            setSupportError(toDataError(err).message)
+            setStarting(false)
+        }
+    }
 
     async function run(question: string, action: () => Promise<void>) {
         if (!window.confirm(question)) return
@@ -111,6 +141,18 @@ export function MemberDetail({ row, units, teams, isSelf, accessHref, onSetStatu
                                         Desativar
                                     </button>
                                 ))}
+                            {canViewAs(row, canSupport, isSelf) && (
+                                <button
+                                    className="btn"
+                                    type="button"
+                                    onClick={() => {
+                                        setSupportError(null)
+                                        setAsking(true)
+                                    }}
+                                >
+                                    Ver como este membro
+                                </button>
+                            )}
                             <Link className="btn btn-primary" to={accessHref}>
                                 Editar acesso
                             </Link>
@@ -129,6 +171,16 @@ export function MemberDetail({ row, units, teams, isSelf, accessHref, onSetStatu
                     )}
                 </div>
             </header>
+
+            {asking && row.kind === 'member' && (
+                <SupportReasonDialog
+                    name={row.member.name}
+                    busy={starting}
+                    error={supportError}
+                    onStart={startSupport}
+                    onClose={() => setAsking(false)}
+                />
+            )}
 
             {error && (
                 <p className="invite-error acc-note" role="alert">

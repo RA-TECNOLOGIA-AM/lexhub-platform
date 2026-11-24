@@ -30,6 +30,19 @@ export type Org = { slug: string; name: string; sub: string }
 
 export type Unit = { code: string; name: string }
 
+// Modo suporte: Owner/Desenvolvedor vendo o hub como um membro, só leitura (a API confere e vence em 1 hora).
+// Modo suporte: um dashboard da unidade que o membro não vê, e por quê (GET .../support/sessions/{id}/hidden).
+export type HiddenReason = 'org_inactive' | 'dashboard_off' | 'not_member' | 'no_unit_role' | 'no_sector_rule'
+export type HiddenDashboard = { key: string; title: string; area: string; reason: HiddenReason }
+
+export type SupportSession = {
+    sessionId: string
+    org: string
+    expiresAt: string
+    reason: string
+    member: { membershipId: string; name: string; avatarPath: string | null; roleLabel: string; units: Unit[] }
+}
+
 // Quem está logado, a organização ativa (a da URL) e as unidades que enxerga nela.
 // orgs = todas as organizações de que a pessoa faz parte (lista do seletor na barra lateral).
 export type Me = { user: User; org: Org; units: Unit[]; orgs: Org[] }
@@ -400,6 +413,7 @@ export type AdminPermissions = {
     audit: boolean
     billing: boolean
     clients: boolean
+    support: boolean // Owner/Desenvolvedor: pode entrar no modo suporte (ver como um membro)
 }
 
 // O que o editor grava (api.update_member_access): estado desejado nas unidades geridas.

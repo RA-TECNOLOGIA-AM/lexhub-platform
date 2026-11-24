@@ -5,6 +5,8 @@ import { Modal } from '../../../components/ui/Modal.tsx'
 import { saveFile } from '../../../lib/download.ts'
 import { fmt } from '../../../lib/format.ts'
 import { dataClient } from '../../../services/client.ts'
+import { SUPPORT_READ_ONLY } from '../../../lib/supportSession.ts'
+import { useSupportSession } from '../../../contexts/support-context.ts'
 import type { DashboardFilters } from '../../../types/index.ts'
 import { contarPorCampo, numeroCnj } from './julgados.ts'
 import type { DadoFaltando } from './types.ts'
@@ -76,6 +78,7 @@ function DadosFaltandoModal({
     const [campo, setCampo] = useState<string | null>(null)
     const [baixando, setBaixando] = useState(false)
     const [erro, setErro] = useState<string | null>(null)
+    const support = useSupportSession() // modo suporte: baixar o relatório é exportar (só leitura)
     const campos = contarPorCampo(itens)
     const visiveis = campo ? itens.filter((i) => i.campo === campo) : itens
 
@@ -109,7 +112,9 @@ function DadosFaltandoModal({
             className="jl-modal"
             onClose={onClose}
             footer={
-                relatorio && itens.length > 0 ? (
+                relatorio && itens.length > 0 && support ? (
+                    <span className="muted small">{SUPPORT_READ_ONLY}</span>
+                ) : relatorio && itens.length > 0 ? (
                     <>
                         {erro && (
                             <span className="small tone-text-danger jl-erro" role="alert">

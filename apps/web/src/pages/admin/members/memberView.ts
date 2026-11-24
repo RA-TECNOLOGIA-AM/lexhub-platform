@@ -88,6 +88,11 @@ const STATUS: Record<Member['status'], { label: string; badge: string }> = {
 
 export const statusOf = (row: MemberRow) => STATUS[row.kind === 'member' ? row.member.status : 'invited']
 
+// "Ver como este membro" (modo suporte): só quem tem a permissão (Owner/Dev), só membro ativo, nunca a si mesmo.
+// O servidor confere de novo ao iniciar; aqui só decide se o botão aparece.
+export const canViewAs = (row: MemberRow, canSupport: boolean, isSelf: boolean): boolean =>
+    canSupport && !isSelf && row.kind === 'member' && row.member.status === 'active'
+
 // Linha de baixo: o e-mail do membro, ou quem convidou e quando o convite vence.
 export function noteOf(row: MemberRow, now: Date): string {
     if (row.kind === 'member') return row.member.email

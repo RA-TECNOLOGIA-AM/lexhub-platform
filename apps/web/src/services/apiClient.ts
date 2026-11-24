@@ -11,12 +11,15 @@ import { createProfileClient } from './profileClient.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
 import type {
+    HiddenDashboard,
     DashboardCatalog,
     DashboardQuery,
     Me,
     Meta,
+    Unit,
     PendenciasResponse,
     ProtocoloResponse,
+    SupportSession,
 } from '../types/index.ts'
 import { paramsFromQuery } from '../lib/dashboardQuery.ts'
 
@@ -140,6 +143,42 @@ export function createApiClient({
             const path = `/orgs/${org}/favorites/${dashboardKey}`
             await (favorite ? http.post(path) : http.delete(path))
         },
+
+        // Modo suporte: a API devolve snake_case; a tela usa o tipo SupportSession.
+        async startSupport(org, membershipId, reason) {
+            const r = await http.post<{
+                session_id: string
+                expires_at: string
+                member: {
+                    membership_id: string
+                    name: string
+                    avatar_path: string | null
+                    role_label: string
+                    units: Unit[]
+                }
+            }>(`/orgs/${org}/support/sessions`, { membership_id: membershipId, reason })
+            const session: SupportSession = {
+                sessionId: r.session_id,
+                org,
+                expiresAt: r.expires_at,
+                reason,
+                member: {
+                    membershipId: r.member.membership_id,
+                    name: r.member.name,
+                    avatarPath: r.member.avatar_path,
+                    roleLabel: r.member.role_label,
+                    units: r.member.units,
+                },
+            }
+            return session
+        },
+        async endSupport(org, sessionId) {
+            await http.delete(`/orgs/${org}/support/sessions/${sessionId}`)
+        },
+        listHiddenForMember: (org, sessionId, unit) =>
+            http.get<HiddenDashboard[]>(
+                `/orgs/${org}/support/sessions/${sessionId}/hidden?unit=${encodeURIComponent(unit)}`,
+            ),
 
         getHubOrder: (org) => http.get<string[]>(`/orgs/${org}/hub-order`),
         async setHubOrder(org, keys) {

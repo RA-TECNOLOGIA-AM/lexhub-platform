@@ -21,6 +21,7 @@ import {
     unitViewOf,
     firstUnitOf,
     hasUnitAccess,
+    canViewAs,
     type MemberRow,
 } from './memberView.ts'
 
@@ -222,5 +223,25 @@ describe('pílulas ou cards', () => {
             },
         }
         expect(storedMembersLayout(broken)).toBe('cards')
+    })
+})
+
+describe('canViewAs (modo suporte)', () => {
+    const active = rows.find((r) => r.kind === 'member' && r.member.status === 'active')!
+    const invite = rows.find((r) => r.kind === 'invitation')!
+
+    it('só Owner/Dev, membro ativo e não a própria pessoa', () => {
+        expect(canViewAs(active, true, false)).toBe(true)
+        expect(canViewAs(active, false, false)).toBe(false)
+        expect(canViewAs(active, true, true)).toBe(false)
+        expect(canViewAs(invite, true, false)).toBe(false)
+    })
+
+    it('membro desativado não', () => {
+        const off = {
+            ...active,
+            member: { ...(active.kind === 'member' ? active.member : ({} as never)), status: 'disabled' },
+        }
+        expect(canViewAs(off as MemberRow, true, false)).toBe(false)
     })
 })

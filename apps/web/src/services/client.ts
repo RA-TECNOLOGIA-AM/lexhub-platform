@@ -1,7 +1,9 @@
 import { createApiClient } from './apiClient.ts'
 import { withSessionCache } from './sessionCache.ts'
+import { withSupportExpiry } from './supportExpiry.ts'
 import { env, required } from './env.ts'
 import { createHttp } from './http.ts'
+import { supportHeaders } from '../lib/supportSession.ts'
 import { createMockClient } from './mockClient.ts'
 import { createSupabaseAuth } from './supabase.ts'
 import type {
@@ -9,6 +11,7 @@ import type {
     DashboardCatalog,
     DashboardQuery,
     Me,
+    HiddenDashboard,
     Meta,
     PendenciasResponse,
     ProtocoloResponse,
@@ -19,6 +22,7 @@ import type {
     BillingResponse,
     AccessOverview,
     AdminPermissions,
+    SupportSession,
     MemberAccessUpdate,
     AuditQuery,
     AuditResponse,
@@ -117,6 +121,12 @@ export interface DataClient {
     setTeamGroups(org: string, teamId: string, groups: string[], seesAll: boolean | null): Promise<void>
     // O que a pessoa gere na organização (o menu esconde Acesso de quem não gere).
     getMyAdminPermissions(org: string): Promise<AdminPermissions>
+    // Modo suporte (Owner/Desenvolvedor): vê como um membro, só leitura, por 1 hora. Sem motivo/permissão = 4xx.
+    // Encerrar é idempotente. A sessão em si fica em lib/supportSession.ts; quem chama a grava.
+    startSupport(org: string, membershipId: string, reason: string): Promise<SupportSession>
+    endSupport(org: string, sessionId: string): Promise<void>
+    // Modo suporte: o que o membro da sessão não vê nesta unidade, e por quê.
+    listHiddenForMember(org: string, sessionId: string, unit: string): Promise<HiddenDashboard[]>
     // Auditoria filtrada no banco por período e tipo.
     getAudit(org: string, query: AuditQuery): Promise<AuditResponse>
     // Abriu um dashboard (vai para a Auditoria). Quem chama ignora falha: nunca impede o dashboard de abrir.
@@ -193,7 +203,8 @@ export interface DataClient {
 
 // mock = dados fictícios; api = Supabase Auth (login) + API V2 (dados). Escolha em VITE_DATA_SOURCE.
 function createDataClient(): DataClient {
-    if (env.dataSource === 'mock') return createMockClient()
+    // Os dois: 409 support_expired encerra o modo suporte e avisa a pessoa (supportExpiry.ts).
+    if (env.dataSource === 'mock') return withSupportExpiry(createMockClient())
     if (env.dataSource === 'api') {
         const auth = createSupabaseAuth(
             required('VITE_SUPABASE_URL', env.supabaseUrl),
@@ -202,11 +213,12 @@ function createDataClient(): DataClient {
         const http = createHttp({
             baseUrl: required('VITE_BASE_API_URL', env.apiUrl),
             getToken: async () => (await auth.auth.getSession()).data.session?.access_token ?? null,
+            getHeaders: supportHeaders,
         })
         // Catálogo, favoritos e ordem em memória na sessão: voltar ao hub não espera a API (sessionCache.ts).
         // A volta do Google vem para a mesma origem em que o app está aberto: o código do PKCE fica
         // guardado no navegador por origem (outra porta = outro armazenamento = login falha).
-        return withSessionCache(createApiClient({ auth, http, siteUrl: window.location.origin }))
+        return withSupportExpiry(withSessionCache(createApiClient({ auth, http, siteUrl: window.location.origin })))
     }
     throw new Error(`VITE_DATA_SOURCE="${env.dataSource}" inválido: use mock ou api`)
 }

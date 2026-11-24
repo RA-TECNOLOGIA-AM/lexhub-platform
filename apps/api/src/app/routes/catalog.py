@@ -36,9 +36,20 @@ async def list_dashboards(
         repo.list_available(access.user.user_id, access.org_id), repo.list_upcoming()
     )
     keys = {r.key for r in rows}
-    return build_catalog(
+    catalog = build_catalog(
         rows, upcoming, await synced_from_cache(cache, keys), await disabled_sources(switch, keys)
     )
+    if access.support is not None:
+        read_only(catalog)
+    return catalog
+
+
+def read_only(catalog: DashboardCatalogOut) -> None:
+    """Modo suporte: o hub do membro sem exportar, ligar/desligar nem as unidades desligadas."""
+    for card in catalog.available:
+        card.can_export = False
+        card.can_toggle = False
+        card.disabled_units = []
 
 
 class EnabledIn(BaseModel):

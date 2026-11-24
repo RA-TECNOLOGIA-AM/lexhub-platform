@@ -1,10 +1,20 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { getSupport, setSupport } from '../lib/supportSession.ts'
 import { dataClient } from '../services/client.ts'
 import { DataError } from '../services/errors.ts'
 import type { Me } from '../types/index.ts'
 import { AuthContext, type AuthValue } from './auth-context.ts'
 import { loadSession, type SessionState } from './session.ts'
 import { tvSession, watchTvSession } from './tvSession.ts'
+
+// Sair da conta no meio do modo suporte: encerra a sessão de suporte no servidor (enquanto o login ainda vale;
+// falha é ignorada) e limpa a aba, para o próximo login nesta aba não voltar "vendo como" outra pessoa.
+async function leaveSupport() {
+    const session = getSupport()
+    if (!session) return
+    await dataClient.endSupport(session.org, session.sessionId).catch(() => {})
+    setSupport(null)
+}
 
 // Guarda quem está logado e entrega isso para o app inteiro via contexto.
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -22,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Sessão aberta pelo QR venceu (24 h): sai e volta para a tela do QR, pronta para o próximo login.
     // Recarrega a página de propósito: a TV fica dias ligada e assim começa limpa.
     const expireTvSession = useCallback(async () => {
+        await leaveSupport()
         await dataClient.signOut().catch(() => {})
         tvSession.clear()
         window.location.replace('/tv-login')
@@ -90,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Padrão: 'Sair' do usuário (o próximo login vai para o hub).
     // returnHere: true = sessão caiu (401); o próximo login volta para a mesma página.
     async function signOut({ returnHere = false }: { returnHere?: boolean } = {}) {
+        await leaveSupport()
         await dataClient.signOut()
         tvSession.clear()
         setRememberLocation(returnHere)

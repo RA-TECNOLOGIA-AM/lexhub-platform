@@ -3,6 +3,8 @@ import { Suspense, type ReactNode } from 'react'
 import { useAuth } from './contexts/auth-context.ts'
 import { AuthProvider } from './contexts/AuthProvider.tsx'
 import { AppearanceProvider } from './contexts/AppearanceProvider.tsx'
+import { SupportProvider } from './contexts/SupportProvider.tsx'
+import { useSupport } from './contexts/support-context.ts'
 import { RequireAuth } from './components/auth/RequireAuth.tsx'
 import { OrgScope } from './components/auth/OrgScope.tsx'
 import { AppLayout } from './components/layout/AppLayout.tsx'
@@ -52,6 +54,17 @@ const PAGES: Record<string, ReactNode> = {
 const ORG_PREFIX = '/:org/'
 const MENU_ITEMS = NAV_SECTIONS.flatMap((s) => s.items).filter((item) => item.key !== 'dashboards')
 const pageOf = (item: NavItem) => PAGES[item.key] ?? <ComingSoonPage item={item} />
+// Admin da organização e plataforma: fora do modo suporte (só leitura de hub e dashboards).
+const isAdminRoute = (route: string) => route.startsWith('/:org/admin/') || route.startsWith('/plataforma/')
+
+// Em modo suporte, as telas de admin e da plataforma voltam ao hub da organização da sessão.
+function NotInSupport({ children }: { children: ReactNode }) {
+    const { session } = useSupport()
+    if (session) return <Navigate to={`/${session.org}/dashboards`} replace />
+    return children
+}
+const guarded = (item: NavItem) =>
+    isAdminRoute(item.route) ? <NotInSupport>{pageOf(item)}</NotInSupport> : pageOf(item)
 
 // Endereço desconhecido: vai para o hub da organização de quem está logado.
 function GoToHub() {
@@ -63,45 +76,60 @@ function App() {
     return (
         <BrowserRouter>
             <AuthProvider>
-                <AppearanceProvider>
-                    <PageTransitionProvider>
-                        {/* Só para o que fica fora do AppLayout (ex.: /login); dentro dele, o Suspense do layout
-                        segura o miolo e mantém menu e topbar na tela enquanto a página baixa. */}
-                        <Suspense fallback={<LoadingState />}>
-                            <Routes>
-                                <Route path="/login" element={<LoginPage />} />
-                                <Route path="/ativar" element={<DeviceActivationPage />} />
-                                <Route path="/tv-login" element={<TvLoginScreen />} />
-                                <Route element={<RequireAuth />}>
-                                    <Route element={<AppLayout />}>
-                                        {/* Tudo de uma organização: o OrgScope garante que a ativa é a da URL. */}
-                                        <Route path="/:org" element={<OrgScope />}>
-                                            <Route index element={<Navigate to="dashboards" replace />} />
-                                            <Route path="dashboards" element={<HubPage />} />
-                                            <Route path=":unit/dashboards/:dashboardKey" element={<DashboardPage />} />
-                                            <Route path="documentacao/:slug" element={<DocumentoPage />} />
-                                            {MENU_ITEMS.filter((item) => item.route.startsWith(ORG_PREFIX)).map(
+                {/* Modo suporte: precisa do roteador (Sair navega) e fica por dentro do login. */}
+                <SupportProvider>
+                    <AppearanceProvider>
+                        <PageTransitionProvider>
+                            {/* Só para o que fica fora do AppLayout (ex.: /login); dentro dele, o Suspense do layout
+                            segura o miolo e mantém menu e topbar na tela enquanto a página baixa. */}
+                            <Suspense fallback={<LoadingState />}>
+                                <Routes>
+                                    <Route path="/login" element={<LoginPage />} />
+                                    <Route path="/ativar" element={<DeviceActivationPage />} />
+                                    <Route path="/tv-login" element={<TvLoginScreen />} />
+                                    <Route element={<RequireAuth />}>
+                                        <Route element={<AppLayout />}>
+                                            {/* Tudo de uma organização: o OrgScope garante que a ativa é a da URL. */}
+                                            <Route path="/:org" element={<OrgScope />}>
+                                                <Route index element={<Navigate to="dashboards" replace />} />
+                                                <Route path="dashboards" element={<HubPage />} />
+                                                <Route
+                                                    path=":unit/dashboards/:dashboardKey"
+                                                    element={<DashboardPage />}
+                                                />
+                                                <Route path="documentacao/:slug" element={<DocumentoPage />} />
+                                                {MENU_ITEMS.filter((item) => item.route.startsWith(ORG_PREFIX)).map(
+                                                    (item) => (
+                                                        <Route
+                                                            key={item.key}
+                                                            path={item.route.slice(ORG_PREFIX.length)}
+                                                            element={guarded(item)}
+                                                        />
+                                                    ),
+                                                )}
+                                            </Route>
+                                            {/* Plataforma: unidades e fontes de qualquer cliente, sem ser membro (o banco confere). */}
+                                            <Route
+                                                path="/plataforma/clientes/:org/unidades"
+                                                element={
+                                                    <NotInSupport>
+                                                        <SourcesPage />
+                                                    </NotInSupport>
+                                                }
+                                            />
+                                            {MENU_ITEMS.filter((item) => !item.route.startsWith(ORG_PREFIX)).map(
                                                 (item) => (
-                                                    <Route
-                                                        key={item.key}
-                                                        path={item.route.slice(ORG_PREFIX.length)}
-                                                        element={pageOf(item)}
-                                                    />
+                                                    <Route key={item.key} path={item.route} element={guarded(item)} />
                                                 ),
                                             )}
                                         </Route>
-                                        {/* Plataforma: unidades e fontes de qualquer cliente, sem ser membro (o banco confere). */}
-                                        <Route path="/plataforma/clientes/:org/unidades" element={<SourcesPage />} />
-                                        {MENU_ITEMS.filter((item) => !item.route.startsWith(ORG_PREFIX)).map((item) => (
-                                            <Route key={item.key} path={item.route} element={pageOf(item)} />
-                                        ))}
+                                        <Route path="*" element={<GoToHub />} />
                                     </Route>
-                                    <Route path="*" element={<GoToHub />} />
-                                </Route>
-                            </Routes>
-                        </Suspense>
-                    </PageTransitionProvider>
-                </AppearanceProvider>
+                                </Routes>
+                            </Suspense>
+                        </PageTransitionProvider>
+                    </AppearanceProvider>
+                </SupportProvider>
             </AuthProvider>
         </BrowserRouter>
     )

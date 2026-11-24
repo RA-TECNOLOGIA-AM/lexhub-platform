@@ -8,11 +8,17 @@ type HttpOptions = {
     baseUrl: string // ex.: http://localhost:8000
     getToken: () => Promise<string | null> // token da sessão (null = sem login)
     fetch?: FetchLike // para os testes; padrão = fetch do navegador
+    getHeaders?: () => Record<string, string> // cabeçalhos extras, lidos a cada chamada (ex.: modo suporte)
 }
 
 // Módulo: as chamadas à API. Parâmetros: URL base e de onde vem o token.
 // Esconde: montar a URL, o cabeçalho Authorization e transformar erro HTTP em DataError.
-export function createHttp({ baseUrl, getToken, fetch: doFetch = (url, init) => fetch(url, init) }: HttpOptions) {
+export function createHttp({
+    baseUrl,
+    getToken,
+    getHeaders,
+    fetch: doFetch = (url, init) => fetch(url, init),
+}: HttpOptions) {
     const base = baseUrl.replace(/\/+$/, '')
 
     // O caminho comum de toda chamada: token, envio e erro HTTP -> DataError. Devolve a resposta crua.
@@ -25,6 +31,7 @@ export function createHttp({ baseUrl, getToken, fetch: doFetch = (url, init) => 
         signal?: AbortSignal,
     ): Promise<Response> {
         const headers = new Headers({ Accept: accept })
+        for (const [name, value] of Object.entries(getHeaders?.() ?? {})) headers.set(name, value)
         const token = await getToken()
         if (token) headers.set('Authorization', `Bearer ${token}`)
         if (body !== undefined) headers.set('Content-Type', 'application/json')

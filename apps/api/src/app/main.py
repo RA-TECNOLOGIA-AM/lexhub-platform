@@ -4,7 +4,7 @@ import time
 from contextlib import asynccontextmanager
 from urllib.parse import urlsplit
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth import build_verifier
@@ -28,11 +28,14 @@ from app.routes import (
     source_connections,
     source_freshness,
     sources,
+    support,
 )
 from app.source_cache import MemoryStore, SourceCache, shared_ttl_covering, ttl_by_query
 from app.source_switch import PgDisabledRepo, SourceSwitch
 from app.sources import source_fetcher
 from app.supabase_client import create_supabase
+from app.support import ViewedLog
+from app.support_guard import support_guard
 
 VERSION = "0.1.0"
 
@@ -184,7 +187,15 @@ def create_app() -> FastAPI:
                 await app.state.db_pool.close()
             logger.info("API desligada")
 
-    app = FastAPI(title="API Dashboard V2", version=VERSION, lifespan=lifespan)
+    # Modo suporte é só leitura em TODAS as rotas, inclusive as que vierem depois (app/support_guard.py).
+    app = FastAPI(
+        title="API Dashboard V2",
+        version=VERSION,
+        lifespan=lifespan,
+        dependencies=[Depends(support_guard)],
+    )
+    # O que já foi auditado como support.viewed (um por sessão + unidade + dashboard a cada 5 min).
+    app.state.support_viewed = ViewedLog()
     # Sem conexão com o banco: 503 com mensagem clara, não 500 (app/platform_db.py).
     install_error_handlers(app)
 
@@ -194,7 +205,7 @@ def create_app() -> FastAPI:
             allow_origins=settings.cors_origins,
             allow_credentials=True,
             allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-            allow_headers=["Authorization", "Content-Type"],
+            allow_headers=["Authorization", "Content-Type", "X-Support-Session"],
         )
     # Por último = mais externo: mede a requisição inteira, inclusive o CORS.
     app.add_middleware(RequestLogMiddleware)
@@ -209,6 +220,7 @@ def create_app() -> FastAPI:
     app.include_router(source_freshness.router)
     app.include_router(source_connections.platform)
     app.include_router(source_connections.org)
+    app.include_router(support.router)
     return app
 
 
