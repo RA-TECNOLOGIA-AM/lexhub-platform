@@ -49,6 +49,8 @@ import { financeiroEstrategicoFor } from './mock/financeiroEstrategico.ts'
 import { acordosFor, execucaoFor } from './mock/execucao.ts'
 import { execucaoEstrategicoFor } from './mock/execucaoEstrategico.ts'
 import { ticketsFor } from './mock/tickets.ts'
+import { marketingLexpreFor } from './mock/marketingLexpre.ts'
+import { marketingNgFor } from './mock/marketingNg.ts'
 import { recursalFor } from './mock/recursal.ts'
 import { publicacoesFor } from './mock/publicacoes.ts'
 import { intermediariasFor } from './mock/intermediarias.ts'
@@ -245,6 +247,8 @@ const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unk
     acordos: acordosFor,
     'execucao-estrategico': execucaoEstrategicoFor,
     tickets: ticketsFor,
+    'marketing-lexpre': marketingLexpreFor,
+    marketing: marketingNgFor,
     recursal: recursalFor,
     publicacoes: publicacoesFor,
     'pendencias-intermediarias': intermediariasFor,

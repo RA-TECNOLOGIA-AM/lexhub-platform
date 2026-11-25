@@ -231,6 +231,55 @@ QUERIES: dict[str, dict] = {
         "description": "Componentes reais de cada demanda de rubrica 'reunida' (pacote), por demanda específica (banco lexpre).",
         "params": [],
     },
+    # v1: queries.py:1220, "perfil_clientes_lexpre" (copiada em 25/11/2026). Marketing (LexPre).
+    "perfil_clientes_lexpre": {
+        "database": "lexpre",
+        "query": """
+        select
+            c.escritorio_id,
+            e.razao_social as "ESCRITORIO",
+            a.data_entrada as "ENTRADA",
+            a.id as "ATENDIMENTO",
+            c.nome as "CLIENTE",
+            c.nascimento as "NASCIMENTO",
+            c.estado_civil as "ESTADO_CIVIL",
+            c.genero as "GENERO",
+            c.bairro as "BAIRRO",
+            c.uf as "UF",
+            f.nome as "FUNCIONARIO",
+            a.nome_campanha as "CAMPANHA",
+            a.plataforma as "PLATAFORMA",
+            a.canal_aquisicao as "CANAL_AQUISICAO",
+            a.tipo_trafego as "TIPO_TRAFEGO",
+            a.prospeccao as "PROSPECCAO",
+            a.motivo_id,
+            a.status_id,
+            a.data_assinatura as "DATA_ASSINATURA",
+            -- Campos extraídos do JSONB ps.respostas
+                ps.respostas ->> 'RESIDENCIA' as "PS_RESIDENCIA",
+                ps.respostas ->> 'ocupação' as "PS_OCUPACAO",
+                ps.respostas ->> 'ESCOLARIDADE' as "PS_ESCOLARIDADE",
+                ps.respostas ->> 'primeiro_nome' as "PS_PRIMEIRO_NOME",
+                ps.respostas ->> 'UNICO PROVEDOR?' as "PS_UNICO_PROVEDOR",
+                ps.respostas ->> 'MEDIA GANHO MENSAL' as "PS_MEDIA_GANHO_MENSAL",
+                ps.respostas ->> 'carteira assinada?' as "PS_CARTEIRA_ASSINADA",
+                ps.respostas ->> 'total de dependentes' as "PS_TOTAL_DEPENDENTES"
+
+            from public.atendimento a
+            left join public.customer c on a.customer_id = c.id
+            left join public.escritorio e on a.escritorio_id = e.id
+            left join public.funcionario f on a.funcionario_id = f.id
+            left join public.pesquisa_socioeconomica ps on a.id = ps.atendimento_id
+
+            where a.status_id = 6
+              and a.data_assinatura is not null
+        """,
+        # Assinado = status_id 6 + data_assinatura (29/09/2026), mesma regra de
+        # comercial_lexpre._is_assinado. Antes era motivo_id = 4, que só é preenchido
+        # quando o atendimento é encerrado depois — deixava ~92% dos assinados de fora.
+        "description": "Perfil de clientes lexPre (assinados: status_id = 6)",
+        "params": [],
+    },
     # v1: queries.py:839, "audit_log_demandas_canceladas_lexpre_NG" (copiada em 11/11/2026). Comercial e Comissão Comercial (LexPre).
     "audit_log_demandas_canceladas_lexpre_NG": {
         "database": "lexpre",

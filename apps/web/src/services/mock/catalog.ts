@@ -83,7 +83,7 @@ export const catalog: DashboardCatalog = {
             title: 'Marketing (LexPre)',
             area: 'Comercial',
             desc: 'Leads e canais de origem.',
-            units: ['NG'],
+            units: NG_AM,
             syncedMin: 60,
             maxDelayMin: 120,
         }),
