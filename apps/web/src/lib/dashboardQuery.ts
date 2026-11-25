@@ -92,6 +92,21 @@ export const FILTER_KEYS = [
     'uf_controle',
     'fase_controle',
     'situacao_processo',
+    'faixa_etaria_marketing',
+    'canal_aquisicao_marketing',
+    'genero_marketing',
+    'tipo_trafego_marketing',
+    'ocupacao_marketing',
+    'dispositivo_marketing',
+    'prospeccao_marketing',
+    'tipo_residencia_marketing',
+    'pessoas_dependentes_marketing',
+    'rubrica_marketing',
+    'categoria_marketing',
+    'posicionamento_marketing',
+    'campanha_marketing',
+    'conjunto_marketing',
+    'criativo_marketing',
 ] as const satisfies readonly (keyof DashboardFilters)[]
 
 // URL -> período e filtros. Período só vale com as duas datas e na ordem certa; senão, o servidor usa o padrão.

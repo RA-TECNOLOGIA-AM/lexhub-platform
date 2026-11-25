@@ -7,16 +7,17 @@ type DashSectionProps = {
     title: string // "Indicadores do período"
     subtitle?: string
     action?: ReactNode // controle da seção ao lado do "Ocultar" (ex.: Total | Entrada); some com a seção oculta
+    anchor?: string // id da seção, para um atalho rolar até ela (ex.: a faixa de resumo do Marketing)
     children: ReactNode
 }
 
 // Módulo: uma seção numerada de dashboard, como na v1 (01 · Visão geral · título · Ocultar).
 // Ocultar só esconde nesta visita: recarregar a página mostra tudo de novo.
-export function DashSection({ index, eyebrow, title, subtitle, action, children }: DashSectionProps) {
+export function DashSection({ index, eyebrow, title, subtitle, action, anchor, children }: DashSectionProps) {
     const [open, setOpen] = useState(true)
     const id = useId()
     return (
-        <section className="dsec" aria-labelledby={`${id}-t`}>
+        <section className="dsec" id={anchor} aria-labelledby={`${id}-t`}>
             <header className="dsec-head">
                 <span className="dsec-num" aria-hidden="true">
                     {String(index).padStart(2, '0')}

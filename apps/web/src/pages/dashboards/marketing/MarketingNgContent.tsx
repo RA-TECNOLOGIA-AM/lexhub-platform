@@ -1,49 +1,59 @@
-import { Kpi } from '../../../components/dashboard/Kpi.tsx'
-import { KpiSection } from '../../../components/dashboard/KpiSection.tsx'
-import { fmt, show } from '../../../lib/format.ts'
-import { statsReader, type V1GenericoResponse } from '../v1Stats.ts'
+import { Icon } from '../../../components/ui/Icon.tsx'
+import type { ContentProps } from '../types.ts'
+import { Aquisicao } from './Aquisicao.tsx'
+import { FacebookAds } from './FacebookAds.tsx'
+import { Fechamento } from './Fechamento.tsx'
+import { Organico } from './Organico.tsx'
+import { Performance } from './Performance.tsx'
+import { PerfilTriados } from './PerfilTriados.tsx'
+import { lerMarketingNg, type MarketingNgResponse } from './marketingNg.ts'
 
-// Campos do Marketing NG na v1 levam o prefixo `marketing_ng_`.
-const P = 'marketing_ng_'
-
-// Só o que é do Marketing (banco NG): os KPIs da página Marketing NG da v1 (Facebook Ads, Funil de Pipeline e
-// Fechamento Campanhas). Carregar, erros e cabeçalho ficam no DashboardView.
-export function MarketingNgContent({ data }: { data: V1GenericoResponse }) {
-    const ler = statsReader(data)
-    const n = (campo: string) => ler(P + campo)
-
+// O Marketing (banco NG): as 7 seções da página da v1 (MarketingNG.tsx) no layout novo. Carregar, erros, cabeçalho,
+// período e as etiquetas de filtro ficam no DashboardView; clicar numa barra/fatia liga o filtro daquela dimensão
+// (como o drill-down da v1: vários valores na mesma dimensão = OU, dimensões diferentes = E).
+export function MarketingNgContent({ data, filters = {}, onToggleFilter }: ContentProps<MarketingNgResponse>) {
+    const ler = lerMarketingNg(data)
+    const filtro = { filters, onToggleFilter }
     return (
-        <>
-            <KpiSection id="facebook" title="Facebook Ads" subtitle="Investimento no período e retorno.">
-                <Kpi label="Valor gasto" value={show(n('facebook_valor_gasto'), fmt.brl)} />
-                <Kpi label="CAC Campanha" value={show(n('facebook_cac_campanha'), fmt.brl)} />
-                <Kpi label="CAC Geral" value={show(n('facebook_cac_geral'), fmt.brl)} />
-                <Kpi label="ROAS Campanha" value={show(n('facebook_roas_campanha'), fmt.dec2)} />
-                <Kpi label="ROAS Geral" value={show(n('facebook_roas_geral'), fmt.dec2)} />
-            </KpiSection>
-
-            <KpiSection id="funil" title="Funil de pipeline">
-                <Kpi label="Clientes de campanha" value={show(n('clientes_campanha'), fmt.int)} />
-                <Kpi label="Leads" value={show(n('leads'), fmt.int)} />
-                <Kpi label="Indicação ativa" value={show(n('indicacao_ativa'), fmt.int)} />
-                <Kpi label="Indicação passiva" value={show(n('indicacao_passiva'), fmt.int)} />
-                <Kpi label="Retorno ativa" value={show(n('retorno_ativa'), fmt.int)} />
-                <Kpi label="Retorno passiva" value={show(n('retorno_passiva'), fmt.int)} />
-            </KpiSection>
-
-            {(['ra', 'ng'] as const).map((c) => (
-                <KpiSection key={c} id={`campanha-${c}`} title={`Fechamento — Campanha ${c.toUpperCase()}`}>
-                    {/* A v1 mostra a conversão da campanha no lugar do comparativo; aqui, como texto. */}
-                    <Kpi
-                        label="Clientes"
-                        value={show(n(`campanha_${c}`), fmt.int)}
-                        note={`Conversão: ${show(n(`conversao_${c}`), fmt.pct)}`}
-                    />
-                    <Kpi label="Protocolados" value={show(n(`protocolados_${c}`), fmt.int)} />
-                    <Kpi label="Valor de causa" value={show(n(`valor_causa_${c}`), fmt.brlShort)} />
-                    <Kpi label="Ticket médio" value={show(n(`ticket_medio_${c}`), fmt.brl)} />
-                </KpiSection>
-            ))}
-        </>
+        <div className="dsecs">
+            {data.lexpre &&
+                (data.lexpre.somado ? (
+                    <p className="mkt-fonte" role="note">
+                        <Icon name="db" size={15} />
+                        <span>
+                            Números somados: <strong>banco NG</strong> (atendimentos até out/2026) +{' '}
+                            <strong>LexPre</strong> (escritório NG, onde o comercial é registrado desde set/2026). Funil
+                            de pipeline e dispositivo: só o banco NG.
+                        </span>
+                    </p>
+                ) : (
+                    <p className="mkt-fonte aviso" role="note">
+                        <Icon name="alert" size={15} />
+                        <span>Só o banco NG (atendimentos até out/2026): {data.lexpre.motivo ?? 'sem o LexPre.'}</span>
+                    </p>
+                ))}
+            <PerfilTriados ler={ler} {...filtro} dispositivo />
+            <FacebookAds ler={ler} index={3} />
+            <Fechamento ler={ler} index={4} raNg {...filtro} />
+            <Aquisicao ler={ler} index={5} {...filtro} />
+            <Performance
+                ler={ler}
+                index={6}
+                campos={{
+                    sufixo: ' NG',
+                    codigo: 'ANUNCIO_NG',
+                    leads: 'leads_ng',
+                    clientes: 'campanha_ng',
+                    acoes: 'acoes_ng',
+                    conversao: 'conversao_ng',
+                    cpl: 'cpl_ng',
+                    valorCausa: 'valor_causa_ng',
+                    ticket: 'ticket_medio_ng',
+                    rubricas: 'ind_rubricas',
+                }}
+                {...filtro}
+            />
+            <Organico ler={ler} index={7} sufixo=" NG" {...filtro} />
+        </div>
     )
 }

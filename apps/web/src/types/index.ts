@@ -130,6 +130,23 @@ export type DashboardFilters = {
     diligencia_colaborador_execucao_acordos?: string[]
     // Execução Estratégico Geral: Ambos (sem o filtro) / condenacao / acordos. Só o front usa (como na v1).
     escopo?: string[]
+    // Marketing (LexPre): os filtros clicáveis da v1 (pares selection_dim/selection_value), um por dimensão, com o
+    // sufixo _marketing (vários valores na mesma dimensão = OU).
+    faixa_etaria_marketing?: string[]
+    canal_aquisicao_marketing?: string[]
+    genero_marketing?: string[]
+    tipo_trafego_marketing?: string[]
+    ocupacao_marketing?: string[]
+    dispositivo_marketing?: string[] // só o Marketing (banco NG)
+    prospeccao_marketing?: string[]
+    tipo_residencia_marketing?: string[]
+    pessoas_dependentes_marketing?: string[]
+    rubrica_marketing?: string[]
+    categoria_marketing?: string[]
+    posicionamento_marketing?: string[]
+    campanha_marketing?: string[]
+    conjunto_marketing?: string[]
+    criativo_marketing?: string[]
     // Tickets (banco NG): um valor de cada, como os pares selection_dim/selection_value da v1
     ticket_servidor?: string[]
     ticket_categoria?: string[]
