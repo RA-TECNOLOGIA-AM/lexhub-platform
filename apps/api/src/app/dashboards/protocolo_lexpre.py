@@ -142,6 +142,11 @@ from app.analyses.v1_routes import (
     _restringir_por_funcionarios_selecionados,
 )
 from app.dashboards.base import DashboardContext, DashboardModule, ExportSpec
+from app.dashboards.protocolo_lexpre_legado import (
+    EXTRA_QUERIES,
+    buscar_protocolo_legado,
+    misturar_legado_no_corpo,
+)
 
 QUERY = "log_setor_demanda_lexpre_NG"
 
@@ -320,7 +325,12 @@ async def build(ctx: DashboardContext) -> dict:
         funcionarios_protocolo=list_funcionarios_protocolo_lexpre(rows),
     )
     # --- saída (V2): o JSON da v1 + opcoes_filtro ---
-    return {**response.model_dump(), "opcoes_filtro": opcoes}
+    corpo = response.model_dump()
+    fonte_indicadores = "lexpre"
+    legado = await buscar_protocolo_legado(ctx)
+    if legado:
+        fonte_indicadores = misturar_legado_no_corpo(corpo, legado)
+    return {**corpo, "opcoes_filtro": opcoes, "fonte_indicadores": fonte_indicadores}
 
 
 async def export_rows(ctx: DashboardContext) -> list[dict]:
@@ -381,6 +391,8 @@ MODULE = DashboardModule(
     source_label="LexPre",
     build=build,
     queries=(QUERY,),
+    # Protocolo legado: NG e LARJ (RJ) no banco ng; LAAM (LA) no laadv.
+    extra_queries=EXTRA_QUERIES,
     # Mesmos parâmetros da v1 (GET /protocolo-lexpre).
     filters={"materia": str, "funcionario": str, "area_atuacao_id": int, "uf": str},
     commission_fields=("comissionamento_por_funcionario",),

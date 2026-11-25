@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { BarList } from '../../../components/charts/BarList.tsx'
-import { ChartCard } from '../../../components/charts/ChartCard.tsx'
+import { ChartCard, ChartEmpty } from '../../../components/charts/ChartCard.tsx'
 import { ColumnChart } from '../../../components/charts/ColumnChart.tsx'
 import { LineChart } from '../../../components/charts/LineChart.tsx'
 import { DashSection } from '../../../components/dashboard/DashSection.tsx'
@@ -95,7 +95,11 @@ export function OrgDocumentosLexpreContent({
                 index={1}
                 eyebrow="Visão geral"
                 title="Indicadores do período"
-                subtitle="Resoluções e tempos no intervalo selecionado, com comparativo ao período anterior."
+                subtitle={
+                    data.fonte_indicadores === 'legado'
+                        ? 'Sem resolvidos no LexPre neste período: números do OrgDoc legado. Represados e devoluções continuam do LexPre (fila atual).'
+                        : 'Resoluções e tempos no intervalo selecionado, com comparativo ao período anterior.'
+                }
             >
                 <div className="grid grid-stat">
                     <HeroStat
@@ -369,23 +373,33 @@ export function OrgDocumentosLexpreContent({
                 index={4}
                 eyebrow="Evolução"
                 title="Resolvidos mês a mês"
-                subtitle="Comparativo ano a ano de resoluções totais."
+                subtitle="Comparado por ano; meses anteriores ao LexPre vêm do OrgDoc legado."
             >
-                <ChartCard title="Resolvidos mês a mês" tag={<Pill>Série Anual (Jan – Dez)</Pill>}>
-                    <LineChart
-                        height={340}
-                        legend
-                        area={anos.length === 1}
-                        emphasizeData
-                        labels={MESES}
-                        partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
-                        tooltip={{ heading: 'Mês', title: mesNome }}
-                        series={anos.map((a, i) => ({
-                            label: String(a.year),
-                            color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
-                            values: a.values,
-                        }))}
-                    />
+                <ChartCard
+                    title="Resolvidos mês a mês"
+                    subtitle="Comparado por ano; não depende do período"
+                    tag={<Pill>Por ano</Pill>}
+                >
+                    {anos.length === 0 ? (
+                        <ChartEmpty>Sem dados no histórico.</ChartEmpty>
+                    ) : (
+                        <LineChart
+                            height={340}
+                            legend
+                            emphasizeData
+                            format={fmt.int}
+                            labels={MESES}
+                            partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
+                            tooltip={{ heading: 'Mês', title: mesNome }}
+                            series={anos.map((a, i) => ({
+                                label: String(a.year),
+                                color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
+                                values: a.values,
+                                dashed: i < ultimo,
+                                area: i === ultimo,
+                            }))}
+                        />
+                    )}
                 </ChartCard>
             </DashSection>
             {aberto && (

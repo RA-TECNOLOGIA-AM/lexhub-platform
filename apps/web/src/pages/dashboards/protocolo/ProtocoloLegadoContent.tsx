@@ -1,5 +1,5 @@
 import { BarList } from '../../../components/charts/BarList.tsx'
-import { ChartCard } from '../../../components/charts/ChartCard.tsx'
+import { ChartCard, ChartEmpty } from '../../../components/charts/ChartCard.tsx'
 import { ColumnChart } from '../../../components/charts/ColumnChart.tsx'
 import { LineChart } from '../../../components/charts/LineChart.tsx'
 import { PieChart } from '../../../components/charts/PieChart.tsx'
@@ -280,26 +280,34 @@ export function ProtocoloLegadoContent({
                 index={4}
                 eyebrow="Tendência"
                 title="Evolução mensal"
-                subtitle="Protocolados mês a mês, ano contra ano, e não protocolados pelo mês de entrada (todo o histórico)."
+                subtitle="Comparado por ano; não protocolados pelo mês de entrada (todo o histórico)."
             >
                 <div className="grid ptl-mes">
-                    <ChartCard title="Protocolados mês a mês" tag={<Pill>Série Anual (Jan – Dez)</Pill>}>
-                        <LineChart
-                            height={340}
-                            legend
-                            emphasizeData
-                            labels={MESES}
-                            partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
-                            tooltip={{ heading: 'Mês', title: mesNome }}
-                            series={anos.map((a, i) => ({
-                                label: String(a.year),
-                                color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
-                                values: a.values,
-                                // anos anteriores tracejados; o ano atual cheio, com o degradê
-                                dashed: i < ultimo,
-                                area: i === ultimo,
-                            }))}
-                        />
+                    <ChartCard
+                        title="Protocolados mês a mês"
+                        subtitle="Comparado por ano; não depende do período"
+                        tag={<Pill>Por ano</Pill>}
+                    >
+                        {anos.length === 0 ? (
+                            <ChartEmpty>Sem dados no histórico.</ChartEmpty>
+                        ) : (
+                            <LineChart
+                                height={340}
+                                legend
+                                emphasizeData
+                                format={fmt.int}
+                                labels={MESES}
+                                partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
+                                tooltip={{ heading: 'Mês', title: mesNome }}
+                                series={anos.map((a, i) => ({
+                                    label: String(a.year),
+                                    color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
+                                    values: a.values,
+                                    dashed: i < ultimo,
+                                    area: i === ultimo,
+                                }))}
+                            />
+                        )}
                     </ChartCard>
                     <ChartCard title="Não protocolados mês a mês" subtitle="Pelo mês de entrada no setor">
                         <ColumnChart

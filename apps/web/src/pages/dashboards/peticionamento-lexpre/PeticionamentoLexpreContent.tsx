@@ -1,6 +1,6 @@
 import { useState, type CSSProperties } from 'react'
 import { BarList } from '../../../components/charts/BarList.tsx'
-import { ChartCard } from '../../../components/charts/ChartCard.tsx'
+import { ChartCard, ChartEmpty } from '../../../components/charts/ChartCard.tsx'
 import { ColumnChart } from '../../../components/charts/ColumnChart.tsx'
 import { DonutChart } from '../../../components/charts/DonutChart.tsx'
 import { LineChart } from '../../../components/charts/LineChart.tsx'
@@ -100,7 +100,13 @@ export function PeticionamentoLexpreContent({
                 index={1}
                 eyebrow="Visão geral"
                 title="Indicadores do período"
-                subtitle="Volume, tempos, valores e fila de não peticionados no intervalo selecionado."
+                subtitle={
+                    data.fonte_indicadores === 'legado'
+                        ? 'Sem peticionados no LexPre neste período: números do Peticionamento legado (volume, fila, tempos e valores). Devoluções continuam do LexPre.'
+                        : data.fonte_indicadores === 'misto'
+                          ? 'Volume, valor e tempos somam LexPre + Peticionamento legado no período. Fila, cancelados e devoluções são do LexPre.'
+                          : 'Volume, tempos, valores e fila de não peticionados no intervalo selecionado.'
+                }
             >
                 <div className="grid grid-stat">
                     <HeroStat
@@ -213,21 +219,32 @@ export function PeticionamentoLexpreContent({
                         }
                         hint="Peticionadas pelo sistema (peticionamento automático ligado)."
                     />
-                    <MiniStat
-                        label="Cancelados"
-                        icon="x-circle"
-                        tone="neutral"
-                        value={<CountUp value={s.cancelados.total} format={fmt.int} />}
-                        below={
-                            <DeltaPill
-                                value={s.cancelados.comparativo}
-                                betterWhenDown
-                                suffix=" vs mês anterior"
-                                plain
-                            />
-                        }
-                        hint="Demandas canceladas que saíram do Peticionamento no período."
-                    />
+                    {data.fonte_indicadores === 'legado' && s.processos_em_revisao != null ? (
+                        <MiniStat
+                            label="Revisão"
+                            icon="eye"
+                            tone="warn"
+                            value={<CountUp value={s.processos_em_revisao} format={fmt.int} />}
+                            below={<StackedRate text="agora" caption="não depende do período" tone="neutral" />}
+                            hint="Processos em revisão (STATUS = REVISÃO): a conferência antes do protocolo. Total de agora no legado, como na página antiga."
+                        />
+                    ) : (
+                        <MiniStat
+                            label="Cancelados"
+                            icon="x-circle"
+                            tone="neutral"
+                            value={<CountUp value={s.cancelados.total} format={fmt.int} />}
+                            below={
+                                <DeltaPill
+                                    value={s.cancelados.comparativo}
+                                    betterWhenDown
+                                    suffix=" vs mês anterior"
+                                    plain
+                                />
+                            }
+                            hint="Demandas canceladas que saíram do Peticionamento no período."
+                        />
+                    )}
                     <MiniStat
                         label="Ticket médio"
                         icon="dollar"
@@ -434,25 +451,33 @@ export function PeticionamentoLexpreContent({
                 index={5}
                 eyebrow="Evolução"
                 title="Peticionados mês a mês"
-                subtitle="Comparativo ano a ano de confecções totais."
+                subtitle="Comparado por ano; meses anteriores ao LexPre vêm do Peticionamento legado."
             >
-                <ChartCard title="Peticionados mês a mês" tag={<Pill>Série Anual (Jan – Dez)</Pill>}>
-                    <LineChart
-                        height={340}
-                        legend
-                        emphasizeData
-                        labels={MESES}
-                        partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
-                        tooltip={{ heading: 'Mês', title: mesNome }}
-                        series={anos.map((a, i) => ({
-                            label: String(a.year),
-                            color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
-                            values: a.values,
-                            // anos anteriores tracejados; o ano atual cheio, com o degradê
-                            dashed: i < ultimo,
-                            area: i === ultimo,
-                        }))}
-                    />
+                <ChartCard
+                    title="Peticionados mês a mês"
+                    subtitle="Comparado por ano; não depende do período"
+                    tag={<Pill>Por ano</Pill>}
+                >
+                    {anos.length === 0 ? (
+                        <ChartEmpty>Sem dados no histórico.</ChartEmpty>
+                    ) : (
+                        <LineChart
+                            height={340}
+                            legend
+                            emphasizeData
+                            format={fmt.int}
+                            labels={MESES}
+                            partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
+                            tooltip={{ heading: 'Mês', title: mesNome }}
+                            series={anos.map((a, i) => ({
+                                label: String(a.year),
+                                color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
+                                values: a.values,
+                                dashed: i < ultimo,
+                                area: i === ultimo,
+                            }))}
+                        />
+                    )}
                 </ChartCard>
             </DashSection>
             {aberto && (

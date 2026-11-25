@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { BarList } from '../../../components/charts/BarList.tsx'
-import { ChartCard } from '../../../components/charts/ChartCard.tsx'
+import { ChartCard, ChartEmpty } from '../../../components/charts/ChartCard.tsx'
 import { ColumnChart } from '../../../components/charts/ColumnChart.tsx'
 import { LineChart } from '../../../components/charts/LineChart.tsx'
 import { DashSection } from '../../../components/dashboard/DashSection.tsx'
@@ -101,7 +101,13 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                 index={1}
                 eyebrow="Visão geral"
                 title="Indicadores do período"
-                subtitle="Protocolados, represados, valores e tempos no intervalo selecionado (quando aplicável)."
+                subtitle={
+                    data.fonte_indicadores === 'legado'
+                        ? 'Sem protocolados no LexPre neste período: números do Protocolo legado (volume, fila, tempos e valores). Devoluções continuam do LexPre.'
+                        : data.fonte_indicadores === 'misto'
+                          ? 'Volume, valor e tempos somam LexPre + Protocolo legado no período. Fila e devoluções são do LexPre.'
+                          : 'Protocolados, represados, valores e tempos no intervalo selecionado (quando aplicável).'
+                }
             >
                 <div className="grid grid-stat">
                     <HeroStat
@@ -174,17 +180,37 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         label="Protocolados de reajuizamento"
                         icon="check-circle"
                         tone="neutral"
-                        value={fmt.int(0)}
-                        below={<StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
-                        hint="O LexPre ainda não registra reajuizamento: fica 0, como na v1."
+                        value={<CountUp value={s.protocolados_de_reajuizamento ?? 0} format={fmt.int} />}
+                        below={
+                            data.fonte_indicadores === 'legado' || data.fonte_indicadores === 'misto' ? (
+                                <StackedRate text="legado" caption="quando disponível" tone="neutral" />
+                            ) : (
+                                <StackedRate text="—" caption="vs mês anterior" tone="neutral" />
+                            )
+                        }
+                        hint={
+                            s.protocolados_de_reajuizamento != null
+                                ? 'Protocolados de reajuizamento no período (banco legado NG/RJ).'
+                                : 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
+                        }
                     />
                     <MiniStat
                         label="Represados de reajuizamento"
                         icon="x-circle"
                         tone="neutral"
-                        value={fmt.int(0)}
-                        below={<StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
-                        hint="O LexPre ainda não registra reajuizamento: fica 0, como na v1."
+                        value={<CountUp value={s.represados_de_reajuizamento ?? 0} format={fmt.int} />}
+                        below={
+                            data.fonte_indicadores === 'legado' || data.fonte_indicadores === 'misto' ? (
+                                <StackedRate text="legado" caption="fila atual" tone="neutral" />
+                            ) : (
+                                <StackedRate text="—" caption="vs mês anterior" tone="neutral" />
+                            )
+                        }
+                        hint={
+                            s.represados_de_reajuizamento != null
+                                ? 'Represados de reajuizamento agora (banco legado NG/RJ).'
+                                : 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
+                        }
                     />
                     <MiniStat
                         label="Ticket médio protocolado"
@@ -360,25 +386,33 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                 index={5}
                 eyebrow="Evolução"
                 title="Protocolados mês a mês"
-                subtitle="Comparativo ano a ano de protocolos totais."
+                subtitle="Comparado por ano; meses anteriores ao LexPre vêm do Protocolo legado."
             >
-                <ChartCard title="Protocolados mês a mês" tag={<Pill>Série Anual (Jan – Dez)</Pill>}>
-                    <LineChart
-                        height={340}
-                        legend
-                        emphasizeData
-                        labels={MESES}
-                        partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
-                        tooltip={{ heading: 'Mês', title: mesNome }}
-                        series={anos.map((a, i) => ({
-                            label: String(a.year),
-                            color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
-                            values: a.values,
-                            // anos anteriores tracejados; o ano atual cheio, com o degradê
-                            dashed: i < ultimo,
-                            area: i === ultimo,
-                        }))}
-                    />
+                <ChartCard
+                    title="Protocolados mês a mês"
+                    subtitle="Comparado por ano; não depende do período"
+                    tag={<Pill>Por ano</Pill>}
+                >
+                    {anos.length === 0 ? (
+                        <ChartEmpty>Sem dados no histórico.</ChartEmpty>
+                    ) : (
+                        <LineChart
+                            height={340}
+                            legend
+                            emphasizeData
+                            format={fmt.int}
+                            labels={MESES}
+                            partial={parcial !== null ? { series: ultimo, index: parcial } : undefined}
+                            tooltip={{ heading: 'Mês', title: mesNome }}
+                            series={anos.map((a, i) => ({
+                                label: String(a.year),
+                                color: CORES_ANO[(anos.length - 1 - i) % CORES_ANO.length],
+                                values: a.values,
+                                dashed: i < ultimo,
+                                area: i === ultimo,
+                            }))}
+                        />
+                    )}
                 </ChartCard>
             </DashSection>
         </div>
