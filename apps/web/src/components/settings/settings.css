@@ -201,6 +201,47 @@
     overflow-wrap: anywhere;
 }
 
+/* ---------- Senha (Perfil) ---------- */
+.settings-field-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+.settings-field-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+.settings-field-value {
+    margin: 0;
+    color: var(--text);
+}
+.settings-field-value.muted {
+    color: var(--text-muted);
+}
+.settings-ok {
+    margin: 8px 0 0;
+    color: var(--ok);
+}
+.settings-password-form {
+    display: flex;
+    flex-direction: column;
+    max-width: 360px;
+    margin-top: 4px;
+}
+.settings-password-form .field-icon {
+    margin-bottom: 14px;
+}
+.settings-password-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 /* ---------- celular: tela cheia, menu vira abas no topo ---------- */
 @media (max-width: 767px) {
     .export-dialog.settings-dialog {

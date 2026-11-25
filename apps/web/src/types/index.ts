@@ -444,7 +444,7 @@ export type MemberAccessUpdate = {
 
 // Auditoria: o que aconteceu na organização (entradas, exportações, acesso, suporte, fontes).
 // source = unidades e fontes (criar/editar unidade, sincronização); other = evento que a tela ainda não conhece
-export type AuditKind = 'login' | 'view' | 'export' | 'access' | 'support' | 'source' | 'other'
+export type AuditKind = 'login' | 'view' | 'export' | 'access' | 'account' | 'support' | 'source' | 'other'
 
 // Um evento como vem do banco (api.list_audit); services/auditEvents.ts traduz para AuditEvent.
 export type RawAuditEvent = {

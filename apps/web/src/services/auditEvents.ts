@@ -29,7 +29,8 @@ const connectorLabel = (v: unknown): string | null =>
 // Junta as partes que existem: 'a · b · c'
 const join = (...parts: (string | null | undefined)[]): string => parts.filter(Boolean).join(' · ')
 
-type Rule = { kind: AuditKind; action: string; detail: (e: RawAuditEvent, m: Meta) => string }
+// action pode depender do metadata (ex.: senha criada ou alterada).
+type Rule = { kind: AuditKind; action: string | ((m: Meta) => string); detail: (e: RawAuditEvent, m: Meta) => string }
 
 const EVENTS: Record<string, Rule> = {
     'auth.login': {
@@ -38,9 +39,15 @@ const EVENTS: Record<string, Rule> = {
         detail: (_, m) => join(describeUserAgent(text(m.userAgent)), text(m.ip)),
     },
     'auth.session_revoked': {
-        kind: 'login',
+        kind: 'account',
         action: 'Desconectou um aparelho',
         detail: (_, m) => join(describeUserAgent(text(m.userAgent)), text(m.ip)),
+    },
+    // Trigger em auth.users: 'created' = a conta só tinha Google; 'changed' = já tinha senha.
+    'auth.password_changed': {
+        kind: 'account',
+        action: (m) => (text(m.kind) === 'created' ? 'Criou a senha' : 'Alterou a senha'),
+        detail: () => '',
     },
     'audit.export': {
         kind: 'export',
@@ -218,13 +225,11 @@ const EVENTS: Record<string, Rule> = {
     },
 }
 
-// Opções do filtro "Tipo de evento": só os tipos que algum evento usa, em ordem alfabética, com "Outros" no fim.
-export const kindOptions = (): AuditKind[] => [
-    ...[...new Set(Object.values(EVENTS).map((r) => r.kind))].sort((a, b) =>
+// Opções do filtro "Tipo de evento": os tipos que algum evento usa, mais "Outros", tudo em ordem alfabética.
+export const kindOptions = (): AuditKind[] =>
+    [...new Set<AuditKind>([...Object.values(EVENTS).map((r) => r.kind), 'other'])].sort((a, b) =>
         KIND[a].label.localeCompare(KIND[b].label, 'pt-BR'),
-    ),
-    'other',
-]
+    )
 
 // O filtro de tipo que o banco aplica (api.list_audit). Um tipo = só os eventos dele. "Outros" = tudo menos os
 // eventos que têm regra aqui (os desconhecidos). '' (todos) = sem filtro.
@@ -247,7 +252,7 @@ export function toAuditEvent(e: RawAuditEvent): AuditEvent {
         actor: e.actor,
         email: e.actorEmail ?? null,
         kind: rule?.kind ?? 'other',
-        action: rule?.action ?? e.action,
+        action: !rule ? e.action : typeof rule.action === 'function' ? rule.action(m) : rule.action,
         detail: rule ? rule.detail(e, m) : (e.targetName ?? e.targetId ?? ''),
     }
 }

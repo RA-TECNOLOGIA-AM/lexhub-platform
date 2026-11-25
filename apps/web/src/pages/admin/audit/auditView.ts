@@ -7,6 +7,7 @@ export const KIND: Record<AuditKind, { label: string; badge: string }> = {
     view: { label: 'Dashboards abertos', badge: 'badge info' },
     export: { label: 'Exportações', badge: 'badge info' },
     access: { label: 'Mudanças de acesso', badge: 'badge neutral' },
+    account: { label: 'Segurança da conta', badge: 'badge off' },
     support: { label: 'Suporte', badge: 'badge pro' },
     source: { label: 'Unidades e fontes', badge: 'badge warn' },
     other: { label: 'Outros', badge: 'badge neutral' },

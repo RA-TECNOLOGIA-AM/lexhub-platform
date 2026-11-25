@@ -96,6 +96,7 @@ const lastViews = new Map<string, number>()
 const AVATAR_KEY = 'lexhub.mock.avatar'
 // Aparência do mock (o que a API guardaria em app.profiles), no localStorage como JSON.
 const APPEARANCE_KEY = 'lexhub.mock.appearance'
+const PASSWORD_KEY = 'lexhub.mock.password'
 const NO_APPEARANCE: Appearance = { mode: null, light: null, dark: null, accent: null }
 
 function storedMockAppearance(): Appearance {
@@ -786,6 +787,17 @@ export function createMockClient(): DataClient {
             requireSession()
             localStorage.setItem(APPEARANCE_KEY, JSON.stringify(appearance))
         },
+        // Senha: no mock só guarda que a conta passou a ter senha.
+        async getPasswordStatus() {
+            await wait()
+            requireSession()
+            return localStorage.getItem(PASSWORD_KEY) === '1'
+        },
+        async setPassword() {
+            await wait()
+            requireSession()
+            localStorage.setItem(PASSWORD_KEY, '1')
+        },
 
         // Mesmas regras da API: sessão, organização, unidade liberada e can_export; registra na Auditoria.
         // No mock o arquivo é sempre CSV (gerar XLSX exige biblioteca); com a API, vem o formato pedido.
@@ -905,6 +917,7 @@ const SUPPORT_WRITES = new Set<keyof DataClient>([
     'uploadMyAvatar',
     'removeMyAvatar',
     'setMyAppearance',
+    'setPassword',
     'approveAccessRequest',
     'rejectAccessRequest',
     'requestAccess',
