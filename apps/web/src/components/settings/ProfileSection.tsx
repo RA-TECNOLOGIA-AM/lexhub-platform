@@ -5,9 +5,10 @@ import { dataClient } from '../../services/client.ts'
 import { Avatar } from '../ui/Avatar.tsx'
 import { Icon } from '../ui/Icon.tsx'
 import { AvatarCropDialog } from './AvatarCropDialog.tsx'
+import { PasswordBlock } from './PasswordBlock.tsx'
 
-// Módulo: Configurações → Perfil. Mostra quem está logado; só a foto é editável aqui.
-// Nome, cargo, setor e escritório são do administrador (Membros/Acesso); o e-mail é o do login.
+// Módulo: Configurações → Perfil. Mostra quem está logado; aqui se editam a foto e a senha.
+// Nome, cargo, setor e escritório são do administrador (Membros/Acesso); o e-mail é o do login e não muda.
 export function ProfileSection() {
     const { me } = useAuth()
     const email = useAsync(() => dataClient.getSessionEmail(), [])
@@ -68,6 +69,7 @@ export function ProfileSection() {
                     </div>
                 ))}
             </dl>
+            <PasswordBlock />
             <dl className="settings-fields settings-fields-split">
                 {work.map((row) => (
                     <div key={row.label} className="settings-field">

@@ -2,8 +2,15 @@ import { customRange, KIND, NEVER, NEVER_LABEL, PERIODS, type AuditFilter, type 
 import { kindOptions } from '../../../services/auditEvents.ts'
 import type { AuditResponse } from '../../../types/index.ts'
 
-// Tipos com evento, em ordem alfabética, e "Outros" no fim ("Nunca acessou" vem depois, à parte).
 const KIND_OPTIONS = kindOptions()
+
+// Opções do "Tipo de evento" depois de "Todos": tipos com evento, "Outros" e (quem pode) "Nunca acessou",
+// tudo em ordem alfabética.
+export function kindSelectOptions(allowNever: boolean): { value: string; label: string }[] {
+    const options = KIND_OPTIONS.map((key) => ({ value: key as string, label: KIND[key].label }))
+    if (allowNever) options.push({ value: NEVER, label: NEVER_LABEL })
+    return options.sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'))
+}
 
 type AuditFiltersProps = {
     value: AuditFilter
@@ -115,12 +122,11 @@ export function AuditFilters({ value, actors, units, orgs, currentOrg, allowNeve
                     onChange={(e) => onChange({ ...value, kind: e.target.value as AuditFilter['kind'] })}
                 >
                     <option value="">Todos</option>
-                    {KIND_OPTIONS.map((key) => (
-                        <option key={key} value={key}>
-                            {KIND[key].label}
+                    {kindSelectOptions(allowNever).map((o) => (
+                        <option key={o.value} value={o.value}>
+                            {o.label}
                         </option>
                     ))}
-                    {allowNever && <option value={NEVER}>{NEVER_LABEL}</option>}
                 </select>
             </label>
             <label className="filter">

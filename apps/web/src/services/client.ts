@@ -203,6 +203,9 @@ export interface DataClient {
     avatarUrl(path: string): string
     // Aparência de quem está logado (Configurações → Aparência): grava os 4 campos de uma vez.
     setMyAppearance(appearance: Appearance): Promise<void>
+    // Senha de quem está logado (Configurações → Perfil): se a conta já tem (só Google = false) e criar/trocar.
+    getPasswordStatus(): Promise<boolean>
+    setPassword(password: string): Promise<void>
 }
 
 // mock = dados fictícios; api = Supabase Auth (login) + API V2 (dados). Escolha em VITE_DATA_SOURCE.

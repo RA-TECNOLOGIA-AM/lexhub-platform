@@ -15,6 +15,20 @@ const raw = (over: Partial<RawAuditEvent>): RawAuditEvent => ({
 })
 
 describe('toAuditEvent', () => {
+    it('senha da conta: criou ou alterou, pelo metadata.kind', () => {
+        expect(toAuditEvent(raw({ action: 'auth.password_changed', metadata: { kind: 'created' } }))).toMatchObject({
+            kind: 'account',
+            action: 'Criou a senha',
+            detail: '',
+        })
+        expect(toAuditEvent(raw({ action: 'auth.password_changed', metadata: { kind: 'changed' } }))).toMatchObject({
+            kind: 'account',
+            action: 'Alterou a senha',
+        })
+        expect(actionFilter('account').p_actions).toEqual(['auth.session_revoked', 'auth.password_changed'])
+        expect(actionFilter('login').p_actions).not.toContain('auth.password_changed')
+    })
+
     it('entrada: navegador, sistema e IP', () => {
         const e = toAuditEvent(
             raw({
@@ -127,11 +141,11 @@ describe('exportação da auditoria', () => {
 })
 
 describe('actionFilter', () => {
-    it('desconectou um aparelho: tipo Entradas, com navegador e IP', () => {
+    it('desconectou um aparelho: tipo Segurança da conta, com navegador e IP', () => {
         const e = toAuditEvent(
             raw({ action: 'auth.session_revoked', metadata: { ip: '10.0.0.2', userAgent: 'python-httpx/0.27.0' } }),
         )
-        expect(e.kind).toBe('login')
+        expect(e.kind).toBe('account')
         expect(e.action).toBe('Desconectou um aparelho')
         expect(e.detail).toBe('TV (QR) · 10.0.0.2')
     })
@@ -155,8 +169,8 @@ describe('actionFilter', () => {
 })
 
 describe('kindOptions', () => {
-    it('tipos com evento em ordem alfabética, com Suporte, com Outros no fim', () => {
-        expect(kindOptions()).toEqual(['view', 'login', 'export', 'access', 'support', 'source', 'other'])
+    it('tipos com evento e Outros, todos em ordem alfabética', () => {
+        expect(kindOptions()).toEqual(['view', 'login', 'export', 'access', 'other', 'account', 'support', 'source'])
     })
 })
 

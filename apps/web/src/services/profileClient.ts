@@ -3,9 +3,19 @@ import type { DataClient } from './client.ts'
 import { DataError } from './errors.ts'
 import { createRpc } from './rpc.ts'
 
-type ProfileClient = Pick<DataClient, 'uploadMyAvatar' | 'removeMyAvatar' | 'avatarUrl' | 'setMyAppearance'>
+type ProfileClient = Pick<
+    DataClient,
+    'uploadMyAvatar' | 'removeMyAvatar' | 'avatarUrl' | 'setMyAppearance' | 'getPasswordStatus' | 'setPassword'
+>
 
 const BUCKET = 'avatars'
+
+// Códigos do Supabase Auth ao trocar a senha → mensagem para a pessoa.
+const PASSWORD_ERRORS: Record<string, string> = {
+    weak_password: 'Senha fraca. Use mais caracteres, com letras e números.',
+    same_password: 'A nova senha é igual à atual.',
+    reauthentication_needed: 'Entre de novo para trocar a senha.',
+}
 
 // Módulo: a foto de perfil pelo Supabase (bucket público 'avatars' + api.set_my_avatar).
 // Cada troca grava um arquivo novo ('<user_id>/<data>.webp'), registra o caminho e apaga o anterior:
@@ -47,6 +57,15 @@ export function createProfileClient(supabase: SupabaseClient): ProfileClient {
         // Aparência: api.set_my_appearance grava os 4 campos na linha de quem está logado.
         async setMyAppearance({ mode, light, dark, accent }) {
             await call<null>('set_my_appearance', { p_mode: mode, p_light: light, p_dark: dark, p_accent: accent })
+        },
+        // Senha: o status vem do banco (só um boolean); a troca é do Supabase Auth, e a auditoria é um trigger.
+        getPasswordStatus: () => call<boolean>('my_password_status'),
+        async setPassword(password) {
+            const { error } = await supabase.auth.updateUser({ password })
+            if (error) {
+                const message = PASSWORD_ERRORS[error.code ?? ''] ?? 'Não foi possível salvar a senha. Tente de novo.'
+                throw new DataError(error.status ?? 0, message, error.code)
+            }
         },
     }
 }

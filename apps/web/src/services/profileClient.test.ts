@@ -3,10 +3,20 @@ import { describe, expect, it } from 'vitest'
 import { createProfileClient } from './profileClient.ts'
 
 // Supabase falso com sessão, storage e rpc: guarda o que foi enviado, apagado e chamado.
-function fake({ previous = null as string | null, rpcError = false } = {}) {
-    const log = { uploads: [] as string[], removed: [] as string[], rpc: [] as unknown[] }
+function fake({
+    previous = null as unknown,
+    rpcError = false,
+    authError = null as { code?: string; status?: number } | null,
+} = {}) {
+    const log = { uploads: [] as string[], removed: [] as string[], rpc: [] as unknown[], updates: [] as unknown[] }
     const supabase = {
-        auth: { getSession: async () => ({ data: { session: { user: { id: 'u1' } } } }) },
+        auth: {
+            getSession: async () => ({ data: { session: { user: { id: 'u1' } } } }),
+            updateUser: async (attrs: unknown) => {
+                log.updates.push(attrs)
+                return { data: { user: null }, error: authError }
+            },
+        },
         storage: {
             from: () => ({
                 upload: async (path: string) => {
@@ -68,5 +78,26 @@ describe('createProfileClient', () => {
 
     it('monta a URL pública', () => {
         expect(fake().client.avatarUrl('u1/a.webp')).toBe('https://x/avatars/u1/a.webp')
+    })
+    it('diz se a conta tem senha pela RPC my_password_status', async () => {
+        const { client, log } = fake({ previous: true })
+        expect(await client.getPasswordStatus()).toBe(true)
+        expect(log.rpc).toEqual([{ fn: 'my_password_status', args: undefined }])
+    })
+
+    it('grava a senha pelo updateUser do Supabase', async () => {
+        const { client, log } = fake()
+        await client.setPassword('abc123')
+        expect(log.updates).toEqual([{ password: 'abc123' }])
+    })
+
+    it.each([
+        ['weak_password', 'Senha fraca. Use mais caracteres, com letras e números.'],
+        ['same_password', 'A nova senha é igual à atual.'],
+        ['reauthentication_needed', 'Entre de novo para trocar a senha.'],
+        ['outro_erro', 'Não foi possível salvar a senha. Tente de novo.'],
+    ])('erro %s do Supabase vira mensagem em português', async (code, message) => {
+        const { client } = fake({ authError: { code, status: 422 } })
+        await expect(client.setPassword('abc123')).rejects.toThrow(message)
     })
 })

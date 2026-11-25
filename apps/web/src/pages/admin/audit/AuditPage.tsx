@@ -82,7 +82,7 @@ export function AuditPage() {
         <>
             <PageHeader
                 title="Auditoria"
-                description="Entradas, dashboards abertos, exportações, mudanças de acesso e sessões de suporte. Guardado por pelo menos 6 meses."
+                description="Entradas, dashboards abertos, exportações, mudanças de acesso, segurança da conta e sessões de suporte. Guardado por pelo menos 6 meses."
                 actions={
                     <button className="btn" type="button" disabled={exporting || count === 0} onClick={exportCsv}>
                         <Icon name="download" size={16} />

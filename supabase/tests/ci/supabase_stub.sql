@@ -16,7 +16,8 @@ create table auth.users (
   id                 uuid primary key,
   email              text,
   raw_user_meta_data jsonb default '{}'::jsonb,
-  raw_app_meta_data  jsonb default '{}'::jsonb
+  raw_app_meta_data  jsonb default '{}'::jsonb,
+  encrypted_password varchar
 );
 
 -- Identidades de login (Google etc.): o banco confere e-mail verificado por aqui, não pelo user_metadata.
