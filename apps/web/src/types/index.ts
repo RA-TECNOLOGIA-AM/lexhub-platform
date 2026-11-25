@@ -270,6 +270,8 @@ export type PendenciasResponse = {
     pendencias_nao_resolvidas_por_origem: Point[] // setor de onde a pendência veio
     media_pendencias_resolvidas_por_funcionario: Point[] // resolvidas por dia, por pessoa (todos veem)
     // Quem gere a unidade vê de todos; os demais, só a própria linha. Taxas em %.
+    // Pendências LexPre: de onde vêm os números (o legado da unidade soma; ver pendencias_lexpre_legado.py).
+    fonte_indicadores?: 'lexpre' | 'legado' | 'misto'
     comissionamento_pendencias_por_funcionario: {
         funcionario: string
         taxa_resolvido: number
