@@ -104,6 +104,11 @@ from app.analyses.v1_routes import (
 )
 from app.dashboards.base import DashboardContext, DashboardModule, ExportSpec
 from app.dashboards.opcoes_lexpre import opcoes_filtro_setor
+from app.dashboards.pendencias_lexpre_legado import (
+    EXTRA_QUERIES,
+    buscar_pendencias_legado,
+    misturar_legado_no_corpo,
+)
 
 QUERIES = ("log_setor_demanda_lexpre_NG", "setor_func_lexpre_NG")
 
@@ -218,8 +223,13 @@ async def build(ctx: DashboardContext) -> dict:
             )
         ],
     )
-    # --- saída (V2): o JSON da v1 + opcoes_filtro ---
-    return {**response.model_dump(), "opcoes_filtro": opcoes}
+    # --- saída (V2): o JSON da v1 + opcoes_filtro + o legado da unidade somado ---
+    corpo = response.model_dump()
+    fonte_indicadores = "lexpre"
+    legado = await buscar_pendencias_legado(ctx)
+    if legado:
+        fonte_indicadores = misturar_legado_no_corpo(corpo, legado)
+    return {**corpo, "opcoes_filtro": opcoes, "fonte_indicadores": fonte_indicadores}
 
 
 async def export_rows(ctx: DashboardContext) -> list[dict]:
@@ -291,6 +301,8 @@ MODULE = DashboardModule(
     source_label="LexPre",
     build=build,
     queries=QUERIES,
+    # Pendências legado: NG e LARJ (RJ) no banco ng; LAAM (LA) no laadv.
+    extra_queries=EXTRA_QUERIES,
     # Mesmos parâmetros da v1 (GET /pendencia-lexpre: sem matéria).
     filters={"funcionario": str, "area_atuacao_id": int, "uf": str},
     commission_fields=("comissionamento_pendencias_por_funcionario",),

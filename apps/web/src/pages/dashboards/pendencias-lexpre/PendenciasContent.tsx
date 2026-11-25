@@ -29,6 +29,9 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
     // Reajuizamento: o LexPre ainda não registra (0, como na v1); o banco legado da NG/RJ tem; o da LA não
     // separa (os campos não vêm e os dois cards somem).
     const lexpre = data.meta.source === 'LexPre'
+    // Pendências LexPre com o legado da unidade somado (NG/RJ/LA): reajuizamento passa a vir do legado.
+    const comLegado = data.fonte_indicadores === 'legado' || data.fonte_indicadores === 'misto'
+    const reajSoLexpre = lexpre && !comLegado
     const comReaj = lexpre || s.pendencias_nao_resolvidas_reajuizamento !== undefined
     const porFuncionario =
         onToggleFilter && ((name: string) => void (!isPlaceholder(name) && onToggleFilter('funcionario', name)))
@@ -57,7 +60,13 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                 index={1}
                 eyebrow="Visão geral"
                 title="Indicadores do período"
-                subtitle="Volume e status das pendências no intervalo selecionado (quando aplicável)."
+                subtitle={
+                    data.fonte_indicadores === 'legado'
+                        ? 'Sem pendências no LexPre neste período: números das Pendências do banco legado.'
+                        : data.fonte_indicadores === 'misto'
+                          ? 'Somam LexPre + Pendências do banco legado (volume, fila, taxas e tempos). Comparativos são do LexPre.'
+                          : 'Volume e status das pendências no intervalo selecionado (quando aplicável).'
+                }
             >
                 <div className="grid grid-stat">
                     <HeroStat
@@ -211,11 +220,15 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                                 value={
                                     <CountUp value={s.pendencias_nao_resolvidas_reajuizamento ?? 0} format={fmt.int} />
                                 }
-                                below={lexpre && <StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
+                                below={
+                                    reajSoLexpre && <StackedRate text="—" caption="vs mês anterior" tone="neutral" />
+                                }
                                 hint={
-                                    lexpre
-                                        ? 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
-                                        : 'Pendências de reajuizamento abertas no período e ainda não resolvidas.'
+                                    comLegado
+                                        ? 'Reajuizamento vem do banco legado (o LexPre ainda não registra).'
+                                        : lexpre
+                                          ? 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
+                                          : 'Pendências de reajuizamento abertas no período e ainda não resolvidas.'
                                 }
                             />
                             <MiniStat
@@ -223,11 +236,15 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                                 icon="undo"
                                 tone="neutral"
                                 value={<CountUp value={s.pendencias_resolvidas_reajuizamento ?? 0} format={fmt.int} />}
-                                below={lexpre && <StackedRate text="—" caption="vs mês anterior" tone="neutral" />}
+                                below={
+                                    reajSoLexpre && <StackedRate text="—" caption="vs mês anterior" tone="neutral" />
+                                }
                                 hint={
-                                    lexpre
-                                        ? 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
-                                        : 'Pendências de reajuizamento abertas no período e já resolvidas.'
+                                    comLegado
+                                        ? 'Reajuizamento vem do banco legado (o LexPre ainda não registra).'
+                                        : lexpre
+                                          ? 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
+                                          : 'Pendências de reajuizamento abertas no período e já resolvidas.'
                                 }
                             />
                         </>
@@ -350,7 +367,11 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                     >
                         <BarList items={origens} total={s.pendencias_nao_resolvidas} showShare wrapNames />
                     </ChartCard>
-                    <ChartCard title="Resolvidas mês a mês" tag={<Pill>Série Anual (Jan – Dez)</Pill>}>
+                    <ChartCard
+                        title="Resolvidas mês a mês"
+                        subtitle={comLegado ? 'LexPre + banco legado, somados mês a mês' : undefined}
+                        tag={<Pill>Série Anual (Jan – Dez)</Pill>}
+                    >
                         <LineChart
                             height={320}
                             legend
