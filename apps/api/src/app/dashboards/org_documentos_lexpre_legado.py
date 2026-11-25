@@ -108,7 +108,7 @@ def _chave_mes(name: str) -> str | None:
     iso = re.fullmatch(r"(\d{4})-(\d{2})", texto)
     if iso:
         return f"{iso.group(1)}-{iso.group(2)}"
-    br = re.fullmatch(r"([a-zç]{3})\w*\.?\s+(\d{4})", texto, re.I)
+    br = re.fullmatch(r"([a-zç]{3})\w*\.?\s+(\d{4})", texto, re.IGNORECASE)
     if not br:
         return None
     mes = _MESES.index(br.group(1).lower()) + 1 if br.group(1).lower() in _MESES else 0

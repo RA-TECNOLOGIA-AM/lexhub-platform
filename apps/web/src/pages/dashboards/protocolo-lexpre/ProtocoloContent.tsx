@@ -180,12 +180,7 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         label="Protocolados de reajuizamento"
                         icon="check-circle"
                         tone="neutral"
-                        value={
-                            <CountUp
-                                value={s.protocolados_de_reajuizamento ?? 0}
-                                format={fmt.int}
-                            />
-                        }
+                        value={<CountUp value={s.protocolados_de_reajuizamento ?? 0} format={fmt.int} />}
                         below={
                             data.fonte_indicadores === 'legado' || data.fonte_indicadores === 'misto' ? (
                                 <StackedRate text="legado" caption="quando disponível" tone="neutral" />
@@ -203,9 +198,7 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         label="Represados de reajuizamento"
                         icon="x-circle"
                         tone="neutral"
-                        value={
-                            <CountUp value={s.represados_de_reajuizamento ?? 0} format={fmt.int} />
-                        }
+                        value={<CountUp value={s.represados_de_reajuizamento ?? 0} format={fmt.int} />}
                         below={
                             data.fonte_indicadores === 'legado' || data.fonte_indicadores === 'misto' ? (
                                 <StackedRate text="legado" caption="fila atual" tone="neutral" />
