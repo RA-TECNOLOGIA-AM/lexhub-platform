@@ -1,0 +1,62 @@
+/* Faixa "Primeiros passos" do hub (GuiaLetreiro.tsx): o letreiro da faixa "Atenção" (DadosFaltando.css),
+   em amarelo como ela. */
+.hub-guia {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    padding: 9px 0;
+    border: 1px solid var(--warn-line);
+    border-radius: var(--r-lg);
+    background: var(--warn-bg);
+    color: var(--warn);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+.hub-guia:hover {
+    background: color-mix(in srgb, var(--warn-dot) 18%, var(--warn-bg));
+}
+.hub-guia:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+}
+.hub-guia-letreiro {
+    display: inline-flex;
+    width: max-content;
+    padding-left: 100%;
+    white-space: nowrap;
+    animation: hub-guia-letreiro var(--dur, 14s) linear infinite;
+}
+.hub-guia-letreiro > span {
+    padding: 0 32px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+.hub-guia:hover .hub-guia-letreiro,
+.hub-guia:focus-visible .hub-guia-letreiro {
+    animation-play-state: paused;
+}
+@keyframes hub-guia-letreiro {
+    from {
+        transform: translateX(0);
+    }
+    to {
+        transform: translateX(-100%);
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hub-guia-letreiro {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        width: auto;
+        padding: 0 16px;
+        white-space: normal;
+        animation: none;
+    }
+    .hub-guia-letreiro > span {
+        padding: 0;
+    }
+}
