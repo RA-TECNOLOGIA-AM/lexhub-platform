@@ -108,6 +108,18 @@ describe('filterRows', () => {
         expect(names(filterRows(rows, { ...none, unit: 'NG', role: 'colaborador' }))).toEqual(['diego', 'gabriel'])
         expect(names(filterRows(rows, { ...none, role: 'admin' }))).toEqual(['ana'])
     })
+    it('Online agora: só ativo visto há menos de 3 min, na hora dada', () => {
+        const now = new Date('2026-11-25T12:00:00Z')
+        const at = (ms: number) => new Date(now.getTime() - ms).toISOString()
+        const list = rows.map((r) =>
+            r.kind === 'member' && emailOf(r).startsWith('ana')
+                ? { ...r, member: { ...r.member, status: 'active' as const, last_seen_at: at(60_000) } }
+                : r.kind === 'member'
+                  ? { ...r, member: { ...r.member, last_seen_at: at(10 * 60_000) } }
+                  : r,
+        )
+        expect(names(filterRows(list, { ...none, status: 'online' }, now))).toEqual(['ana'])
+    })
 })
 
 describe('activeCount', () => {

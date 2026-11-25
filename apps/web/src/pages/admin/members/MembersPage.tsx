@@ -93,7 +93,7 @@ export function MembersPage() {
 
     const count = activeCount(data)
     const listProps = {
-        rows: filterRows(rows, filter),
+        rows: filterRows(rows, filter, now),
         units: data.units,
         unit: filter.unit || null,
         now,
