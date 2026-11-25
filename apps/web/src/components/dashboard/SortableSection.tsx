@@ -1,6 +1,7 @@
 import { useDndContext, useDroppable } from '@dnd-kit/core'
 import { rectSortingStrategy, SortableContext } from '@dnd-kit/sortable'
 import type { ReactNode } from 'react'
+import { areaColor } from '../../lib/hubView.ts'
 import { CardSection } from './CardSection.tsx'
 
 type SortableSectionProps = {
@@ -21,7 +22,9 @@ export function SortableSection({ title, ids, acceptsOthers = false, children }:
     return (
         <div ref={setNodeRef} className={highlight ? 'drop-zone over' : 'drop-zone'}>
             <SortableContext id={title} items={ids} strategy={rectSortingStrategy}>
-                <CardSection title={title}>{children}</CardSection>
+                <CardSection title={title} color={areaColor(title)}>
+                    {children}
+                </CardSection>
             </SortableContext>
         </div>
     )
