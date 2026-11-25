@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from 'react-router'
 import { useAuth } from '../../contexts/auth-context.ts'
 import { useSupportSession } from '../../contexts/support-context.ts'
 import { HiddenForMember } from './HiddenForMember.tsx'
+import { GuiaLetreiro } from './GuiaLetreiro.tsx'
 import { DashboardCard } from '../../components/dashboard/DashboardCard.tsx'
 import { HubDnd, type HubDrop } from '../../components/dashboard/HubDnd.tsx'
 import { SortableCard } from '../../components/dashboard/SortableCard.tsx'
@@ -142,6 +143,7 @@ export function HubPage() {
                         {unit ? ` · ${unitName(unit, units)}` : ''}. Troque a unidade no seletor da barra lateral.
                     </p>
                 </div>
+                <GuiaLetreiro org={org} />
             </section>
 
             <HubDnd onDrop={handleDrop}>
