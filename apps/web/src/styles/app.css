@@ -927,6 +927,15 @@ button.org:hover {
     outline: 2px dashed var(--accent);
     outline-offset: 6px;
 }
+/* Hub em Lista: a cor da área como no Quadro (bolinha no título, borda esquerda nos cards). */
+.card-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.card-section.has-color .dcard {
+    border-left: 3px solid var(--col);
+}
 /* Favoritos vazio: a dica ocupa a linha inteira da grade. */
 .drop-hint {
     grid-column: 1 / -1;
