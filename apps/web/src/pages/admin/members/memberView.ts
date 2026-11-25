@@ -116,7 +116,7 @@ export function initialsOf(row: MemberRow): string {
 }
 
 // --- Filtros (Buscar, Unidade, Cargo, Situação) ---
-export type MemberStatusFilter = Member['status'] | '' // '' = todas
+export type MemberStatusFilter = Member['status'] | 'online' | '' // '' = todas; online = ativo com o LexHub aberto agora
 export type MemberFilter = {
     q: string
     unit: string
@@ -124,7 +124,8 @@ export type MemberFilter = {
     status: MemberStatusFilter
 }
 
-export const STATUS_OPTIONS: { value: Member['status']; label: string }[] = [
+export const STATUS_OPTIONS: { value: Exclude<MemberStatusFilter, ''>; label: string }[] = [
+    { value: 'online', label: 'Online agora' },
     { value: 'active', label: 'Ativo' },
     { value: 'invited', label: 'Convite pendente' },
     { value: 'disabled', label: 'Desativado' },
@@ -143,7 +144,8 @@ function hasRole(row: MemberRow, role: MemberFilter['role'], unit: string): bool
 
 const statusKey = (row: MemberRow) => (row.kind === 'member' ? row.member.status : 'invited')
 
-export function filterRows(rows: MemberRow[], f: MemberFilter): MemberRow[] {
+// now: a hora de referência do filtro Online (a mesma da tela, para a bolinha e o filtro baterem).
+export function filterRows(rows: MemberRow[], f: MemberFilter, now: Date = new Date()): MemberRow[] {
     return rows.filter((row) => {
         // Busca por nome, e-mail ou setor.
         const text =
@@ -154,7 +156,7 @@ export function filterRows(rows: MemberRow[], f: MemberFilter): MemberRow[] {
             matchesText(text, f.q) &&
             (!f.unit || inUnit(row, f.unit)) &&
             (!f.role || hasRole(row, f.role, f.unit)) &&
-            (!f.status || statusKey(row) === f.status)
+            (!f.status || (f.status === 'online' ? isOnline(row, now) : statusKey(row) === f.status))
         )
     })
 }
