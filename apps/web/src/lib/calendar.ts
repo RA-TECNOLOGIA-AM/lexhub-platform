@@ -2,10 +2,33 @@
 // Datas no formato 'AAAA-MM-DD', como em lib/period.ts. Mês sempre de 0 a 11 (como o Date).
 
 export const MONTH_NAMES = [
-    'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+    'janeiro',
+    'fevereiro',
+    'março',
+    'abril',
+    'maio',
+    'junho',
+    'julho',
+    'agosto',
+    'setembro',
+    'outubro',
+    'novembro',
+    'dezembro',
 ]
-export const MONTH_SHORT = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.']
+export const MONTH_SHORT = [
+    'jan.',
+    'fev.',
+    'mar.',
+    'abr.',
+    'mai.',
+    'jun.',
+    'jul.',
+    'ago.',
+    'set.',
+    'out.',
+    'nov.',
+    'dez.',
+]
 // Semana começa no domingo (padrão do Brasil).
 export const WEEKDAYS = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 

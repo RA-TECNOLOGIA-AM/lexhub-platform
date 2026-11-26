@@ -1022,7 +1022,7 @@ button.org:hover {
     flex: none;
     color: var(--text-muted);
 }
-.date-trigger[aria-pressed="true"] {
+.date-trigger[aria-pressed='true'] {
     border-color: var(--accent);
     box-shadow: 0 0 0 1px var(--accent);
 }
@@ -1072,7 +1072,7 @@ button.org:hover {
 .cal-nav:hover:not(:disabled),
 .cal-title:hover,
 .cal-month:hover:not(:disabled),
-.cal-day:hover:not(:disabled):not([aria-pressed="true"]) {
+.cal-day:hover:not(:disabled):not([aria-pressed='true']) {
     background: var(--surface-3);
 }
 .cal-nav:disabled,
@@ -1107,17 +1107,17 @@ button.org:hover {
     text-decoration: underline;
     text-underline-offset: 3px;
 }
-.cal-day[data-range="inside"] {
+.cal-day[data-range='inside'] {
     background: var(--accent-soft);
     border-radius: 0;
 }
-.cal-day[data-range="start"] {
+.cal-day[data-range='start'] {
     border-radius: var(--r-sm) 0 0 var(--r-sm);
 }
-.cal-day[data-range="end"] {
+.cal-day[data-range='end'] {
     border-radius: 0 var(--r-sm) var(--r-sm) 0;
 }
-.cal-day[aria-pressed="true"] {
+.cal-day[aria-pressed='true'] {
     background: var(--accent);
     color: var(--on-accent);
     font-weight: 700;
@@ -1132,7 +1132,7 @@ button.org:hover {
     border-radius: var(--r-sm);
     font-size: var(--fs-sm);
 }
-.cal-month[aria-current="date"] {
+.cal-month[aria-current='date'] {
     background: var(--accent);
     color: var(--on-accent);
     font-weight: 700;

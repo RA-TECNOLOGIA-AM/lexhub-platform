@@ -83,10 +83,21 @@ export function RangeCalendar({ from, to, start, min, max, today, onPick }: Rang
         return (
             <div className="cal">
                 <div className="cal-head">
-                    <button type="button" className="cal-nav" aria-label="Ano anterior" disabled={!canPrevYear} onClick={() => setYearView(yearView - 1)}>
+                    <button
+                        type="button"
+                        className="cal-nav"
+                        aria-label="Ano anterior"
+                        disabled={!canPrevYear}
+                        onClick={() => setYearView(yearView - 1)}
+                    >
                         <Icon name="chevron-left" size={16} />
                     </button>
-                    <button type="button" className="cal-title" onClick={() => setMode('days')} aria-label="Voltar para os dias">
+                    <button
+                        type="button"
+                        className="cal-title"
+                        onClick={() => setMode('days')}
+                        aria-label="Voltar para os dias"
+                    >
                         {yearView}
                     </button>
                     <button
@@ -127,7 +138,13 @@ export function RangeCalendar({ from, to, start, min, max, today, onPick }: Rang
     return (
         <div className="cal">
             <div className="cal-head">
-                <button type="button" className="cal-nav" aria-label="Mês anterior" disabled={!canPrev} onClick={() => goMonth(-1)}>
+                <button
+                    type="button"
+                    className="cal-nav"
+                    aria-label="Mês anterior"
+                    disabled={!canPrev}
+                    onClick={() => goMonth(-1)}
+                >
                     <Icon name="chevron-left" size={16} />
                 </button>
                 <button
@@ -142,7 +159,13 @@ export function RangeCalendar({ from, to, start, min, max, today, onPick }: Rang
                     {MONTH_NAMES[m]} de {y}
                     <Icon name="chevron-down" size={14} />
                 </button>
-                <button type="button" className="cal-nav" aria-label="Próximo mês" disabled={!canNext} onClick={() => goMonth(1)}>
+                <button
+                    type="button"
+                    className="cal-nav"
+                    aria-label="Próximo mês"
+                    disabled={!canNext}
+                    onClick={() => goMonth(1)}
+                >
                     <Icon name="chevron-right" size={16} />
                 </button>
             </div>
