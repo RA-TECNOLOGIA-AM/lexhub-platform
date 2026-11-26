@@ -4,6 +4,7 @@ import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 import { orgInitials } from '../../lib/orgs.ts'
 import { hubUnit, rememberUnit, rememberedUnit, unitChoices, unitsWithDashboards } from '../../lib/activeUnit.ts'
 import { unitLogo, unitName } from '../../lib/units.ts'
+import { GERAL_UNIT } from '../../lib/orgDashboard.ts'
 import type { Org, Unit } from '../../types/index.ts'
 import { Icon } from '../ui/Icon.tsx'
 import { useDismiss } from '../../hooks/useDismiss.ts'
@@ -45,7 +46,10 @@ export function OrgSwitcher({ current, orgs, units, canCreate, onNavigate, onOpe
         returnFocus: button,
     })
 
-    const onDashboard = matchPath(DASHBOARD_ROUTE, pathname)
+    // Dashboard da organização (/:org/geral/...): não tem unidade, então o seletor age como fora de um dashboard
+    // (escolher uma unidade leva ao hub filtrado).
+    const matched = matchPath(DASHBOARD_ROUTE, pathname)
+    const onDashboard = matched?.params.unit === GERAL_UNIT ? null : matched
     const dashboardKey = onDashboard?.params.dashboardKey ?? null
     // O catálogo (já em memória na sessão: não espera a API) diz quais unidades têm dashboards
     // e, num dashboard, em quais unidades ele está liberado.

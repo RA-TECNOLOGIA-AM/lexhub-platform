@@ -7,4 +7,5 @@ export const HIDDEN_REASON: Record<HiddenReason, string> = {
     dashboard_off: 'Desligado nesta unidade',
     not_member: 'Não é membro ativo',
     org_inactive: 'Unidade ou organização inativa',
+    owner_dev_only: 'Só Owner e Desenvolvedor veem este dashboard',
 }
