@@ -4232,6 +4232,104 @@ QUERIES["configuracoes_vinculacoes"] = {
 }
 
 
+# v1: queries.py:2407, "log_subfase_processual_geral" (copiada em 26/11/2026). estrategico_geral.
+QUERIES["log_subfase_processual_geral"] = {
+        "database": "lexflow",
+        "query": """
+        SELECT
+            lfp.id_processo                        AS "ID_PROCESSO",
+            p.id_escritorio_assinante               AS "ID_ESCRITORIO",
+            p.id_situacao                           AS "ID_SITUACAO",
+            lfp.id_fase                             AS "ID_FASE",
+            f.description                           AS "FASE",
+            lfp.id_status_processual                AS "ID_SUBFASE",
+            sp.description                          AS "SUBFASE",
+            lfp.tipo_movimentacao                   AS "TIPO_MOVIMENTACAO",
+            lfp.data                                AS "DATA"
+        FROM public.log_fase_processual lfp
+        JOIN public.processo p                  ON p.id = lfp.id_processo
+        LEFT JOIN public.fase f                 ON lfp.id_fase = f.id
+        LEFT JOIN public.status_processual sp   ON lfp.id_status_processual = sp.id
+        WHERE p.id_situacao IN (1, 2, 6)
+          AND lfp.id_status_processual IS NOT NULL
+        ORDER BY lfp.id_processo, lfp.data
+        """,
+        "description": (
+            "Histórico de movimentação de fase/subfase (log_fase_processual) de todos os "
+            "escritórios — usado para estimar o tempo médio de permanência por subfase no "
+            "dashboard Estratégico (jurídico geral). Inclui ATIVO (1), ARQUIVADO (2) e "
+            "SUSPENSO/SOBRESTADO (6) — o filtro de situação de fato é aplicado em Python, "
+            "via `processo_ids` (mesmo escopo do filtro de escritório/comarca/situação)."
+        ),
+        "params": []
+    }
+
+
+# v1: queries.py:304, "actions_LA" (copiada em 26/11/2026). comercial_LA.
+QUERIES["actions_LA"] = {
+        "database": "laadv",
+        "query": """
+        SELECT
+            a."date" AS "ENTRADA",
+            a.customer_id AS "ID_CUSTOMER",
+            c.nome AS "CLIENTE",
+            tu.uf AS "UF",
+            a.id_action AS "ID_ACTION",
+            f.nome AS "ATENDENTE",
+            t.nome_campanha AS "CAMPANHA",
+            ac.distribuido_em,
+            ac.onboarding,
+            ac.respondeu_onboarding,
+            ac.data_etapa1,
+            ac.respondeu_etapa1,
+            ac.data_etapa2,
+            ac.respondeu_etapa2,
+            ac.data_etapa3,
+            ac.respondeu_etapa3,
+            ac.contrato_criado_em,
+            GREATEST(ac.fechado_em, ac.data_upsell) AS "ASSINADO_EM",
+            ac.data_encerramento,
+            t.canal_aquisicao AS "CANAL_AQUISICAO",
+            t.tipo_trafego AS "TIPO_TRAFEGO",
+            t.prospeccao AS "PROPECCAO",
+            t.id AS "ID_TRACK",
+            ac.status_id AS "STATUS",
+            ac.motivo_encerramento AS "MOTIVO_ENCERRAMENTO"
+        FROM "public".actions a
+        LEFT JOIN "public".actions_status ac ON a.action_status_id = ac.id
+        LEFT JOIN "public".type_status ts ON ac.status_id = ts.id
+        LEFT JOIN "public".customers c ON a.customer_id = c.id
+        LEFT JOIN "public".trackeamento t ON a.trackeamento_id = t.id
+        LEFT JOIN "public".type_uf_end tu ON a.uf_id = tu.id_uf_end
+        LEFT JOIN "Setores".funcionarios f ON a.atendente_comercial = f.id
+        """,
+        "description": "Actions do banco LAADV",
+        "params": []
+    }
+
+
+# v1: queries.py:274, "andamento_processual_LA" (copiada em 26/11/2026). comercial_LA.
+QUERIES["andamento_processual_LA"] = {
+        "database": "laadv",
+        "query": """
+        SELECT
+            ap.id,
+            ap."NOME",
+            ap."ENTRADA",
+            ap."INICIO_ATENDIMENTO",
+            ap."STATUS",
+            ap."SAIDA",
+            ap."AVALIACAO",
+            ap."ID_FUNCIONARIO",
+            f.nome AS "RESPONSAVEL"
+        FROM acompanhamento_processual.andamento_processual ap
+        LEFT JOIN "Setores".funcionarios f ON ap."ID_FUNCIONARIO" = f.id
+        """,
+        "description": "Andamento processual do banco LAADV",
+        "params": []
+    }
+
+
 # Agravos fora de toda query do LexFlow que lê processo (regra da v1 de 06/11/2026, que lá rodava no fim do
 # queries.py). Fica no fim do arquivo, depois de todas as queries; agendamentos_* ficam de fora. Ver lexflow_agravo.
 from app.lexflow_agravo import aplicar_em as _excluir_agravos

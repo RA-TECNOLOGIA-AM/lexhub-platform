@@ -60,6 +60,7 @@ import { replicasFor } from './mock/replicas.ts'
 import { controleFor } from './mock/controle.ts'
 import { sobrevivenciaFor } from './mock/sobrevivencia.ts'
 import { vinculacoesFor } from './mock/vinculacoes.ts'
+import { estrategicoFor } from './mock/estrategico.ts'
 import { previsaoFor } from './mock/previsao.ts'
 import { julgadosAcordaosFor } from './mock/julgadosAcordaos.ts'
 import { julgadosSentencasFor } from './mock/julgadosSentencas.ts'
@@ -250,6 +251,7 @@ const MOCK_COMPLETO: Record<string, (unit: string, query: DashboardQuery) => unk
     'execucao-estrategico': execucaoEstrategicoFor,
     tickets: ticketsFor,
     'configuracoes-vinculacoes': vinculacoesFor,
+    estrategico: estrategicoFor,
     'marketing-lexpre': marketingLexpreFor,
     marketing: marketingNgFor,
     recursal: recursalFor,

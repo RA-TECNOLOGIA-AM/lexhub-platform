@@ -9,6 +9,7 @@ from app.dashboards import (
     configuracoes_vinculacoes,
     controle_processos,
     emendas_manifestacoes,
+    estrategico,
     execucao,
     execucao_estrategico,
     financeiro_estrategico,
@@ -73,5 +74,6 @@ DASHBOARDS: dict[str, DashboardModule] = {
         sobrevivencia_processual.MODULE,
         previsao_individualizada.MODULE,
         configuracoes_vinculacoes.MODULE,
+        estrategico.MODULE,
     )
 }

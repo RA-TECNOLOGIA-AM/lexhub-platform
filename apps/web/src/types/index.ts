@@ -161,6 +161,10 @@ export type DashboardFilters = {
     setor_vinculacao?: string[]
     status_vinculacao?: string[]
     problema_vinculacao?: string[]
+    // Estratégico: UF (só NG: AM | PA | PB, os escritórios NGAM/NGPA/NGPB da v1), comarca e situação (só o Jurídico).
+    uf_estrategico?: string[]
+    comarca_estrategico?: string[]
+    situacao_estrategico?: string[]
     // Julgados Acórdãos e Sentenças (LexFlow): os filtros cumulativos da v1 (sufixo _julgados) e a situação do processo.
     materia_julgados?: string[]
     relator_julgados?: string[] // acórdãos: relator (2G)
