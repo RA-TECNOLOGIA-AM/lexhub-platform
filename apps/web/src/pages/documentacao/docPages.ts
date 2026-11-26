@@ -45,6 +45,7 @@ export const DOC_PAGES: Record<string, ComponentType> = {
     'replicas-la': lazyNamed(() => import('./conteudo/ReplicasLA.tsx'), 'ReplicasLADoc'),
     'julgados-sentencas': lazyNamed(() => import('./conteudo/JulgadosSentencas.tsx'), 'JulgadosSentencasDoc'),
     'marketing-lexpre': lazyNamed(() => import('./conteudo/MarketingLexpre.tsx'), 'MarketingLexpreDoc'),
+    'marketing-ng': lazyNamed(() => import('./conteudo/MarketingNg.tsx'), 'MarketingNgDoc'),
     'execucao-estrategico': lazyNamed(() => import('./conteudo/ExecucaoEstrategico.tsx'), 'ExecucaoEstrategicoDoc'),
     'sobrevivencia-processual': lazyNamed(
         () => import('./conteudo/SobrevivenciaProcessual.tsx'),

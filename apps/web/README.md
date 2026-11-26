@@ -110,6 +110,7 @@ Estados do login: `/login?convite=abc` e `/login?estado=sessao-expirada`.
 | `/tv-login`                                                                                                       | Tela pública da TV: QR Code e código para entrada manual.                                                  |
 | `/:org/dashboards`                                                                                                | Hub da organização, por exemplo `/lexgroup/dashboards`.                                                    |
 | `/:org/:unit/dashboards/:dashboardKey`                                                                            | Dashboard de uma unidade. A unidade está na URL, então recarregar ou compartilhar o link mantém a seleção. |
+| `/:org/geral/dashboards/:dashboardKey`                                                                            | Dashboard da organização inteira (`scope = 'org'`, ex.: Estratégico Geral); só Owner/Dev.                  |
 | `/:org/documentacao/:slug`                                                                                        | Guia de um dashboard.                                                                                      |
 | `/:org/admin/membros`, `/:org/admin/acesso`, `/:org/admin/unidades`, `/:org/admin/auditoria`, `/:org/admin/plano` | Administração da organização.                                                                              |
 | `/plataforma/clientes`, `/plataforma/pedidos`                                                                     | Ferramentas da equipe RA.                                                                                  |
@@ -192,16 +193,17 @@ Todo dashboard usa `pages/dashboards/DashboardView.tsx` para buscar dados, apres
 filtros, exportação e conteúdo. Cada módulo declara a key, a função de busca e seu conteúdo em
 `pages/dashboards/<key>/index.ts`; `pages/dashboards/registry.tsx` associa a key à página.
 
-O registro do front contém módulos para Comercial e Comissão (`comercial`, `comercial-lexpre`, `comissao`,
+O registro do front (36 keys) contém módulos para Comercial e Comissão (`comercial`, `comercial-lexpre`, `comissao`,
 `comissao-lexpre`); Marketing (`marketing`, `marketing-lexpre`); NPS (`nps`); Protocolo, Pendências, Organização de
-Documentos e Peticionamento nas variantes NG/LexPre; Pré-protocolo; Execução, Acordos e Recursal; Estratégico,
-Despesas e Meta anual.
+Documentos e Peticionamento nas variantes NG/LexPre; Pré-protocolo; Pendências Intermediárias, Emendas e
+Manifestações, Réplicas e Publicações; Execução, Acordos, Execução Estratégico, Recursal, Julgados (Sentenças e
+Acórdãos), Sobrevivência Processual, Previsão Individualizada, Controle de Processos, Tickets e Configurações das
+Vinculações; Estratégico, Estratégico Geral, Financeiro Estratégico, Despesas e Meta anual.
 
-O registro de cálculos da API tem 18 keys: `comercial`, `comercial-lexpre`, `comissao`, `comissao-lexpre`,
-`marketing`, `nps`, `protocolo`, `protocolo-lexpre`, `pendencias`, `pendencias-lexpre`, `org-documentos`,
-`org-documentos-lexpre`, `peticionamento`, `peticionamento-lexpre`, `pre-protocolo`, `execucao`, `acordos` e
-`recursal`. `marketing-lexpre`, `estrategico`, `despesas` e `meta-anual` ainda não estão nesse registro; uma página no
-front não significa que a API já forneça seus dados.
+O registro de cálculos da API (`apps/api/src/app/dashboards/__init__.py`) tem 33 keys: todas as do front menos
+`estrategico`, `despesas` e `estrategico-geral`. O Estratégico Geral não entra nesse registro: é da organização inteira
+e tem rota própria (`app/org_dashboard.py`, `lib/orgDashboard.ts`). Uma página no front não significa que a API já
+forneça seus dados.
 
 Para criar um dashboard, adicione o tipo de resposta, o módulo e conteúdo, registre a página e implemente o cálculo e
 as regras do catálogo na API/banco. Os dados fictícios completos estão disponíveis para Protocolo (LexPre) e

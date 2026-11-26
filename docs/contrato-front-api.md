@@ -15,7 +15,7 @@ ordem dos cards (`GET` e `PUT /orgs/{org}/hub-order`), além de `GET /health`, `
 (`GET /orgs/{org}/units/{unit}/dashboards/{key}`) existe desde 11/11. Com o cálculo da v1 ligado: Protocolo, Pendências,
 Organização de Documentos, Peticionamento, Comercial e Comissão Comercial (LexPre); números conferidos contra a v1 nas
 mesmas linhas (NG, LA e RJ, mês fechado e mês corrente), aguardando a validação do analista para abrir os cards.
-Marketing (LexPre) ainda não (usa também o banco NG). Desde 12/11 também Execução, Acordos e Recursal (LexFlow), com
+Marketing (LexPre) desde 26/11 (o Marketing NG soma o LexPre ao banco NG). Desde 12/11 também Execução, Acordos e Recursal (LexFlow), com
 o mesmo conteúdo da v1 nas mesmas linhas (ver "Dashboards do LexFlow" abaixo), e desde 17/11 Julgados Acórdãos
 (LexFlow, ver abaixo). **As demais rotas de dados abaixo
 ainda não existem.** No modo `api`, cada tela sem rota mostra o erro 404

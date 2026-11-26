@@ -223,6 +223,14 @@ export const DOC_ENTRIES: DocEntry[] = [
         offices: ['NG', 'LA'],
     },
     {
+        slug: 'marketing-ng',
+        title: 'Marketing — NG',
+        description:
+            'Banco NG legado somado ao LexPre (escritório NG): perfil e triagem com dispositivo, Facebook Ads e funil de pipeline, campanhas RA × NG, aquisição e indicadores pago e orgânico.',
+        dashboards: ['marketing'],
+        offices: ['NG'],
+    },
+    {
         slug: 'execucao-estrategico',
         title: 'Execução Estratégico Geral',
         description:

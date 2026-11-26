@@ -105,7 +105,8 @@ const TV: DocStep[] = [
         title: 'Autorize',
         body: (
             <p>
-                Confira se o código é o mesmo da TV e clique em <strong>"Autorizar TV"</strong>. A TV entra sozinha.
+                Confira se o código é o mesmo da TV, marque <strong>"Estou na frente da TV..."</strong> e clique em{' '}
+                <strong>"Autorizar TV"</strong>. A TV entra sozinha.
             </p>
         ),
     },
@@ -184,8 +185,9 @@ export function GuiaDoUsuarioDoc() {
             >
                 <DocSteps steps={TV} />
                 <InfoBox>
-                    O login da TV vale por 24 horas. O QR Code se renova sozinho a cada poucos minutos; se demorar, use
-                    o código novo.
+                    A TV entra na <strong>sua conta</strong>: só autorize um código que você está vendo agora numa TV da
+                    LexGroup. Se alguém mandou o link ou o código por mensagem ou e-mail, não autorize. O login da TV
+                    vale por 24 horas. O QR Code se renova sozinho a cada poucos minutos; se demorar, use o código novo.
                 </InfoBox>
             </DocSection>
 

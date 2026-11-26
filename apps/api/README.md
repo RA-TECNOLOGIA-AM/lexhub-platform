@@ -86,6 +86,8 @@ Rotas de usuário exigem `Authorization: Bearer <token>`. O código e o polling 
 | `GET /orgs/{org_slug}/units/{unit_code}/dashboards/{dashboard_key}/access` | Confere acesso e escopo (`all` ou `own`). |
 | `GET /orgs/{org_slug}/units/{unit_code}/dashboards/{dashboard_key}` | Dados do dashboard; aceita período `from`/`to` e filtros do módulo. |
 | `GET /orgs/{org_slug}/units/{unit_code}/dashboards/{dashboard_key}/export` | Exportação CSV/XLSX, com campos e filtros selecionáveis. |
+| `GET /orgs/{org_slug}/geral/dashboards/{dashboard_key}/access` | Confere acesso a um dashboard da organização inteira (`scope = 'org'`, ex.: Estratégico Geral); só Owner/Dev. |
+| `GET /orgs/{org_slug}/geral/dashboards/{dashboard_key}` | Dados do dashboard da organização, uma parte por unidade (NG, LAAM, LARJ) em `units[]`. |
 
 O registro de cálculos está em `app/dashboards/`. Uma key no catálogo ou no front não garante que o cálculo já esteja registrado na API; dashboard sem cálculo retorna 404. Módulo registrado mas ainda não habilitado retorna 501. Fonte ou banco da plataforma indisponível retorna 503.
 
