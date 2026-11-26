@@ -99,6 +99,10 @@ export const DASHBOARD_PAGES: Record<string, ComponentType> = {
         () => import('./tickets/index.ts'),
         (m) => m.tickets,
     ),
+    'configuracoes-vinculacoes': lazyDashboard(
+        () => import('./configuracoes-vinculacoes/index.ts'),
+        (m) => m.configuracoesVinculacoes,
+    ),
     'execucao-estrategico': lazyDashboard(
         () => import('./execucao-estrategico/index.ts'),
         (m) => m.execucaoEstrategico,

@@ -4084,6 +4084,154 @@ QUERIES["log_subfase_processual_RJ"] = {
     }
 
 
+# v1: queries.py:4285, "configuracoes_vinculacoes" (copiada em 26/11/2026). Configurações das Vinculações.
+QUERIES["configuracoes_vinculacoes"] = {
+    "database": "lexflow",
+    "query": """
+    SELECT
+        sa.id                                                        AS id_vinculacao,
+        sa.id_escritorio_assinante,
+        ea.nome_fantasia                                             AS escritorio,
+        ea.razao_social                                              AS escritorio_razao_social,
+        ea.ativo                                                     AS escritorio_ativo,
+        sa.ativo                                                     AS vinculacao_ativa,
+        s.description                                                AS setor,
+        a.description                                                AS atividade,
+
+        ca.id                                                        AS id_configuracao,
+        ca.ativo                                                     AS configuracao_ativa,
+        ca.permite_pendencia,
+
+        ca.regra_cumprido_exige_anexo,
+        ca.regra_cumprido_exige_parecer,
+        ca.regra_cumprido_sem_exigencia,
+        ca.regra_nao_cumprido_exige_motivo,
+        ca.regra_nao_cumprido_exige_anexo,
+        ca.regra_nao_cumprido_exige_motivo_anexo,
+        ca.regra_nao_cumprido_nenhuma_exigencia,
+
+        ca.fluxo_encerramento_cumprido_apenas_encerrar,
+        ca.fluxo_encerramento_cumprido_encaminhar_agendamento,
+        ca.fluxo_encerramento_cumprido_id_setor_atividade_encaminhamento,
+        ca.fluxo_encerramento_cumprido_encaminhamento_com_motivo,
+        ca.qtd_dias_prazo_cumprido,
+        ca.encaminhamentos_cumprido_json,
+
+        ca.fluxo_encerramento_nao_cumprido_apenas_encerrar,
+        ca.fluxo_encerramento_nao_cumprido_controladoria,
+        ca.fluxo_encerramento_nao_cumprido_id_setor_atividade,
+        ca.fluxo_encerramento_nao_cumprido_encaminhamento_com_motivo,
+        ca.qtd_dias_prazo_nao_cumprido,
+        ca.encaminhamentos_nao_cumprido_json,
+
+        ca.encaminhamento_automatico_ativo,
+        ca.encaminhamentos_automaticos_cumprido_json,
+        ca.encaminhamentos_automaticos_nao_cumprido_json,
+
+        sa2.id                                                       AS id_vinculacao_destino_cumprido,
+        sa3.id                                                       AS id_vinculacao_destino_nao_cumprido,
+
+        ca.trigger_criacao_ativo,
+        ca.trigger_criacao_situacao_id,
+        sitc.description                                             AS situacao_agendamento,
+        ca.trigger_criacao_fase_id,
+        fc.description                                               AS fase_agendamento,
+        ca.trigger_criacao_status_processual_id,
+        spc.description                                              AS subfase_agendamento,
+        spc.fase_id                                                  AS subfase_agendamento_fase_id,
+
+        ca.trigger_conclusao_ativo,
+        ca.trigger_conclusao_fase_id,
+        fcon.description                                             AS fase_conclusao,
+        ca.trigger_conclusao_status_processual_id,
+        spcon.description                                            AS subfase_conclusao,
+        spcon.fase_id                                                AS subfase_conclusao_fase_id,
+        tc.triggers_conclusao_slots,
+
+        ca.disponivel_agendamento_manual,
+        ca.prazo_padrao_qtd_dias,
+        ca.prazo_padrao_dias_uteis,
+
+        ca.id_conf_campos_obrigatorios,
+        cco_flags.campos_obrigatorios,
+
+        ca.criado_em                                                 AS configuracao_criado_em,
+        ca.atualizado_em                                             AS configuracao_atualizado_em,
+
+        -- Configuração inteira, para exibir automaticamente campos que o painel
+        -- ainda não interpreta (colunas novas do LexFlow). Segredos ficam de fora.
+        to_jsonb(ca) - 'webhook_criacao_secret' - 'webhook_criacao_headers_json'
+                                                                     AS configuracao_completa
+    FROM public.setor_atividade sa
+    JOIN public.setor s               ON s.id = sa.id_setor
+    JOIN public.atividade a           ON a.id = sa.id_atividade
+    LEFT JOIN public.escritorio_assinante ea ON ea.id = sa.id_escritorio_assinante
+    LEFT JOIN LATERAL (
+        SELECT ca2.*
+        FROM public.configuracao_atividade ca2
+        WHERE ca2.id_setor_atividade = sa.id
+        -- O LexFlow só lê a configuração ATIVA (getConfiguracaoBySetorAtividade)
+        ORDER BY ca2.ativo DESC NULLS LAST, (ca2.id_subatividade IS NULL) DESC, ca2.id DESC
+        LIMIT 1
+    ) ca ON true
+    LEFT JOIN public.conf_campos_obrigatorios cco ON cco.id = ca.id_conf_campos_obrigatorios
+    LEFT JOIN LATERAL (
+        SELECT jsonb_agg(kv.key) AS campos_obrigatorios
+        FROM jsonb_each(to_jsonb(cco)) AS kv
+        WHERE kv.value::text = 'true'
+    ) cco_flags ON true
+    -- Gatilhos de encerramento por opção do fluxo (tickets 762/871 do LexFlow):
+    -- um slot por destino+motivo e por fluxo (cumprido | nao_cumprido; slot
+    -- legado sem o campo = cumprido); as colunas flat trigger_conclusao_* viram fallback.
+    LEFT JOIN LATERAL (
+        SELECT jsonb_agg(
+                   jsonb_build_object(
+                       'kind',                 slot->>'kind',
+                       'fluxo',                CASE WHEN slot->>'fluxo' = 'nao_cumprido'
+                                                    THEN 'nao_cumprido' ELSE 'cumprido' END,
+                       'id_setor_atividade',   slot->>'id_setor_atividade',
+                       'motivo',               slot->>'motivo',
+                       'ativo',                COALESCE((slot->>'ativo')::boolean, false),
+                       'fase_id',              f_slot.id,
+                       'fase_id_raw',          slot->>'fase_id',
+                       'fase',                 f_slot.description,
+                       'status_processual_id', sp_slot.id,
+                       'status_processual_id_raw', slot->>'status_processual_id',
+                       'subfase',              sp_slot.description,
+                       'subfase_fase_id',      sp_slot.fase_id
+                   )
+                   ORDER BY ord
+               ) AS triggers_conclusao_slots
+        FROM jsonb_array_elements(
+                 CASE WHEN jsonb_typeof(ca.triggers_conclusao_por_encaminhamento_json) = 'array'
+                      THEN ca.triggers_conclusao_por_encaminhamento_json
+                      ELSE '[]'::jsonb END
+             ) WITH ORDINALITY AS t(slot, ord)
+        LEFT JOIN public.fase f_slot
+               ON f_slot.id = CASE WHEN slot->>'fase_id' ~ '^[0-9]+$' THEN (slot->>'fase_id')::int END
+        LEFT JOIN public.status_processual sp_slot
+               ON sp_slot.id = CASE WHEN slot->>'status_processual_id' ~ '^[0-9]+$'
+                                    THEN (slot->>'status_processual_id')::int END
+    ) tc ON true
+    LEFT JOIN public.situacao sitc        ON sitc.id = ca.trigger_criacao_situacao_id
+    LEFT JOIN public.fase fc              ON fc.id = ca.trigger_criacao_fase_id
+    LEFT JOIN public.status_processual spc ON spc.id = ca.trigger_criacao_status_processual_id
+    LEFT JOIN public.fase fcon            ON fcon.id = ca.trigger_conclusao_fase_id
+    LEFT JOIN public.status_processual spcon ON spcon.id = ca.trigger_conclusao_status_processual_id
+    LEFT JOIN public.setor_atividade sa2  ON sa2.id = ca.fluxo_encerramento_cumprido_id_setor_atividade_encaminhamento
+    LEFT JOIN public.setor_atividade sa3  ON sa3.id = ca.fluxo_encerramento_nao_cumprido_id_setor_atividade
+    ORDER BY sa.id_escritorio_assinante, s.description, a.description
+    """,
+    "description": (
+        "Auditoria de todas as vinculações (setor_atividade) do LexFlow, cruzadas com "
+        "configuracao_atividade: campos obrigatórios, regras de cumprido/não cumprido, "
+        "fase/subfase de agendamento e conclusão, e próxima atividade desencadeada. "
+        "Usado pela página Configurações das Vinculações (admin)."
+    ),
+    "params": []
+}
+
+
 # Agravos fora de toda query do LexFlow que lê processo (regra da v1 de 06/11/2026, que lá rodava no fim do
 # queries.py). Fica no fim do arquivo, depois de todas as queries; agendamentos_* ficam de fora. Ver lexflow_agravo.
 from app.lexflow_agravo import aplicar_em as _excluir_agravos

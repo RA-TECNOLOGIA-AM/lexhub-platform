@@ -152,6 +152,11 @@ export type DashboardFilters = {
     ticket_categoria?: string[]
     ticket_subcategoria?: string[]
     ticket_status?: string[]
+    // Configurações das Vinculações (LexFlow): setor, status (sem = as ativas; 'todas' inclui as inativas) e o tipo de
+    // problema. A página filtra no navegador, como a v1; a API usa os mesmos na exportação.
+    setor_vinculacao?: string[]
+    status_vinculacao?: string[]
+    problema_vinculacao?: string[]
     // Julgados Acórdãos e Sentenças (LexFlow): os filtros cumulativos da v1 (sufixo _julgados) e a situação do processo.
     materia_julgados?: string[]
     relator_julgados?: string[] // acórdãos: relator (2G)
