@@ -29,9 +29,9 @@ export function ExecucaoEstrategicoDoc() {
             toc={TOC}
             intro={
                 <>
-                    Este guia explica o dashboard de Execução Estratégico: uma visão combinada que soma os dados
-                    dos dashboards Execução Estratégico (Condenação) e Execução Acordos Estratégico num único conjunto
-                    de indicadores e gráficos. Nenhum conhecimento técnico é necessário.
+                    Este guia explica o dashboard de Execução Estratégico: uma visão combinada que soma os dados dos
+                    dashboards Execução Estratégico (Condenação) e Execução Acordos Estratégico num único conjunto de
+                    indicadores e gráficos. Nenhum conhecimento técnico é necessário.
                 </>
             }
         >
@@ -66,9 +66,9 @@ export function ExecucaoEstrategicoDoc() {
                 </DocCard>
                 <DocCard title="Quando usar este dashboard em vez dos dois separados">
                     <p>
-                        Use o Execução Estratégico para uma visão executiva única do setor de Execução como um
-                        todo. Para o detalhe fino de cada domínio (TRE, classificação Judicial x Extrajudicial, alerta
-                        de valor de alçada final vazio, etc.), use os dashboards de origem — Execução Estratégico e
+                        Use o Execução Estratégico para uma visão executiva única do setor de Execução como um todo.
+                        Para o detalhe fino de cada domínio (TRE, classificação Judicial x Extrajudicial, alerta de
+                        valor de alçada final vazio, etc.), use os dashboards de origem — Execução Estratégico e
                         Execução Acordos Estratégico (documentações separadas).
                     </p>
                 </DocCard>
