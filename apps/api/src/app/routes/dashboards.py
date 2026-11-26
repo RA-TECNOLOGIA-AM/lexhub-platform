@@ -326,7 +326,7 @@ async def dashboard_export(
         request, access, refs, sources, audit, today, start, end, unit_scope
     )
     try:
-        spec = export.pick_report(module, relatorio)
+        spec = export.pick_report(module, relatorio, ctx.unit_ref)
     except export.ExportError as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail=str(exc)) from None
     if spec is None:

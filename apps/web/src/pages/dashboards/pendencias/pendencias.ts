@@ -35,12 +35,16 @@ function linhasComissao(v: unknown): Comissao[] {
 
 const nomes = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => String(x).trim()).filter(Boolean) : [])
 
-// A resposta da rota da v1 (NG, RJ ou LA) no formato das Pendências (LexPre). Pela rota (`dashboard`): a
-// resposta da v1 traz os campos de todas as rotas (os das outras vêm null).
+// Veio da rota da LA (banco LA)? Pela rota (`dashboard`): a resposta da v1 traz os campos de todas as rotas
+// (os das outras vêm null).
+export const pendenciasDaLA = (data: V1GenericoResponse): boolean =>
+    data.dashboard ? data.dashboard === 'pendencia_LA' : numero(data.stats?.pendencias_total_LA) !== null
+
+// A resposta da rota da v1 (NG, RJ ou LA) no formato das Pendências (LexPre).
 export function lerPendencias(data: V1GenericoResponse): PendenciasResponse {
     const d = data as V1GenericoResponse & Record<string, unknown>
     const s = data.stats ?? {}
-    const la = data.dashboard ? data.dashboard === 'pendencia_LA' : numero(s.pendencias_total_LA) !== null
+    const la = pendenciasDaLA(data)
     const sufixo = la ? '_LA' : ''
     const n = (campo: string) => numero(s[`${campo}${sufixo}`]) ?? 0
     const nulo = (campo: string) => numero(s[campo])

@@ -105,6 +105,9 @@ class ExportSpec:
     # Relatório que junta outros num arquivo só (ver ExportPart). Com partes, fields/labels são os das partes com
     # o prefixo; a rota busca as linhas de cada parte (rows devolve as de todas juntas, marcadas com a parte).
     parts: tuple[ExportPart, ...] = ()
+    # Outro relatório numa unidade cujos campos a v1 mudava (ex.: o Protocolo da LA, com action_id no lugar de
+    # id_action): ref da unidade -> relatório. Sem a unidade, vale este.
+    por_unidade: dict[str, "ExportSpec"] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

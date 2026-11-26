@@ -3,6 +3,7 @@ import { fmt } from '../../../lib/format.ts'
 import { dataClient } from '../../../services/client.ts'
 import type { DashboardModule } from '../types.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
+import { pendenciasExport } from './exportFields.ts'
 import { PendenciasLegadoContent } from './PendenciasLegadoContent.tsx'
 import { lerPendencias } from './pendencias.ts'
 
@@ -12,6 +13,7 @@ export const pendencias: DashboardModule<V1GenericoResponse> = {
     key: 'pendencias',
     fetch: (query) => dataClient.getDashboardData<V1GenericoResponse>('pendencias', query),
     Content: PendenciasLegadoContent,
+    exportFields: pendenciasExport,
     // Na v1, o filtro de funcionários (as opções vêm da própria resposta).
     filters: (data) => [
         {

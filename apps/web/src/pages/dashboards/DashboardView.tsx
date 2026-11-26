@@ -85,6 +85,9 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
         )
     }
 
+    // Os campos do relatório: fixos ou, quando mudam com a unidade (LA × NG/RJ), lidos da resposta.
+    const exportGroups = typeof module.exportFields === 'function' ? module.exportFields(data) : module.exportFields
+
     const { Content } = module
     return (
         <>
@@ -120,7 +123,7 @@ export function DashboardView<T extends { meta: Meta }>({ module }: { module: Da
                             title={summary.title}
                             reports={
                                 module.exportReports ??
-                                (module.exportFields ? [{ key: null, title: '', groups: module.exportFields }] : [])
+                                (exportGroups ? [{ key: null, title: '', groups: exportGroups }] : [])
                             }
                             initialReport={module.exportReportInicial?.(query.filters ?? {})}
                             onExport={exportReport}

@@ -3,6 +3,7 @@ import { fmt } from '../../../lib/format.ts'
 import { dataClient } from '../../../services/client.ts'
 import type { DashboardModule } from '../types.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
+import { peticionamentoExport } from './exportFields.ts'
 import { PeticionamentoLegadoContent } from './PeticionamentoLegadoContent.tsx'
 import { peticionamentoLegadoFilters } from './filters.ts'
 import { lerPeticionamento } from './peticionamento.ts'
@@ -12,6 +13,7 @@ export const peticionamento: DashboardModule<V1GenericoResponse> = {
     key: 'peticionamento',
     fetch: (query) => dataClient.getDashboardData<V1GenericoResponse>('peticionamento', query),
     Content: PeticionamentoLegadoContent,
+    exportFields: peticionamentoExport,
     filters: (data) => peticionamentoLegadoFilters(lerPeticionamento(data)),
     // Mesmas colunas do PDF da v1: taxa (define a faixa de preço), Massa e ESPECÍFICA (qtd × valor) e comissão.
     commission: (data) => ({
