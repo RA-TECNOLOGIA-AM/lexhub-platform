@@ -31,14 +31,18 @@ def pick_format(raw: str | None) -> str:
     return fmt
 
 
-def pick_report(module: DashboardModule, relatorio: str | None) -> ExportSpec | None:
-    """O relatório pedido: o principal (sem ?relatorio) ou um dos export_reports. None = não exporta."""
+def pick_report(
+    module: DashboardModule, relatorio: str | None, unit_ref: str = ""
+) -> ExportSpec | None:
+    """O relatório pedido: o principal (sem ?relatorio) ou um dos export_reports, na versão da unidade
+    (ExportSpec.por_unidade). None = não exporta."""
     if not relatorio:
-        return module.export
-    spec = module.export_reports.get(relatorio)
-    if spec is None:
-        raise ExportError(f"Relatório desconhecido: {relatorio}")
-    return spec
+        spec = module.export
+    else:
+        spec = module.export_reports.get(relatorio)
+        if spec is None:
+            raise ExportError(f"Relatório desconhecido: {relatorio}")
+    return spec.por_unidade.get(unit_ref, spec) if spec else None
 
 
 def pick_options(spec: ExportSpec, raw: dict[str, str]) -> dict[str, str]:

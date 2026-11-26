@@ -13,7 +13,9 @@ export type DashboardModule<T extends { meta: Meta }> = {
     // Os filtros deste dashboard (opções vêm da resposta; `current` = os em uso, para manter na lista o que já foi
     // escolhido); sem = não tem filtros.
     filters?: (data: T, current: DashboardFilters) => FilterField[]
-    exportFields?: ExportGroup[] // campos do relatório (cópia da lista do servidor); sem = não exporta ainda
+    // Campos do relatório (cópia da lista do servidor); sem = não exporta ainda. Função dos dados quando os campos
+    // mudam com a unidade, como na v1 (ex.: o Protocolo da LA, com action_id no lugar de id_action).
+    exportFields?: ExportGroup[] | ((data: T) => ExportGroup[])
     // Mais de um relatório e/ou escolhas além dos campos (recorte, visão), como na v1. Tem preferência sobre exportFields.
     exportReports?: ExportReport[]
     // O relatório que a janela abre escolhido, pelos filtros da página (key; null = o principal). Sem = o primeiro.

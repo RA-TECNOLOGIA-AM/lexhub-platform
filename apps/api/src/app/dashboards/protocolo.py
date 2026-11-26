@@ -7,8 +7,10 @@ tem os nomes com _LA); o front lê as duas. Os gráficos "mês a mês" vêm do h
 filtros: na v1 a página os buscava numa segunda chamada, sem data.
 """
 
+from dataclasses import replace
+
 from app.analyses import v1_dashboard_generico_la as copia_la
-from app.dashboards import generico_ng
+from app.dashboards import generico_ng, legado_export
 
 MODULE = generico_ng.modulo(
     key="protocolo",
@@ -26,3 +28,6 @@ MODULE = generico_ng.modulo(
         "comissionamento_protocolo_LA_por_funcionario",
     ),
 )
+
+# A exportação da v1 (/x/export, /x_RJ/export e /x_LA/export): app/dashboards/legado_export.py.
+MODULE = replace(MODULE, export=legado_export.PROTOCOLO)

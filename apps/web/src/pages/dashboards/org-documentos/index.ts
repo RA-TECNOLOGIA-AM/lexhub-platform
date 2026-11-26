@@ -3,6 +3,7 @@ import { fmt } from '../../../lib/format.ts'
 import { dataClient } from '../../../services/client.ts'
 import type { DashboardModule } from '../types.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
+import { orgDocumentosExport } from './exportFields.ts'
 import { OrgDocumentosLegadoContent } from './OrgDocumentosLegadoContent.tsx'
 import { orgDocumentosLegadoFilters } from './filters.ts'
 import { lerOrgDocumentos } from './orgDocumentos.ts'
@@ -12,6 +13,7 @@ export const orgDocumentos: DashboardModule<V1GenericoResponse> = {
     key: 'org-documentos',
     fetch: (query) => dataClient.getDashboardData<V1GenericoResponse>('org-documentos', query),
     Content: OrgDocumentosLegadoContent,
+    exportFields: orgDocumentosExport,
     filters: (data) => orgDocumentosLegadoFilters(lerOrgDocumentos(data)),
     // Mesmas colunas do PDF da v1: valor de causa, quantidade de resolvidos e comissão.
     commission: (data) => ({

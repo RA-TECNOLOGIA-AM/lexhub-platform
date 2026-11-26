@@ -3,6 +3,7 @@ import { fmt } from '../../../lib/format.ts'
 import { dataClient } from '../../../services/client.ts'
 import type { DashboardModule } from '../types.ts'
 import type { V1GenericoResponse } from '../v1Stats.ts'
+import { protocoloExport } from './exportFields.ts'
 import { ProtocoloLegadoContent } from './ProtocoloLegadoContent.tsx'
 import { protocoloLegadoFilters } from './filters.ts'
 import { lerProtocolo } from './protocolo.ts'
@@ -12,6 +13,7 @@ export const protocolo: DashboardModule<V1GenericoResponse> = {
     key: 'protocolo',
     fetch: (query) => dataClient.getDashboardData<V1GenericoResponse>('protocolo', query),
     Content: ProtocoloLegadoContent,
+    exportFields: protocoloExport,
     filters: (data) => protocoloLegadoFilters(lerProtocolo(data)),
     commission: (data) => ({
         columns: [

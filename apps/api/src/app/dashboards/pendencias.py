@@ -7,8 +7,10 @@ Como na página da v1 da NG, o que é da fila de agora (não resolvidas, as com 
 e o "mês a mês" vêm do histórico todo, com os mesmos filtros: a v1 os buscava numa chamada sem data.
 """
 
+from dataclasses import replace
+
 from app.analyses import v1_dashboard_generico_la as copia_la
-from app.dashboards import generico_ng
+from app.dashboards import generico_ng, legado_export
 
 MODULE = generico_ng.modulo(
     key="pendencias",
@@ -32,3 +34,6 @@ MODULE = generico_ng.modulo(
         "comissionamento_pendencias_LA_por_funcionario",
     ),
 )
+
+# A exportação da v1 (/x/export, /x_RJ/export e /x_LA/export): app/dashboards/legado_export.py.
+MODULE = replace(MODULE, export=legado_export.PENDENCIAS)

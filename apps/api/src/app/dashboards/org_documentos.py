@@ -9,8 +9,10 @@ o "mês a mês" vêm do histórico todo, com os mesmos filtros: na v1 a página 
 sem data.
 """
 
+from dataclasses import replace
+
 from app.analyses import v1_dashboard_generico_la as copia_la
-from app.dashboards import generico_ng
+from app.dashboards import generico_ng, legado_export
 
 MODULE = generico_ng.modulo(
     key="org-documentos",
@@ -37,3 +39,6 @@ MODULE = generico_ng.modulo(
         "comissionamento_org_doc_LA_por_funcionario",
     ),
 )
+
+# A exportação da v1 (/x/export, /x_RJ/export e /x_LA/export): app/dashboards/legado_export.py.
+MODULE = replace(MODULE, export=legado_export.ORG_DOC)
