@@ -14,6 +14,8 @@ export function DeviceActivationPage() {
     const [submitting, setSubmitting] = useState(false)
     const [authorized, setAuthorized] = useState(false)
     const [error, setError] = useState('')
+    // Contra phishing: quem autoriza confirma que vê a TV. Link recebido de outra pessoa = sessão entregue a ela.
+    const [atTv, setAtTv] = useState(false)
     // Desconectar outros aparelhos: idle -> confirm (pergunta) -> working -> done.
     const [others, setOthers] = useState<'idle' | 'confirm' | 'working' | 'done'>('idle')
 
@@ -45,6 +47,10 @@ export function DeviceActivationPage() {
         const normalized = normalizeUserCode(code)
         if (!normalized) {
             setError('Digite os 8 caracteres do código que aparece na TV.')
+            return
+        }
+        if (!atTv) {
+            setError('Confirme que você está na frente da TV que mostra este código.')
             return
         }
 
@@ -122,12 +128,28 @@ export function DeviceActivationPage() {
                                 disabled={submitting}
                             />
                         </div>
+                        <div className="notice" role="note">
+                            <span>
+                                A TV vai entrar na <strong>sua conta</strong>. Só autorize se você está vendo esse
+                                código agora numa TV da LexGroup. Se recebeu este link por mensagem ou e-mail, não
+                                autorize.
+                            </span>
+                        </div>
+                        <label className="small" style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                            <input
+                                type="checkbox"
+                                checked={atTv}
+                                onChange={(event) => setAtTv(event.target.checked)}
+                                disabled={submitting}
+                            />
+                            <span>Estou na frente da TV e o código acima é o mesmo que aparece nela.</span>
+                        </label>
                         {error && (
                             <div className="notice danger" role="alert">
                                 {error}
                             </div>
                         )}
-                        <button className="btn btn-primary btn-block" type="submit" disabled={submitting}>
+                        <button className="btn btn-primary btn-block" type="submit" disabled={submitting || !atTv}>
                             {submitting ? 'Autorizando…' : 'Autorizar TV'}
                         </button>
                     </form>
