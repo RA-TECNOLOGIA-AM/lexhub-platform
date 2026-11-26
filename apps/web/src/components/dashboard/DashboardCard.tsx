@@ -1,6 +1,7 @@
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 import type { DashboardSummary } from '../../types/index.ts'
 import { isDisabled } from '../../lib/dashboardSwitch.ts'
+import { dashboardHref } from '../../lib/orgDashboard.ts'
 import { DashboardSwitchMenu } from './DashboardSwitchMenu.tsx'
 import { Freshness } from './Freshness.tsx'
 import { Icon } from '../ui/Icon.tsx'
@@ -37,7 +38,7 @@ export function DashboardCard({
             style={{ viewTransitionName: `card-${dashboard.key}` }}
         >
             <span className="dcard-head">
-                <PageTransitionLink className="title dcard-link" to={`/${org}/${unit}/dashboards/${dashboard.key}`}>
+                <PageTransitionLink className="title dcard-link" to={dashboardHref(org, unit, dashboard)}>
                     {dashboard.title}
                 </PageTransitionLink>
                 <span className="dcard-actions">

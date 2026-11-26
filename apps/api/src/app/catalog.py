@@ -52,6 +52,9 @@ class DashboardUnitRow:
     can_see_commission: bool
     enabled: bool = True  # False só chega para quem pode religar (Desenvolvedor)
     can_toggle: bool = False
+    scope: str = (
+        "unit"  # 'org' = junta as unidades numa tela só (só Owner/Dev; app/org_dashboard.py)
+    )
 
 
 @dataclass(frozen=True)
@@ -90,6 +93,9 @@ class DashboardSummaryOut(BaseModel):
     can_see_commission: bool
     disabled_units: list[str] = []  # unidades em que está desligado (só o Desenvolvedor recebe)
     can_toggle: bool = False  # mostra o menu de ligar/desligar no card
+    # 'unit' = abre por unidade (/:org/:unit/dashboards/:key); 'org' = uma tela com todas as `units`
+    # (/:org/geral/dashboards/:key, só Owner e Desenvolvedor).
+    scope: str = "unit"
 
 
 class UpcomingOut(BaseModel):
@@ -134,6 +140,7 @@ def build_catalog(
                 can_see_commission=r.can_see_commission,
                 disabled_units=[] if r.enabled else [r.unit_code],
                 can_toggle=r.can_toggle,
+                scope=r.scope,
             )
             continue
         card.units.append(r.unit_code)
@@ -159,7 +166,8 @@ select d.key, d.name as title, d.area, coalesce(d.description, '') as "desc",
        (app_private.has_unit_permission($1::uuid, u.id, $3)
         or app_private.has_unit_permission($1::uuid, u.id, $4)) as can_see_commission,
        od.enabled,
-       x.can_toggle
+       x.can_toggle,
+       d.scope
   from app.org_dashboards od
   join app.units u             on u.id = od.unit_id and u.active
   join app.dashboard_catalog d on d.key = od.dashboard_key and d.active and d.status = 'available'

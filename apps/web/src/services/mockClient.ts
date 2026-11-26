@@ -43,6 +43,7 @@ import type {
 } from '../types/index.ts'
 import { getSupport } from '../lib/supportSession.ts'
 import { metaFor } from './mock/helpers.ts'
+import { GERAL_UNIT } from '../lib/orgDashboard.ts'
 import { orgDocumentosLegadoFor } from './mock/orgDocumentosLegado.ts'
 import { pendenciasLegadoFor } from './mock/pendenciasLegado.ts'
 import { financeiroEstrategicoFor } from './mock/financeiroEstrategico.ts'
@@ -723,6 +724,28 @@ export function createMockClient(): DataClient {
                 const completo = MOCK_COMPLETO[dashboardKey]
                 return (completo ? completo(unit, q) : { meta: metaFor(unit), stats: {} }) as unknown as T
             }),
+
+        // Como a API (app/routes/org_dashboards.py): o `meta` com unit 'geral' e as unidades com o bloco vazio.
+        async getOrgDashboardData<T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery) {
+            await wait()
+            requireSession()
+            const dash = catalogForDev().available.find((d) => d.key === dashboardKey)
+            if (!requireOrg(query.org) || !dash || dash.scope !== 'org') {
+                throw new DataError(403, 'Você não tem acesso a este dashboard')
+            }
+            const meta = {
+                ...metaFor(GERAL_UNIT, dash.source),
+                synced_at: null,
+                from: query.from ?? '',
+                to: query.to ?? '',
+            }
+            if (!query.from || !query.to) {
+                const today = new Date().toISOString().slice(0, 10)
+                meta.from = `${today.slice(0, 8)}01`
+                meta.to = today
+            }
+            return { meta, units: dash.units.map((code) => ({ code, name: code, data: {} })) } as unknown as T
+        },
 
         // Pedidos de acesso: mesmas regras das funções do schema api (ver mock/accessRequests.ts).
         async requestAccess(office, message) {

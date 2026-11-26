@@ -281,6 +281,19 @@ export const catalog: DashboardCatalog = {
         }),
 
         // Estratégico
+        // Estratégico Geral: dashboard da organização (só Owner e Desenvolvedor), uma tela com as 3 unidades.
+        {
+            ...entry({
+                key: 'estrategico-geral',
+                title: 'Estratégico Geral',
+                area: 'Estratégico',
+                desc: 'NG, LAAM e LARJ juntas: a visão estratégica de todas as unidades.',
+                units: ALL,
+                source: 'Várias fontes',
+                syncedMin: 10,
+            }),
+            scope: 'org',
+        },
         entry({
             key: 'estrategico',
             title: 'Estratégico',

@@ -192,6 +192,8 @@ export function createApiClient({
         getPendencias: dashboard<PendenciasResponse>('pendencias-lexpre'),
         getDashboardData: <T extends { meta: Meta }>(dashboardKey: string, query: DashboardQuery) =>
             dashboard<T>(dashboardKey)(query),
+        getOrgDashboardData: <T extends { meta: Meta }>(dashboardKey: string, q: DashboardQuery) =>
+            http.get<T>(`/orgs/${q.org}/geral/dashboards/${dashboardKey}${toSearch(q)}`, q.signal),
 
         // Mesmo formato da v1: ?format=xlsx&campos=id_demanda&campos=materia&from=...&materia=ANP
         async exportDashboard({ org, unit, dashboard, format, campos, relatorio, opcoes, ...query }) {
