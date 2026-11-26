@@ -50,21 +50,10 @@ def test_formato_do_card(client, signer, repo, catalog_repo):
                 "can_see_commission": True,
                 "disabled_units": [],
                 "can_toggle": False,
-                "scope": "unit",
             }
         ],
         "upcoming": [],
     }
-
-
-def test_card_da_organizacao_leva_o_scope(client, signer, repo, catalog_repo):
-    repo.join(USER_ID)
-    for unit in ("NG", "LA", "RJ"):
-        catalog_repo.add(USER_ID, repo.org_id, row(key="estrategico-geral", unit=unit, scope="org"))
-
-    [card] = client.get("/orgs/lexgroup/dashboards", headers=auth(signer)).json()["available"]
-
-    assert (card["scope"], card["units"]) == ("org", ["NG", "LA", "RJ"])
 
 
 def test_um_card_por_dashboard_com_as_unidades_na_ordem(client, signer, repo, catalog_repo):
