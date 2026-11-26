@@ -995,9 +995,151 @@ button.org:hover {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
 }
-.period-fields > label,
-.period-fields .field {
+/* DateField (components/ui/DateField.tsx): rótulo + campo; o painel abre para a direita, alinhado ao campo. */
+.date-popover {
+    right: auto;
+    left: 0;
+    width: min(320px, calc(100vw - 32px));
+}
+.date-field,
+.period-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     min-width: 0;
+}
+.date-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    min-width: 0;
+    text-align: left;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+}
+.date-trigger svg {
+    flex: none;
+    color: var(--text-muted);
+}
+.date-trigger[aria-pressed="true"] {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+/* Calendário (components/ui/RangeCalendar.tsx): nas cores do tema, com a faixa De→Até pintada. */
+.cal {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.cal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+.cal-nav,
+.cal-title,
+.cal-day,
+.cal-month {
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+.cal-nav {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--r-sm);
+    color: var(--text-muted);
+}
+.cal-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
+    font-weight: 600;
+    font-size: var(--fs-sm);
+}
+.cal-title svg {
+    color: var(--text-muted);
+}
+.cal-nav:hover:not(:disabled),
+.cal-title:hover,
+.cal-month:hover:not(:disabled),
+.cal-day:hover:not(:disabled):not([aria-pressed="true"]) {
+    background: var(--surface-3);
+}
+.cal-nav:disabled,
+.cal-day:disabled,
+.cal-month:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+.cal-week,
+.cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.cal-week span {
+    text-align: center;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    color: var(--text-faint);
+    padding: 2px 0;
+}
+.cal-day {
+    height: 34px;
+    border-radius: var(--r-sm);
+    font-size: var(--fs-sm);
+    font-variant-numeric: tabular-nums;
+}
+.cal-day[data-out] {
+    color: var(--text-faint);
+}
+.cal-day[data-today] {
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.cal-day[data-range="inside"] {
+    background: var(--accent-soft);
+    border-radius: 0;
+}
+.cal-day[data-range="start"] {
+    border-radius: var(--r-sm) 0 0 var(--r-sm);
+}
+.cal-day[data-range="end"] {
+    border-radius: 0 var(--r-sm) var(--r-sm) 0;
+}
+.cal-day[aria-pressed="true"] {
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+}
+.cal-months {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+.cal-month {
+    height: 40px;
+    border-radius: var(--r-sm);
+    font-size: var(--fs-sm);
+}
+.cal-month[aria-current="date"] {
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+}
+.cal :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
 }
 .period-error {
     margin: 0;

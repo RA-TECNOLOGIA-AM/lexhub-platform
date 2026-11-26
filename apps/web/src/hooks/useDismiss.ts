@@ -17,7 +17,11 @@ export function useDismiss({ open, onClose, isInside, returnFocus }: DismissOpti
         returnFocus?.current?.focus()
     })
     const onClick = useEffectEvent((event: MouseEvent) => {
-        if (!isInside(event.target as Element)) onClose()
+        const target = event.target as Element
+        // O clique trocou a tela e tirou o próprio botão do documento (ex.: mês do calendário):
+        // não dá mais para saber onde ele estava, e quem some assim é coisa do próprio painel.
+        if (!target.isConnected) return
+        if (!isInside(target)) onClose()
     })
 
     useEffect(() => {
