@@ -279,6 +279,12 @@ export const GUIDE_ENTRIES: GuideEntry[] = [
         description:
             'Primeiros passos: entrar, escolher a unidade, achar e ler um dashboard, filtrar, exportar e deixar o app do seu jeito.',
     },
+    {
+        slug: 'api-publica',
+        title: 'API pública',
+        description:
+            'Para Owners, Gestores e Controllers: pedir a chave, gerar e renovar tokens e buscar os dados do Exportar por API (Power BI, planilhas, scripts).',
+    },
 ]
 
 // Título de qualquer guia (de uso ou de dashboard) pelo slug. null = não existe.

@@ -2,6 +2,7 @@ import type { DataClient, DeviceSession } from './client.ts'
 import { actorsOf } from '../pages/admin/audit/auditView.ts'
 import { DataError } from './errors.ts'
 import { createMockDevices } from './mockDevices.ts'
+import { createMockApiKeys } from './mock/apiKeys.ts'
 import {
     addAuditEvent,
     EXPORT_LABELS,
@@ -143,6 +144,8 @@ function catalogForDev(): DashboardCatalog {
 
 // Membros do mock: a lista muda com os convites (volta ao original no F5).
 const mockDevices = createMockDevices()
+// Chaves de API do mock: em memória (voltam ao exemplo no F5).
+const apiKeys = createMockApiKeys()
 const memberStore = createMembersStore({ name: me.user.name, email: '' })
 // Acesso do mock: grava na mesma loja de Membros.
 const accessStore = createAccessStore(memberStore)
@@ -302,6 +305,43 @@ export function createMockClient(): DataClient {
             await wait()
             mockDevices.revoke(id)
         },
+
+        // Chave de API: mesmas regras das funções do schema api (ver mock/apiKeys.ts).
+        async getApiKeyEligibility() {
+            await wait()
+            return apiKeys.eligibility()
+        },
+        async requestApiKey(_org, note, extras) {
+            await wait()
+            return apiKeys.request(who(), note, extras)
+        },
+        async getMyApiKey() {
+            await wait()
+            return apiKeys.mine(who())
+        },
+        async issueApiKeyTokens() {
+            await wait()
+            return apiKeys.tokens(who())
+        },
+        async listApiKeys(_org, status) {
+            await wait()
+            return apiKeys.list(status)
+        },
+        async countPendingApiKeys() {
+            return apiKeys.count()
+        },
+        async decideApiKey(id, approve, sectors, note) {
+            await wait()
+            return apiKeys.decide(id, approve, sectors, note)
+        },
+        async revokeApiKey(id) {
+            await wait()
+            apiKeys.revoke(id)
+        },
+        async revokeApiKeySector(id, sector) {
+            await wait()
+            apiKeys.revokeSector(id, sector)
+        },
         async isSessionAlive() {
             return sessionStorage.getItem(SESSION_KEY) !== null
         },
@@ -453,6 +493,7 @@ export function createMockClient(): DataClient {
                 billing: true,
                 clients: true,
                 support: true,
+                api_keys: true,
             }
         },
 

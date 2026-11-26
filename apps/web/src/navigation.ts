@@ -10,7 +10,7 @@ export type NavItem = {
     icon: IconName
     route: string // padrão da rota; ':org' vira a organização ativa
     active?: (pathname: string) => boolean // quando a regra "começa com a rota" não basta
-    badge?: 'access-requests' // contador ao lado do item (ex.: pedidos de acesso pendentes)
+    badge?: 'access-requests' | 'api-keys' // contador ao lado do item (ex.: pedidos de acesso pendentes)
     requires?: keyof AdminPermissions // só aparece para quem gere isso (api.my_admin_permissions)
 }
 
@@ -83,6 +83,17 @@ export const NAV_SECTIONS: NavSection[] = [
                 requires: 'audit',
             },
             {
+                key: 'chaves-api',
+                label: 'Chaves de API',
+                title: 'Chaves de API',
+                description:
+                    'Pedidos de chave de API de Owners, Gestores e Controllers: aprovar com os setores extras, acompanhar e revogar.',
+                icon: 'key',
+                route: '/:org/admin/chaves-api',
+                requires: 'api_keys',
+                badge: 'api-keys',
+            },
+            {
                 key: 'plano',
                 label: 'Plano e cobrança',
                 title: 'Plano e cobrança',
@@ -145,7 +156,16 @@ export function visibleItems(
 export function menuPermissions(data: AdminPermissions | null, error: unknown): AdminPermissions | null {
     if (data) return data
     return error
-        ? { access: true, members: true, sources: true, audit: true, billing: true, clients: true, support: false }
+        ? {
+              access: true,
+              members: true,
+              sources: true,
+              audit: true,
+              billing: true,
+              clients: true,
+              support: false,
+              api_keys: true,
+          }
         : null
 }
 

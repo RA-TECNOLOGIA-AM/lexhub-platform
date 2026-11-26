@@ -9,6 +9,7 @@ import { createBillingClient } from './billingClient.ts'
 import { createNotificationsClient } from './notifications.ts'
 import { createProfileClient } from './profileClient.ts'
 import { createDevicesClient } from './devicesClient.ts'
+import { createApiKeysClient } from './apiKeysClient.ts'
 import { DataError } from './errors.ts'
 import { toSearch, type Http } from './http.ts'
 import type {
@@ -62,6 +63,8 @@ export function createApiClient({
         ...createProfileClient(auth),
         // Dispositivos (sessões da conta): também direto no Supabase (schema api).
         ...createDevicesClient(auth),
+        // Chave de API: pedido e aprovação no Supabase (schema api); os tokens saem da API.
+        ...createApiKeysClient(auth, http),
 
         async signIn(email, password) {
             const { error } = await auth.auth.signInWithPassword({ email: email.trim(), password })

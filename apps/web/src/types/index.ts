@@ -449,6 +449,42 @@ export type AccountSession = {
     current: boolean
 }
 
+// Chave de API (API pública /v1). Pede: Owner, Gestor ou Controller; aprova: Desenvolvedor.
+export type ApiKeyStatus = 'pending' | 'active' | 'rejected' | 'revoked'
+export type ApiKeySectorStatus = 'pending' | 'approved' | 'rejected' | 'revoked'
+// Setor da chave: base = setor atual da pessoa (sem validade); extra = pedido com justificativa e validade.
+export type ApiKeySector = {
+    setor: string
+    base: boolean
+    status: ApiKeySectorStatus
+    justificativa: string | null
+    expiresAt: string | null
+}
+export type ApiKeyInfo = {
+    id: string
+    userName: string
+    userEmail: string
+    status: ApiKeyStatus
+    note: string | null
+    decisionNote: string | null
+    requestedAt: string
+    decidedAt: string | null
+    revokedAt: string | null
+    lastUsedAt: string | null
+    sectors: ApiKeySector[]
+}
+// validade = AAAA-MM-DD (último dia em que o setor extra vale), entre amanhã e 365 dias.
+export type ApiKeyExtraRequest = { setor: string; justificativa: string; validade: string }
+// sectors = setores que dá para pedir como extra (das unidades que a chave alcança).
+export type ApiKeyEligibility = { eligible: boolean; baseSectors: string[]; sectors: string[] }
+// Os tokens aparecem uma vez só (gerar de novo invalida os anteriores).
+export type ApiKeyTokens = {
+    accessToken: string
+    accessExpiresAt: string
+    refreshToken: string
+    refreshExpiresAt: string
+}
+
 // O que a pessoa gere nesta organização (api.my_admin_permissions): o menu esconde o que não for dela.
 // sources = vê a aba Unidades e fontes (Owner/Desenvolvedor: todas; Gestor/Controller: as próprias unidades).
 // audit = vê a Auditoria (Owner/Desenvolvedor). billing = vê Plano e cobrança (Owner/Desenvolvedor e equipe RA).
@@ -461,6 +497,7 @@ export type AdminPermissions = {
     billing: boolean
     clients: boolean
     support: boolean // Owner/Desenvolvedor: pode entrar no modo suporte (ver como um membro)
+    api_keys: boolean // Desenvolvedor: aprova e revoga chaves de API
 }
 
 // O que o editor grava (api.update_member_access): estado desejado nas unidades geridas.

@@ -35,6 +35,7 @@ describe('docFor', () => {
 describe('guideOrDoc', () => {
     it('acha guia de uso e guia de dashboard; slug desconhecido = null', () => {
         expect(guideOrDoc('guia-do-usuario')?.title).toBe('Como usar o LexHub')
+        expect(guideOrDoc('api-publica')?.title).toBe('API pública')
         expect(guideOrDoc('acordos')?.title).toBe('Execução Acordos')
         expect(guideOrDoc('nao-existe')).toBeNull()
     })

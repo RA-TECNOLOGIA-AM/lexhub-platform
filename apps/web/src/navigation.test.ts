@@ -4,7 +4,7 @@ import { menuPermissions, NAV_SECTIONS, visibleItems } from './navigation.ts'
 const admin = NAV_SECTIONS.find((s) => s.title === 'Administração')!
 const keys = (perms: Parameters<typeof visibleItems>[1]) => visibleItems(admin, perms).map((i) => i.key)
 
-const ALL = { access: true, members: true, sources: true, audit: true, billing: true, clients: true, support: true }
+const ALL = { access: true, members: true, sources: true, audit: true, billing: true, clients: true, support: true, api_keys: true }
 const NONE = {
     access: false,
     members: false,
@@ -13,6 +13,7 @@ const NONE = {
     billing: false,
     clients: false,
     support: false,
+    api_keys: false,
 }
 
 describe('visibleItems', () => {
@@ -46,6 +47,7 @@ describe('visibleItems', () => {
             billing: false,
             clients: false,
             support: false,
+            api_keys: false,
         }
         expect(keys(controller)).toContain('unidades')
         expect(keys(controller)).not.toContain('membros')
@@ -83,6 +85,7 @@ describe('menuPermissions', () => {
             billing: false,
             clients: false,
             support: false,
+            api_keys: false,
         }
         expect(menuPermissions(some, null)).toEqual(some)
         expect(menuPermissions(null, null)).toBeNull()
@@ -96,5 +99,12 @@ describe('modo suporte', () => {
     })
     it('fora do suporte, nada muda', () => {
         expect(visibleItems(admin, ALL, false, false).map((i) => i.key)).toEqual(keys(ALL))
+    })
+})
+
+describe('Chaves de API', () => {
+    it('só aparece para quem aprova (api_keys)', () => {
+        expect(keys(ALL)).toContain('chaves-api')
+        expect(keys({ ...ALL, api_keys: false })).not.toContain('chaves-api')
     })
 })

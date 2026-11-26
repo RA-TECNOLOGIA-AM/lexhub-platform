@@ -28,6 +28,7 @@ const MembersPage = lazyNamed(() => import('./pages/admin/members/MembersPage.ts
 const BillingPage = lazyNamed(() => import('./pages/admin/billing/BillingPage.tsx'), 'BillingPage')
 const AccessPage = lazyNamed(() => import('./pages/admin/access/AccessPage.tsx'), 'AccessPage')
 const AuditPage = lazyNamed(() => import('./pages/admin/audit/AuditPage.tsx'), 'AuditPage')
+const ApiKeysPage = lazyNamed(() => import('./pages/admin/api-keys/ApiKeysPage.tsx'), 'ApiKeysPage')
 const ClientsPage = lazyNamed(() => import('./pages/platform/clients/ClientsPage.tsx'), 'ClientsPage')
 const AccessRequestsPage = lazyNamed(
     () => import('./pages/platform/requests/AccessRequestsPage.tsx'),
@@ -43,6 +44,7 @@ const PAGES: Record<string, ReactNode> = {
     plano: <BillingPage />,
     acesso: <AccessPage />,
     auditoria: <AuditPage />,
+    'chaves-api': <ApiKeysPage />,
     clientes: <ClientsPage />,
     pedidos: <AccessRequestsPage />,
     documentacao: <DocumentacaoPage />,
