@@ -6,7 +6,7 @@ Dividido em duas partes trocáveis:
 Quem vê o quê é a regra do banco (app_private.dashboard_scope); exportar e comissão vêm
 das permissões (app_private.has_unit_permission), nunca de nomes de papel.
 
-Ligar/desligar um dashboard numa unidade (só o Desenvolvedor, permissão dashboards.toggle): o banco
+Ligar/desligar um dashboard numa unidade (Owner e Desenvolvedor, permissão dashboards.toggle): o banco
 decide e audita (app_private.set_dashboard_enabled, migration 20261118130000). Desligado some para
 todos; o Desenvolvedor continua recebendo a unidade, marcada em `disabled_units`.
 """
@@ -23,7 +23,7 @@ from app.access import get_db_pool
 
 SEE_ALL_ORG = "org.dashboards.all"  # owner, admin
 SEE_ALL_UNIT = "unit.dashboards.all"  # gestor, controller
-TOGGLE = "dashboards.toggle"  # admin (Desenvolvedor): liga/desliga dashboard na unidade
+TOGGLE = "dashboards.toggle"  # owner e admin (Desenvolvedor): liga/desliga dashboard na unidade
 
 
 class ToggleNotAllowed(Exception):

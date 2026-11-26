@@ -186,7 +186,7 @@ def test_ligar_desligar_sem_permissao_403(client, signer, repo, catalog_repo):
         headers=auth(signer),
     )
     assert r.status_code == 403
-    assert r.json() == {"detail": "Só o Desenvolvedor liga e desliga dashboards."}
+    assert r.json() == {"detail": "Só o Owner ou o Desenvolvedor liga e desliga dashboards."}
 
 
 def test_ligar_desligar_dashboard_inexistente_404(client, signer, repo, catalog_repo):
