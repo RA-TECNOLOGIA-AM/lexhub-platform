@@ -70,7 +70,7 @@ async def set_dashboard_enabled(
     access: Annotated[OrgAccess, Depends(require_org)],
     repo: Annotated[CatalogRepo, Depends(get_catalog_repo)],
 ) -> EnabledOut:
-    """Liga/desliga o dashboard numa unidade (só o Desenvolvedor). Desligado some do hub e da API para todos;
+    """Liga/desliga o dashboard numa unidade (Owner e Desenvolvedor). Desligado some do hub e da API para todos;
     o Desenvolvedor continua vendo. O banco confere a permissão e grava na auditoria."""
     try:
         enabled = await repo.set_enabled(

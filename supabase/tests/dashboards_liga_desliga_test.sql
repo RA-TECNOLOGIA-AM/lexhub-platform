@@ -1,5 +1,5 @@
 -- =============================================================================
--- Teste de 20261118130000_dashboards_liga_desliga.sql. Roda numa transação e desfaz no fim (ROLLBACK).
+-- Teste de 20261118130000_dashboards_liga_desliga.sql (+ 20261126210000: o Owner também liga/desliga). Roda numa transação e desfaz no fim (ROLLBACK).
 -- Passou = nenhum ERROR (só o aviso 'OK: ...'). Falhou = ERROR 'FALHOU: ...'.
 --
 -- Cenário: org 'org-teste-liga' com U1 e U2; d-um ligado nas duas; equipe E1 (U1) com regra E1 -> d-um.
@@ -58,12 +58,7 @@ begin
         raise exception 'FALHOU: colaborador deveria ver o ligado';
     end if;
 
-    -- Só o Desenvolvedor desliga (o Owner e o colaborador não)
-    begin
-        perform app_private.set_dashboard_enabled(owner, 'org-teste-liga', 'U1', 'd-liga', false);
-        raise exception 'FALHOU: Owner não deveria desligar';
-    exception when insufficient_privilege then null;
-    end;
+    -- Owner e Desenvolvedor desligam; o colaborador não
     begin
         perform app_private.set_dashboard_enabled(colab, 'org-teste-liga', 'U1', 'd-liga', false);
         raise exception 'FALHOU: colaborador não deveria desligar';
@@ -78,12 +73,12 @@ begin
         raise exception 'FALHOU: org_dashboards continua ligado';
     end if;
 
-    -- Some para colaborador e Owner; o Dev continua abrindo; U2 não muda
+    -- Some para o colaborador; Dev e Owner continuam abrindo (podem religar); U2 não muda
     if app_private.dashboard_scope(colab, u1, 'd-liga') is not null then
         raise exception 'FALHOU: colaborador ainda vê o desligado';
     end if;
-    if app_private.dashboard_scope(owner, u1, 'd-liga') is not null then
-        raise exception 'FALHOU: Owner ainda vê o desligado';
+    if app_private.dashboard_scope(owner, u1, 'd-liga') is distinct from 'all' then
+        raise exception 'FALHOU: Owner deveria abrir o desligado';
     end if;
     if app_private.dashboard_scope(dev, u1, 'd-liga') is distinct from 'all' then
         raise exception 'FALHOU: Dev deveria abrir o desligado';
@@ -114,6 +109,18 @@ begin
     end if;
     select count(*) into n from app.audit_log where actor_user_id = dev and action = 'dashboard.enabled';
     if n <> 1 then raise exception 'FALHOU: esperava 1 auditoria de religar, veio %', n; end if;
+
+    -- Owner desliga e religa (U2), com auditoria em nome dele
+    if app_private.set_dashboard_enabled(owner, 'org-teste-liga', 'U2', 'd-liga', false) is distinct from false then
+        raise exception 'FALHOU: Owner deveria desligar';
+    end if;
+    if (select enabled from app.org_dashboards where unit_id = u2 and dashboard_key = 'd-liga') then
+        raise exception 'FALHOU: org_dashboards de U2 continua ligado';
+    end if;
+    perform app_private.set_dashboard_enabled(owner, 'org-teste-liga', 'U2', 'd-liga', true);
+    select count(*) into n from app.audit_log
+    where actor_user_id = owner and action in ('dashboard.disabled', 'dashboard.enabled');
+    if n <> 2 then raise exception 'FALHOU: esperava 2 auditorias do Owner, veio %', n; end if;
 
     raise notice 'OK: dashboards_liga_desliga';
 end;
