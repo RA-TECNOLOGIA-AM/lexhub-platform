@@ -1,6 +1,8 @@
 import { customRange, KIND, NEVER, NEVER_LABEL, PERIODS, type AuditFilter, type AuditPeriod } from './auditView.ts'
 import { kindOptions } from '../../../services/auditEvents.ts'
 import type { AuditResponse } from '../../../types/index.ts'
+import { DateField } from '../../../components/ui/DateField.tsx'
+import { todayIso } from '../../../lib/period.ts'
 
 const KIND_OPTIONS = kindOptions()
 
@@ -32,6 +34,8 @@ export function AuditFilters({ value, actors, units, orgs, currentOrg, allowNeve
     }
 
     const org = value.org || currentOrg
+    const today = todayIso()
+    const range = { from: value.de, to: value.ate }
     return (
         <div className="filters">
             {orgs && (
@@ -90,28 +94,25 @@ export function AuditFilters({ value, actors, units, orgs, currentOrg, allowNeve
             {value.period === 'custom' && (
                 <>
                     {/* min/max impedem "de" depois de "até" (a URL voltaria para 7 dias). */}
-                    <label className="filter">
-                        <span className="lbl">De</span>
-                        <input
-                            className="field"
-                            type="date"
-                            value={value.de}
-                            max={value.ate}
-                            required
-                            onChange={(e) => e.target.value && onChange({ ...value, de: e.target.value })}
-                        />
-                    </label>
-                    <label className="filter">
-                        <span className="lbl">Até</span>
-                        <input
-                            className="field"
-                            type="date"
-                            value={value.ate}
-                            min={value.de}
-                            required
-                            onChange={(e) => e.target.value && onChange({ ...value, ate: e.target.value })}
-                        />
-                    </label>
+                    <DateField
+                        className="filter"
+                        label="De"
+                        value={value.de}
+                        max={value.ate || today}
+                        today={today}
+                        range={range}
+                        onChange={(de) => onChange({ ...value, de })}
+                    />
+                    <DateField
+                        className="filter"
+                        label="Até"
+                        value={value.ate}
+                        min={value.de}
+                        max={today}
+                        today={today}
+                        range={range}
+                        onChange={(ate) => onChange({ ...value, ate })}
+                    />
                 </>
             )}
             <label className="filter">

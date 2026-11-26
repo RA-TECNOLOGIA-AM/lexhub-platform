@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react'
 import { Icon } from '../ui/Icon.tsx'
+import { RangeCalendar } from '../ui/RangeCalendar.tsx'
 import { useDismiss } from '../../hooks/useDismiss.ts'
+import { formatBr } from '../../lib/calendar.ts'
 import { PRESETS, periodError, periodLabel, presetPeriod, todayIso, type Period } from '../../lib/period.ts'
 
 type PeriodPickerProps = {
@@ -23,12 +25,41 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
         returnFocus: button,
     })
 
+    const [active, setActive] = useState<'from' | 'to'>('from') // a ponta que o calendário preenche
+    const [calKey, setCalKey] = useState(0) // trocar = o calendário reabre na data da ponta ativa
+
     const error = periodError(draft)
 
     // Abrir sempre começa do período em uso (cancelar descarta o rascunho).
     function toggle() {
-        if (!open) setDraft(value ?? presetPeriod('este-mes'))
+        if (!open) {
+            setDraft(value ?? presetPeriod('este-mes'))
+            setActive('from')
+            setCalKey((k) => k + 1)
+        }
         setOpen((o) => !o)
+    }
+
+    function focusEnd(end: 'from' | 'to') {
+        setActive(end)
+        setCalKey((k) => k + 1)
+    }
+
+    // Clique no calendário: preenche a ponta ativa. Escolher De passa para Até (sem pular o mês mostrado).
+    // Se a ordem inverter, as pontas se ajustam em vez de deixar um período impossível.
+    function pick(iso: string) {
+        if (active === 'from') {
+            setDraft({ from: iso, to: draft.to && draft.to < iso ? iso : draft.to })
+            setActive('to')
+        } else {
+            setDraft(iso < draft.from ? { from: iso, to: draft.from } : { ...draft, to: iso })
+        }
+    }
+
+    function choosePreset(range: Period) {
+        setDraft(range)
+        setActive('from')
+        setCalKey((k) => k + 1)
     }
 
     function apply() {
@@ -63,7 +94,7 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
                                     type="button"
                                     className="pill"
                                     aria-pressed={pressed}
-                                    onClick={() => setDraft(range)}
+                                    onClick={() => choosePreset(range)}
                                 >
                                     {p.label}
                                 </button>
@@ -71,27 +102,30 @@ export function PeriodPicker({ value, onChange }: PeriodPickerProps) {
                         })}
                     </div>
                     <div className="period-fields">
-                        <label>
-                            <span className="lbl">De</span>
-                            <input
-                                className="field"
-                                type="date"
-                                value={draft.from}
-                                max={todayIso()}
-                                onChange={(e) => setDraft({ ...draft, from: e.target.value })}
-                            />
-                        </label>
-                        <label>
-                            <span className="lbl">Até</span>
-                            <input
-                                className="field"
-                                type="date"
-                                value={draft.to}
-                                max={todayIso()}
-                                onChange={(e) => setDraft({ ...draft, to: e.target.value })}
-                            />
-                        </label>
+                        {(['from', 'to'] as const).map((end) => (
+                            <div key={end} className="period-field">
+                                <span className="lbl">{end === 'from' ? 'De' : 'Até'}</span>
+                                <button
+                                    type="button"
+                                    className="field date-trigger"
+                                    aria-pressed={active === end}
+                                    onClick={() => focusEnd(end)}
+                                >
+                                    {formatBr(draft[end]) || 'dd/mm/aaaa'}
+                                    <Icon name="calendar" size={15} />
+                                </button>
+                            </div>
+                        ))}
                     </div>
+                    <RangeCalendar
+                        key={calKey}
+                        from={draft.from}
+                        to={draft.to}
+                        start={draft[active] || todayIso()}
+                        max={todayIso()}
+                        today={todayIso()}
+                        onPick={pick}
+                    />
                     {error && <p className="small period-error">{error}</p>}
                     <div className="popover-actions">
                         <button className="btn" type="button" onClick={() => setOpen(false)}>
