@@ -23,13 +23,13 @@ const TOC: TocItem[] = [
 export function ExecucaoEstrategicoDoc() {
     return (
         <DocPage
-            title="Execução Estratégico Geral — NG, LA e LARJ"
+            title="Execução Estratégico — NG, LA e LARJ"
             tags={['NG', 'LA', 'LARJ']}
             note="Mesma lógica nas três unidades, exceto Confecção CS (só NG/LA)"
             toc={TOC}
             intro={
                 <>
-                    Este guia explica o dashboard de Execução Estratégico Geral: uma visão combinada que soma os dados
+                    Este guia explica o dashboard de Execução Estratégico: uma visão combinada que soma os dados
                     dos dashboards Execução Estratégico (Condenação) e Execução Acordos Estratégico num único conjunto
                     de indicadores e gráficos. Nenhum conhecimento técnico é necessário.
                 </>
@@ -52,7 +52,7 @@ export function ExecucaoEstrategicoDoc() {
                     <p>
                         A Seção 03 (gargalos da atividade "Elaborar Cumprimento de Sentença") só existe quando o
                         dashboard de origem Execução Condenação tem esse conceito cadastrado. NG e LA têm; LARJ, por
-                        enquanto, não — então o dashboard de Execução Estratégico Geral LARJ mostra só as Seções 01
+                        enquanto, não — então o dashboard de Execução Estratégico LARJ mostra só as Seções 01
                         (Indicadores) e 02 (Entradas e saídas por mês).
                     </p>
                 </DocCard>
@@ -66,7 +66,7 @@ export function ExecucaoEstrategicoDoc() {
                 </DocCard>
                 <DocCard title="Quando usar este dashboard em vez dos dois separados">
                     <p>
-                        Use o Execução Estratégico Geral para uma visão executiva única do setor de Execução como um
+                        Use o Execução Estratégico para uma visão executiva única do setor de Execução como um
                         todo. Para o detalhe fino de cada domínio (TRE, classificação Judicial x Extrajudicial, alerta
                         de valor de alçada final vazio, etc.), use os dashboards de origem — Execução Estratégico e
                         Execução Acordos Estratégico (documentações separadas).
