@@ -5,7 +5,6 @@ import { Icon } from '../ui/Icon.tsx'
 import { TopbarPortal } from '../layout/TopbarSlot.tsx'
 import { minutesSince } from '../../lib/format.ts'
 import { unitName } from '../../lib/units.ts'
-import { unitLabel } from '../../lib/orgDashboard.ts'
 import { PageTransitionLink } from '../page_transition/PageTransitionLink.tsx'
 import { DOC_ENTRIES, docFor } from '../../pages/documentacao/docRegistry.ts'
 import { DOC_PAGES } from '../../pages/documentacao/docPages.ts'
@@ -25,7 +24,7 @@ export function DashboardHeader({ org, dashboard, meta, actions }: DashboardHead
     const entry = docFor(DOC_ENTRIES, dashboard.key, meta.unit)
     const doc = entry && DOC_PAGES[entry.slug] ? entry : null
     const late = meta.synced_at === null || minutesSince(meta.synced_at) > dashboard.max_delay_min
-    const title = `${dashboard.title} · ${unitLabel(meta.unit, unitName(meta.unit, me?.units ?? []))}`
+    const title = `${dashboard.title} · ${unitName(meta.unit, me?.units ?? [])}`
     return (
         <section className="dhead">
             {/* O nome também fica na topbar: continua à vista quando o cabeçalho sai da tela ao rolar. */}
@@ -39,11 +38,9 @@ export function DashboardHeader({ org, dashboard, meta, actions }: DashboardHead
                 <span className="dhead-trail">
                     <PageTransitionLink to={`/${org}/dashboards`}>Dashboards</PageTransitionLink>
                     {/* unidade e fonte com o mesmo nome (NG · NG) aparecem uma vez só */}
-                    {[...new Set([dashboard.area, unitLabel(meta.unit, meta.unit), meta.source].filter(Boolean))].map(
-                        (part) => (
-                            <span key={part}> · {part}</span>
-                        ),
-                    )}
+                    {[...new Set([dashboard.area, meta.unit, meta.source].filter(Boolean))].map((part) => (
+                        <span key={part}> · {part}</span>
+                    ))}
                 </span>
                 <div className="dhead-title">
                     <span className="dhead-icon" aria-hidden="true">

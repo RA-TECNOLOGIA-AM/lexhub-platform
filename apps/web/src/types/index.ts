@@ -32,8 +32,7 @@ export type Unit = { code: string; name: string }
 
 // Modo suporte: Owner/Desenvolvedor vendo o hub como um membro, só leitura (a API confere e vence em 1 hora).
 // Modo suporte: um dashboard da unidade que o membro não vê, e por quê (GET .../support/sessions/{id}/hidden).
-export type HiddenReason =
-    'org_inactive' | 'dashboard_off' | 'not_member' | 'no_unit_role' | 'no_sector_rule' | 'owner_dev_only'
+export type HiddenReason = 'org_inactive' | 'dashboard_off' | 'not_member' | 'no_unit_role' | 'no_sector_rule'
 export type HiddenDashboard = { key: string; title: string; area: string; reason: HiddenReason }
 
 export type SupportSession = {
@@ -66,9 +65,6 @@ export type DashboardSummary = {
     // ligar/desligar no card. Quem não é Dev não recebe as unidades desligadas.
     disabled_units?: string[]
     can_toggle?: boolean
-    // 'org' = dashboard da organização (ex.: Estratégico Geral): uma tela com todas as `units`, só Owner e
-    // Desenvolvedor (lib/orgDashboard.ts). Sem = 'unit', abre por unidade.
-    scope?: 'unit' | 'org'
 }
 
 export type DashboardCatalog = {

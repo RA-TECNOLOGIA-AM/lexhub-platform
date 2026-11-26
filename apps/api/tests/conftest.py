@@ -157,7 +157,7 @@ class FakeCatalogRepo:
         from app.catalog import DashboardMissing, ToggleNotAllowed
 
         if not self.allowed:
-            raise ToggleNotAllowed("Só o Desenvolvedor liga e desliga dashboards.")
+            raise ToggleNotAllowed("Só o Owner ou o Desenvolvedor liga e desliga dashboards.")
         if self.missing:
             raise DashboardMissing("Este dashboard não existe nesta unidade.")
         self.switched.append((user_id, org_slug, unit_code, dashboard_key, enabled))

@@ -25,7 +25,6 @@ from app.routes import (
     health,
     hub,
     me,
-    org_dashboards,
     public_auth,
     public_data,
     source_connections,
@@ -218,7 +217,6 @@ def create_app() -> FastAPI:
     app.include_router(catalog.router)
     app.include_router(hub.router)
     app.include_router(dashboards.router)
-    app.include_router(org_dashboards.router)
     app.include_router(device_auth.router)
     app.include_router(sources.router)
     app.include_router(source_freshness.router)

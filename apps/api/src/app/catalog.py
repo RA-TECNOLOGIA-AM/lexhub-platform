@@ -6,7 +6,7 @@ Dividido em duas partes trocáveis:
 Quem vê o quê é a regra do banco (app_private.dashboard_scope); exportar e comissão vêm
 das permissões (app_private.has_unit_permission), nunca de nomes de papel.
 
-Ligar/desligar um dashboard numa unidade (só o Desenvolvedor, permissão dashboards.toggle): o banco
+Ligar/desligar um dashboard numa unidade (Owner e Desenvolvedor, permissão dashboards.toggle): o banco
 decide e audita (app_private.set_dashboard_enabled, migration 20261118130000). Desligado some para
 todos; o Desenvolvedor continua recebendo a unidade, marcada em `disabled_units`.
 """
@@ -23,7 +23,7 @@ from app.access import get_db_pool
 
 SEE_ALL_ORG = "org.dashboards.all"  # owner, admin
 SEE_ALL_UNIT = "unit.dashboards.all"  # gestor, controller
-TOGGLE = "dashboards.toggle"  # admin (Desenvolvedor): liga/desliga dashboard na unidade
+TOGGLE = "dashboards.toggle"  # owner e admin (Desenvolvedor): liga/desliga dashboard na unidade
 
 
 class ToggleNotAllowed(Exception):
@@ -52,9 +52,6 @@ class DashboardUnitRow:
     can_see_commission: bool
     enabled: bool = True  # False só chega para quem pode religar (Desenvolvedor)
     can_toggle: bool = False
-    scope: str = (
-        "unit"  # 'org' = junta as unidades numa tela só (só Owner/Dev; app/org_dashboard.py)
-    )
 
 
 @dataclass(frozen=True)
@@ -93,9 +90,6 @@ class DashboardSummaryOut(BaseModel):
     can_see_commission: bool
     disabled_units: list[str] = []  # unidades em que está desligado (só o Desenvolvedor recebe)
     can_toggle: bool = False  # mostra o menu de ligar/desligar no card
-    # 'unit' = abre por unidade (/:org/:unit/dashboards/:key); 'org' = uma tela com todas as `units`
-    # (/:org/geral/dashboards/:key, só Owner e Desenvolvedor).
-    scope: str = "unit"
 
 
 class UpcomingOut(BaseModel):
@@ -140,7 +134,6 @@ def build_catalog(
                 can_see_commission=r.can_see_commission,
                 disabled_units=[] if r.enabled else [r.unit_code],
                 can_toggle=r.can_toggle,
-                scope=r.scope,
             )
             continue
         card.units.append(r.unit_code)
@@ -166,8 +159,7 @@ select d.key, d.name as title, d.area, coalesce(d.description, '') as "desc",
        (app_private.has_unit_permission($1::uuid, u.id, $3)
         or app_private.has_unit_permission($1::uuid, u.id, $4)) as can_see_commission,
        od.enabled,
-       x.can_toggle,
-       d.scope
+       x.can_toggle
   from app.org_dashboards od
   join app.units u             on u.id = od.unit_id and u.active
   join app.dashboard_catalog d on d.key = od.dashboard_key and d.active and d.status = 'available'
