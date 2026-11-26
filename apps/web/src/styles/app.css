@@ -10509,34 +10509,6 @@ button.mkt-rub-linha:not(:disabled):hover,
     font-weight: 500;
     overflow-wrap: anywhere;
 }
-
-/* Estratégico Geral (pages/dashboards/estrategico-geral): um bloco por unidade, lado a lado. */
-.estrategico-geral {
-    display: grid;
-    gap: 16px;
-}
-.estrategico-geral-units {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 16px;
-}
-.estrategico-geral-unit {
-    display: grid;
-    gap: 8px;
-    padding: 16px;
-}
-.estrategico-geral-unit .desc {
-    margin: 0;
-}
-.estrategico-geral-unit-head {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.estrategico-geral-unit-head img {
-    border-radius: 6px;
-}
-
 /* Estratégico: cards de 2 e 6 por linha, aviso de fonte, subfases e comarcas com rolagem. */
 .es-dois {
     grid-template-columns: repeat(2, minmax(0, 1fr));
