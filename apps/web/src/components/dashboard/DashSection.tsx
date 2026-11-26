@@ -4,6 +4,7 @@ import { Icon } from '../ui/Icon.tsx'
 type DashSectionProps = {
     index: number // 1 -> "01"
     eyebrow: string // "Visão geral"
+    badge?: ReactNode // selo ao lado do eyebrow (ex.: o total da seção)
     title: string // "Indicadores do período"
     subtitle?: string
     action?: ReactNode // controle da seção ao lado do "Ocultar" (ex.: Total | Entrada); some com a seção oculta
@@ -13,7 +14,7 @@ type DashSectionProps = {
 
 // Módulo: uma seção numerada de dashboard, como na v1 (01 · Visão geral · título · Ocultar).
 // Ocultar só esconde nesta visita: recarregar a página mostra tudo de novo.
-export function DashSection({ index, eyebrow, title, subtitle, action, anchor, children }: DashSectionProps) {
+export function DashSection({ index, eyebrow, badge, title, subtitle, action, anchor, children }: DashSectionProps) {
     const [open, setOpen] = useState(true)
     const id = useId()
     return (
@@ -23,7 +24,14 @@ export function DashSection({ index, eyebrow, title, subtitle, action, anchor, c
                     {String(index).padStart(2, '0')}
                 </span>
                 <div className="dsec-text">
-                    <span className="dsec-eyebrow">{eyebrow}</span>
+                    {badge ? (
+                        <span className="dsec-eyebrow-row">
+                            <span className="dsec-eyebrow">{eyebrow}</span>
+                            {badge}
+                        </span>
+                    ) : (
+                        <span className="dsec-eyebrow">{eyebrow}</span>
+                    )}
                     <h2 className="dsec-title" id={`${id}-t`}>
                         {title}
                     </h2>

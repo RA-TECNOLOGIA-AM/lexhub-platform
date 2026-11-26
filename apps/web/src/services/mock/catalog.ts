@@ -298,9 +298,9 @@ export const catalog: DashboardCatalog = {
             key: 'estrategico',
             title: 'Estratégico',
             area: 'Estratégico',
-            desc: 'Visão geral das unidades.',
-            units: ['Consolidado'],
-            source: '3 unidades',
+            desc: 'Comercial, protocolo e jurídico da unidade: contratos e ações fechadas, represados, protocolados, valor de causa e o avanço nas fases.',
+            units: ALL,
+            source: 'LexFlow, legado e LexPre',
             syncedMin: 10,
         }),
         entry({
