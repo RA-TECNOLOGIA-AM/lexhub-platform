@@ -1001,12 +1001,16 @@ button.org:hover {
     left: 0;
     width: min(320px, calc(100vw - 32px));
 }
+/* O espaço entre rótulo e campo vem do margin do .lbl, igual aos <label> da barra. */
 .date-field,
 .period-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
     min-width: 0;
+}
+/* Na barra de filtros: mesmo tamanho dos selects (.filters > div, em tokens.css, faria o campo crescer). */
+.filters > .date-field {
+    flex: 0 1 180px;
 }
 .date-trigger {
     display: flex;
