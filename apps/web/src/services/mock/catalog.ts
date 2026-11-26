@@ -318,6 +318,15 @@ export const catalog: DashboardCatalog = {
             syncedMin: 6,
         }),
         entry({
+            key: 'configuracoes-vinculacoes',
+            title: 'Configurações das Vinculações',
+            area: 'Estratégico',
+            desc: 'Auditoria das vinculações (setor + atividade) do LexFlow: fluxos de cumprido e não cumprido, gatilhos de fase/subfase e o que falta configurar.',
+            units: ALL,
+            source: 'LexFlow',
+            syncedMin: 6,
+        }),
+        entry({
             key: 'financeiro-estrategico',
             title: 'Financeiro Estratégico',
             area: 'Financeiro',
