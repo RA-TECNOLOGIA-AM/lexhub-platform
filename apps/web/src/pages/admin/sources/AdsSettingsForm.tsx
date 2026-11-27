@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import type { AdsCampaignOption, AdsConversionOption, AdsSettings } from '../../../types/index.ts'
 import {
     BACKFILL_OPTIONS,
@@ -126,23 +126,29 @@ export function AdsSettingsForm({
                         </div>
                         <div className="ads-campaigns" role="group" aria-label="Campanhas da conta">
                             {shown.length === 0 && <p className="muted small">Nenhuma campanha com esse nome.</p>}
-                            {shown.map((c) => (
-                                <label key={c.id} className="ads-campaign">
-                                    <input
-                                        type="checkbox"
-                                        checked={chosen.includes(c.id)}
-                                        onChange={(e) => set({ campaigns: toggle(chosen, c.id, e.target.checked) })}
-                                    />
-                                    <span className="ads-check-text">
-                                        <span>{c.name}</span>
-                                        <span className="muted small">
-                                            {objectiveLabel(c.objective)} · {money(c.spend30, currency)} em 30 dias
+                            {shown.map((c, i) => (
+                                <Fragment key={c.id}>
+                                    {/* Várias contas: o nome da conta antes das campanhas dela */}
+                                    {c.account && c.account !== shown[i - 1]?.account && (
+                                        <span className="ads-campaign-group">{c.account}</span>
+                                    )}
+                                    <label className="ads-campaign">
+                                        <input
+                                            type="checkbox"
+                                            checked={chosen.includes(c.id)}
+                                            onChange={(e) => set({ campaigns: toggle(chosen, c.id, e.target.checked) })}
+                                        />
+                                        <span className="ads-check-text">
+                                            <span>{c.name}</span>
+                                            <span className="muted small">
+                                                {objectiveLabel(c.objective)} · {money(c.spend30, currency)} em 30 dias
+                                            </span>
                                         </span>
-                                    </span>
-                                    <span className={`badge ${isActive(c.status) ? 'ok' : 'neutral'}`}>
-                                        {statusLabel(c.status)}
-                                    </span>
-                                </label>
+                                        <span className={`badge ${isActive(c.status) ? 'ok' : 'neutral'}`}>
+                                            {statusLabel(c.status)}
+                                        </span>
+                                    </label>
+                                </Fragment>
                             ))}
                         </div>
                     </>

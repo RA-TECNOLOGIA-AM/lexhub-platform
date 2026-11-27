@@ -929,12 +929,23 @@ def capabilities(granted: set[str], accounts: int, businesses: int) -> list[dict
     return out
 
 
-def _account_item(a: dict[str, Any]) -> dict[str, Any] | None:
+ACCOUNT_FIELDS = (
+    "id,account_id,name,currency,timezone_name,account_status,amount_spent,business{id,name}"
+)
+# Até quantos negócios a leitura do token abre para achar contas não atribuídas (cada um = 2 chamadas).
+MAX_BUSINESSES = 10
+
+
+def _account_item(
+    a: dict[str, Any], *, assigned: bool = True, business: dict[str, Any] | None = None
+) -> dict[str, Any] | None:
+    """Uma conta de anúncios na lista do token. assigned=False: o negócio tem a conta, mas ela não foi
+    atribuída ao usuário do token (os relatórios dela não abrem com este token)."""
     account = normalize_account(str(a.get("id") or a.get("account_id") or ""))
     if account is None:
         return None
     status = _int(a.get("account_status"))
-    business = a.get("business") if isinstance(a.get("business"), dict) else {}
+    owner = a.get("business") if isinstance(a.get("business"), dict) else (business or {})
     return {
         "id": account,
         "name": a.get("name") or account,
@@ -942,9 +953,31 @@ def _account_item(a: dict[str, Any]) -> dict[str, Any] | None:
         "timezone": a.get("timezone_name") or "",
         "status": ACCOUNT_STATUS.get(status) if status is not None else None,
         "active": status in (1, None),
-        "business": business.get("name"),
+        "business": owner.get("name"),
+        "businessId": str(owner["id"]) if owner.get("id") else None,
         "spent": float(_budget(a.get("amount_spent")) or 0),  # total gasto na vida da conta
+        "assigned": assigned,
     }
+
+
+async def _business_accounts(
+    graph: GraphClient, businesses: list[dict[str, Any]], known: set[str]
+) -> list[dict[str, Any]]:
+    """As contas dos negócios (próprias e de clientes) que não estão em /me/adaccounts: o token vê o
+    negócio, mas a conta não foi atribuída ao usuário. Negócio que não abre (sem papel de admin) é pulado."""
+    found: list[dict[str, Any]] = []
+    for b in businesses[:MAX_BUSINESSES]:
+        for edge in ("owned_ad_accounts", "client_ad_accounts"):
+            try:
+                raw = await graph.pages(f"/{b['id']}/{edge}", {"fields": ACCOUNT_FIELDS})
+            except GraphError:
+                continue
+            for r in raw:
+                item = _account_item(r, assigned=False, business=b)
+                if item is not None and item["id"] not in known:
+                    known.add(item["id"])
+                    found.append(item)
+    return found
 
 
 async def token_info(graph: GraphClient, *, app_token: str | None = None) -> dict[str, Any]:
@@ -997,23 +1030,27 @@ async def token_info(graph: GraphClient, *, app_token: str | None = None) -> dic
     )
     accounts: list[dict[str, Any]] = []
     if granted & {"ads_read", "ads_management"}:
-        raw = await graph.pages(
-            "/me/adaccounts",
-            {
-                "fields": "id,account_id,name,currency,timezone_name,account_status,amount_spent,"
-                "business{id,name}",
-                "limit": 200,
-            },
-        )
+        raw = await graph.pages("/me/adaccounts", {"fields": ACCOUNT_FIELDS, "limit": 200})
         accounts = [a for a in (_account_item(r) for r in raw) if a is not None]
-        accounts.sort(key=lambda a: (not a["active"], str(a["name"]).lower()))
-    businesses: list[dict[str, Any]] = []
+    # Os negócios: os do usuário (/me/businesses, com business_management) e os donos das contas.
+    by_id: dict[str, dict[str, Any]] = {}
     if "business_management" in granted:
         try:
-            found = await graph.pages("/me/businesses", {"fields": "id,name"})
-            businesses = [{"id": str(b.get("id")), "name": b.get("name")} for b in found]
+            for b in await graph.pages("/me/businesses", {"fields": "id,name"}):
+                if b.get("id"):
+                    by_id[str(b["id"])] = {"id": str(b["id"]), "name": b.get("name")}
         except GraphError:
-            businesses = []
+            pass
+    for a in accounts:
+        if a["businessId"]:
+            by_id.setdefault(a["businessId"], {"id": a["businessId"], "name": a["business"]})
+    businesses = list(by_id.values())
+    if "business_management" in granted and businesses:
+        known = {a["id"] for a in accounts}
+        accounts += await _business_accounts(graph, businesses, known)
+    # As que o token lê primeiro; depois as ativas; depois pelo nome.
+    accounts.sort(key=lambda a: (not a["assigned"], not a["active"], str(a["name"]).lower()))
+    readable = [a for a in accounts if a["assigned"]]
     debug: dict[str, Any] = {}
     if app_token:
         try:
@@ -1026,7 +1063,8 @@ async def token_info(graph: GraphClient, *, app_token: str | None = None) -> dic
         Check("network", True, "A API alcançou graph.facebook.com", ms()),
         Check("login", True, f"Token aceito pela Meta{who}", ms()),
     ]
-    if not accounts:
+    hidden = len(accounts) - len(readable)
+    if not readable:
         detail = (
             "O token não acessa nenhuma conta de anúncios. No Gerenciador de Negócios, atribua a conta "
             "ao usuário do sistema."
@@ -1035,11 +1073,11 @@ async def token_info(graph: GraphClient, *, app_token: str | None = None) -> dic
         )
         checks.append(Check("read", False, detail, ms()))
     else:
-        checks.append(
-            Check("read", True, f"{len(accounts)} conta(s) de anúncios encontrada(s)", ms())
-        )
+        extra = f"; {hidden} do negócio sem acesso aos relatórios" if hidden else ""
+        message = f"{len(readable)} conta(s) de anúncios com acesso{extra}"
+        checks.append(Check("read", True, message, ms()))
     return {
-        "ok": bool(accounts),
+        "ok": bool(readable),
         "checks": [vars(c) for c in checks],
         "user": {"id": str(me.get("id") or ""), "name": me.get("name")},
         "tokenType": TOKEN_TYPES.get(str(debug.get("type")), debug.get("type")) if debug else None,
@@ -1049,7 +1087,7 @@ async def token_info(graph: GraphClient, *, app_token: str | None = None) -> dic
         "neverExpires": (expires == 0) if debug else None,
         "app": debug.get("application") if debug else None,
         "permissions": permissions,
-        "capabilities": capabilities(granted, len(accounts), len(businesses)),
+        "capabilities": capabilities(granted, len(readable), len(businesses)),
         "accounts": accounts,
         "businesses": businesses,
     }

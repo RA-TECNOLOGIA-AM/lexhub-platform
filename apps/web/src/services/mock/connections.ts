@@ -33,6 +33,7 @@ const TABS: SheetTab[] = [
 // se está ligada, o status de antes de desligar e a estrutura salva no teste (detalhe técnico).
 type Stored = {
     connectedAt?: number // Facebook Ads: quando a coleta (fictícia) do histórico começou
+    place?: string // Facebook Ads: 'Organização · UNIDADE' (a leitura do token marca a conta como já ligada)
     config: Record<string, unknown>
     secret: string
     writerAck: boolean
@@ -295,6 +296,11 @@ export function connectIn(data: SourcesResponse, unitCode: string, input: Connec
         ;({ checks, canWrite } = dbChecks(input.host, port, input.database, input.user, input.password, input.ssl))
     }
     if (!okOf(checks)) return { saved: false, needsWriterAck: false, checks, source: null }
+    // Como o banco: uma conta de anúncios numa fonte só (data_sources_ad_account_uq).
+    if (input.connector === 'facebook_ads') {
+        const taken = adsInUse()[adAccount(input.adAccountId) ?? '']
+        if (taken) throw new DataError(409, `Esta conta de anúncios já está conectada (${taken}).`)
+    }
     if (canWrite && input.connector !== 'sheets' && input.connector !== 'facebook_ads' && !input.writerAck) {
         return { saved: false, needsWriterAck: true, checks, source: null }
     }
@@ -348,6 +354,7 @@ export function connectIn(data: SourcesResponse, unitCode: string, input: Connec
         enabled: true,
         statusBefore: null,
         connectedAt: Date.now(),
+        place: `LexGroup · ${unitCode}`,
         schema:
             input.connector === 'facebook_ads'
                 ? ADS_SCHEMA
@@ -456,7 +463,16 @@ function adsSource(sourceId: string): Stored {
     return s
 }
 
-export const readAdsTokenIn = (token: string): AdsTokenInfo => adsTokenInfo(token)
+// As contas já ligadas a uma fonte do mock: conta -> 'Organização · UNIDADE'.
+function adsInUse(): Record<string, string> {
+    const out: Record<string, string> = {}
+    for (const s of stored.values()) {
+        if (isAdsConfig(s.config)) out[String(s.config.ad_account_id)] = s.place ?? 'outra unidade'
+    }
+    return out
+}
+
+export const readAdsTokenIn = (token: string): AdsTokenInfo => adsTokenInfo(token, adsInUse())
 
 export function inspectAdsIn(input: { adAccountId: string; token: string }): AdsOptions {
     const checks = adsChecks(input.adAccountId, input.token)
@@ -472,17 +488,18 @@ export function inspectAdsIn(input: { adAccountId: string; token: string }): Ads
             timezone: 'America/Manaus',
             status: account.endsWith('0') ? 'desativada' : 'ativa',
         },
-        ...adsOptions(),
+        ...adsOptions(account),
     }
 }
 
 export function previewAdsIn(input: { adAccountId: string; settings: AdsSettings }): AdsPreview {
-    if (!adAccount(input.adAccountId)) throw new DataError(422, 'ID da conta inválido.')
-    return adsPreview(input.settings)
+    const account = adAccount(input.adAccountId)
+    if (!account) throw new DataError(422, 'ID da conta inválido.')
+    return adsPreview(input.settings, account)
 }
 
 export function adsTokenSavedIn(sourceId: string): AdsTokenInfo {
-    return adsTokenInfo(adsSource(sourceId).secret)
+    return adsTokenInfo(adsSource(sourceId).secret, adsInUse())
 }
 
 export function adsOptionsIn(sourceId: string): AdsOptions {
@@ -497,14 +514,13 @@ export function adsOptionsIn(sourceId: string): AdsOptions {
             timezone: String(c.timezone),
             status: null,
         },
-        ...adsOptions(),
+        ...adsOptions(String(c.ad_account_id)),
         settings: adsSettingsOf(c),
     }
 }
 
 export function previewSavedAdsIn(sourceId: string, settings: AdsSettings): AdsPreview {
-    adsSource(sourceId)
-    return adsPreview(settings)
+    return adsPreview(settings, String(adsSource(sourceId).config.ad_account_id))
 }
 
 export function saveAdsSettingsIn(data: SourcesResponse, sourceId: string, settings: AdsSettings): AdsSettingsSaved {
@@ -531,5 +547,5 @@ export function adsSummaryIn(sourceId: string): AdsSummary | null {
     const s = stored.get(sourceId)
     if (!s || !isAdsConfig(s.config)) return null
     const progress = (Date.now() - (s.connectedAt ?? 0)) / 60_000
-    return adsSummary(adsSettingsOf(s.config), progress)
+    return adsSummary(adsSettingsOf(s.config), progress, String(s.config.ad_account_id))
 }

@@ -82,6 +82,9 @@ class FakeAdminRepo:
     async def recompute_results(self, source_id, conversions):
         self.calls.append(("recompute", source_id, conversions))
 
+    async def ad_accounts_in_use(self):
+        return {"act_2": "Cliente · MC"}
+
 
 def db_result(*, ok=True, can_write=False) -> CheckResult:
     checks = [Check("network", True, "A API alcançou h:5432"), Check("login", ok, "x")]
@@ -562,7 +565,11 @@ def ads(client, fx, monkeypatch):
 
     async def token(g, app_token=None):
         state["app_token"] = app_token
-        return {"ok": True, "checks": [], "accounts": [{"id": "act_1", "name": "NG Anúncios"}]}
+        return {
+            "ok": True,
+            "checks": [],
+            "accounts": [{"id": "act_1", "name": "NG Anúncios"}, {"id": "act_2", "name": "RJ"}],
+        }
 
     monkeypatch.setattr(far, "account_options", options)
     monkeypatch.setattr(far, "token_info", token)
@@ -672,7 +679,10 @@ def test_personalizar_detalhamento_novo_refaz_o_historico(client, signer, fx, ad
 def test_ler_token_antes_e_depois_de_conectar(client, signer, fx, ads):
     fx.repo.admins.add(USER_ID)
     r = client.post("/sources/facebook-ads/token", json={"token": TOKEN}, headers=auth(signer))
-    assert r.status_code == 200 and r.json()["accounts"][0]["name"] == "NG Anúncios"
+    accounts = r.json()["accounts"]
+    assert r.status_code == 200 and accounts[0]["name"] == "NG Anúncios"
+    # A conta já ligada a uma fonte vem marcada (a tela bloqueia)
+    assert [a["connectedTo"] for a in accounts] == [None, "Cliente · MC"]
     assert ads["graph"].tokens == [TOKEN] and ads["app_token"] is None and TOKEN not in r.text
     assert (
         client.post(
