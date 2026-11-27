@@ -10845,3 +10845,339 @@ button.mkt-rub-linha:not(:disabled):hover,
         width: 120px;
     }
 }
+
+/* Facebook Ads: assistente em etapas (Acesso, Personalizar, Prévia), personalização, prévia e o painel de
+   dados guardados no detalhe da fonte. */
+.ads-dialog {
+    width: min(860px, calc(100vw - 32px));
+    max-height: min(880px, calc(100vh - 32px));
+}
+.source-dialog.ads-wide {
+    width: min(820px, calc(100vw - 32px));
+    max-height: min(880px, calc(100vh - 32px));
+}
+.ads-stepper {
+    display: flex;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    flex-wrap: wrap;
+}
+.ads-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 12px 4px 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+}
+.ads-step-n {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--surface-3);
+    font-size: var(--fs-xs);
+    font-weight: 700;
+}
+.ads-step.current {
+    border-color: var(--accent);
+    color: var(--text);
+    font-weight: 600;
+}
+.ads-step.current .ads-step-n {
+    background: var(--accent);
+    color: var(--on-accent);
+}
+.ads-step.done .ads-step-n {
+    background: var(--ok-bg);
+    color: var(--ok);
+}
+.ads-form {
+    display: grid;
+    gap: 14px;
+}
+.ads-section {
+    margin: 0;
+    padding: 12px 14px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+.ads-section legend {
+    padding: 0 6px;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text-2);
+}
+.ads-section > p {
+    margin: 0;
+}
+.ads-checks {
+    display: grid;
+    gap: 6px;
+}
+.ads-checks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.ads-check,
+.ads-campaign {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+}
+.ads-check:hover,
+.ads-campaign:hover {
+    background: var(--surface-2);
+}
+.ads-check input,
+.ads-campaign input {
+    margin-top: 3px;
+    accent-color: var(--accent);
+}
+.ads-check-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.ads-campaign .badge {
+    flex: none;
+}
+.ads-campaign-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+.ads-campaigns {
+    display: grid;
+    gap: 2px;
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--divider);
+    border-radius: var(--r-sm);
+    padding: 4px;
+}
+.ads-note {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--info-line);
+    border-radius: var(--r-md);
+    background: var(--info-bg);
+    color: var(--info);
+    font-size: var(--fs-sm);
+}
+.ads-empty {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--warn-line);
+    border-radius: var(--r-md);
+    background: var(--warn-bg);
+    color: var(--warn);
+    font-size: var(--fs-sm);
+}
+.ads-preview,
+.ads-summary {
+    display: grid;
+    gap: 12px;
+}
+.ads-title {
+    margin: 4px 0 0;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text-2);
+}
+.ads-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin: 0;
+}
+.ads-kpi {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+}
+.ads-kpi dt {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+}
+.ads-kpi dd {
+    margin: 2px 0 0;
+    font-size: var(--fs-lg);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.ads-table-wrap {
+    overflow-x: auto;
+}
+.ads-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-sm);
+    font-variant-numeric: tabular-nums;
+}
+.ads-table th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--text-muted);
+    padding: 6px 10px 6px 0;
+    border-bottom: 1px solid var(--divider);
+    white-space: nowrap;
+}
+.ads-table td {
+    padding: 6px 10px 6px 0;
+    border-bottom: 1px solid var(--divider);
+}
+.ads-table td:not(:first-child),
+.ads-table th:not(:first-child) {
+    text-align: right;
+    white-space: nowrap;
+}
+.ads-bars {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+}
+.ads-bars li {
+    display: grid;
+    grid-template-columns: minmax(120px, 1.2fr) 2fr minmax(150px, auto);
+    align-items: center;
+    gap: 10px;
+    font-size: var(--fs-sm);
+}
+.ads-bar {
+    height: 8px;
+    border-radius: var(--r-pill);
+    background: var(--surface-3);
+    overflow: hidden;
+}
+.ads-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--accent);
+}
+.ads-bar-value {
+    text-align: right;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.ads-creatives {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 10px;
+}
+.ads-creative {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    min-width: 0;
+}
+.ads-creative img,
+.ads-creative-ph {
+    flex: none;
+    width: 64px;
+    height: 64px;
+    border-radius: var(--r-sm);
+    object-fit: cover;
+    background: var(--surface-3);
+}
+.ads-creative-ph {
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+}
+.ads-creative-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.ads-clamp {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.ads-link {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.ads-progress {
+    color: var(--info);
+}
+@media (max-width: 560px) {
+    .ads-bars li {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+    .ads-bar-value {
+        text-align: left;
+    }
+}
+/* Facebook Ads: o que o token permite e as contas dele */
+.ads-token {
+    display: grid;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+}
+.ads-perms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.ads-caps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 8px;
+}
+.ads-cap {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-size: var(--fs-sm);
+}
+.ads-cap svg {
+    flex: none;
+    margin-top: 2px;
+}
+.ads-cap.is-used svg {
+    color: var(--ok);
+}
+.ads-cap.is-available svg {
+    color: var(--info);
+}
+.ads-cap.is-warn svg {
+    color: var(--warn-dot);
+}
+.ads-cap.is-missing {
+    color: var(--text-muted);
+}
+.ads-accounts {
+    max-height: 280px;
+    overflow-y: auto;
+}

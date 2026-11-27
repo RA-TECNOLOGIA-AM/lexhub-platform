@@ -9,6 +9,7 @@ const KIND_ICON: Record<SourceKind, IconName> = {
     flow: 'flow',
     finance: 'receipt',
     sheet: 'sheet',
+    ads: 'target',
 }
 
 type OpenSource = (source: DataSource) => void

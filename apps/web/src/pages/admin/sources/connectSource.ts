@@ -3,9 +3,9 @@ import type { DatabaseConnector, DataSource, ProductKey, ProductOffice, SourceCh
 
 // Módulo: as regras do Conectar fonte, sem React (testadas em connectSource.test.ts).
 
-export type ConnectorKey = ProductKey | 'postgres' | 'mysql' | 'sheets'
+export type ConnectorKey = ProductKey | 'postgres' | 'mysql' | 'sheets' | 'facebook_ads'
 
-// Os tipos do primeiro passo, nesta ordem. secret = guarda senha ou link cifrado (precisa da chave na API).
+// Os tipos do primeiro passo, nesta ordem. secret = guarda senha, link ou token cifrado (precisa da chave na API).
 // Tipo novo = uma linha aqui (e o passo dele no ConnectSourceDialog).
 export const CONNECTORS: { key: ConnectorKey; label: string; hint: string; icon: IconName; secret: boolean }[] = [
     { key: 'lexpre', label: 'LexPre', hint: 'Escolha o escritório no banco do LexPre.', icon: 'db', secret: false },
@@ -19,7 +19,20 @@ export const CONNECTORS: { key: ConnectorKey; label: string; hint: string; icon:
     { key: 'postgres', label: 'Postgres', hint: 'Banco próprio da operação.', icon: 'db', secret: true },
     { key: 'mysql', label: 'MySQL', hint: 'Banco próprio da operação.', icon: 'db', secret: true },
     { key: 'sheets', label: 'Google Planilhas', hint: 'Planilha publicada na Web.', icon: 'sheet', secret: true },
+    {
+        key: 'facebook_ads',
+        label: 'Facebook Ads',
+        hint: 'Anúncios da conta na Meta, guardados por dia.',
+        icon: 'target',
+        secret: true,
+    },
 ]
+
+// ID da conta de anúncios como a API aceita: 'act_123', '123' ou com espaços. Fora disso, null.
+export function normalizeAdAccount(raw: string): string | null {
+    const m = /^(?:act_)?(\d{1,20})$/.exec(raw.replace(/\s+/g, ''))
+    return m ? `act_${m[1]}` : null
+}
 
 export const isProduct = (key: ConnectorKey): key is ProductKey => key === 'lexpre' || key === 'lexflow'
 export const isDatabase = (key: ConnectorKey): key is DatabaseConnector => key === 'postgres' || key === 'mysql'

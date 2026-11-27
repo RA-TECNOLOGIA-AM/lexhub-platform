@@ -180,6 +180,9 @@ export function SourcesPage() {
                     onLink={linkOffice}
                     loadConnectInfo={() => dataClient.getConnectInfo()}
                     inspectSheet={(url) => dataClient.inspectSheet(url)}
+                    readAdsToken={(token) => dataClient.readFacebookAdsToken(token)}
+                    inspectAds={(input) => dataClient.inspectFacebookAds(input)}
+                    previewAds={(input) => dataClient.previewFacebookAds(input)}
                     onConnect={(input) => dataClient.connectSource(org, current.unit.code, input)}
                     onSaved={() => {
                         setVersion((v) => v + 1)

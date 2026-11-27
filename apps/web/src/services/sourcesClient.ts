@@ -3,6 +3,10 @@ import type { DataClient } from './client.ts'
 import type { Http } from './http.ts'
 import { createRpc } from './rpc.ts'
 import type {
+    AdsOptions,
+    AdsPreview,
+    AdsSettingsSaved,
+    AdsTokenInfo,
     ConnectInfo,
     ConnectResult,
     DataSource,
@@ -37,6 +41,13 @@ type SourcesClient = Pick<
     | 'changeSourceSecret'
     | 'disconnectSource'
     | 'setSourceEnabled'
+    | 'readFacebookAdsToken'
+    | 'getFacebookAdsToken'
+    | 'inspectFacebookAds'
+    | 'previewFacebookAds'
+    | 'getFacebookAdsOptions'
+    | 'previewSavedFacebookAds'
+    | 'saveFacebookAdsSettings'
 >
 
 // Os parâmetros que create_unit e update_unit recebem (mesmos nomes do banco).
@@ -99,5 +110,19 @@ export function createSourcesClient(supabase: SupabaseClient, http: Http): Sourc
         disconnectSource: (org, source) => http.delete<void>(`/orgs/${enc(org)}/sources/${enc(source)}`),
         setSourceEnabled: (org, source, enabled) =>
             http.put<DataSource>(`/orgs/${enc(org)}/sources/${enc(source)}/enabled`, { enabled }),
+        // Facebook Ads (app/routes/facebook_ads_routes.py)
+        readFacebookAdsToken: (token) => http.post<AdsTokenInfo>('/sources/facebook-ads/token', { token }),
+        getFacebookAdsToken: (org, source) =>
+            http.get<AdsTokenInfo>(`/orgs/${enc(org)}/sources/${enc(source)}/facebook-ads/token`),
+        inspectFacebookAds: (input) => http.post<AdsOptions>('/sources/facebook-ads/inspect', input),
+        previewFacebookAds: (input) => http.post<AdsPreview>('/sources/facebook-ads/preview', input),
+        getFacebookAdsOptions: (org, source) =>
+            http.get<AdsOptions>(`/orgs/${enc(org)}/sources/${enc(source)}/facebook-ads/options`),
+        previewSavedFacebookAds: (org, source, settings) =>
+            http.post<AdsPreview>(`/orgs/${enc(org)}/sources/${enc(source)}/facebook-ads/preview`, { settings }),
+        saveFacebookAdsSettings: (org, source, settings) =>
+            http.put<AdsSettingsSaved>(`/orgs/${enc(org)}/sources/${enc(source)}/facebook-ads/settings`, {
+                settings,
+            }),
     }
 }

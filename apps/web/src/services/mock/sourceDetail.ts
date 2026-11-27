@@ -1,6 +1,6 @@
 import type { DashboardCatalog, SourceDetail, SourcesResponse, SyncRun } from '../../types/index.ts'
 import { minAgo } from './helpers.ts'
-import { isManaged, managedConfig } from './connections.ts'
+import { adsSummaryIn, isManaged, managedConfig } from './connections.ts'
 
 // O detalhe de uma fonte no mock, no mesmo formato de api.source_detail (migration 20261113200000_detalhe_fonte.sql).
 
@@ -53,5 +53,6 @@ export function sourceDetailFor(
         canManage: isManaged(sourceId), // o mock entra como TI da LexGroup
         // A TI da LexGroup vê a chave e a estrutura salva (produto Lex e bancos internos: sem estrutura)
         technical: { key: sourceId, schema: managedConfig(sourceId)?.schema ?? null },
+        ads: adsSummaryIn(sourceId), // Facebook Ads: o que já está guardado; null nas outras fontes
     }
 }

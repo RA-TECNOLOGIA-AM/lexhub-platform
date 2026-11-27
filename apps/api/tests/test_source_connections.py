@@ -5,6 +5,8 @@ import pytest
 
 from app.connection_check import Check, CheckResult
 from app.database import SourceUnavailable
+from app.facebook_ads import CONVERSATION_TYPE as CONVERSATION
+from app.facebook_ads import SCHEMA_CACHE, AccountInfo
 from app.secret_box import SecretBox
 from app.sheets import InvalidSheetLink, TabInfo
 from app.source_admin import ManagedSource, RuleBroken
@@ -71,6 +73,15 @@ class FakeAdminRepo:
     async def record_run(self, source_id, kind, ok, checks, ms, error):
         self.runs.append((source_id, kind, ok, error))
 
+    async def set_config(self, user_id, source_id, config, detail):
+        if self.fail:
+            raise self.fail
+        self.calls.append(("set_config", source_id, config))
+        return {"id": "fb_mc_000001", "status": "healthy"}
+
+    async def recompute_results(self, source_id, conversions):
+        self.calls.append(("recompute", source_id, conversions))
+
 
 def db_result(*, ok=True, can_write=False) -> CheckResult:
     checks = [Check("network", True, "A API alcançou h:5432"), Check("login", ok, "x")]
@@ -84,6 +95,17 @@ def db_result(*, ok=True, can_write=False) -> CheckResult:
     )
 
 
+ADS_ACCOUNT = AccountInfo("act_123456", "NG Anúncios", "BRL", "America/Manaus", 1)
+
+
+def ads_result(*, ok=True) -> tuple[CheckResult, AccountInfo | None]:
+    checks = [Check("network", True, "A API alcançou graph.facebook.com"), Check("login", ok, "x")]
+    if not ok:
+        return CheckResult(checks), None
+    checks += [Check("read", True, "Conta NG Anúncios"), Check("account", True, "ativa")]
+    return CheckResult(checks, schema_cache=SCHEMA_CACHE), ADS_ACCOUNT
+
+
 class Fakes:
     def __init__(self):
         self.repo = FakeAdminRepo()
@@ -95,10 +117,20 @@ class Fakes:
         }
         self.invalidated: list[str] = []
         self.switch_invalidated = 0
+        self.ads = ads_result()
+        self.ads_calls: list[tuple[str, str]] = []
+        self.woke = 0
 
     async def check_db(self, target):
         self.targets.append(target)
         return self.db
+
+    async def check_ads(self, account_id, token):
+        self.ads_calls.append((account_id, token))
+        return self.ads
+
+    def wake(self):
+        self.woke += 1
 
     async def read_sheet(self, link):
         if isinstance(self.tabs, Exception):
@@ -128,6 +160,8 @@ def fx(client):
     o[get_source_admin_repo] = lambda: f.repo
     o[sc.get_db_checker] = lambda: f.check_db
     o[sc.get_sheet_reader] = lambda: f.read_sheet
+    o[sc.get_ads_checker] = lambda: f.check_ads
+    o[sc.get_ads_sync] = lambda: f
     o[sc.get_secret_box] = lambda: BOX
     o[sc.get_rate_limit] = lambda: sc.RateLimit(limit=100)
     o[get_registered_sources] = lambda: f
@@ -400,3 +434,252 @@ def test_limite_de_testes(client, signer, fx):
         client.post("/orgs/cliente/units/MC/sources", json=DB, headers=auth(signer)).status_code
         == 429
     )
+
+
+# --- Facebook Ads -----------------------------------------------------------------------------------
+
+TOKEN = "EAAB" + "x" * 60
+ADS = {
+    "connector": "facebook_ads",
+    "name": "Anúncios MC",
+    "adAccountId": " 123456 ",
+    "token": TOKEN,
+}
+
+
+def test_conecta_facebook_ads_cifra_o_token_e_chama_a_coleta(client, signer, fx):
+    fx.repo.admins.add(USER_ID)
+    r = client.post("/orgs/cliente/units/MC/sources", json=ADS, headers=auth(signer))
+    body = r.json()
+    assert r.status_code == 200 and body["saved"]
+    assert [c["key"] for c in body["checks"]] == ["network", "login", "read", "account"]
+    assert fx.ads_calls == [("act_123456", TOKEN)]
+    _, connector, name, detail, config, ciphertext, writer_ack, schema = fx.repo.calls[0]
+    assert connector == "facebook_ads" and name == "Anúncios MC" and not writer_ack
+    assert config == config | {
+        "ad_account_id": "act_123456",
+        "account_name": "NG Anúncios",
+        "currency": "BRL",
+        "timezone": "America/Manaus",
+        "collect_version": 1,  # sem personalização: a padrão
+    }
+    assert detail == "Facebook Ads · NG Anúncios (act_123456)" and schema == SCHEMA_CACHE
+    assert (
+        BOX.decrypt(ciphertext) == TOKEN and TOKEN not in str(fx.repo.calls) and TOKEN not in r.text
+    )
+    assert fx.woke == 1 and fx.repo.runs == [("src-1", "test", True, None)]
+
+
+def test_facebook_ads_conta_invalida_ou_teste_falhou_nao_grava(client, signer, fx):
+    fx.repo.admins.add(USER_ID)
+    bad = {**ADS, "adAccountId": "minha conta"}
+    body = client.post("/orgs/cliente/units/MC/sources", json=bad, headers=auth(signer)).json()
+    assert not body["saved"] and body["checks"][0]["message"].startswith("ID da conta inválido")
+    assert fx.ads_calls == []
+    fx.ads = ads_result(ok=False)
+    body = client.post("/orgs/cliente/units/MC/sources", json=ADS, headers=auth(signer)).json()
+    assert not body["saved"] and fx.repo.calls == [] and fx.woke == 0
+    short = {**ADS, "token": "curto"}
+    r = client.post("/orgs/cliente/units/MC/sources", json=short, headers=auth(signer))
+    assert r.status_code == 422
+
+
+def _connected_ads(fx):
+    fx.repo.admins.add(USER_ID)
+    fx.repo.sources["fb_mc_000001"] = ManagedSource(
+        id="src-fb",
+        key="fb_mc_000001",
+        org_id="org-1",
+        unit_id="unit-1",
+        connector="facebook_ads",
+        name="Anúncios",
+        config={"ad_account_id": "act_123456", "account_name": "NG", "timezone": "UTC"},
+        secret_ciphertext=BOX.encrypt(TOKEN),
+    )
+
+
+def test_facebook_ads_testar_de_novo_e_trocar_token(client, signer, fx):
+    _connected_ads(fx)
+    r = client.post("/orgs/cliente/sources/fb_mc_000001/test", headers=auth(signer))
+    assert r.json()["ok"] and fx.ads_calls == [("act_123456", TOKEN)]
+    novo = "EAAC" + "y" * 60
+    r = client.put(
+        "/orgs/cliente/sources/fb_mc_000001/secret",
+        json={"token": f" {novo} "},
+        headers=auth(signer),
+    )
+    assert r.json()["saved"] and fx.ads_calls[-1] == ("act_123456", novo)
+    assert BOX.decrypt(fx.repo.calls[-1][2]) == novo and fx.woke == 1
+    # Sem o token (só senha): 422 pedindo o campo certo
+    r = client.put(
+        "/orgs/cliente/sources/fb_mc_000001/secret", json={"password": "x"}, headers=auth(signer)
+    )
+    assert r.status_code == 422 and "token" in r.json()["detail"]
+
+
+# --- Facebook Ads: opções, prévia e personalização (app/routes/facebook_ads_routes.py) ---------------
+
+
+class FakeAdsGraph:
+    """O cliente da Graph API (as funções de opções e prévia são trocadas no teste)."""
+
+    def __init__(self):
+        self.tokens: list[str] = []
+
+    def __call__(self, token):
+        self.tokens.append(token)
+        return self
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return None
+
+
+@pytest.fixture
+def ads(client, fx, monkeypatch):
+    from app.facebook_ads import GraphError
+    from app.routes import facebook_ads_routes as far
+
+    graph = FakeAdsGraph()
+    client.app.dependency_overrides[far.get_graph_factory] = lambda: graph
+    state = {"previews": [], "fail": None}
+
+    async def options(g, account):
+        if state["fail"]:
+            raise state["fail"]
+        return {
+            "campaigns": [{"id": "11", "name": "Captação", "spend30": 300.0}],
+            "conversions": [],
+        }
+
+    async def preview(g, account, settings):
+        if state["fail"]:
+            raise state["fail"]
+        state["previews"].append((account, settings))
+        return {"totals": {"spend": 100.0}, "campaigns": [], "breakdowns": [], "ads": []}
+
+    async def token(g, app_token=None):
+        state["app_token"] = app_token
+        return {"ok": True, "checks": [], "accounts": [{"id": "act_1", "name": "NG Anúncios"}]}
+
+    monkeypatch.setattr(far, "account_options", options)
+    monkeypatch.setattr(far, "token_info", token)
+    monkeypatch.setattr(far, "preview", preview)
+    state["graph"] = graph
+    state["error"] = GraphError
+    return state
+
+
+def test_inspecionar_conta_devolve_opcoes_sem_o_token(client, signer, fx, ads):
+    fx.repo.admins.add(USER_ID)
+    body = {"adAccountId": "123456", "token": TOKEN}
+    r = client.post("/sources/facebook-ads/inspect", json=body, headers=auth(signer))
+    out = r.json()
+    assert r.status_code == 200 and out["ok"] and out["account"]["name"] == "NG Anúncios"
+    assert out["account"]["status"] == "ativa" and out["campaigns"][0]["id"] == "11"
+    assert ads["graph"].tokens == [TOKEN] and TOKEN not in r.text
+    # Teste falhou: sem opções (nenhuma chamada a mais)
+    fx.ads = ads_result(ok=False)
+    out = client.post("/sources/facebook-ads/inspect", json=body, headers=auth(signer)).json()
+    assert not out["ok"] and out["campaigns"] == [] and ads["graph"].tokens == [TOKEN]
+    bad = client.post(
+        "/sources/facebook-ads/inspect", json={**body, "adAccountId": "x"}, headers=auth(signer)
+    ).json()
+    assert not bad["ok"] and bad["checks"][0]["message"].startswith("ID da conta inválido")
+
+
+def test_previa_antes_de_conectar_e_erro_da_meta_vira_502(client, signer, fx, ads):
+    fx.repo.admins.add(USER_ID)
+    body = {"adAccountId": "act_123456", "token": TOKEN, "settings": {"breakdowns": ["region"]}}
+    r = client.post("/sources/facebook-ads/preview", json=body, headers=auth(signer))
+    assert r.status_code == 200 and r.json()["totals"]["spend"] == 100.0
+    account, settings = ads["previews"][0]
+    assert account == "act_123456" and settings.breakdowns == ("region",)
+    ads["fail"] = ads["error"](401, 190, None, "x")
+    r = client.post("/sources/facebook-ads/preview", json=body, headers=auth(signer))
+    assert r.status_code == 502 and r.json()["detail"].startswith("A Meta recusou o token")
+    r = client.post(
+        "/sources/facebook-ads/preview", json={**body, "adAccountId": "x"}, headers=auth(signer)
+    )
+    assert r.status_code == 422
+
+
+def test_conectar_guarda_a_personalizacao_na_config(client, signer, fx):
+    fx.repo.admins.add(USER_ID)
+    settings = {
+        "metrics": ["video", "reach"],
+        "conversions": ["lead"],
+        "campaigns": ["11"],
+        "breakdowns": ["device", "age_gender"],
+        "backfillDays": 365,
+        "creatives": False,
+    }
+    client.post(
+        "/orgs/cliente/units/MC/sources", json={**ADS, "settings": settings}, headers=auth(signer)
+    )
+    config = fx.repo.calls[0][4]
+    assert config["metrics"] == ["reach", "video"] and config["campaigns"] == ["11"]
+    assert config["breakdowns"] == ["age_gender", "device"] and config["backfill_days"] == 365
+    assert config["creatives"] is False and config["collect_version"] == 1
+    assert "token" not in config
+
+
+def test_opcoes_e_previa_com_o_token_salvo(client, signer, fx, ads):
+    _connected_ads(fx)
+    out = client.get(
+        "/orgs/cliente/sources/fb_mc_000001/facebook-ads/options", headers=auth(signer)
+    ).json()
+    assert out["settings"]["backfillDays"] == 1095 and out["account"]["id"] == "act_123456"
+    assert ads["graph"].tokens == [TOKEN]
+    r = client.post(
+        "/orgs/cliente/sources/fb_mc_000001/facebook-ads/preview",
+        json={"settings": {"metrics": []}},
+        headers=auth(signer),
+    )
+    assert r.status_code == 200 and ads["previews"][0][1].metrics == ()
+
+
+def test_personalizar_so_conversoes_refaz_resultados_sem_coletar_de_novo(client, signer, fx, ads):
+    _connected_ads(fx)
+    url = "/orgs/cliente/sources/fb_mc_000001/facebook-ads/settings"
+    r = client.put(url, json={"settings": {"conversions": ["lead"]}}, headers=auth(signer))
+    out = r.json()
+    assert r.status_code == 200 and out["recollect"] is False
+    _, _, config = fx.repo.calls[0]
+    assert config["collect_version"] == 1 and config["ad_account_id"] == "act_123456"
+    assert fx.repo.calls[1] == ("recompute", "src-fb", ["lead"]) and fx.woke == 1
+
+
+def test_personalizar_detalhamento_novo_refaz_o_historico(client, signer, fx, ads):
+    _connected_ads(fx)
+    url = "/orgs/cliente/sources/fb_mc_000001/facebook-ads/settings"
+    settings = {"breakdowns": ["platform"], "conversions": ["lead", CONVERSATION]}
+    out = client.put(url, json={"settings": settings}, headers=auth(signer)).json()
+    assert out["recollect"] is True and out["settings"]["breakdowns"] == ["platform"]
+    assert fx.repo.calls[0][2]["collect_version"] == 2
+    assert not any(c[0] == "recompute" for c in fx.repo.calls)  # conversões iguais às padrão
+    _connected(fx)  # um banco não tem personalização
+    r = client.put(
+        "/orgs/cliente/sources/pg_mc_000001/facebook-ads/settings",
+        json={"settings": {}},
+        headers=auth(signer),
+    )
+    assert r.status_code == 409
+
+
+def test_ler_token_antes_e_depois_de_conectar(client, signer, fx, ads):
+    fx.repo.admins.add(USER_ID)
+    r = client.post("/sources/facebook-ads/token", json={"token": TOKEN}, headers=auth(signer))
+    assert r.status_code == 200 and r.json()["accounts"][0]["name"] == "NG Anúncios"
+    assert ads["graph"].tokens == [TOKEN] and ads["app_token"] is None and TOKEN not in r.text
+    assert (
+        client.post(
+            "/sources/facebook-ads/token", json={"token": "x"}, headers=auth(signer)
+        ).status_code
+        == 422
+    )
+    _connected_ads(fx)
+    r = client.get("/orgs/cliente/sources/fb_mc_000001/facebook-ads/token", headers=auth(signer))
+    assert r.status_code == 200 and ads["graph"].tokens[-1] == TOKEN

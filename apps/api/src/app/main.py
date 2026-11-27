@@ -13,6 +13,8 @@ from app.cache_warmer import warm_loop, warm_targets
 from app.config import Settings, get_settings
 from app.dashboards import DASHBOARDS
 from app.database import DatabaseManager
+from app.facebook_ads import client_factory
+from app.facebook_ads_sync import AdsSync, PgAdsRepo
 from app.logs import configure_logging, seconds
 from app.platform_db import install_error_handlers, keep_warm, open_platform_pool
 from app.registered_sources import PgRegisteredRepo, RegisteredSources
@@ -22,6 +24,7 @@ from app.routes import (
     catalog,
     dashboards,
     device_auth,
+    facebook_ads_routes,
     health,
     hub,
     me,
@@ -32,6 +35,7 @@ from app.routes import (
     sources,
     support,
 )
+from app.secret_box import SecretBox, SecretKeyMissing
 from app.source_cache import MemoryStore, SourceCache, shared_ttl_covering, ttl_by_query
 from app.source_switch import PgDisabledRepo, SourceSwitch
 from app.sources import source_fetcher
@@ -71,6 +75,27 @@ async def _log_cache(cache: CacheService, settings: Settings) -> None:
             seconds(settings.CACHE_TTL_DEFAULT),
             seconds(settings.CACHE_TTL_HEAVY),
         )
+
+
+def _build_ads_sync(app: FastAPI, settings: Settings) -> AdsSync | None:
+    """A coleta do Facebook Ads, se ligada e com banco e chave de cifra (app/facebook_ads_sync.py)."""
+    if not settings.FACEBOOK_ADS_SYNC_ENABLED:
+        logger.info("Coleta do Facebook Ads desligada (FACEBOOK_ADS_SYNC_ENABLED=false)")
+        return None
+    if app.state.db_pool is None:
+        logger.warning("Coleta do Facebook Ads não sobe: sem DATABASE_URL")
+        return None
+    try:
+        box = SecretBox.from_setting(settings.SOURCE_SECRET_KEY)
+    except (SecretKeyMissing, ValueError):
+        logger.warning("Coleta do Facebook Ads não sobe: falta SOURCE_SECRET_KEY (cifra o token)")
+        return None
+    return AdsSync(
+        PgAdsRepo(app.state.db_pool),
+        box,
+        client_factory(settings),
+        interval=settings.FACEBOOK_ADS_SYNC_INTERVAL,
+    )
 
 
 def _log_auth(settings: Settings) -> None:
@@ -132,8 +157,11 @@ def create_app() -> FastAPI:
         app.state.result_memo = ResultMemo(
             settings.DASHBOARD_MEMO_MAX_ENTRIES, max_age=settings.SOURCE_CACHE_TTL
         )
+        # Coleta do Facebook Ads (desligada por padrão); a rota de conectar chama wake() nela.
+        app.state.ads_sync = _build_ads_sync(app, settings)
         warmer = None
         keeper = None
+        ads = None
         try:
             if app.state.db_pool is not None:
                 keeper = asyncio.create_task(
@@ -169,6 +197,8 @@ def create_app() -> FastAPI:
                 warmer = asyncio.create_task(_start_warmer(app, settings))
             else:
                 logger.info("Aquecedor do cache desligado (SOURCE_CACHE_WARM_ENABLED=false)")
+            if app.state.ads_sync is not None:
+                ads = asyncio.create_task(app.state.ads_sync.loop())
             logger.info(
                 "API pronta em %s: %d dashboards registrados",
                 seconds(time.perf_counter() - started),
@@ -177,7 +207,7 @@ def create_app() -> FastAPI:
             yield
         finally:
             logger.info("Desligando a API...")
-            tasks = [t for t in (warmer, keeper) if t is not None]
+            tasks = [t for t in (warmer, keeper, ads) if t is not None]
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
@@ -222,6 +252,8 @@ def create_app() -> FastAPI:
     app.include_router(source_freshness.router)
     app.include_router(source_connections.platform)
     app.include_router(source_connections.org)
+    app.include_router(facebook_ads_routes.platform)
+    app.include_router(facebook_ads_routes.org)
     app.include_router(support.router)
     app.include_router(public_auth.org)
     app.include_router(public_auth.v1)

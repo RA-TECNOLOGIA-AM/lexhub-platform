@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { DataSource, ProductOffice, SourceCheck } from '../../../types/index.ts'
-import { CONNECTORS, connectorBlock, failedChecks, officeSub, sortOffices } from './connectSource.ts'
+import {
+    CONNECTORS,
+    connectorBlock,
+    failedChecks,
+    normalizeAdAccount,
+    officeSub,
+    sortOffices,
+} from './connectSource.ts'
 
 const office = (ref: string, name: string, linked = false): ProductOffice => ({
     ref,
@@ -22,9 +29,28 @@ const check = (over: Partial<SourceCheck>): SourceCheck => ({
 })
 
 describe('connectSource', () => {
-    it('os 5 tipos; banco e planilha guardam segredo', () => {
-        expect(CONNECTORS.map((c) => c.key)).toEqual(['lexpre', 'lexflow', 'postgres', 'mysql', 'sheets'])
-        expect(CONNECTORS.filter((c) => c.secret).map((c) => c.key)).toEqual(['postgres', 'mysql', 'sheets'])
+    it('os 6 tipos; banco, planilha e Facebook Ads guardam segredo', () => {
+        expect(CONNECTORS.map((c) => c.key)).toEqual([
+            'lexpre',
+            'lexflow',
+            'postgres',
+            'mysql',
+            'sheets',
+            'facebook_ads',
+        ])
+        expect(CONNECTORS.filter((c) => c.secret).map((c) => c.key)).toEqual([
+            'postgres',
+            'mysql',
+            'sheets',
+            'facebook_ads',
+        ])
+    })
+
+    it('ID da conta de anúncios: act_ ou só os números, como a API', () => {
+        expect(normalizeAdAccount('act_123')).toBe('act_123')
+        expect(normalizeAdAccount(' 123 456 ')).toBe('act_123456')
+        expect(normalizeAdAccount('act_')).toBeNull()
+        expect(normalizeAdAccount('conta 1')).toBeNull()
     })
 
     it('bloqueia produto que a unidade já tem e banco/planilha sem a chave na API', () => {

@@ -44,7 +44,7 @@ const GROUPS: { group: SourceGroup; title: string; one: string; hint: string }[]
         group: 'connection',
         title: 'Fontes conectadas',
         one: 'Fonte conectada',
-        hint: 'Bancos e planilhas conectados por uma unidade',
+        hint: 'Bancos, planilhas e contas de anúncios conectados por uma unidade',
     },
 ]
 
