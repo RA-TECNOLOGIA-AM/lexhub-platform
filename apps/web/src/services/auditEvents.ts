@@ -49,6 +49,25 @@ const changed = (v: unknown): string | null => {
 // Junta as partes que existem: 'a · b · c'
 const join = (...parts: (string | null | undefined)[]): string => parts.filter(Boolean).join(' · ')
 
+// Setores extras pedidos na chave de API: [{setor, validade}] -> 'Financeiro até 31/12'
+const extras = (v: unknown): string | null => {
+    const items = Array.isArray(v) ? v : []
+    const parts = items
+        .map((x) => (x && typeof x === 'object' ? (x as Meta) : {}))
+        .map((x) => [text(x.setor), day(x.validade) && `até ${day(x.validade)}`].filter(Boolean).join(' '))
+        .filter(Boolean)
+    return parts.length ? `extras: ${parts.join(', ')}` : null
+}
+// Dono da chave (targetName vem de api.list_audit, 20261127140000).
+const owner = (e: RawAuditEvent): string | null => (e.targetName ? `chave de ${e.targetName}` : null)
+const sectors = (v: unknown): string | null => (list(v).length ? `setores: ${list(v).join(', ')}` : null)
+// Leitura pela API: dashboard, unidade, relatório e período.
+const apiRead = (e: RawAuditEvent, m: Meta): string => {
+    const from = day(m.from)
+    const to = day(m.to)
+    return join(e.targetId, text(m.unit), text(m.relatorio), from && to ? `${from} a ${to}` : null)
+}
+
 // action pode depender do metadata (ex.: senha criada ou alterada).
 type Rule = { kind: AuditKind; action: string | ((m: Meta) => string); detail: (e: RawAuditEvent, m: Meta) => string }
 
@@ -125,6 +144,40 @@ const EVENTS: Record<string, Rule> = {
                 text(m.format)?.toUpperCase(),
             )
         },
+    },
+    // Chave de API (api_key.* no banco; tokens e leituras gravados pela API em /v1).
+    'api_key.requested': {
+        kind: 'api',
+        action: 'Pediu chave de API',
+        detail: (_, m) => extras(m.extras) ?? '',
+    },
+    'api_key.approved': {
+        kind: 'api',
+        action: 'Aprovou chave de API',
+        detail: (e, m) => join(owner(e), sectors(m.sectors_approved), text(m.note)),
+    },
+    'api_key.rejected': {
+        kind: 'api',
+        action: 'Recusou chave de API',
+        detail: (e, m) => join(owner(e), text(m.note)),
+    },
+    'api_key.revoked': { kind: 'api', action: 'Revogou chave de API', detail: (e) => owner(e) ?? '' },
+    'api_key.sector_revoked': {
+        kind: 'api',
+        action: 'Tirou setor da chave de API',
+        detail: (e, m) => join(owner(e), text(m.setor)),
+    },
+    'api_key.tokens_issued': { kind: 'api', action: 'Gerou tokens da API', detail: () => '' },
+    'api_key.refresh_reuse': {
+        kind: 'api',
+        action: 'Token da API reusado',
+        detail: () => 'refresh já usado; tokens da chave derrubados',
+    },
+    'api.read': { kind: 'api', action: 'Leu dados pela API', detail: apiRead },
+    'api.access_denied': {
+        kind: 'api',
+        action: 'API negou acesso',
+        detail: (e, m) => join(e.targetId, text(m.unit)),
     },
     'member.invited': {
         kind: 'access',

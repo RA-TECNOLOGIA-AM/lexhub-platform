@@ -67,12 +67,12 @@ values ('10000000-0000-4000-8000-0000000a7001', '30000000-0000-4000-8000-0000000
 do $$
 begin
     if not app_private.api_key_eligible('00000000-0000-4000-8000-0000000a7003', '10000000-0000-4000-8000-0000000a7001')
-       or not app_private.api_key_eligible('00000000-0000-4000-8000-0000000a7001', '10000000-0000-4000-8000-0000000a7001') then
-        raise exception 'FALHOU: Gestor e Owner deveriam poder pedir';
+       or not app_private.api_key_eligible('00000000-0000-4000-8000-0000000a7001', '10000000-0000-4000-8000-0000000a7001')
+       or not app_private.api_key_eligible('00000000-0000-4000-8000-0000000a7002', '10000000-0000-4000-8000-0000000a7001') then
+        raise exception 'FALHOU: Gestor, Owner e Desenvolvedor deveriam poder pedir';
     end if;
-    if app_private.api_key_eligible('00000000-0000-4000-8000-0000000a7004', '10000000-0000-4000-8000-0000000a7001')
-       or app_private.api_key_eligible('00000000-0000-4000-8000-0000000a7002', '10000000-0000-4000-8000-0000000a7001') then
-        raise exception 'FALHOU: Colaborador e Desenvolvedor não deveriam poder pedir';
+    if app_private.api_key_eligible('00000000-0000-4000-8000-0000000a7004', '10000000-0000-4000-8000-0000000a7001') then
+        raise exception 'FALHOU: Colaborador não deveria poder pedir';
     end if;
 end;
 $$;
@@ -285,5 +285,26 @@ begin
     raise notice 'OK: api_publica';
 end;
 $$;
+
+-- 20261127140000: na auditoria, o evento da chave mostra o dono (Gestor), não quem aprovou.
+select set_config('teste.k_g', id::text, true) from app.api_keys
+ where user_id = '00000000-0000-4000-8000-0000000a7003';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"00000000-0000-4000-8000-0000000a7001","role":"authenticated"}';
+do $$
+declare
+    v jsonb := api.list_audit('org-teste-api', p_actions => array['api_key.approved']);
+    k_g text := current_setting('teste.k_g');
+    nome text;
+begin
+    select e ->> 'targetName' into nome
+      from jsonb_array_elements(v -> 'events') e where e ->> 'targetId' = k_g;
+    if nome is distinct from 'Gestor API' then
+        raise exception 'FALHOU: aprovação da chave do Gestor deveria trazer "Gestor API" (veio %)', nome;
+    end if;
+    raise notice 'OK: auditoria mostra o dono da chave';
+end;
+$$;
+reset role;
 
 rollback;

@@ -4,6 +4,7 @@ import { kindSelectOptions } from './AuditFilters.tsx'
 describe('kindSelectOptions', () => {
     it('tudo em ordem alfabética, com "Nunca acessou" no meio quando pode', () => {
         expect(kindSelectOptions(true).map((o) => o.label)).toEqual([
+            'Chave de API',
             'Dashboards abertos',
             'Entradas',
             'Exportações',
