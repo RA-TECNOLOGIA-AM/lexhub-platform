@@ -2289,7 +2289,7 @@ QUERIES: dict[str, dict] = {
             count(*) as "QUANTIDADE",
             coalesce(sum(
                 case when m.description = 'ANP'
-                     then coalesce(nullif(p.valor_dano_moral, 0), p.valor_causa)
+                     then coalesce(p.valor_dano_moral, 0)
                      else p.valor_causa
                 end
             ), 0) as "VALOR_CAUSA"
@@ -2305,8 +2305,8 @@ QUERIES: dict[str, dict] = {
         "description": (
             "Valor de causa ajuizado do NG (escritório 20, sem RJ) agregado por dia de "
             "distribuição e matéria — fonte única do Valor Protocolado/Ajuizado do Financeiro "
-            "Estratégico NG. Matéria ANP usa dano moral (fallback valor da causa quando "
-            "vazio/0), mesma regra do banco ng e do LexPre. A data é a data UTC de "
+            "Estratégico NG. Matéria ANP usa só o dano moral (vazio = 0, sem cair no valor "
+            "da causa), mesma regra do banco ng e do LexPre. A data é a data UTC de "
             "`distribuicao` (gravada ora 00:00 UTC, ora 00:00 Manaus); sem distribuição "
             "vem com DATA_AJUIZAMENTO nula."
         ),
