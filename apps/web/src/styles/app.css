@@ -411,6 +411,50 @@ button.org:hover {
     color: var(--side-item);
     white-space: normal;
 }
+/* Várias organizações: o nome de cada uma (= todas as unidades dela) + a seta que mostra as unidades. */
+.org-menu-head {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.org-menu .org-menu-org {
+    flex: 1;
+    min-width: 0;
+    font-weight: 600;
+}
+.org-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    border: 0;
+    border-radius: var(--r-sm, 6px);
+    background: transparent;
+    color: var(--side-label);
+    cursor: pointer;
+}
+.org-menu-toggle:hover,
+.org-menu-toggle:focus-visible {
+    background: var(--side-line);
+    color: var(--side-item);
+}
+.org-menu-units {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.org-menu-note {
+    padding: 6px 8px;
+    font-size: var(--fs-xs);
+    color: var(--side-label);
+}
+.org-menu-group + .org-menu-group {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--side-line);
+}
 .org-unit-logo {
     width: 30px;
     height: 30px;

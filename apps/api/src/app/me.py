@@ -92,15 +92,17 @@ class UserOut(BaseModel):
     appearance: AppearanceOut  # tema salvo na conta; o front valida os ids (lib/themeEngine.ts)
 
 
+class UnitOut(BaseModel):
+    code: str
+    name: str
+
+
 class OrgOut(BaseModel):
     slug: str
     name: str
     sub: str
-
-
-class UnitOut(BaseModel):
-    code: str
-    name: str
+    # As unidades que a pessoa vê nesta organização: o seletor lista cada organização seguida delas.
+    units: list[UnitOut] = []
 
 
 class MeOut(BaseModel):
@@ -147,10 +149,23 @@ def _has_any(m: MembershipRow, wanted: set[str]) -> bool:
 
 
 def build_me(
-    orgs: list[OrgRow], current: OrgRow, m: MembershipRow, *, platform_staff: bool
+    orgs: list[OrgRow],
+    current: OrgRow,
+    m: MembershipRow,
+    *,
+    platform_staff: bool,
+    org_units: dict[str, tuple[UnitRow, ...]] | None = None,
 ) -> MeOut:
+    """org_units: as unidades que a pessoa vê em cada organização (pelo id); sem ela, a lista fica vazia."""
+
     def org_out(o: OrgRow) -> OrgOut:
-        return OrgOut(slug=o.slug, name=o.name, sub=org_sub(o.unit_count))
+        units = (org_units or {}).get(o.id, ())
+        return OrgOut(
+            slug=o.slug,
+            name=o.name,
+            sub=org_sub(o.unit_count),
+            units=[UnitOut(code=u.code, name=u.name) for u in units],
+        )
 
     return MeOut(
         user=UserOut(

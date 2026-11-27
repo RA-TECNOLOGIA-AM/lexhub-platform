@@ -9,6 +9,7 @@ import { LoadingState } from '../../../components/states/LoadingState.tsx'
 import { dataClient } from '../../../services/client.ts'
 import { toDataError } from '../../../services/errors.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
+import { useAuth } from '../../../contexts/auth-context.ts'
 import { SourceList } from './SourceList.tsx'
 import { UnitNav } from './UnitNav.tsx'
 import { SourceDetailDialog } from './SourceDetailDialog.tsx'
@@ -18,6 +19,7 @@ import { DeleteUnitDialog } from './DeleteUnitDialog.tsx'
 import { MetaIntegrationDialog } from './MetaIntegrationDialog.tsx'
 import type { DataSource, ProductKey, UnitInput } from '../../../types/index.ts'
 import { lastFailureLabel, pickUnit, syncNote } from './sourcesView.ts'
+import { rememberUnit, rememberedUnit, sourcesUnit } from '../../../lib/activeUnit.ts'
 import { withFreshness } from './sourceFreshness.ts'
 import { timezoneLabel } from './unitForm.ts'
 
@@ -45,19 +47,39 @@ export function SourcesPage() {
     const [connecting, setConnecting] = useState(false) // o modal Conectar fonte
     const [metaOpen, setMetaOpen] = useState(false) // o modal Integração Meta (app da Meta e pausa da coleta)
     const [deleting, setDeleting] = useState<{ code: string; name: string } | null>(null) // o modal Excluir unidade
+    const { switchOrg } = useAuth()
+    // Criou, renomeou, excluiu ou restaurou unidade: o seletor da barra lateral (lista do "me") se atualiza
+    // sem recarregar a página. Pela plataforma o seletor é o da organização de quem olha: nada a fazer.
+    const refreshSwitcher = () => {
+        if (!fromPlatform) void switchOrg(org).catch(() => undefined)
+    }
 
     if (error) return <ErrorState error={error} />
     if (!data) return <LoadingState />
 
-    const picked = pickUnit(data.units, params.get('unidade'))
+    // Na organização, a unidade é a do seletor da barra lateral (URL ou a lembrada) e a tela só mostra ela:
+    // ninguém vê nem conecta fonte de outra unidade sem trocar no seletor. Pela plataforma (sem seletor do
+    // cliente), a lista da página continua com todas.
+    const unitCode = fromPlatform
+        ? params.get('unidade')
+        : sourcesUnit(
+              params.get('unidade'),
+              rememberedUnit(org),
+              data.units.map((u) => u.unit.code),
+          )
+    const picked = pickUnit(data.units, unitCode)
     const current = picked && withFreshness(picked, freshness)
-    const pickUnitCode = (code: string) => setParams({ unidade: code }, { replace: true })
+    const pickUnitCode = (code: string) => {
+        if (!fromPlatform) rememberUnit(org, code)
+        setParams({ unidade: code }, { replace: true })
+    }
 
     async function saveUnit(unit: UnitInput) {
         const saved =
             form?.mode === 'create' ? await dataClient.createUnit(org, unit) : await dataClient.updateUnit(org, unit)
         setVersion((v) => v + 1)
         pickUnitCode(saved.unit.code)
+        refreshSwitcher()
     }
 
     // Volta a unidade sem as fontes próprias (foram apagadas com as senhas na exclusão).
@@ -66,6 +88,7 @@ export function SourcesPage() {
             const restored = await dataClient.restoreUnit(org, code)
             setVersion((v) => v + 1)
             pickUnitCode(restored.unit.code)
+            refreshSwitcher()
             setNotice(
                 `${restored.unit.name} foi restaurada. As fontes próprias dela não voltam: conecte de novo se precisar.`,
             )
@@ -117,7 +140,7 @@ export function SourcesPage() {
                 {notice && <Notice message={notice} onClose={() => setNotice(null)} />}
                 <div className="sources-cols">
                     <UnitNav
-                        units={data.units}
+                        units={fromPlatform ? data.units : current ? [current] : []}
                         selected={current?.unit.code}
                         limit={data.unitLimit}
                         onPick={pickUnitCode}
@@ -221,6 +244,7 @@ export function SourcesPage() {
                     onDeleted={() => {
                         setParams({}, { replace: true })
                         setVersion((v) => v + 1)
+                        refreshSwitcher()
                         setNotice(
                             `${deleting.name} foi excluída. Fica arquivada por 30 dias antes de ser apagada de vez.`,
                         )

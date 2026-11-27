@@ -36,6 +36,10 @@ def test_admin_formato_completo(client, signer, me_repo):
 
     r = client.get("/me", headers=auth(signer))
 
+    lexgroup_units = [
+        {"code": "LA", "name": "Luis Albert AM"},
+        {"code": "NG", "name": "Nicolas Gomes"},
+    ]
     assert r.status_code == 200
     assert r.json() == {
         "user": {
@@ -50,14 +54,22 @@ def test_admin_formato_completo(client, signer, me_repo):
             "avatar_path": None,
             "appearance": {"mode": None, "light": None, "dark": None, "accent": None},
         },
-        "org": {"slug": "lexgroup", "name": "LexGroup", "sub": "3 unidades"},
-        "units": [
-            {"code": "LA", "name": "Luis Albert AM"},
-            {"code": "NG", "name": "Nicolas Gomes"},
-        ],
+        "org": {
+            "slug": "lexgroup",
+            "name": "LexGroup",
+            "sub": "3 unidades",
+            "units": lexgroup_units,
+        },
+        "units": lexgroup_units,
         "orgs": [
-            {"slug": "lexgroup", "name": "LexGroup", "sub": "3 unidades"},
-            {"slug": "cliente-parceiro", "name": "Cliente parceiro", "sub": "1 unidade"},
+            {"slug": "lexgroup", "name": "LexGroup", "sub": "3 unidades", "units": lexgroup_units},
+            # cada organização traz as unidades que a pessoa vê nela (o seletor lista org + unidades)
+            {
+                "slug": "cliente-parceiro",
+                "name": "Cliente parceiro",
+                "sub": "1 unidade",
+                "units": [],
+            },
         ],
     }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hubUnit, rememberUnit, rememberedUnit, unitChoices, unitsWithDashboards } from './activeUnit.ts'
+import { hubUnit, rememberUnit, rememberedUnit, sourcesUnit, unitChoices, unitsWithDashboards } from './activeUnit.ts'
 
 const units = [
     { code: 'NG', name: 'Nicolas Gomes' },
@@ -70,5 +70,26 @@ describe('unitChoices', () => {
 
     it('no dashboard: só as unidades liberadas nele, sem "Todas"', () => {
         expect(unitChoices(units, ['LA', 'RJ'])).toEqual([{ code: 'LA', label: 'LAAM' }])
+    })
+})
+
+describe('sourcesUnit', () => {
+    const codes = ['NG', 'LA', 'EDT']
+
+    it('a da URL manda', () => {
+        expect(sourcesUnit('LA', 'NG', codes)).toBe('LA')
+    })
+
+    it('sem URL, a lembrada no seletor', () => {
+        expect(sourcesUnit(null, 'EDT', codes)).toBe('EDT')
+    })
+
+    it('"Todas" lembrada ou código que a pessoa não vê: a primeira', () => {
+        expect(sourcesUnit(null, null, codes)).toBe('NG')
+        expect(sourcesUnit('XX', 'YY', codes)).toBe('NG')
+    })
+
+    it('sem unidades: nenhuma', () => {
+        expect(sourcesUnit(null, null, [])).toBeNull()
     })
 })
