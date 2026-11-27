@@ -44,6 +44,8 @@ export const plans: Plan[] = [
 ]
 
 // Módulo: a cobrança da LexGroup no mock: Pro sem teto (como no banco); os limites valem para as operações novas.
+// Só no mock, os assentos têm teto de 50 para o aviso de limite aparecer (sino e Convidar pessoas):
+// começa perto do teto e chega ao limite depois de alguns convites.
 // Parâmetro: os assentos usados (vêm de Membros, para as duas telas mostrarem o mesmo número).
 export function billingFor(seatsUsed: number): BillingResponse {
     return {
@@ -55,7 +57,7 @@ export function billingFor(seatsUsed: number): BillingResponse {
             gateway: null,
         },
         usage: [
-            { key: 'seats', label: 'Assentos', used: seatsUsed, total: null },
+            { key: 'seats', label: 'Assentos', used: seatsUsed, total: 50 },
             { key: 'units', label: 'Unidades', used: 3, total: null },
             { key: 'sources', label: 'Fontes de dados', used: 12, total: null },
         ],
