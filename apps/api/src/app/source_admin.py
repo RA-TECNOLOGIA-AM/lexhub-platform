@@ -1,7 +1,7 @@
 """Conectar fonte (banco próprio e planilha) e gerenciar a fonte: o banco da plataforma.
 
-As regras ficam nas funções do banco (migrations 20261117180000_conectar_banco_planilha.sql e
-20261118100000_fontes_liga_desliga.sql): só a TI da
+As regras ficam nas funções do banco (migrations 20261117180000_conectar_banco_planilha.sql,
+20261118100000_fontes_liga_desliga.sql e 20261127110000_fonte_facebook_ads.sql): só a TI da
 LexGroup (app_private.is_source_admin), auditoria, key gerada. Aqui só chamamos e traduzimos o erro:
   42501 -> NotAllowed (403); P0001 -> RuleBroken (409, a mensagem vai para a tela).
 """
@@ -72,6 +72,12 @@ class SourceAdminRepo(Protocol):
     async def record_run(
         self, source_id: str, kind: str, ok: bool, checks: list[dict], ms: int, error: str | None
     ) -> None: ...
+
+    async def set_config(
+        self, user_id: str, source_id: str, config: dict[str, Any], detail: str
+    ) -> dict[str, Any]: ...
+
+    async def recompute_results(self, source_id: str, conversions: list[str]) -> None: ...
 
 
 _UNIT_SQL = """
@@ -182,6 +188,26 @@ class PgSourceAdminRepo:
             enabled,
         )
         return json.loads(out)
+
+    async def set_config(self, user_id, source_id, config, detail):
+        """Personalização do Facebook Ads (20261127110000_fonte_facebook_ads.sql)."""
+        out = await _call(
+            self._pool,
+            "select app_private.set_source_config($1::uuid, $2::uuid, $3::jsonb, $4)::text",
+            user_id,
+            source_id,
+            json.dumps(config),
+            detail,
+        )
+        return json.loads(out)
+
+    async def recompute_results(self, source_id, conversions):
+        """Conversões trocadas: "resultados" de novo, a partir das ações já guardadas."""
+        await self._pool.execute(
+            "select app_private.facebook_ads_recompute_results($1::uuid, $2::text[])",
+            source_id,
+            conversions,
+        )
 
     async def record_run(self, source_id, kind, ok, checks, ms, error):
         await self._pool.execute(

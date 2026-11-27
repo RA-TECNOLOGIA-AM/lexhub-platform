@@ -72,8 +72,15 @@ import { sourceDetailFor } from './mock/sourceDetail.ts'
 import { createUnitIn, deleteUnitIn, restoreUnitIn, unitImpactIn, updateUnitIn } from './mock/units.ts'
 import { linkOfficeIn, productOffices } from './mock/offices.ts'
 import {
+    adsOptionsIn,
+    adsTokenSavedIn,
     changeSecretIn,
     connectIn,
+    inspectAdsIn,
+    previewAdsIn,
+    previewSavedAdsIn,
+    readAdsTokenIn,
+    saveAdsSettingsIn,
     disconnectIn,
     EGRESS_IP_EXEMPLO,
     inspectSheetIn,
@@ -687,6 +694,51 @@ export function createMockClient(): DataClient {
             disconnectIn(requireOrg(org) ? sources : onboardingSources, source)
         },
 
+        async readFacebookAdsToken(token) {
+            await wait()
+            requireSession()
+            return copy(readAdsTokenIn(token))
+        },
+
+        async getFacebookAdsToken(org, source) {
+            await wait()
+            requireSession()
+            requireOrg(org)
+            return copy(adsTokenSavedIn(source))
+        },
+
+        async inspectFacebookAds(input) {
+            await wait()
+            requireSession()
+            return copy(inspectAdsIn(input))
+        },
+
+        async previewFacebookAds(input) {
+            await wait()
+            requireSession()
+            return copy(previewAdsIn(input))
+        },
+
+        async getFacebookAdsOptions(org, source) {
+            await wait()
+            requireSession()
+            requireOrg(org)
+            return copy(adsOptionsIn(source))
+        },
+
+        async previewSavedFacebookAds(org, source, settings) {
+            await wait()
+            requireSession()
+            requireOrg(org)
+            return copy(previewSavedAdsIn(source, settings))
+        },
+
+        async saveFacebookAdsSettings(org, source, settings) {
+            await wait()
+            requireSession()
+            return copy(saveAdsSettingsIn(requireOrg(org) ? sources : onboardingSources, source, settings))
+        },
+
         async setSourceEnabled(org, source, enabled) {
             await wait()
             requireSession()
@@ -961,6 +1013,7 @@ const SUPPORT_WRITES = new Set<keyof DataClient>([
     'changeSourceSecret',
     'disconnectSource',
     'setSourceEnabled',
+    'saveFacebookAdsSettings',
     'closeOrganization',
     'reopenOrganization',
     'uploadMyAvatar',

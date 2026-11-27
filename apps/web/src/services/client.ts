@@ -8,6 +8,11 @@ import { createMockClient } from './mockClient.ts'
 import { createSupabaseAuth } from './supabase.ts'
 import type {
     AccountSession,
+    AdsOptions,
+    AdsPreview,
+    AdsSettings,
+    AdsSettingsSaved,
+    AdsTokenInfo,
     ApiKeyEligibility,
     ApiKeyExtraRequest,
     ApiKeyInfo,
@@ -180,6 +185,15 @@ export interface DataClient {
     disconnectSource(org: string, source: string): Promise<void>
     // Ligar/desligar (pausa reversível; a API limpa o cache na hora). Devolve a fonte com o status novo.
     setSourceEnabled(org: string, source: string, enabled: boolean): Promise<DataSource>
+    // Facebook Ads (só a TI da LexGroup): antes de conectar, com a conta e o token; depois, com o token salvo.
+    // Erro da Meta na prévia/opções = 502 com a mensagem para a tela.
+    readFacebookAdsToken(token: string): Promise<AdsTokenInfo> // quem é, permissões e as contas (com o nome)
+    getFacebookAdsToken(org: string, source: string): Promise<AdsTokenInfo> // o token salvo
+    inspectFacebookAds(input: { adAccountId: string; token: string }): Promise<AdsOptions>
+    previewFacebookAds(input: { adAccountId: string; token: string; settings: AdsSettings }): Promise<AdsPreview>
+    getFacebookAdsOptions(org: string, source: string): Promise<AdsOptions>
+    previewSavedFacebookAds(org: string, source: string, settings: AdsSettings): Promise<AdsPreview>
+    saveFacebookAdsSettings(org: string, source: string, settings: AdsSettings): Promise<AdsSettingsSaved>
     // Plataforma: todas as organizações. Só Owner/Desenvolvedor da LexGroup e equipe RA; os outros recebem 403.
     listClients(): Promise<ClientsResponse>
     // Encerrar organização (some de todas as telas, histórico guardado). A LexGroup nunca.

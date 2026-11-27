@@ -54,7 +54,8 @@ class DbTarget:
 
 @dataclass
 class Check:
-    key: Literal["network", "login", "read", "readOnly"]
+    # account: só o Facebook Ads (a conta de anúncios está ativa? app/facebook_ads.py)
+    key: Literal["network", "login", "read", "readOnly", "account"]
     ok: bool
     message: str
     ms: int = 0

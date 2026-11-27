@@ -592,7 +592,7 @@ export type ClosedOrg = {
 }
 
 // Unidades e fontes: de onde vêm os dados de cada unidade (conectores).
-export type SourceKind = 'database' | 'flow' | 'finance' | 'sheet' // define o ícone
+export type SourceKind = 'database' | 'flow' | 'finance' | 'sheet' | 'ads' // define o ícone
 // pending = falta autorizar (ex.: Conta Azul); waiting = conectada, mas ainda não sincronizou nenhuma vez;
 // no_dashboards = conectada, mas nenhum dashboard ligado na unidade usa a fonte (o analista liga depois);
 // disabled = a TI da LexGroup desligou a fonte (pausa: o segredo fica salvo, a API não lê)
@@ -601,8 +601,9 @@ export type SourceKind = 'database' | 'flow' | 'finance' | 'sheet' // define o �
 export type SourceStatus =
     'healthy' | 'late' | 'pending' | 'waiting' | 'on_open' | 'failing' | 'no_dashboards' | 'disabled'
 // Como a API conecta na fonte (app.data_sources.connector)
-export type SourceConnector = 'lexpre' | 'lexflow' | 'internal' | 'postgres' | 'mysql' | 'sheets'
-// product = contratado pela organização (LexFlow, LexPre); connection = conectada por uma unidade (banco, planilha)
+export type SourceConnector = 'lexpre' | 'lexflow' | 'internal' | 'postgres' | 'mysql' | 'sheets' | 'facebook_ads'
+// product = contratado pela organização (LexFlow, LexPre); connection = conectada por uma unidade (banco, planilha,
+// conta de anúncios)
 export type SourceGroup = 'product' | 'connection'
 
 export type DataSource = {
@@ -653,13 +654,15 @@ export type SourceDetail = {
     owner: Unit | null // unidade dona; null = produto contratado pela organização
     dashboards: { key: string; name: string }[] // os desta unidade que usam a fonte
     runs: SyncRun[] // as 10 últimas, da mais recente para a mais antiga
-    // Banco: host, port, database, user, ssl. Planilha: tab. Nunca a senha nem o link.
+    // Banco: host, port, database, user, ssl. Planilha: tab. Facebook Ads: ad_account_id, account_name,
+    // currency, timezone. Nunca a senha, o link nem o token.
     config: Record<string, unknown>
     writerAck: boolean // salva com um usuário que pode escrever ("Salvar mesmo assim")
     enabled: boolean // false = desligada pela TI da LexGroup (religar não pede o segredo de novo)
     // TI da LexGroup numa fonte com o segredo no banco: testar, trocar senha, ligar/desligar, desconectar
     canManage: boolean
     technical: SourceTechnical | null // só para a TI da LexGroup; null para os demais
+    ads?: AdsSummary | null // Facebook Ads: o que já está guardado; null nas outras fontes
 }
 
 // Para o analista escrever as queries: a chave da fonte e a estrutura salva no teste de conexão.
@@ -686,11 +689,143 @@ export type DatabaseConnectInput = {
 
 export type SheetConnectInput = { connector: 'sheets'; name: string; url: string; tab: string }
 
-export type ConnectInput = DatabaseConnectInput | SheetConnectInput
+// Facebook Ads: a conta de anúncios (act_123 ou só os números), o token do usuário do sistema (ads_read) e a
+// personalização da coleta.
+export type FacebookAdsConnectInput = {
+    connector: 'facebook_ads'
+    name: string
+    adAccountId: string
+    token: string
+    settings: AdsSettings
+}
 
-// Uma checagem do teste (rede, login, leitura, só leitura). warn = não impede salvar.
+// --- Facebook Ads: personalização, opções da conta, prévia e resumo (app/facebook_ads.py) ---
+// Grupos opcionais de métricas (gasto, impressões, cliques, leads e conversas vêm sempre).
+export type AdsMetricGroup = 'reach' | 'video' | 'quality'
+export type AdsBreakdown = 'age_gender' | 'platform' | 'region' | 'device'
+export type AdsBackfillDays = 90 | 365 | 1095
+
+export type AdsSettings = {
+    metrics: AdsMetricGroup[]
+    conversions: string[] // tipos de ação da Meta que somam em "resultados"
+    campaigns: string[] | null // null = todas as campanhas
+    breakdowns: AdsBreakdown[]
+    backfillDays: AdsBackfillDays // quanto buscar na primeira coleta
+    creatives: boolean // guardar título, texto, imagem e link dos anúncios
+}
+
+export type AdsAccount = { id: string; name: string; currency: string; timezone: string; status: string | null }
+
+// O que o token permite (POST /sources/facebook-ads/token): quem é, permissões, possibilidades e as contas.
+export type AdsCapabilityStatus = 'used' | 'available' | 'warn' | 'missing'
+export type AdsTokenAccount = AdsAccount & {
+    active: boolean
+    business: string | null // o Gerenciador de Negócios dono da conta (com business_management)
+    spent: number // total gasto na vida da conta
+}
+export type AdsTokenInfo = {
+    ok: boolean // false = token recusado ou sem nenhuma conta de anúncios
+    checks: SourceCheck[]
+    user: { id: string; name: string | null } | null
+    tokenType: string | null // 'Usuário do sistema'... (só com FACEBOOK_APP_ID na API)
+    expiresAt: string | null
+    neverExpires: boolean | null // null = a API não sabe (sem o ID do app)
+    app: string | null
+    permissions: { name: string; label: string; granted: boolean }[]
+    capabilities: { key: string; label: string; status: AdsCapabilityStatus; detail: string }[]
+    accounts: AdsTokenAccount[]
+    businesses: { id: string; name: string | null }[]
+}
+export type AdsCampaignOption = {
+    id: string
+    name: string
+    status: string | null // effective_status da Meta (ACTIVE, PAUSED...)
+    objective: string | null // OUTCOME_LEADS...
+    spend30: number // gasto nos últimos 30 dias
+}
+export type AdsConversionOption = { type: string; label: string; count30: number }
+
+// Passo Acesso (antes de conectar) ou Personalizar coleta (depois, com settings): teste + opções da conta.
+export type AdsOptions = {
+    ok: boolean
+    checks: SourceCheck[]
+    account: AdsAccount | null
+    campaigns: AdsCampaignOption[]
+    conversions: AdsConversionOption[]
+    settings?: AdsSettings
+}
+
+export type AdsTotals = {
+    spend: number
+    impressions: number
+    clicks: number
+    linkClicks: number
+    leads: number
+    conversations: number
+    results: number
+    reach: number | null // null = alcance não coletado
+    thruplays: number | null // null = vídeo não coletado
+}
+
+export type AdsCreative = {
+    id?: string
+    title?: string
+    body?: string
+    imageUrl?: string
+    thumbnailUrl?: string
+    linkUrl?: string
+    callToAction?: string
+    type?: string
+}
+
+// Os últimos 7 dias com a personalização (nada é gravado).
+export type AdsPreview = {
+    since: string | null
+    until: string | null
+    totals: AdsTotals
+    campaigns: (AdsTotals & { id: string; name: string | null })[]
+    breakdowns: { key: AdsBreakdown; rows: (AdsTotals & { segment: string[] })[] }[]
+    ads: (AdsTotals & { id: string; name: string | null; campaignName: string | null; creative: AdsCreative | null })[]
+}
+
+// O que já está guardado (api.source_detail -> ads), para o painel do detalhe da fonte.
+export type AdsSummary = {
+    firstDay: string | null
+    lastDay: string | null
+    rows: number
+    breakdownRows: Partial<Record<AdsBreakdown, number>>
+    entities: { campaigns: number; activeCampaigns: number; adsets: number; ads: number; creatives: number } | null
+    last30: {
+        spend: number
+        impressions: number
+        clicks: number
+        linkClicks: number
+        landingPageViews: number
+        leads: number
+        conversations: number
+        results: number
+    }
+    topCampaigns: {
+        id: string
+        name: string | null
+        status: string | null
+        objective: string | null
+        spend: number
+        results: number
+        impressions: number
+        linkClicks: number
+    }[]
+    backfill: { done: boolean; coveredUntil: string | null } | null
+}
+
+// Personalização salva: recollect = a coleta vai refazer o histórico.
+export type AdsSettingsSaved = { source: DataSource; recollect: boolean; settings: AdsSettings }
+
+export type ConnectInput = DatabaseConnectInput | SheetConnectInput | FacebookAdsConnectInput
+
+// Uma checagem do teste (rede, login, leitura, só leitura; no Facebook Ads, a conta ativa). warn = não impede salvar.
 export type SourceCheck = {
-    key: 'network' | 'login' | 'read' | 'readOnly'
+    key: 'network' | 'login' | 'read' | 'readOnly' | 'account'
     ok: boolean
     message: string
     ms: number
@@ -715,8 +850,8 @@ export type ConnectInfo = {
     egressIp: string | null // o IP que a operação libera no firewall do banco
 }
 
-// Trocar a senha (banco) ou o link (planilha).
-export type SecretInput = { password?: string; url?: string; writerAck: boolean }
+// Trocar a senha (banco), o link (planilha) ou o token (Facebook Ads).
+export type SecretInput = { password?: string; url?: string; token?: string; writerAck: boolean }
 
 export type SourcesResponse = {
     orgName: string // de qual organização são as unidades (o título da tela)

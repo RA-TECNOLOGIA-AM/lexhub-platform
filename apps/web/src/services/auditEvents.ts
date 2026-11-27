@@ -25,7 +25,9 @@ const day = (v: unknown): string | null => {
 const product = (v: unknown): string | null => ({ lexpre: 'LexPre', lexflow: 'LexFlow' })[text(v) ?? ''] ?? text(v)
 // 'postgres' -> 'Postgres', 'sheets' -> 'Google Planilhas'
 const connectorLabel = (v: unknown): string | null =>
-    ({ postgres: 'Postgres', mysql: 'MySQL', sheets: 'Google Planilhas' })[text(v) ?? ''] ?? text(v)
+    ({ postgres: 'Postgres', mysql: 'MySQL', sheets: 'Google Planilhas', facebook_ads: 'Facebook Ads' })[
+        text(v) ?? ''
+    ] ?? text(v)
 // Junta as partes que existem: 'a · b · c'
 const join = (...parts: (string | null | undefined)[]): string => parts.filter(Boolean).join(' · ')
 
@@ -186,6 +188,7 @@ const EVENTS: Record<string, Rule> = {
                 connectorLabel(m.connector),
                 text(m.host),
                 text(m.tab) && `aba ${text(m.tab)}`,
+                text(m.adAccount) && `conta ${text(m.adAccount)}`,
                 m.writerAck === true ? 'usuário que pode escrever' : null,
             ),
     },

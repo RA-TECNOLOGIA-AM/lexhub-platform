@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { DataSource, SourceDetail, SourceFreshness, SourceTechnical } from '../../../types/index.ts'
 import { sourceWithFreshness } from './sourceFreshness.ts'
 import { ManageSource } from './ManageSource.tsx'
+import { AdsSummaryPanel } from './AdsSummaryPanel.tsx'
 import { CopyButton } from './CheckList.tsx'
 import { Modal } from '../../../components/ui/Modal.tsx'
 import { LoadingState } from '../../../components/states/LoadingState.tsx'
@@ -32,7 +33,8 @@ type SourceDetailDialogProps = {
 }
 
 // Módulo: o modal de uma fonte, vista de uma unidade — sobre, conexão (só a TI da LexGroup, nas fontes
-// conectadas pela tela), dashboards que usam e testes de conexão. Senha e link nunca aparecem.
+// conectadas pela tela), dados guardados (Facebook Ads), dashboards que usam e testes de conexão.
+// Senha, link e token nunca aparecem.
 // O status e a "Última leitura" vêm do registro de leituras (como a linha da lista); a tabela de baixo é
 // só dos testes manuais (Testar de novo), que conferem a conexão sem ler dados para um dashboard.
 export function SourceDetailDialog({
@@ -58,7 +60,7 @@ export function SourceDetailDialog({
             title={name}
             subtitle={data ? detailLabel(data.source) : undefined}
             aside={status && <span className={status.badge}>{status.label}</span>}
-            className="source-dialog"
+            className={`source-dialog${data?.ads ? ' ads-wide' : ''}`}
             onClose={onClose}
         >
             {error ? (
@@ -71,6 +73,9 @@ export function SourceDetailDialog({
                 <>
                     {data.canManage && (
                         <ManageSource org={org} detail={data} onChanged={changed} onDisconnected={onDisconnected} />
+                    )}
+                    {data.ads && (
+                        <AdsSummaryPanel summary={data.ads} currency={String(data.config.currency ?? '') || 'BRL'} />
                     )}
                     <SourceDetailBody detail={data} source={current ?? data.source} />
                     {data.technical && <SourceTechnicalSection technical={data.technical} />}
@@ -94,7 +99,8 @@ function SourceTechnicalSection({ technical }: { technical: SourceTechnical }) {
             </div>
             {tables.length === 0 ? (
                 <p className="muted small" style={{ margin: '8px 0 0' }}>
-                    Estrutura ainda não salva. Ela é lida no teste de conexão (Testar de novo ou Trocar senha/link).
+                    Estrutura ainda não salva. Ela é lida no teste de conexão (Testar de novo ou Trocar
+                    senha/link/token).
                 </p>
             ) : (
                 <div className="source-schema" style={{ marginTop: 8 }}>
@@ -125,6 +131,7 @@ function SourceTechnicalSection({ technical }: { technical: SourceTechnical }) {
 // Módulo: as três seções do modal, a partir da resposta já carregada.
 // `source` = a fonte já com a hora do registro (sourceWithFreshness).
 function SourceDetailBody({ detail, source }: { detail: SourceDetail; source: DataSource }) {
+    const ads = detail.source.connector === 'facebook_ads' // o log tem as coletas, além dos testes
     return (
         <>
             <section aria-label="Sobre a fonte">
@@ -153,11 +160,13 @@ function SourceDetailBody({ detail, source }: { detail: SourceDetail; source: Da
                 )}
             </section>
 
-            <section aria-label="Testes de conexão">
-                <h3 className="source-section-title">Testes de conexão</h3>
+            <section aria-label={ads ? 'Coletas e testes' : 'Testes de conexão'}>
+                <h3 className="source-section-title">{ads ? 'Coletas e testes' : 'Testes de conexão'}</h3>
                 {detail.runs.length === 0 ? (
                     <p className="muted small" style={{ margin: 0 }}>
-                        Nenhum teste ainda. Os testes feitos em Testar de novo ou ao trocar a senha/link aparecem aqui.
+                        {ads
+                            ? 'Nenhuma coleta ainda. Cada coleta (a cada 10 minutos) e cada Testar de novo aparece aqui.'
+                            : 'Nenhum teste ainda. Os testes feitos em Testar de novo ou ao trocar a senha/link/token aparecem aqui.'}
                     </p>
                 ) : (
                     <table className="source-runs">

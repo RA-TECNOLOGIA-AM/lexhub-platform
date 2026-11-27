@@ -1,5 +1,9 @@
 import { useState } from 'react'
 import type {
+    AdsOptions,
+    AdsPreview,
+    AdsSettings,
+    AdsTokenInfo,
     ConnectInfo,
     ConnectInput,
     ConnectResult,
@@ -23,6 +27,7 @@ import {
     type ConnectorKey,
 } from './connectSource.ts'
 import { DatabaseStep } from './DatabaseStep.tsx'
+import { FacebookAdsStep, type AdsAccessInput } from './FacebookAdsStep.tsx'
 import { SheetsStep } from './SheetsStep.tsx'
 
 type ConnectSourceDialogProps = {
@@ -32,13 +37,16 @@ type ConnectSourceDialogProps = {
     onLink: (product: ProductKey, ref: string) => Promise<void> // grava; se rejeitar, a mensagem aparece no modal
     loadConnectInfo: () => Promise<ConnectInfo> // a API cifra senha/link? qual o IP de saída?
     inspectSheet: (url: string) => Promise<SheetTab[]>
-    onConnect: (input: ConnectInput) => Promise<ConnectResult> // testa e salva banco ou planilha
-    onSaved: () => void // banco/planilha gravado: a página busca a lista de novo
+    readAdsToken: (token: string) => Promise<AdsTokenInfo> // Facebook Ads: o que o token permite e as contas
+    inspectAds: (input: AdsAccessInput) => Promise<AdsOptions> // Facebook Ads: testa e traz as opções da conta
+    previewAds: (input: AdsAccessInput & { settings: AdsSettings }) => Promise<AdsPreview>
+    onConnect: (input: ConnectInput) => Promise<ConnectResult> // testa e salva banco, planilha ou Facebook Ads
+    onSaved: () => void // banco/planilha/conta gravada: a página busca a lista de novo
     onClose: () => void
 }
 
 // Módulo: o assistente Conectar fonte. Passo 1 escolhe o tipo; passo 2 é o do tipo (escritório do
-// LexPre/LexFlow, banco próprio ou planilha). Não sabe de API: recebe quem busca e quem grava.
+// LexPre/LexFlow, banco próprio, planilha ou conta do Facebook Ads). Não sabe de API: recebe quem busca e quem grava.
 export function ConnectSourceDialog({
     unit,
     sources,
@@ -46,6 +54,9 @@ export function ConnectSourceDialog({
     onLink,
     loadConnectInfo,
     inspectSheet,
+    readAdsToken,
+    inspectAds,
+    previewAds,
     onConnect,
     onSaved,
     onClose,
@@ -84,6 +95,20 @@ export function ConnectSourceDialog({
             <SheetsStep
                 unit={unit}
                 inspect={inspectSheet}
+                onSave={onConnect}
+                onSaved={onSaved}
+                onBack={back}
+                onClose={onClose}
+            />
+        )
+    }
+    if (step === 'facebook_ads') {
+        return (
+            <FacebookAdsStep
+                unit={unit}
+                readToken={readAdsToken}
+                inspect={inspectAds}
+                preview={previewAds}
                 onSave={onConnect}
                 onSaved={onSaved}
                 onBack={back}
