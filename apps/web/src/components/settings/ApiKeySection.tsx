@@ -273,7 +273,7 @@ export function ApiKeyView(props: ApiKeyViewProps) {
     )
 }
 
-// Módulo: Configurações → Chave de API (só Owner, Gestor e Controller veem a seção).
+// Módulo: Configurações → Chave de API (só Owner, Desenvolvedor, Gestor e Controller veem a seção).
 export function ApiKeySection() {
     const { me } = useAuth()
     const org = me?.org.slug ?? ''

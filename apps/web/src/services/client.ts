@@ -104,7 +104,7 @@ export interface DataClient {
     listMySessions(): Promise<AccountSession[]>
     revokeMySession(id: string): Promise<void>
 
-    // Chave de API (API pública /v1). Pede: Owner, Gestor ou Controller (Configurações → Chave de API).
+    // Chave de API (API pública /v1). Pede: Owner, Desenvolvedor, Gestor ou Controller (Configurações → Chave de API).
     getApiKeyEligibility(org: string): Promise<ApiKeyEligibility>
     requestApiKey(org: string, note: string | null, extras: ApiKeyExtraRequest[]): Promise<string>
     getMyApiKey(org: string): Promise<ApiKeyInfo | null> // a mais recente (null = nunca pediu)
