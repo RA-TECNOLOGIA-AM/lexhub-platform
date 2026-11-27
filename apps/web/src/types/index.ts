@@ -26,7 +26,8 @@ export type Appearance = {
     accent: string | null
 }
 
-export type Org = { slug: string; name: string; sub: string }
+// units: as unidades que a pessoa vê nesta organização (o seletor lista cada organização seguida delas).
+export type Org = { slug: string; name: string; sub: string; units?: Unit[] }
 
 export type Unit = { code: string; name: string }
 

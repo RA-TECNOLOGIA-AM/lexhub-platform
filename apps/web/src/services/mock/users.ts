@@ -14,12 +14,6 @@ const user: User = {
     appearance: { mode: null, light: null, dark: null, accent: null },
 }
 
-// As organizações de que essa pessoa faz parte (as mesmas do protótipo).
-export const orgs: Org[] = [
-    { slug: 'lexgroup', name: 'LexGroup', sub: 'Plano Pro · 3 unidades' },
-    { slug: 'cliente-parceiro', name: 'Cliente parceiro', sub: 'Implantação · 1 unidade' },
-]
-
 // Unidades que a pessoa enxerga em cada organização.
 const UNITS: Record<string, Unit[]> = {
     lexgroup: [
@@ -29,6 +23,17 @@ const UNITS: Record<string, Unit[]> = {
     ],
     'cliente-parceiro': [{ code: 'CP', name: 'Parceiro · sede' }],
 }
+
+// As organizações de que essa pessoa faz parte (as mesmas do protótipo), cada uma com as unidades dela.
+export const orgs: Org[] = [
+    { slug: 'lexgroup', name: 'LexGroup', sub: 'Plano Pro · 3 unidades', units: UNITS.lexgroup },
+    {
+        slug: 'cliente-parceiro',
+        name: 'Cliente parceiro',
+        sub: 'Implantação · 1 unidade',
+        units: UNITS['cliente-parceiro'],
+    },
+]
 
 // O "me" de uma organização; null = a pessoa não faz parte dela (a API responde 403).
 export function meFor(slug: string): Me | null {

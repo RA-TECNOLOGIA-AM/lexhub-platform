@@ -26,4 +26,10 @@ async def get_me(
     if current is None:
         await deny_org(request, user, audit, org)
     membership = next(m for o, m in memberships if o.id == current.id)
-    return build_me(orgs, current, membership, platform_staff=is_platform_staff(user))
+    return build_me(
+        orgs,
+        current,
+        membership,
+        platform_staff=is_platform_staff(user),
+        org_units={o.id: m.units for o, m in memberships},
+    )

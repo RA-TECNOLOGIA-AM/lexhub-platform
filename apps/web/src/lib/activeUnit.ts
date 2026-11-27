@@ -62,3 +62,12 @@ export function unitChoices(units: Unit[], dashboardUnits: string[] | null): Uni
     const each = units.map((u) => ({ code: u.code, label: u.name }))
     return units.length > 1 ? [{ code: null, label: 'Todas as unidades' }, ...each] : each
 }
+
+// A unidade de Unidades e fontes: sempre uma (não existe "Todas", para ninguém conectar fonte na unidade errada).
+// A da URL (?unidade=) manda; sem ela, a lembrada; senão, a primeira. Código que a pessoa não vê não vale.
+export function sourcesUnit(fromUrl: string | null, remembered: string | null, codes: string[]): string | null {
+    for (const candidate of [fromUrl, remembered]) {
+        if (candidate && codes.includes(candidate)) return candidate
+    }
+    return codes[0] ?? null
+}
