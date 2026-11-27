@@ -8,8 +8,9 @@ Conjuntos de dados (app.facebook_ads_sync_state guarda até onde cada um chegou)
   ads          por anúncio e dia (app.facebook_ads_daily), sempre;
   age_gender, platform, region, device
                por campanha, dia e segmento (app.facebook_ads_breakdowns), os escolhidos na fonte.
-Para cada um, a cada FACEBOOK_ADS_SYNC_INTERVAL (10 min, o ritmo que a tela espera de uma fonte; ver
-app_private.sync_every_min) e logo depois de conectar ou personalizar:
+Para cada um, a cada intervalo da tela (Integração Meta; 10 min sem nada salvo, o mesmo número que o banco
+usa para marcar a fonte como atrasada: app_private.ads_sync_every_min) e logo depois de conectar ou
+personalizar:
   * histórico: na primeira vez e quando a personalização muda o que é coletado (collect_version), os
     últimos `backfill_days` (a Meta guarda 37 meses), em blocos de 31 dias, do mais antigo para o mais
     novo. Cada bloco é gravado na hora: se a coleta cair no meio, a próxima continua de onde parou;
@@ -191,16 +192,24 @@ class AdsSync:
         box: SecretBox,
         client_for: ClientFactory,
         *,
-        interval: float,
+        interval: float | Callable[[], float],  # segundos; função = lido a cada rodada (a tela)
         now: Callable[[], datetime] = lambda: datetime.now(tz=ZoneInfo("UTC")),
         clock: Callable[[], float] = time.monotonic,
+        before_run: Callable[[], Awaitable[object]] | None = None,
+        paused: Callable[[], bool] | None = None,
     ):
         self._repo, self._box, self._client_for = repo, box, client_for
         self._interval = interval
+        # A configuração da Meta (tela ou .env): lida antes de cada rodada; a tela pode pausar a coleta.
+        self._before_run, self._paused = before_run, paused
         self._now, self._clock = now, clock
         self._last_deep: dict[str, float] = {}
         self._entities_for: dict[str, tuple] = {}  # fonte -> a personalização da última atualização
         self._wake = asyncio.Event()
+
+    def interval(self) -> float:
+        """Segundos até a próxima rodada (o da tela, lido de novo a cada vez)."""
+        return self._interval() if callable(self._interval) else self._interval
 
     def wake(self) -> None:
         """Coletar já (uma conta foi conectada, personalizada, religada ou teve o token trocado)."""
@@ -208,6 +217,13 @@ class AdsSync:
 
     async def run_once(self) -> int:
         """Uma rodada em todas as fontes ligadas. Devolve as linhas gravadas."""
+        if self._before_run is not None:
+            await self._before_run()
+        if self._paused is not None and self._paused():
+            logger.info(
+                "Facebook Ads: coleta pausada na tela (Unidades e fontes > Integração Meta)"
+            )
+            return 0
         total = 0
         for source in await self._repo.sources():
             total += await self.sync_source(source)
@@ -299,7 +315,7 @@ class AdsSync:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     ) -> None:
         """Tarefa de fundo: uma rodada a cada `interval` segundos, ou antes se alguém chamar wake()."""
-        logger.info("Coleta do Facebook Ads ligada: a cada %s", seconds(self._interval))
+        logger.info("Coleta do Facebook Ads ligada (o intervalo vem da Integração Meta)")
         await sleep(initial_delay)
         while True:
             self._wake.clear()
@@ -308,7 +324,7 @@ class AdsSync:
             except Exception:
                 logger.exception("Facebook Ads: rodada da coleta falhou")
             try:
-                await asyncio.wait_for(self._wake.wait(), timeout=self._interval)
+                await asyncio.wait_for(self._wake.wait(), timeout=self.interval())
             except TimeoutError:
                 pass
 

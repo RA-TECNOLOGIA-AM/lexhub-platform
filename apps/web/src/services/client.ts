@@ -59,6 +59,10 @@ import type {
     ApprovalOrg,
     ApprovalTarget,
     NotificationsResponse,
+    MetaIntegration,
+    MetaIntegrationInput,
+    MetaIntegrationSaved,
+    MetaIntegrationTest,
 } from '../types/index.ts'
 
 export type DeviceCodeResponse = {
@@ -194,6 +198,15 @@ export interface DataClient {
     getFacebookAdsOptions(org: string, source: string): Promise<AdsOptions>
     previewSavedFacebookAds(org: string, source: string, settings: AdsSettings): Promise<AdsPreview>
     saveFacebookAdsSettings(org: string, source: string, settings: AdsSettings): Promise<AdsSettingsSaved>
+    // Integração Meta (só a TI da LexGroup): o app da Meta, a versão da Graph API e a pausa da coleta, para todas
+    // as contas. A chave secreta nunca volta. Testar não grava; salvar chave nova testa antes (falhou = saved false).
+    getMetaIntegration(): Promise<MetaIntegration>
+    testMetaIntegration(input: {
+        appId: string
+        appSecret: string | null
+        graphVersion: string
+    }): Promise<MetaIntegrationTest>
+    saveMetaIntegration(input: MetaIntegrationInput): Promise<MetaIntegrationSaved>
     // Plataforma: todas as organizações. Só Owner/Desenvolvedor da LexGroup e equipe RA; os outros recebem 403.
     listClients(): Promise<ClientsResponse>
     // Encerrar organização (some de todas as telas, histórico guardado). A LexGroup nunca.

@@ -28,6 +28,24 @@ const connectorLabel = (v: unknown): string | null =>
     ({ postgres: 'Postgres', mysql: 'MySQL', sheets: 'Google Planilhas', facebook_ads: 'Facebook Ads' })[
         text(v) ?? ''
     ] ?? text(v)
+// As chaves que mudaram (personalização do Facebook Ads, Integração Meta) em português.
+const CHANGED: Record<string, string> = {
+    metrics: 'métricas',
+    conversions: 'conversões',
+    campaigns: 'campanhas',
+    breakdowns: 'detalhamentos',
+    backfill_days: 'histórico',
+    creatives: 'criativos',
+    collect_version: 'coleta refeita',
+    app_id: 'ID do app',
+    graph_version: 'versão da Graph API',
+    sync_paused: 'atualização automática',
+    sync_interval_min: 'intervalo da atualização',
+}
+const changed = (v: unknown): string | null => {
+    const keys = list(v).map((k) => CHANGED[k] ?? k)
+    return keys.length ? keys.join(', ') : null
+}
 // Junta as partes que existem: 'a · b · c'
 const join = (...parts: (string | null | undefined)[]): string => parts.filter(Boolean).join(' · ')
 
@@ -196,6 +214,21 @@ const EVENTS: Record<string, Rule> = {
         kind: 'source',
         action: 'Trocou a senha da fonte',
         detail: (_, m) => join(text(m.name), connectorLabel(m.connector)),
+    },
+    'source.config_changed': {
+        kind: 'source',
+        action: 'Personalizou fonte',
+        detail: (_, m) => join(text(m.name), connectorLabel(m.connector), changed(m.changed)),
+    },
+    'integration.updated': {
+        kind: 'source',
+        action: 'Configurou integração',
+        detail: (_, m) =>
+            join(
+                text(m.integration) === 'meta' ? 'Meta (Facebook Ads)' : text(m.integration),
+                changed(m.changed),
+                m.secret === 'set' ? 'chave do app trocada' : m.secret === 'clear' ? 'chave do app apagada' : null,
+            ),
     },
     'source.disconnected': {
         kind: 'source',

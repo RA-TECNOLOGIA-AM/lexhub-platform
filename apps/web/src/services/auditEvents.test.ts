@@ -211,3 +211,28 @@ describe('modo suporte', () => {
         expect(actionFilter('support').p_actions).toEqual(['support.started', 'support.viewed', 'support.ended'])
     })
 })
+
+describe('fontes e integrações', () => {
+    it('personalizou fonte e configurou a Integração Meta: o que mudou, em português, sem segredo', () => {
+        const cfg = toAuditEvent(
+            raw({
+                action: 'source.config_changed',
+                metadata: { name: 'Ads NG', connector: 'facebook_ads', changed: ['breakdowns', 'metrics'] },
+            }),
+        )
+        expect(cfg).toMatchObject({ kind: 'source', action: 'Personalizou fonte' })
+        expect(cfg.detail).toBe('Ads NG · Facebook Ads · detalhamentos, métricas')
+        const meta = toAuditEvent(
+            raw({
+                action: 'integration.updated',
+                metadata: { integration: 'meta', changed: ['app_id', 'sync_paused'], secret: 'set' },
+            }),
+        )
+        expect(meta).toMatchObject({ kind: 'source', action: 'Configurou integração' })
+        expect(meta.detail).toBe('Meta (Facebook Ads) · ID do app, atualização automática · chave do app trocada')
+        const keep = toAuditEvent(
+            raw({ action: 'integration.updated', metadata: { integration: 'meta', changed: [], secret: 'keep' } }),
+        )
+        expect(keep.detail).toBe('Meta (Facebook Ads)')
+    })
+})

@@ -6,6 +6,7 @@ import {
     costPer,
     count,
     dateLabel,
+    intervalLabel,
     isActive,
     money,
     objectiveLabel,
@@ -25,7 +26,9 @@ export function AdsSummaryPanel({ summary, currency }: AdsSummaryPanelProps) {
         s.backfill === null
             ? 'A primeira coleta ainda não começou (ela roda logo depois de conectar).'
             : s.backfill.done
-              ? 'Histórico completo; os últimos dias são atualizados a cada 10 minutos.'
+              ? s.syncPaused
+                  ? 'Histórico completo. A atualização automática está pausada (Integração Meta).'
+                  : `Histórico completo; os últimos dias são atualizados a cada ${intervalLabel(s.syncEveryMin)}.`
               : `Buscando o histórico: já guardado até ${dateLabel(s.backfill.coveredUntil)}.`
     return (
         <section aria-label="Dados guardados" className="ads-summary">

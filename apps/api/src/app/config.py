@@ -63,20 +63,18 @@ class Settings(BaseSettings):
     # Só desenvolvimento: deixa conectar em banco de rede interna (localhost, 10.x...). Em produção, False.
     SOURCE_ALLOW_PRIVATE_HOSTS: bool = False
 
-    # --- Facebook Ads (Marketing API da Meta; app/facebook_ads.py e app/facebook_ads_sync.py). O token do
-    # usuário do sistema fica cifrado no banco com a SOURCE_SECRET_KEY, como a senha do banco. ---
-    # Versão da Graph API (a Meta mantém cada uma por uns 2 anos; v26.0 é de 29/07/2026).
+    # --- Facebook Ads (Marketing API da Meta; app/facebook_ads.py e app/facebook_ads_sync.py). O token de cada
+    # conta fica cifrado no banco com a SOURCE_SECRET_KEY, como a senha do banco. ---
+    # Reserva: o app da Meta e a versão da Graph API são configurados na tela (Unidades e fontes > Integração
+    # Meta, app/meta_config.py); estes só valem quando a tela não definiu.
     FACEBOOK_GRAPH_VERSION: str = Field(default="v26.0", pattern=r"^v\d{2}\.0$")
-    # Chave secreta do app da Meta: com ela cada chamada leva o appsecret_proof (obrigatório se o app
-    # tiver "Require App Secret" ligado). Vazia = sem appsecret_proof.
     FACEBOOK_APP_SECRET: str = ""
-    # ID do app da Meta: com ele e a chave, a tela mostra o tipo e a validade do token (/debug_token).
     FACEBOOK_APP_ID: str = ""
     FACEBOOK_HTTP_TIMEOUT: float = Field(default=30.0, ge=5.0, le=120.0)
-    # A coleta que grava as métricas em app.facebook_ads_daily. Desligada por padrão: uma API local com o
-    # banco de produção não coleta sozinha. Em produção, ligar em UMA réplica só.
+    # Trava da máquina para a coleta que grava as métricas em app.facebook_ads_daily. Desligada por padrão:
+    # uma API local com o banco de produção não coleta sozinha. Em produção, ligar em UMA réplica só. Ligar ou
+    # pausar no dia a dia e o intervalo (para todas as contas) são na tela (Integração Meta).
     FACEBOOK_ADS_SYNC_ENABLED: bool = False
-    FACEBOOK_ADS_SYNC_INTERVAL: int = Field(default=600, ge=60, le=3600)
 
     # --- Bancos de origem (iguais à v1). Banco sem variáveis = desligado. ---
     DB_NG_URL: str = ""
