@@ -11,6 +11,7 @@ import { dataClient } from '../../../services/client.ts'
 import type { InviteRequest } from '../../../types/index.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
 import { useAutoRefresh } from '../../../hooks/useAutoRefresh.ts'
+import { seatAlert } from '../../../lib/planLimits.ts'
 import { InvitePanel } from './InvitePanel.tsx'
 import { MemberDetail } from './MemberDetail.tsx'
 import { MemberFilters } from './MemberFilters.tsx'
@@ -53,7 +54,14 @@ export function MembersPage() {
     }, [])
     const { data, error } = useAsync(() => dataClient.listMembers(org), [org, version])
     // Modo suporte ("Ver como este membro"): só para quem tem a permissão. Falhou = sem o botão.
-    const canSupport = useAsync(() => dataClient.getMyAdminPermissions(org), [org]).data?.support === true
+    const perms = useAsync(() => dataClient.getMyAdminPermissions(org), [org]).data
+    const canSupport = perms?.support === true
+    // Assentos do plano: só quem vê Plano e cobrança busca. Falhou = sem aviso. Refaz depois de convidar.
+    const canBilling = perms?.billing === true
+    const billing = useAsync(
+        () => (canBilling ? dataClient.getBilling(org).catch(() => null) : Promise.resolve(null)),
+        [org, canBilling, version],
+    ).data
     // Busca a lista de novo a cada minuto (com a aba visível): quem entrou ou saiu aparece sem recarregar.
     useAutoRefresh(60_000, () => setVersion((v) => v + 1), data)
 
@@ -138,6 +146,8 @@ export function MembersPage() {
                         units={data.units}
                         teams={data.teams}
                         canInviteAdmin={data.can_invite_admin}
+                        seatAlert={seatAlert(billing?.usage)}
+                        billingPath={`/${org}/admin/plano`}
                         onSend={sendInvite}
                         onClose={() => setInviting(false)}
                     />

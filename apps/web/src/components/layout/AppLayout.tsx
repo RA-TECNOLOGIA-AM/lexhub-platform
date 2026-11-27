@@ -22,6 +22,7 @@ import { useAsync } from '../../hooks/useAsync.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useSidebarCollapsed } from '../../hooks/useSidebarCollapsed.ts'
 import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
+import { limitAlerts } from '../../lib/planLimits.ts'
 import { usePendingApiKeys } from '../../hooks/usePendingApiKeys.ts'
 import { usePresenceHeartbeat } from '../../hooks/usePresenceHeartbeat.ts'
 import { tvSession } from '../../contexts/tvSession.ts'
@@ -71,6 +72,15 @@ export function AppLayout() {
         [orgSlug],
     )
     const perms = menuPermissions(permsQuery.data ?? null, permsQuery.error)
+    // Limites do plano perto de acabar (sino): só quem vê Plano e cobrança busca; falhou = sem aviso.
+    const billingQuery = useAsync(
+        () =>
+            orgSlug && permsQuery.data?.billing === true && !support
+                ? dataClient.getBilling(orgSlug)
+                : Promise.resolve(null),
+        [orgSlug, permsQuery.data?.billing, !!support],
+    )
+    const planAlerts = limitAlerts(billingQuery.data?.usage ?? [])
     // Selo de chaves de API pendentes: só o Desenvolvedor busca.
     const pendingKeys = usePendingApiKeys(orgSlug, permsQuery.data?.api_keys === true)
 
@@ -209,7 +219,13 @@ export function AppLayout() {
                     <div className="topbar-slot" ref={setTopbarEnd} />
                     {/* Busca de dashboards só fora deles (hub, admin...): dentro de um dashboard sai da frente. */}
                     {!dashboardKey && <SearchBox org={org.slug} />}
-                    <NotificationsBell staff={user.platform_staff} pending={pending} onNavigate={closeMenu} />
+                    <NotificationsBell
+                        staff={user.platform_staff}
+                        pending={pending}
+                        planAlerts={planAlerts}
+                        billingPath={`/${org.slug}/admin/plano`}
+                        onNavigate={closeMenu}
+                    />
                     <FullscreenToggle />
                     <ThemeToggle />
                     <SettingsButton />
