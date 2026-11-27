@@ -171,6 +171,94 @@ def test_relatorio_divide_o_periodo_quando_a_meta_pede_menos_dados():
     ]
 
 
+def test_relatorio_divide_o_periodo_quando_a_meta_nao_responde_a_tempo():
+    def answer(req):
+        span = json.loads(req.url.params["time_range"])
+        if span["since"] != span["until"]:
+            raise httpx.ReadTimeout("lento", request=req)
+        return {"data": [{"ad_id": "1", "date_start": span["since"]}]}
+
+    graph = FakeGraph({"/act_9/insights": answer})
+
+    async def go():
+        async with graph.client() as c:
+            return await c.report(
+                "act_9", level="ad", fields="x", since=date(2026, 11, 1), until=date(2026, 11, 3)
+            )
+
+    assert [r["date_start"] for r in run(go())] == ["2026-11-01", "2026-11-02", "2026-11-03"]
+
+
+def test_relatorio_de_um_dia_que_nao_responde_a_tempo_vira_erro():
+    def answer(req):
+        raise httpx.ReadTimeout("lento", request=req)
+
+    graph = FakeGraph({"/act_9/insights": answer})
+
+    async def go():
+        async with graph.client() as c:
+            return await c.report(
+                "act_9", level="ad", fields="x", since=date(2026, 11, 1), until=date(2026, 11, 1)
+            )
+
+    with pytest.raises(GraphUnavailable) as exc:
+        run(go())
+    assert exc.value.timeout
+    assert len(graph.requests) == 1
+
+
+def test_rede_fora_nao_divide_o_periodo():
+    def answer(req):
+        raise httpx.ConnectError("sem rede", request=req)
+
+    graph = FakeGraph({"/act_9/insights": answer})
+
+    async def go():
+        async with graph.client() as c:
+            return await c.report(
+                "act_9", level="ad", fields="x", since=date(2026, 11, 1), until=date(2026, 11, 30)
+            )
+
+    with pytest.raises(GraphUnavailable) as exc:
+        run(go())
+    assert not exc.value.timeout
+    assert len(graph.requests) == 1
+
+
+def test_lista_pede_paginas_menores_quando_a_meta_pede_menos_dados():
+    # Anúncios com o criativo: a Meta recusa a página de 500 e aceita a de 100; o cursor continua.
+    def answer(req):
+        limit, after = int(req.url.params["limit"]), req.url.params.get("after")
+        if limit > 100:
+            return error(1, status=500, message="Please reduce the amount of data")
+        if after is None:
+            return {"data": [{"id": "1"}], "paging": {"cursors": {"after": "AA"}, "next": "x"}}
+        return {"data": [{"id": "2"}], "paging": {"cursors": {"after": "BB"}}}
+
+    graph = FakeGraph({"/act_9/ads": answer})
+
+    async def go():
+        async with graph.client() as c:
+            return await c.entities("act_9", "ad", creatives=True)
+
+    assert [r["id"] for r in run(go())] == ["1", "2"]
+    sent = [(r.url.params["limit"], r.url.params.get("after")) for r in graph.requests]
+    assert sent == [("500", None), ("100", None), ("100", "AA")]
+
+
+def test_lista_desiste_quando_nem_a_menor_pagina_passa():
+    graph = FakeGraph({"/act_9/ads": error(1, status=500, message="Please reduce the amount")})
+
+    async def go():
+        async with graph.client() as c:
+            return await c.entities("act_9", "ad", creatives=True)
+
+    with pytest.raises(GraphError) as exc:
+        run(go())
+    assert exc.value.kind == "too_much"
+    assert [r.url.params["limit"] for r in graph.requests] == ["500", "100", "25"]
+
+
 ROW = {
     "date_start": "2026-11-25",
     "account_id": "123",
