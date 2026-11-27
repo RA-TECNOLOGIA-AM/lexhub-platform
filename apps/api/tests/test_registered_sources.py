@@ -24,13 +24,17 @@ def settings(**over) -> Settings:
 
 
 class FakeRepo:
-    def __init__(self, rows):
+    def __init__(self, rows, ads=None):
         self.rows = rows
+        self.ads = ads or {}  # id da fonte -> linhas guardadas pela coleta
         self.loads = 0
 
     async def load(self, key):
         self.loads += 1
         return self.rows.get(key)
+
+    async def ads_rows(self, source_id):
+        return self.ads.get(source_id, [])
 
 
 PUB = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQabcdefghijklmnopqrstuv/pubhtml"
@@ -144,3 +148,29 @@ def test_roteamento_banco_do_env_e_fonte_com_segredo_no_banco():
     # Sem o banco da plataforma: indisponível (não tenta o .env, que não tem mais o link).
     with pytest.raises(SourceUnavailable):
         asyncio.run(source_fetcher(object(), "sheets_financeiro_ng", None).fetch("A"))
+
+
+def ads_row(enabled=True):
+    return row(
+        key="fb_ng_abc123",
+        connector="facebook_ads",
+        secret="EAAB-token",
+        enabled=enabled,
+        config={"ad_account_id": "act_1", "account_name": "Ca01"},
+    )
+
+
+def test_conta_de_anuncios_responde_facebook_ads_com_o_que_a_coleta_guardou():
+    guardado = [{"date": "2026-11-02", "valor_gasto": 10, "nome_conta": "Ca01"}]
+    repo = FakeRepo({"fb_ng_abc123": ads_row()}, ads={"s1": guardado})
+    fetcher = RegisteredSourceFetcher(RegisteredSources(repo, settings()), "fb_ng_abc123")
+    assert asyncio.run(fetcher.fetch("facebook_ads")) == guardado
+    with pytest.raises(ValueError):
+        asyncio.run(fetcher.fetch("perfil_clientes_lexpre"))
+
+
+def test_conta_de_anuncios_desligada_nao_responde():
+    repo = FakeRepo({"fb_ng_abc123": ads_row(enabled=False)}, ads={"s1": [{"x": 1}]})
+    fetcher = RegisteredSourceFetcher(RegisteredSources(repo, settings()), "fb_ng_abc123")
+    with pytest.raises(SourceDisabled):
+        asyncio.run(fetcher.fetch("facebook_ads"))

@@ -14,7 +14,10 @@ Exportação (nova na V2; a v1 não exportava esta página), nas colunas da do M
     (actions_NG_2, a base do "Leads" da página, com o perfil e a campanha do cliente) e os do LexPre do escritório
     da NG (o relatório de Leads do Marketing (LexPre)), com a coluna "Base" dizendo de onde veio. Segue o período
     e os filtros da tela.
-  * Facebook Ads — o relatório do Marketing (LexPre) do escritório da NG (os anúncios são do banco NG).
+  * Facebook Ads — o relatório do Marketing (LexPre) do escritório da NG.
+
+Facebook Ads: das contas da Meta conectadas na unidade (app/dashboards/anuncios_meta.py), as mesmas no cálculo
+do banco NG e no do LexPre; sem conta conectada, da tabela metrics_ads.facebook_ads do banco NG, como na v1.
 """
 
 from dataclasses import replace
@@ -29,6 +32,7 @@ from app.analyses.NG.marketing_ng import (
     _valor_causa_row_analise_thiago,
 )
 from app.dashboards import generico_v1, marketing_lexpre
+from app.dashboards.anuncios_meta import com_anuncios_da_meta
 from app.dashboards.base import (
     DashboardContext,
     DashboardInputError,
@@ -70,7 +74,8 @@ def contexto_lexpre(ctx: DashboardContext) -> tuple[DashboardContext | None, str
         source=fonte,
         unit_ref=ref,
         source_db="lexpre",
-        # O Facebook Ads do LexPre vem do banco ng (o mesmo deste dashboard): CAC e ROAS do LexPre precisam dele.
+        # Sem conta da Meta conectada (ctx.ads_sources, que segue no contexto), o Facebook Ads do LexPre vem do
+        # banco ng (o mesmo deste dashboard): CAC e ROAS do LexPre precisam dele.
         extra_sources={"ng": ctx.source},
         extra_refs={"ng": ctx.unit_ref},
     ), None
@@ -92,7 +97,8 @@ async def build(ctx: DashboardContext) -> dict:
         raise NotReady("Marketing (banco NG) só existe na v1 para a NG")
     dims, valores = selecao(ctx.filters)
     resposta = await generico_v1.chamar_v1(
-        ctx,
+        # O Facebook Ads das contas da Meta da unidade, se conectadas (senão, o do banco ng).
+        replace(ctx, source=com_anuncios_da_meta(ctx)),
         copia,
         copia.HANDLERS["marketing_NG"],
         from_date=ctx.period.start,
@@ -249,7 +255,7 @@ async def export_leads(ctx: DashboardContext) -> list[dict[str, Any]]:
 
 
 async def export_facebook(ctx: DashboardContext) -> list[dict[str, Any]]:
-    """O Facebook Ads do Marketing (LexPre) do escritório da NG (os anúncios ficam no banco NG)."""
+    """O Facebook Ads do Marketing (LexPre) do escritório da NG (contas da Meta da unidade ou banco NG)."""
     if ctx.unit_ref != "NG":
         raise NotReady("Marketing (banco NG) só existe na v1 para a NG")
     lexpre_ctx, motivo = contexto_lexpre(replace(ctx, filters={}))
@@ -269,6 +275,7 @@ MODULE = DashboardModule(
     queries=copia.QUERIES_POR_DASHBOARD["marketing_NG"],
     # Novo na V2: o comercial do LexPre (escritório da NG) somado aos números do banco NG.
     extra_queries={"lexpre": marketing_lexpre.QUERIES},
+    meta_ads=True,
     export=ExportSpec(
         fields={slug: slug for slug in CAMPOS_LEADS},
         labels=CAMPOS_LEADS,

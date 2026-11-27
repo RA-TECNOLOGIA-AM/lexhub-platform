@@ -50,6 +50,9 @@ class DashboardContext:
     # ligados (app.unit_source_refs): banco -> busca e banco -> ref da unidade nele.
     extra_sources: dict[str, SourceFetcher] = field(default_factory=dict)
     extra_refs: dict[str, str] = field(default_factory=dict)
+    # As contas de anúncios da Meta ligadas à unidade (key da fonte -> busca; query `facebook_ads`), só nos
+    # módulos com `meta_ads`. Vazio = a unidade ainda não conectou conta: o módulo segue no banco ng.
+    ads_sources: dict[str, SourceFetcher] = field(default_factory=dict)
     # De que banco `source` lê: o do módulo ou, numa unidade sem ele, um dos alt_sources.
     source_db: str = ""
     # Exportação: as opções escolhidas na janela (ExportSpec.options), ex.: {"criterio": "saida"}.
@@ -146,6 +149,9 @@ class DashboardModule:
     # Queries de `queries` que podem vir só com as linhas da unidade da tela (app/unit_scope.py): o cálculo
     # descarta as das outras unidades antes de qualquer conta. Conferido em tests/test_unit_scope_paridade.py.
     unit_scoped: tuple[str, ...] = ()
+    # Lê o Facebook Ads das contas da Meta conectadas na unidade (Unidades e fontes): a casca entrega
+    # ctx.ads_sources (app/dashboards/anuncios_meta.py).
+    meta_ads: bool = False
 
     def pick_source(self, refs: dict[str, str]) -> tuple[str, str] | None:
         """(banco, ref da unidade nele) de onde o dashboard sai nesta unidade; None = nenhum ligado."""

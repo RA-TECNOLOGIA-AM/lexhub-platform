@@ -320,14 +320,42 @@ class FakeSources:
     def __init__(self):
         self.members: dict[tuple[str, str, str], str] = {}  # (user_id, org_id, source_db) -> ref
         self.data: dict[str, list] = {}  # query_name -> linhas
+        # Fonte com dados próprios (db_name -> {query_name -> linhas}), ex.: cada conta de anúncios da Meta;
+        # a que não está aqui lê `data`.
+        self.by_db: dict[str, dict[str, list]] = {}
+        self.disabled: set[str] = set()  # fontes desligadas na tela (fetch -> SourceDisabled)
+        self.loading: set[str] = set()  # contas da Meta ainda carregando o histórico
         self.last: FakeSource | None = None
 
     async def member_ref(self, user_id, org_id, source_db):
         return self.members.get((user_id, org_id, source_db))
 
+    async def ads_ready(self, keys):
+        """Contas da Meta: as ligadas, se nenhuma estiver carregando o histórico (`loading`)."""
+        if any(k in self.loading for k in keys if k not in self.disabled):
+            return []
+        return [k for k in keys if k not in self.disabled]
+
     def factory(self, db_name):
-        self.last = FakeSource(db_name, self.data)
-        return self.last
+        if db_name in self.disabled:
+            return _DisabledSource(db_name)
+        source = FakeSource(db_name, self.by_db.get(db_name, self.data))
+        if db_name not in self.by_db:
+            self.last = source
+        return source
+
+
+class _DisabledSource:
+    def __init__(self, db_name: str):
+        self.db_name = db_name
+
+    async def fetch(self, query_name):
+        from app.database import SourceDisabled
+
+        raise SourceDisabled(self.db_name)
+
+    def synced_at(self):
+        return None
 
 
 @pytest.fixture
