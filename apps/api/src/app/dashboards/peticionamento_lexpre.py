@@ -174,9 +174,10 @@ from app.dashboards.peticionamento_lexpre_legado import (
     buscar_peticionamento_legado,
     misturar_legado_no_corpo,
 )
+from app.dashboards.reajuizamento_lexpre import QUERY_REAJUIZAMENTO, acrescentar_reajuizamento
 from app.dashboards.rubricas_reunidas import componentes_por_demanda, rubricas_reunidas
 
-QUERIES = ("log_setor_demanda_lexpre_NG", "demanda_rubrica_reunida_lexpre_NG")
+QUERIES = ("log_setor_demanda_lexpre_NG", "demanda_rubrica_reunida_lexpre_NG", QUERY_REAJUIZAMENTO)
 
 
 def opcoes_filtro(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -427,6 +428,13 @@ async def build(ctx: DashboardContext) -> dict:
     legado = await buscar_peticionamento_legado(ctx)
     if legado:
         fonte_indicadores = misturar_legado_no_corpo(corpo, legado)
+    # Reajuizamento do LexPre: fora dos totais e da comissão, em cards próprios.
+    await acrescentar_reajuizamento(
+        build,
+        ctx,
+        corpo,
+        {"peticionados_de_reajuizamento": "total_peticionados", "represados_de_reajuizamento": "represados"},
+    )
     return {
         **corpo,
         "opcoes_filtro": opcoes,

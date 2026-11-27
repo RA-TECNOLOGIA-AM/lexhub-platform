@@ -5,14 +5,16 @@ import { ColumnChart } from '../../../components/charts/ColumnChart.tsx'
 import { DonutChart } from '../../../components/charts/DonutChart.tsx'
 import { LineChart } from '../../../components/charts/LineChart.tsx'
 import { DashSection } from '../../../components/dashboard/DashSection.tsx'
-import { DeltaPill, FootRow, HeroStat, MiniStat, Pill, StackedRate } from '../../../components/dashboard/StatCard.tsx'
+import { DeltaPill, FootRow, HeroStat, Pill, StackedRate } from '../../../components/dashboard/StatCard.tsx'
 import { CountUp } from '../../../components/ui/CountUp.tsx'
 import { Segmented } from '../../../components/ui/Segmented.tsx'
 import { seriesByYear, sortByMonth, topN } from '../../../lib/charts.ts'
 import { fmt } from '../../../lib/format.ts'
+import { CardCompacto, CardDuplo, CardModo, RitmoDosDois } from '../setor/IndicadoresCards.tsx'
+import { ReajuizamentoResumo } from '../setor/Reajuizamento.tsx'
 import type { ContentProps } from '../types.ts'
 import { CORES_ANO, MESES, diaCurto, diaLongo, mesBarra, mesNome, periodo } from '../setor/datas.ts'
-import { DevolucaoCard, DevolucaoResumo, Velocidade } from '../setor/Devolucao.tsx'
+import { DevolucaoCard, DevolucaoResumo } from '../setor/Devolucao.tsx'
 import { FuncionarioPanel, type PainelLabels } from '../setor/FuncionarioPanel.tsx'
 import { RubricasModal } from '../setor/RubricasModal.tsx'
 import {
@@ -68,6 +70,10 @@ export function PeticionamentoLexpreContent({
     const fila = share(s.represados, operacao)
     const filaTone = tomDaFila(fila)
     const topRepresado = topN(data.represados_por_materia, 1)[0]?.name ?? null
+    // Modo de peticionamento: manual (base da comissão) x automático (sistema).
+    const manual = s.peticionados_manualmente.total
+    const auto = s.peticionados_automaticamente.total
+    const pctAuto = share(auto, manual + auto)
 
     const pessoas = funcionarios({
         feitos: data.peticionados_por_funcionario,
@@ -98,14 +104,19 @@ export function PeticionamentoLexpreContent({
         <div className="dsecs">
             <DashSection
                 index={1}
-                eyebrow="Visão geral"
-                title="Indicadores do período"
+                eyebrow="Peticionamento (LexPre)"
+                badge={
+                    <Pill tone="info">
+                        {fmt.dec1(pctAuto)}% automação · {fmt.dec1(share(protocolados, peticionados))}% protocolados
+                    </Pill>
+                }
+                title="Indicadores do período — Peticionamento"
                 subtitle={
                     data.fonte_indicadores === 'legado'
                         ? 'Sem peticionados no LexPre neste período: números do Peticionamento legado (volume, fila, tempos e valores). Devoluções continuam do LexPre.'
                         : data.fonte_indicadores === 'misto'
                           ? 'Volume, valor e tempos somam LexPre + Peticionamento legado no período. Fila, cancelados e devoluções são do LexPre.'
-                          : 'Volume, tempos, valores e fila de não peticionados no intervalo selecionado.'
+                          : 'Volume, tempos, valores confeccionados e fila de não peticionados no intervalo selecionado.'
                 }
             >
                 <div className="grid grid-stat">
@@ -114,7 +125,8 @@ export function PeticionamentoLexpreContent({
                         icon="check-circle"
                         tone="accent"
                         value={<CountUp value={peticionados} format={fmt.int} />}
-                        below={<DeltaPill value={s.total_peticionados.comparativo} suffix=" vs mês anterior" plain />}
+                        aside={<DeltaPill value={s.total_peticionados.comparativo} />}
+                        below={<span className="muted">vs mês anterior</span>}
                         hint="Demandas confeccionadas (não canceladas) que saíram do Peticionamento no período: manuais + automáticas."
                         footer={
                             <>
@@ -124,10 +136,12 @@ export function PeticionamentoLexpreContent({
                                             Protocolados:{' '}
                                             <strong className="num">
                                                 <CountUp value={protocolados} format={fmt.int} />
-                                            </strong>{' '}
-                                            <span className="tone-text-ok">
-                                                ({fmt.dec1(share(protocolados, peticionados))}%)
-                                            </span>
+                                            </strong>
+                                        </span>
+                                    }
+                                    right={
+                                        <span className="num tone-text-ok">
+                                            {fmt.dec1(share(protocolados, peticionados))}%
                                         </span>
                                     }
                                 />
@@ -148,8 +162,9 @@ export function PeticionamentoLexpreContent({
                         icon="x-circle"
                         tone="danger"
                         value={<CountUp value={s.represados} format={fmt.int} />}
-                        below={<StackedRate text={`${fmt.dec1(fila)}%`} caption="na fila" tone={filaTone} />}
-                        hint="Demandas no Peticionamento agora, ainda sem confecção. Não depende do período."
+                        aside={<Pill tone={filaTone}>{fmt.dec1(fila)}% na fila</Pill>}
+                        below={<span className="muted">Estoque atual aguardando</span>}
+                        hint="Demandas no Peticionamento agora, ainda sem confecção. Não depende do período. '% na fila' = não peticionados ÷ (peticionados no período + não peticionados)."
                         footer={
                             <FootRow
                                 left="Aguardando peticionamento"
@@ -169,110 +184,95 @@ export function PeticionamentoLexpreContent({
                                 plain
                             />
                         }
-                        hint="Soma do valor de causa das demandas confeccionadas no período (ANP usa o dano moral)."
+                        hint="Soma do valor de causa das demandas confeccionadas no período (ANP usa o dano moral). Ticket médio = valor ÷ peticionados."
                         footer={
                             <FootRow
-                                left="Volume financeiro confeccionado"
-                                right={<span className="num tone-text-ok">{unit}</span>}
+                                left={
+                                    <span>
+                                        Ticket médio:{' '}
+                                        <strong className="num">
+                                            <CountUp value={s.ticket_medio_confeccionado.total} format={fmt.brl} />
+                                        </strong>
+                                    </span>
+                                }
+                                right={<DeltaPill value={s.ticket_medio_confeccionado.comparativo} plain />}
                             />
                         }
                     />
-                    <HeroStat
-                        label="Tempo médio peticionado"
+                    <CardDuplo
+                        label="Tempo peticionado"
                         icon="clock"
                         tone="info"
-                        value={<CountUp value={s.media_tempo_peticionado} format={fmt.duracao} />}
-                        below={
-                            <DeltaPill
-                                value={s.comparativo_tempo_medio_peticionado}
-                                betterWhenDown
-                                suffix=" vs mês anterior"
-                                plain
+                        hint="Da entrada no Peticionamento à saída, nas demandas confeccionadas no período. Média e mediana (metade levou até este tempo), com a variação vs mês anterior."
+                        caixas={[
+                            {
+                                label: 'Média',
+                                value: <CountUp value={s.media_tempo_peticionado} format={fmt.duracao} />,
+                                delta: s.comparativo_tempo_medio_peticionado,
+                                betterWhenDown: true,
+                            },
+                            {
+                                label: 'Mediana',
+                                value: <CountUp value={s.mediana_tempo_peticionado} format={fmt.duracao} />,
+                                delta: s.comparativo_mediana_tempo_peticionado,
+                                betterWhenDown: true,
+                            },
+                        ]}
+                        footer={
+                            <FootRow
+                                left={
+                                    <RitmoDosDois
+                                        media={s.comparativo_tempo_medio_peticionado}
+                                        mediana={s.comparativo_mediana_tempo_peticionado}
+                                    />
+                                }
+                                right={<span className="num muted">{unit}</span>}
                             />
                         }
-                        hint="Tempo médio entre a entrada no Peticionamento e a saída, nas demandas confeccionadas no período."
-                        footer={<FootRow left={<Velocidade value={s.comparativo_tempo_medio_peticionado} />} />}
                     />
                 </div>
-                <div className="grid grid-mini-5 grid-mini grid-mini-stack">
-                    <MiniStat
-                        label="Peticionados manualmente"
-                        icon="users"
-                        tone="accent"
-                        value={<CountUp value={s.peticionados_manualmente.total} format={fmt.int} />}
-                        below={
-                            <DeltaPill value={s.peticionados_manualmente.comparativo} suffix=" vs mês anterior" plain />
-                        }
-                        hint="Confeccionadas por um funcionário (peticionamento automático desligado). Base da comissão."
-                    />
-                    <MiniStat
-                        label="Peticionados automaticamente"
-                        icon="flow"
-                        tone="info"
-                        value={<CountUp value={s.peticionados_automaticamente.total} format={fmt.int} />}
-                        below={
-                            <DeltaPill
-                                value={s.peticionados_automaticamente.comparativo}
-                                suffix=" vs mês anterior"
-                                plain
-                            />
-                        }
-                        hint="Peticionadas pelo sistema (peticionamento automático ligado)."
+                <div className="grid grid-stat-3 grid-mini">
+                    <CardModo
+                        label="Modo de peticionamento"
+                        manual={manual}
+                        auto={auto}
+                        deltaManual={s.peticionados_manualmente.comparativo}
+                        deltaAuto={s.peticionados_automaticamente.comparativo}
+                        hint="Manualmente: confeccionadas por um funcionário (base da comissão). Automaticamente: peticionadas pelo sistema."
                     />
                     {data.fonte_indicadores === 'legado' && s.processos_em_revisao != null ? (
-                        <MiniStat
+                        <CardCompacto
                             label="Revisão"
                             icon="eye"
                             tone="warn"
                             value={<CountUp value={s.processos_em_revisao} format={fmt.int} />}
+                            delta={null}
                             below={<StackedRate text="agora" caption="não depende do período" tone="neutral" />}
                             hint="Processos em revisão (STATUS = REVISÃO): a conferência antes do protocolo. Total de agora no legado, como na página antiga."
                         />
                     ) : (
-                        <MiniStat
+                        <CardCompacto
                             label="Cancelados"
                             icon="x-circle"
                             tone="neutral"
                             value={<CountUp value={s.cancelados.total} format={fmt.int} />}
-                            below={
-                                <DeltaPill
-                                    value={s.cancelados.comparativo}
-                                    betterWhenDown
-                                    suffix=" vs mês anterior"
-                                    plain
-                                />
-                            }
+                            delta={s.cancelados.comparativo}
+                            betterWhenDown
                             hint="Demandas canceladas que saíram do Peticionamento no período."
                         />
                     )}
-                    <MiniStat
-                        label="Ticket médio"
-                        icon="dollar"
-                        tone="ok"
-                        value={<CountUp value={s.ticket_medio_confeccionado.total} format={fmt.brl} />}
-                        below={
-                            <DeltaPill
-                                value={s.ticket_medio_confeccionado.comparativo}
-                                suffix=" vs mês anterior"
-                                plain
-                            />
-                        }
-                        hint="Valor confeccionado dividido pelo total de peticionados no período."
-                    />
-                    <MiniStat
-                        label="Mediana de tempo peticionado"
-                        icon="clock"
-                        tone="info"
-                        value={<CountUp value={s.mediana_tempo_peticionado} format={fmt.duracao} />}
-                        below={
-                            <DeltaPill
-                                value={s.comparativo_mediana_tempo_peticionado}
-                                betterWhenDown
-                                suffix=" vs mês anterior"
-                                plain
-                            />
-                        }
-                        hint="Metade das demandas confeccionadas no período levou até este tempo no Peticionamento."
+                    <ReajuizamentoResumo
+                        setor="Peticionamento"
+                        periodo={{
+                            label: 'Peticionados',
+                            value: s.peticionados_de_reajuizamento,
+                            hint: 'Peticionados: demandas de reajuizamento peticionadas no período.',
+                        }}
+                        fila={{
+                            label: 'Não peticionados',
+                            value: s.represados_de_reajuizamento,
+                            hint: 'Não peticionados: demandas de reajuizamento no Peticionamento agora.',
+                        }}
                     />
                 </div>
             </DashSection>

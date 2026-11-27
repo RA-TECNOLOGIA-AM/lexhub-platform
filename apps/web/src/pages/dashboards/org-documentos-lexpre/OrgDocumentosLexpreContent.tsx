@@ -4,14 +4,15 @@ import { ChartCard, ChartEmpty } from '../../../components/charts/ChartCard.tsx'
 import { ColumnChart } from '../../../components/charts/ColumnChart.tsx'
 import { LineChart } from '../../../components/charts/LineChart.tsx'
 import { DashSection } from '../../../components/dashboard/DashSection.tsx'
-import { DeltaPill, FootRow, HeroStat, MiniStat, Pill, StackedRate } from '../../../components/dashboard/StatCard.tsx'
+import { DeltaPill, FootRow, HeroStat, Pill } from '../../../components/dashboard/StatCard.tsx'
 import { CountUp } from '../../../components/ui/CountUp.tsx'
 import { Segmented } from '../../../components/ui/Segmented.tsx'
 import { seriesByYear, sortByMonth, topN } from '../../../lib/charts.ts'
 import { fmt } from '../../../lib/format.ts'
+import { ReajuizamentoResumo } from '../setor/Reajuizamento.tsx'
+import { CardCompacto, CardDuplo } from '../setor/IndicadoresCards.tsx'
 import type { ContentProps } from '../types.ts'
 import { CORES_ANO, MESES, diaCurto, diaLongo, mesBarra, mesNome, periodo } from '../setor/datas.ts'
-import { Velocidade } from '../setor/Devolucao.tsx'
 import { FuncionarioPanel, type PainelLabels } from '../setor/FuncionarioPanel.tsx'
 import { RubricasModal } from '../setor/RubricasModal.tsx'
 import {
@@ -66,6 +67,10 @@ export function OrgDocumentosLexpreContent({
     const fila = share(s.represados, operacao)
     const filaTone = tomDaFila(fila)
     const topRepresado = topN(data.nao_organizados_total_por_materia, 1)[0]?.name ?? null
+    // Modo de resolução: manual (base da comissão) x automático (sistema).
+    const manual = s.organizados_manualmente.total
+    const auto = s.organizados_e_peticionados_automaticamente.total
+    const pctAuto = share(auto, manual + auto)
 
     const pessoas = funcionarios({
         feitos: data.resolvidos_por_funcionario,
@@ -93,12 +98,13 @@ export function OrgDocumentosLexpreContent({
         <div className="dsecs">
             <DashSection
                 index={1}
-                eyebrow="Visão geral"
-                title="Indicadores do período"
+                eyebrow="Organização de Documentos (LexPre)"
+                badge={<Pill tone="ok">{fmt.dec1(pctAuto)}% automação</Pill>}
+                title="Indicadores do período — Organização de Documentos"
                 subtitle={
                     data.fonte_indicadores === 'legado'
                         ? 'Sem resolvidos no LexPre neste período: números do OrgDoc legado. Represados e devoluções continuam do LexPre (fila atual).'
-                        : 'Resoluções e tempos no intervalo selecionado, com comparativo ao período anterior.'
+                        : 'Resoluções, automação, devoluções e tempos no intervalo selecionado, com comparativo ao período anterior.'
                 }
             >
                 <div className="grid grid-stat">
@@ -107,7 +113,8 @@ export function OrgDocumentosLexpreContent({
                         icon="check-circle"
                         tone="accent"
                         value={<CountUp value={resolvidos} format={fmt.int} />}
-                        below={<DeltaPill value={s.resolvidos_total.comparativo} suffix="vs mês anterior" plain />}
+                        aside={<DeltaPill value={s.resolvidos_total.comparativo} />}
+                        below={<span className="muted">vs mês anterior</span>}
                         hint="Demandas que saíram da Organização de documentos no período: manuais + automáticas."
                         footer={
                             <>
@@ -117,10 +124,12 @@ export function OrgDocumentosLexpreContent({
                                             Protocolados:{' '}
                                             <strong className="num">
                                                 <CountUp value={protocolados} format={fmt.int} />
-                                            </strong>{' '}
-                                            <span className="tone-text-ok">
-                                                ({fmt.dec1(share(protocolados, resolvidos))}%)
-                                            </span>
+                                            </strong>
+                                        </span>
+                                    }
+                                    right={
+                                        <span className="num tone-text-ok">
+                                            {fmt.dec1(share(protocolados, resolvidos))}%
                                         </span>
                                     }
                                 />
@@ -141,8 +150,9 @@ export function OrgDocumentosLexpreContent({
                         icon="x-circle"
                         tone="danger"
                         value={<CountUp value={s.represados} format={fmt.int} />}
-                        below={<StackedRate text={`${fmt.dec1(fila)}%`} caption="na fila" tone={filaTone} />}
-                        hint="Demandas na Organização de documentos agora, ainda sem resolução. Não depende do período."
+                        aside={<Pill tone={filaTone}>{fmt.dec1(fila)}% na fila</Pill>}
+                        below={<span className="muted">Estoque atual aguardando</span>}
+                        hint="Demandas na Organização de documentos agora, ainda sem resolução. Não depende do período. '% na fila' = represados ÷ (resolvidos no período + represados)."
                         footer={
                             <FootRow
                                 left="Aguardando organização"
@@ -150,88 +160,97 @@ export function OrgDocumentosLexpreContent({
                             />
                         }
                     />
-                    <HeroStat
-                        label="Tempo médio resolvidos"
+                    <CardDuplo
+                        label="Tempo de resolução"
                         icon="clock"
                         tone="info"
-                        value={<CountUp value={s.media_tempo_resolvidos} format={fmt.duracao} />}
-                        below={
-                            <DeltaPill
-                                value={s.comparativo_tempo_medio_resolvidos}
-                                betterWhenDown
-                                suffix="vs mês anterior"
-                                plain
+                        hint="Da entrada no setor à saída, nas demandas resolvidas no período. Média e mediana (metade levou até este tempo), com a variação vs mês anterior."
+                        caixas={[
+                            {
+                                label: 'Média',
+                                value: <CountUp value={s.media_tempo_resolvidos} format={fmt.duracao} />,
+                                delta: s.comparativo_tempo_medio_resolvidos,
+                                betterWhenDown: true,
+                            },
+                            {
+                                label: 'Mediana',
+                                value: <CountUp value={s.mediana_tempo_resolvidos} format={fmt.duracao} />,
+                                delta: s.comparativo_mediana_tempo_resolvidos,
+                                betterWhenDown: true,
+                            },
+                        ]}
+                        footer={
+                            <FootRow
+                                left={<Ritmo nome="Média" value={s.comparativo_tempo_medio_resolvidos} />}
+                                right={<Ritmo nome="Mediana" value={s.comparativo_mediana_tempo_resolvidos} curto />}
                             />
                         }
-                        hint="Tempo médio entre a entrada no setor e a saída, nas demandas resolvidas no período."
-                        footer={<FootRow left={<Velocidade value={s.comparativo_tempo_medio_resolvidos} />} />}
                     />
-                    <HeroStat
-                        label="Mediana de tempo resolvidos"
-                        icon="clock"
-                        tone="info"
-                        value={<CountUp value={s.mediana_tempo_resolvidos} format={fmt.duracao} />}
-                        below={
-                            <DeltaPill
-                                value={s.comparativo_mediana_tempo_resolvidos}
-                                betterWhenDown
-                                suffix="vs mês anterior"
-                                plain
-                            />
+                    <CardDuplo
+                        label="Modo de resolução"
+                        icon="flow"
+                        tone="ok"
+                        badge={<Pill tone="info">{fmt.dec1(pctAuto)}% Auto</Pill>}
+                        hint="Manualmente: organizadas por um funcionário (base da comissão). Automaticamente: organizadas e peticionadas pelo sistema."
+                        caixas={[
+                            {
+                                label: 'Manualmente',
+                                value: <CountUp value={manual} format={fmt.int} />,
+                                delta: s.organizados_manualmente.comparativo,
+                            },
+                            {
+                                label: 'Automaticamente',
+                                value: <CountUp value={auto} format={fmt.int} />,
+                                delta: s.organizados_e_peticionados_automaticamente.comparativo,
+                                destaque: true,
+                            },
+                        ]}
+                        footer={
+                            <>
+                                <div className="split" aria-hidden="true">
+                                    <span className="split-b" style={{ flexGrow: manual }} />
+                                    <span className="split-info" style={{ flexGrow: auto }} />
+                                </div>
+                                <FootRow
+                                    left={<span className="num muted">Manual: {fmt.dec1(100 - pctAuto)}%</span>}
+                                    right={<span className="num tone-text-info">Automático: {fmt.dec1(pctAuto)}%</span>}
+                                />
+                            </>
                         }
-                        hint="Metade das demandas resolvidas no período levou até este tempo no setor."
-                        footer={<FootRow left={<Velocidade value={s.comparativo_mediana_tempo_resolvidos} />} />}
                     />
                 </div>
-                <div className="grid grid-stat grid-mini grid-mini-stack">
-                    <MiniStat
-                        label="Resolvido manualmente"
-                        icon="users"
-                        tone="accent"
-                        value={<CountUp value={s.organizados_manualmente.total} format={fmt.int} />}
-                        below={
-                            <DeltaPill value={s.organizados_manualmente.comparativo} suffix="vs mês anterior" plain />
-                        }
-                        hint="Organizadas por um funcionário. Base da comissão."
-                    />
-                    <MiniStat
-                        label="Resolvido automaticamente"
-                        icon="flow"
-                        tone="info"
-                        value={<CountUp value={s.organizados_e_peticionados_automaticamente.total} format={fmt.int} />}
-                        below={
-                            <DeltaPill
-                                value={s.organizados_e_peticionados_automaticamente.comparativo}
-                                suffix="vs mês anterior"
-                                plain
-                            />
-                        }
-                        hint="Organizadas e peticionadas pelo sistema (automático ligado)."
-                    />
-                    <MiniStat
+                <div className="grid grid-stat-3 grid-mini">
+                    <CardCompacto
                         label="Cancelados"
                         icon="x-circle"
                         tone="neutral"
                         value={<CountUp value={s.cancelados.total} format={fmt.int} />}
-                        below={
-                            <DeltaPill value={s.cancelados.comparativo} betterWhenDown suffix="vs mês anterior" plain />
-                        }
+                        delta={s.cancelados.comparativo}
+                        betterWhenDown
                         hint="Demandas canceladas que saíram da Organização de documentos no período."
                     />
-                    <MiniStat
+                    <CardCompacto
                         label="Devolvido p/ Pendência"
                         icon="undo"
                         tone="danger"
                         value={<CountUp value={s.devolvido_pendencia} format={fmt.int} />}
-                        below={
-                            <DeltaPill
-                                value={s.comparativo_devolvido_pendencia}
-                                betterWhenDown
-                                suffix="vs mês anterior"
-                                plain
-                            />
-                        }
-                        hint="Demandas que a Organização de documentos devolveu para Pendências (total histórico; o comparativo é das devoluções no período)."
+                        delta={s.comparativo_devolvido_pendencia}
+                        betterWhenDown
+                        alerta={(s.comparativo_devolvido_pendencia ?? 0) > 0}
+                        hint="Demandas que a Organização de documentos devolveu para Pendências (total histórico; o comparativo é das devoluções no período). 'Atenção' quando as devoluções subiram vs mês anterior."
+                    />
+                    <ReajuizamentoResumo
+                        setor="Org. Doc"
+                        periodo={{
+                            label: 'Resolvidos',
+                            value: s.resolvidos_de_reajuizamento,
+                            hint: 'Resolvidos: demandas de reajuizamento resolvidas no período.',
+                        }}
+                        fila={{
+                            label: 'Represados',
+                            value: s.represados_de_reajuizamento,
+                            hint: 'Represados: demandas de reajuizamento no setor agora.',
+                        }}
                     />
                 </div>
             </DashSection>
@@ -413,4 +432,12 @@ export function OrgDocumentosLexpreContent({
             )}
         </div>
     )
+}
+
+// "Média: perda de velocidade" / "Mediana: ganho": tempo subiu = perda; desceu = ganho.
+function Ritmo({ nome, value, curto }: { nome: string; value: number | null; curto?: boolean }) {
+    if (!value) return <span className="muted">{nome}: sem variação</span>
+    const ganho = value < 0
+    const texto = curto ? (ganho ? 'ganho' : 'perda') : ganho ? 'ganho de velocidade' : 'perda de velocidade'
+    return <span className={ganho ? 'tone-text-ok' : 'tone-text-danger'}>{`${nome}: ${texto}`}</span>
 }

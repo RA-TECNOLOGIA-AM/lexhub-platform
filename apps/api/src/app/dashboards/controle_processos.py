@@ -37,6 +37,7 @@ from app.analyses.NG import controle_processo_NG as controle_ng
 from app.dashboards import generico_v1, protocolo_lexpre
 from app.dashboards.base import DashboardContext, DashboardInputError, DashboardModule, NotReady
 from app.dashboards.pendencias_intermediarias import _FonteRJ, _sem_nulos
+from app.dashboards.reajuizamento_lexpre import QUERY_REAJUIZAMENTO
 from app.unit_scope import com_recorte
 
 
@@ -329,7 +330,7 @@ MODULE = DashboardModule(
             )
         ),
         "laadv": tuple(v1_la.QUERIES_POR_DASHBOARD["protocolo_LA"]),
-        "lexpre": (protocolo_lexpre.QUERY,),
+        "lexpre": (protocolo_lexpre.QUERY, QUERY_REAJUIZAMENTO),
     },
 )
 

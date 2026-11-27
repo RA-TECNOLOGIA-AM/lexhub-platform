@@ -109,8 +109,9 @@ from app.dashboards.pendencias_lexpre_legado import (
     buscar_pendencias_legado,
     misturar_legado_no_corpo,
 )
+from app.dashboards.reajuizamento_lexpre import QUERY_REAJUIZAMENTO, acrescentar_reajuizamento
 
-QUERIES = ("log_setor_demanda_lexpre_NG", "setor_func_lexpre_NG")
+QUERIES = ("log_setor_demanda_lexpre_NG", "setor_func_lexpre_NG", QUERY_REAJUIZAMENTO)
 
 
 def opcoes_filtro(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -229,6 +230,16 @@ async def build(ctx: DashboardContext) -> dict:
     legado = await buscar_pendencias_legado(ctx)
     if legado:
         fonte_indicadores = misturar_legado_no_corpo(corpo, legado)
+    # Reajuizamento do LexPre: fora dos totais e da comissão, em cards próprios (+ o do legado, se houver).
+    await acrescentar_reajuizamento(
+        build,
+        ctx,
+        corpo,
+        {
+            "pendencias_nao_resolvidas_reajuizamento": "pendencias_nao_resolvidas",
+            "pendencias_resolvidas_reajuizamento": "pendencias_resolvidas",
+        },
+    )
     return {**corpo, "opcoes_filtro": opcoes, "fonte_indicadores": fonte_indicadores}
 
 

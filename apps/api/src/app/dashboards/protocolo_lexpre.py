@@ -147,6 +147,7 @@ from app.dashboards.protocolo_lexpre_legado import (
     buscar_protocolo_legado,
     misturar_legado_no_corpo,
 )
+from app.dashboards.reajuizamento_lexpre import QUERY_REAJUIZAMENTO, acrescentar_reajuizamento
 
 QUERY = "log_setor_demanda_lexpre_NG"
 
@@ -330,6 +331,13 @@ async def build(ctx: DashboardContext) -> dict:
     legado = await buscar_protocolo_legado(ctx)
     if legado:
         fonte_indicadores = misturar_legado_no_corpo(corpo, legado)
+    # Reajuizamento do LexPre: fora dos totais e da comissão, em cards próprios (+ o do legado, se houver).
+    await acrescentar_reajuizamento(
+        build,
+        ctx,
+        corpo,
+        {"protocolados_de_reajuizamento": "protocolados_total", "represados_de_reajuizamento": "represados"},
+    )
     return {**corpo, "opcoes_filtro": opcoes, "fonte_indicadores": fonte_indicadores}
 
 
@@ -390,7 +398,7 @@ MODULE = DashboardModule(
     source_db="lexpre",
     source_label="LexPre",
     build=build,
-    queries=(QUERY,),
+    queries=(QUERY, QUERY_REAJUIZAMENTO),
     # Protocolo legado: NG e LARJ (RJ) no banco ng; LAAM (LA) no laadv.
     extra_queries=EXTRA_QUERIES,
     # Mesmos parâmetros da v1 (GET /protocolo-lexpre).

@@ -20,6 +20,9 @@ export type PeticionamentoLexpreResponse = {
         comparativo_mediana_tempo_peticionado: number | null
         // Situação atual do setor (totais, não dependem do período).
         represados: number // "Não peticionados"
+        // Reajuizamento do LexPre: fora dos totais e da comissão (cards próprios).
+        peticionados_de_reajuizamento?: number
+        represados_de_reajuizamento?: number
         // Só quando os KPIs vêm do legado NG/RJ (existia na página antiga; a LA não tinha).
         processos_em_revisao?: number | null
         retorno_org_doc: number
