@@ -1,9 +1,12 @@
 import type {
     AdsBackfillDays,
     AdsBreakdown,
+    AdsCampaignOption,
     AdsConversionOption,
     AdsMetricGroup,
+    AdsOptions,
     AdsSettings,
+    AdsTokenAccount,
 } from '../../../types/index.ts'
 
 // Módulo: as regras e os rótulos da fonte Facebook Ads, sem React (testados em facebookAds.test.ts).
@@ -286,3 +289,54 @@ export const cpm = (spend: number, impressions: number, currency = 'BRL'): strin
 // '2026-11-25' -> '25/11/2026'
 export const dateLabel = (iso: string | null | undefined): string =>
     iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : '—'
+
+// --- Várias contas no Conectar fonte (cada conta escolhida vira uma fonte) ------------------------------
+
+// Por que uma conta da lista do token não pode ser escolhida (null = pode).
+export function accountBlock(account: AdsTokenAccount): string | null {
+    if (account.assigned === false) {
+        return 'Sem acesso aos relatórios: no Gerenciador de Negócios, atribua a conta ao usuário do token.'
+    }
+    if (account.connectedTo) return `Já conectada em ${account.connectedTo}.`
+    return null
+}
+
+// As opções de várias contas juntas: conversões somadas (pelo tipo) e campanhas de todas, cada uma com o
+// nome da conta (o formulário agrupa por ela quando há mais de uma).
+export function mergeOptions(list: { account: string; options: AdsOptions }[]): {
+    campaigns: AdsCampaignOption[]
+    conversions: AdsConversionOption[]
+} {
+    const many = list.length > 1
+    const campaigns = list.flatMap(({ account, options }) =>
+        options.campaigns.map((c) => (many ? { ...c, account } : c)),
+    )
+    const byType = new Map<string, AdsConversionOption>()
+    for (const { options } of list) {
+        for (const c of options.conversions) {
+            const seen = byType.get(c.type)
+            byType.set(c.type, seen ? { ...seen, count30: seen.count30 + c.count30 } : { ...c })
+        }
+    }
+    const conversions = [...byType.values()].sort(
+        (a, b) => b.count30 - a.count30 || a.label.localeCompare(b.label, 'pt-BR'),
+    )
+    return { campaigns, conversions }
+}
+
+// A personalização de uma das contas: as campanhas escolhidas que são dela (as outras são de outra conta).
+export function settingsForAccount(settings: AdsSettings, accountCampaigns: readonly string[]): AdsSettings {
+    if (settings.campaigns === null) return settings
+    return { ...settings, campaigns: settings.campaigns.filter((id) => accountCampaigns.includes(id)) }
+}
+
+// "Só as escolhidas" com várias contas: cada conta precisa de ao menos uma campanha. null = tudo certo.
+export function accountsWithoutCampaigns(
+    settings: AdsSettings,
+    accounts: { name: string; campaigns: readonly string[] }[],
+): string | null {
+    if (settings.campaigns === null) return null
+    const missing = accounts.filter((a) => !a.campaigns.some((id) => settings.campaigns!.includes(id)))
+    if (missing.length === 0) return null
+    return `Escolha ao menos uma campanha de: ${missing.map((a) => a.name).join(', ')}.`
+}

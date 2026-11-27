@@ -89,6 +89,15 @@ Rate = Annotated[RateLimit, Depends(get_rate_limit)]
 Box = Annotated[SecretBox, Depends(get_secret_box)]
 
 
+async def _with_in_use(repo: SourceAdminRepo, info: dict[str, Any]) -> dict[str, Any]:
+    """Marca as contas já ligadas a uma fonte (connectedTo = 'Organização · UNIDADE'): a tela bloqueia
+    a escolha antes de o banco recusar."""
+    in_use = await repo.ad_accounts_in_use() if info.get("accounts") else {}
+    for account in info.get("accounts", []):
+        account["connectedTo"] = in_use.get(account["id"])
+    return info
+
+
 async def _meta[T](call: Awaitable[T]) -> T:
     try:
         return await call
@@ -126,13 +135,14 @@ async def _saved(
 
 @platform.post("/token")
 async def read_token(
-    body: TokenIn, user: Admin, graph_for: Graph, app: AppToken, rate: Rate
+    body: TokenIn, user: Admin, repo: Repo, graph_for: Graph, app: AppToken, rate: Rate
 ) -> dict[str, Any]:
     """Passo Acesso: quem é o token, as permissões, o que dá para fazer e as contas de anúncios que ele
     acessa (com o nome, para escolher numa lista). Não grava nada."""
     rate.check(user.user_id)
     async with graph_for(body.token.strip()) as graph:
-        return await _meta(token_info(graph, app_token=app))
+        info = await _meta(token_info(graph, app_token=app))
+    return await _with_in_use(repo, info)
 
 
 @platform.post("/inspect")
@@ -188,7 +198,8 @@ async def saved_token(
     _, token = await _saved(repo, box, org_slug, key)
     rate.check(user.user_id)
     async with graph_for(token) as graph:
-        return await _meta(token_info(graph, app_token=app))
+        info = await _meta(token_info(graph, app_token=app))
+    return await _with_in_use(repo, info)
 
 
 @org.get("/options")

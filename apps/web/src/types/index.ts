@@ -720,8 +720,12 @@ export type AdsAccount = { id: string; name: string; currency: string; timezone:
 export type AdsCapabilityStatus = 'used' | 'available' | 'warn' | 'missing'
 export type AdsTokenAccount = AdsAccount & {
     active: boolean
-    business: string | null // o Gerenciador de Negócios dono da conta (com business_management)
+    business: string | null // o Gerenciador de Negócios dono da conta
+    businessId?: string | null
     spent: number // total gasto na vida da conta
+    // false = o negócio tem a conta, mas ela não foi atribuída ao usuário do token (os relatórios não abrem)
+    assigned?: boolean
+    connectedTo?: string | null // já ligada a uma fonte: 'Organização · UNIDADE'; null = livre
 }
 export type AdsTokenInfo = {
     ok: boolean // false = token recusado ou sem nenhuma conta de anúncios
@@ -742,6 +746,7 @@ export type AdsCampaignOption = {
     status: string | null // effective_status da Meta (ACTIVE, PAUSED...)
     objective: string | null // OUTCOME_LEADS...
     spend30: number // gasto nos últimos 30 dias
+    account?: string // várias contas no Conectar: o nome da conta da campanha (a tela agrupa por ela)
 }
 export type AdsConversionOption = { type: string; label: string; count30: number }
 

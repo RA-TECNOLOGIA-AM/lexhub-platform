@@ -50,9 +50,33 @@ const ACCOUNTS: AdsTokenAccount[] = [
         business: 'LexGroup',
         spent: 12_004.9,
     },
+    // O negócio tem a conta, mas ela não foi atribuída ao usuário do token (aparece bloqueada).
+    {
+        id: 'act_4443332221',
+        name: 'RJ · Anúncios Rio',
+        currency: 'BRL',
+        timezone: 'America/Sao_Paulo',
+        status: 'ativa',
+        active: true,
+        business: 'LexGroup',
+        spent: 58_900,
+        assigned: false,
+    },
 ]
 
 export const adsAccountName = (id: string) => ACCOUNTS.find((a) => a.id === id)?.name ?? `Anúncios ${id.slice(-4)}`
+
+// As campanhas de uma conta: as mesmas do exemplo, com ids próprios por conta (os ids da Meta são únicos)
+// e o gasto proporcional ao tamanho da conta.
+function campaignsOf(account: string): AdsCampaignOption[] {
+    const suffix = account.replace(/\D/g, '').slice(-3)
+    const scale = account === 'act_1234567891' || !ACCOUNTS.some((a) => a.id === account) ? 1 : 0.3
+    return CAMPAIGNS.map((c) => ({
+        ...c,
+        id: c.id.slice(0, -3) + suffix.padStart(3, '0') + c.id.slice(-1),
+        spend30: Math.round(c.spend30 * scale * 100) / 100,
+    }))
+}
 
 const CAMPAIGNS: AdsCampaignOption[] = [
     {
@@ -112,7 +136,8 @@ const check = (key: SourceCheck['key'], ok: boolean, message: string): SourceChe
     skipped: false,
 })
 
-export function adsTokenInfo(token: string): AdsTokenInfo {
+// inUse: as contas já ligadas a uma fonte (conta -> 'Organização · UNIDADE'), como a API marca.
+export function adsTokenInfo(token: string, inUse: Record<string, string> = {}): AdsTokenInfo {
     const empty = {
         user: null,
         tokenType: null,
@@ -146,15 +171,20 @@ export function adsTokenInfo(token: string): AdsTokenInfo {
         pages_manage_ads: 'Anúncios das páginas',
         pages_show_list: 'Listar páginas',
     }
-    const accounts = noAccount ? [] : ACCOUNTS.map((a) => ({ ...a }))
+    const accounts = noAccount ? [] : ACCOUNTS.map((a) => ({ assigned: true, ...a, connectedTo: inUse[a.id] ?? null }))
+    const readable = accounts.filter((a) => a.assigned !== false)
     const status = (on: boolean): AdsCapabilityStatus => (on ? 'available' : 'missing')
     return {
-        ok: accounts.length > 0,
+        ok: readable.length > 0,
         checks: [
             net,
             check('login', true, 'Token aceito pela Meta (usuário Coletor LexHub)'),
-            accounts.length > 0
-                ? check('read', true, `${accounts.length} conta(s) de anúncios encontrada(s)`)
+            readable.length > 0
+                ? check(
+                      'read',
+                      true,
+                      `${readable.length} conta(s) de anúncios com acesso; ${accounts.length - readable.length} do negócio sem acesso aos relatórios`,
+                  )
                 : check(
                       'read',
                       false,
@@ -172,7 +202,7 @@ export function adsTokenInfo(token: string): AdsTokenInfo {
                 key: 'insights',
                 label: 'Relatórios de anúncios',
                 status: 'used',
-                detail: `Métricas, detalhamentos, campanhas e criativos de ${accounts.length} conta(s) de anúncios`,
+                detail: `Métricas, detalhamentos, campanhas e criativos de ${readable.length} conta(s) de anúncios`,
             },
             {
                 key: 'manage',
@@ -216,8 +246,8 @@ export function adsTokenInfo(token: string): AdsTokenInfo {
     }
 }
 
-export const adsOptions = () => ({
-    campaigns: CAMPAIGNS.map((c) => ({ ...c })),
+export const adsOptions = (account = 'act_1234567891') => ({
+    campaigns: campaignsOf(account),
     conversions: CONVERSIONS.map((c) => ({ ...c })),
 })
 
@@ -286,12 +316,12 @@ const SEGMENTS: Record<AdsBreakdown, [string[], number][]> = {
     ],
 }
 
-const chosenCampaigns = (settings: AdsSettings) =>
-    CAMPAIGNS.filter((c) => settings.campaigns === null || settings.campaigns.includes(c.id))
+const chosenCampaigns = (settings: AdsSettings, account: string) =>
+    campaignsOf(account).filter((c) => settings.campaigns === null || settings.campaigns.includes(c.id))
 
-export function adsPreview(settings: AdsSettings): AdsPreview {
+export function adsPreview(settings: AdsSettings, account = 'act_1234567891'): AdsPreview {
     const week = (c: AdsCampaignOption) => (c.spend30 * 7) / 30
-    const campaigns = chosenCampaigns(settings)
+    const campaigns = chosenCampaigns(settings, account)
         .filter((c) => c.spend30 > 0)
         .map((c) => ({ id: c.id, name: c.name, ...totalsFor(week(c), settings) }))
         .sort((a, b) => b.spend - a.spend)
@@ -332,13 +362,13 @@ export function adsPreview(settings: AdsSettings): AdsPreview {
 }
 
 // O resumo do que está guardado. `progress` (0 a 1): quanto do histórico a coleta já trouxe.
-export function adsSummary(settings: AdsSettings, progress: number): AdsSummary {
+export function adsSummary(settings: AdsSettings, progress: number, account = 'act_1234567891'): AdsSummary {
     const day = 86_400_000
     const iso = (ms: number) => new Date(ms).toISOString().slice(0, 10)
     const first = Date.now() - settings.backfillDays * day
     const covered = first + (Date.now() - first) * Math.min(progress, 1)
     const rows = Math.round(settings.backfillDays * 21 * Math.min(progress, 1))
-    const campaigns = chosenCampaigns(settings)
+    const campaigns = chosenCampaigns(settings, account)
     const spend = campaigns.reduce((sum, c) => sum + c.spend30, 0)
     const t = totalsFor(spend, settings)
     const factor: Record<AdsBreakdown, number> = { age_gender: 14, platform: 9, region: 6, device: 4 }

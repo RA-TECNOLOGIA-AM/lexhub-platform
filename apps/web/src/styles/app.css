@@ -11181,6 +11181,47 @@ button.mkt-rub-linha:not(:disabled):hover,
     max-height: 280px;
     overflow-y: auto;
 }
+/* Facebook Ads: contas do token para marcar (uma ou várias) e as campanhas agrupadas por conta */
+.ads-account {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--divider);
+    cursor: pointer;
+}
+.ads-account:last-child {
+    border-bottom: 0;
+}
+.ads-account:hover:not(.blocked) {
+    background: var(--surface-2);
+}
+.ads-account input {
+    margin-top: 3px;
+    accent-color: var(--accent);
+}
+.ads-account .badge {
+    flex: none;
+}
+.ads-account.blocked {
+    cursor: default;
+    background: var(--surface-2);
+}
+.ads-account.blocked strong {
+    color: var(--text-muted);
+}
+.ads-block {
+    color: var(--warn);
+}
+.ads-campaign-group {
+    display: block;
+    padding: 8px 8px 2px;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
 
 /* Org. Documentos (LexPre), seção 01: card "duplo" (Média x Mediana, Manual x Automático), card compacto com
    selo de alerta e o card único de reajuizamento (separado do total). */

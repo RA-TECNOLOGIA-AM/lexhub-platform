@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import type { AdsOptions } from '../../../types/index.ts'
 import {
+    accountBlock,
+    accountsWithoutCampaigns,
+    mergeOptions,
+    settingsForAccount,
     adsSourceName,
     CONVERSATION,
     DEFAULT_ADS_SETTINGS,
@@ -97,5 +102,79 @@ describe('facebookAds', () => {
             Detalhamentos: 'Nenhum',
             Histórico: '3 anos (máximo da Meta)',
         })
+    })
+})
+
+describe('várias contas no Conectar fonte', () => {
+    const options = (campaigns: string[], conversions: [string, number][]): AdsOptions => ({
+        ok: true,
+        checks: [],
+        account: null,
+        campaigns: campaigns.map((id) => ({
+            id,
+            name: `Campanha ${id}`,
+            status: 'ACTIVE',
+            objective: null,
+            spend30: 1,
+        })),
+        conversions: conversions.map(([type, count30]) => ({ type, label: type, count30 })),
+    })
+
+    it('conta bloqueada: sem acesso aos relatórios ou já conectada', () => {
+        const base = {
+            id: 'act_1',
+            name: 'NG',
+            currency: 'BRL',
+            timezone: '',
+            status: null,
+            active: true,
+            business: null,
+            spent: 0,
+        }
+        expect(accountBlock(base)).toBeNull()
+        expect(accountBlock({ ...base, assigned: false })).toMatch(/Sem acesso aos relatórios/)
+        expect(accountBlock({ ...base, connectedTo: 'LexGroup · NG' })).toBe('Já conectada em LexGroup · NG.')
+    })
+
+    it('junta as opções: conversões somadas e campanhas com o nome da conta', () => {
+        const merged = mergeOptions([
+            {
+                account: 'NG',
+                options: options(
+                    ['11', '12'],
+                    [
+                        ['lead', 3],
+                        [CONVERSATION, 5],
+                    ],
+                ),
+            },
+            { account: 'LA', options: options(['21'], [['lead', 4]]) },
+        ])
+        expect(merged.campaigns.map((c) => [c.id, c.account])).toEqual([
+            ['11', 'NG'],
+            ['12', 'NG'],
+            ['21', 'LA'],
+        ])
+        expect(merged.conversions.map((c) => [c.type, c.count30])).toEqual([
+            ['lead', 7],
+            [CONVERSATION, 5],
+        ])
+        // Uma conta só: as campanhas ficam sem o nome da conta (sem grupos no formulário)
+        expect(mergeOptions([{ account: 'NG', options: options(['11'], []) }]).campaigns[0].account).toBeUndefined()
+    })
+
+    it('a personalização de cada conta leva só as campanhas dela', () => {
+        const s = { ...DEFAULT_ADS_SETTINGS, campaigns: ['11', '21'] }
+        expect(settingsForAccount(s, ['11', '12']).campaigns).toEqual(['11'])
+        expect(settingsForAccount(DEFAULT_ADS_SETTINGS, ['11']).campaigns).toBeNull()
+        const accounts = [
+            { name: 'NG', campaigns: ['11', '12'] },
+            { name: 'LA', campaigns: ['21'] },
+        ]
+        expect(accountsWithoutCampaigns(s, accounts)).toBeNull()
+        expect(accountsWithoutCampaigns({ ...s, campaigns: ['11'] }, accounts)).toBe(
+            'Escolha ao menos uma campanha de: LA.',
+        )
+        expect(accountsWithoutCampaigns(DEFAULT_ADS_SETTINGS, accounts)).toBeNull()
     })
 })
