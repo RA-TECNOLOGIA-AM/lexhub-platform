@@ -11,6 +11,7 @@ from app.analyses.common import memo
 from app.clock import get_now
 from app.config import get_settings
 from app.dashboards import DASHBOARDS, export
+from app.dashboards.anuncios_meta import ads_keys
 from app.dashboards.base import (
     DashboardContext,
     DashboardInputError,
@@ -144,6 +145,11 @@ async def _prepare(
         # Só as linhas da unidade da tela nas queries que aceitam o recorte (app/unit_scope.py).
         source = scope_source(source, source_db, unit_ref, module.unit_scoped)
     extra_sources = {db: sources(db) for db in extra_refs}
+    # Facebook Ads: as contas da Meta conectadas na unidade, quando todas já têm o histórico completo
+    # (app/dashboards/anuncios_meta.py); senão, o módulo segue no banco ng.
+    ads_sources: dict = {}
+    if module.meta_ads and (keys := ads_keys(access.source_refs)):
+        ads_sources = {key: sources(key) for key in await refs.ads_ready(keys)}
     ctx = DashboardContext(
         source=source,
         source_db=source_db,
@@ -154,6 +160,7 @@ async def _prepare(
         own_ref=own_ref,
         extra_sources=extra_sources,
         extra_refs=extra_refs,
+        ads_sources=ads_sources,
         remember=_remember(
             get_result_memo(request),
             # Tudo que muda o cálculo além do que o módulo põe na chave (período, filtros...). O dia
@@ -163,11 +170,12 @@ async def _prepare(
                 source_db,
                 unit_ref,
                 tuple(sorted(extra_refs.items())),
+                tuple(ads_sources),
                 access.can_see_commission,
                 own_ref,
                 day,
             ),
-            fetchers={source_db: source, **extra_sources},
+            fetchers={source_db: source, **extra_sources, **ads_sources},
         ),
     )
     return module, ctx

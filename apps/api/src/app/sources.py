@@ -42,6 +42,10 @@ class SourceRefsRepo(Protocol):
     # A pessoa logada naquela organização, como aparece na fonte; None = vínculo ainda não feito.
     async def member_ref(self, user_id: str, org_id: str, source_db: str) -> str | None: ...
 
+    # Das contas de anúncios da Meta da unidade (keys 'fb_...'), as que o Marketing já pode ler: as ligadas,
+    # se TODAS as ligadas já têm o histórico completo; senão nenhuma (a unidade segue no banco ng).
+    async def ads_ready(self, keys: list[str]) -> list[str]: ...
+
 
 _MEMBER_REF_SQL = """
 select r.ref
@@ -51,12 +55,35 @@ select r.ref
 """
 
 
+# Conta pronta = o histórico da personalização atual já foi todo coletado (app.facebook_ads_sync_state,
+# conjunto 'ads', app/facebook_ads_sync.py). Uma conta ainda carregando deixaria o gasto da unidade pela
+# metade; a desligada na tela fica de fora.
+_ADS_READY_SQL = """
+select ds.key,
+       ds.enabled,
+       coalesce(s.backfill_done, false)
+         and s.collect_version = coalesce((ds.config ->> 'collect_version')::int, 1) as ready
+  from app.data_sources ds
+  left join app.facebook_ads_sync_state s on s.source_id = ds.id and s.dataset = 'ads'
+ where ds.key = any($1::text[]) and ds.active and ds.connector = 'facebook_ads'
+ order by ds.key
+"""
+
+
 class PgSourceRefsRepo:
     def __init__(self, pool: asyncpg.Pool):
         self._pool = pool
 
     async def member_ref(self, user_id: str, org_id: str, source_db: str) -> str | None:
         return await self._pool.fetchval(_MEMBER_REF_SQL, user_id, org_id, source_db)
+
+    async def ads_ready(self, keys: list[str]) -> list[str]:
+        if not keys:
+            return []
+        ligadas = [r for r in await self._pool.fetch(_ADS_READY_SQL, keys) if r["enabled"]]
+        if not all(r["ready"] for r in ligadas):
+            return []
+        return [r["key"] for r in ligadas]
 
 
 def get_source_refs_repo(pool: Annotated[asyncpg.Pool, Depends(get_db_pool)]) -> SourceRefsRepo:

@@ -12,7 +12,8 @@ app.data_sources (connector postgres/mysql/sheets, segredo cifrado) e chegam aqu
                           só quando alguém usa, conferindo o endereço conectado (app/net_guard.py).
                           É também o ConnectionProvider (app/database.py) das fontes Postgres;
   * RegisteredSourceFetcher  o SourceFetcher de uma fonte conectada: banco (consulta registrada em
-                          app/source_queries.py) ou planilha (a aba).
+                          app/source_queries.py), planilha (a aba) ou conta de anúncios da Meta (a query
+                          `facebook_ads`, com o que a coleta guardou no próprio LexHub: app/facebook_ads_sync.py).
 O roteamento (banco do .env x fonte da tela) fica em app/sources.py (source_fetcher).
 """
 
@@ -44,7 +45,11 @@ from app.source_queries import QUERIES
 
 logger = logging.getLogger(__name__)
 
-CONNECTED = ("postgres", "mysql", "sheets")
+CONNECTED = ("postgres", "mysql", "sheets", "facebook_ads")
+
+# A única query de uma conta de anúncios da Meta: as linhas da coleta nas colunas de metrics_ads.facebook_ads
+# (banco ng), as que o Marketing lê.
+ADS_QUERY = "facebook_ads"
 
 
 @dataclass(frozen=True)
@@ -68,11 +73,35 @@ class RegisteredSource:
 class RegisteredRepo(Protocol):
     async def load(self, key: str) -> RegisteredRow | None: ...
 
+    async def ads_rows(self, source_id: str) -> list[dict[str, Any]]: ...
+
 
 _LOAD_SQL = """
 select id::text, key, connector, config::text, secret_ciphertext, config_version, enabled
   from app.data_sources
  where key = $1 and active and connector = any($2::text[]) and secret_ciphertext is not null
+"""
+
+
+# O que a coleta guardou (app.facebook_ads_daily), nas colunas de metrics_ads.facebook_ads (banco ng), para o
+# cálculo da v1 ler igual: id_conta sem o "act_", nome_conta = o nome da conta na Meta. `cadastros` sai das
+# ações (cadastro concluído), já que a coleta não tem coluna para ele; sem a ação no dia, null, como no ng.
+_ADS_ROWS_SQL = """
+select f.day as "date",
+       f.campaign_id, f.campaign_name as campaign,
+       f.adset_id, f.adset_name as adset,
+       f.ad_id, f.ad_name as ad,
+       f.reach as alcance, f.impressions as impressoes, f.spend as valor_gasto,
+       f.link_clicks as cliques_no_link, f.landing_page_views as landing_page_view, f.leads,
+       (select sum((a ->> 'value')::numeric)::bigint
+          from jsonb_array_elements(f.actions) a
+         where a ->> 'action_type' = 'complete_registration') as cadastros,
+       regexp_replace(f.account_id, '^act_', '') as id_conta,
+       coalesce(ds.config ->> 'account_name', ds.name) as nome_conta
+  from app.facebook_ads_daily f
+  join app.data_sources ds on ds.id = f.source_id
+ where f.source_id = $1::uuid
+ order by f.day, f.ad_id
 """
 
 
@@ -93,6 +122,9 @@ class PgRegisteredRepo:
             config_version=r["config_version"],
             enabled=r["enabled"],
         )
+
+    async def ads_rows(self, source_id: str) -> list[dict[str, Any]]:
+        return [dict(r) for r in await self._pool.fetch(_ADS_ROWS_SQL, source_id)]
 
 
 async def _guarded(conn: asyncpg.Connection, allow_private: bool) -> None:
@@ -145,6 +177,16 @@ class RegisteredSources:
         source = RegisteredSource(row=row, secret=secret, loaded_at=self._clock())
         self._cache[key] = source
         return source
+
+    async def ads_rows(self, key: str) -> list[dict[str, Any]]:
+        """As linhas guardadas de uma conta de anúncios da Meta (desligada = SourceDisabled, como as outras)."""
+        source = await self.get(key)
+        if source.row.connector != "facebook_ads":
+            raise SourceUnavailable(key)
+        try:
+            return await self._repo.ads_rows(source.row.id)
+        except (*CONNECTION_ERRORS, asyncpg.PostgresError) as exc:
+            raise SourceUnavailable(key) from exc
 
     async def invalidate(self, key: str) -> None:
         """Senha trocada, fonte desligada ou desconectada: esquece a fonte e fecha os pools dela nesta réplica."""
@@ -271,7 +313,8 @@ async def _close(pool: Any) -> None:
 
 class RegisteredSourceFetcher:
     """SourceFetcher de uma fonte conectada pela tela. Banco: `fetch(nome da query)` com a query de
-    app/source_queries.py cujo "database" é a key da fonte. Planilha: `fetch(aba)`."""
+    app/source_queries.py cujo "database" é a key da fonte. Planilha: `fetch(aba)`. Conta de anúncios da
+    Meta: `fetch("facebook_ads")`."""
 
     def __init__(
         self,
@@ -294,6 +337,10 @@ class RegisteredSourceFetcher:
                 return (await self._registered.get(self._key)).secret
 
             rows = await SheetSourceFetcher(self._key, link).fetch(query_name)
+        elif connector == "facebook_ads":
+            if query_name != ADS_QUERY:
+                raise ValueError(f"Conta de anúncios {self._key} só responde {ADS_QUERY}")
+            rows = await self._registered.ads_rows(self._key)
         else:
             spec = self._queries[query_name]
             if spec["database"] != self._key:

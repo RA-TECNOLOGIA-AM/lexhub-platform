@@ -282,3 +282,81 @@ def test_marketing_ng_sem_lexpre_ligado_fica_so_com_o_legado(client, signer, rep
     body = r.json()
     assert body["lexpre"]["somado"] is False
     assert body["stats"]["marketing_ng_total_clientes"] == 1
+
+
+# --- Facebook Ads das contas da Meta conectadas na unidade (app/dashboards/anuncios_meta.py) ---------------------
+
+
+def _conta_meta(repo, sources, unit: str, key: str, linhas: list[dict]) -> None:
+    """Uma conta de anúncios conectada na unidade (app.unit_source_refs, key 'fb_...', ref '*')."""
+    repo.unit_refs[(repo.units[("lexgroup", unit)], key)] = "*"
+    sources.by_db[key] = {"facebook_ads": linhas}
+
+
+def test_ng_com_contas_da_meta_le_as_contas_e_nao_o_banco_ng(client, signer, repo, sources):
+    _pronto(repo, sources)
+    _conta_meta(repo, sources, "NG", "fb_ng_aaa111", [anuncio(date(2026, 11, 2), 300.0)])
+    _conta_meta(repo, sources, "NG", "fb_ng_bbb222", [anuncio(date(2026, 11, 3), 25.0)])
+    r = client.get(url("NG") + "?from=2026-11-01&to=2026-11-11", headers=auth(signer))
+    assert r.status_code == 200, r.text
+    s = r.json()["stats"]
+    assert s["marketing_lexpre_ng_facebook_valor_gasto"] == 325.0  # as duas contas, nada do banco ng (150,5)
+    assert s["marketing_lexpre_ng_facebook_cliques"] == 20
+
+
+def test_la_com_conta_da_meta_tem_os_anuncios_sem_o_recorte_la(client, signer, repo, sources):
+    # Na v1 a LA só via campanhas "[LA]" do banco ng (nenhuma): com a conta dela, entra tudo da conta.
+    _pronto(repo, sources, unit="LA", escritorio="2", com_ng=False)
+    _conta_meta(repo, sources, "LA", "fb_la_ccc333", [anuncio(date(2026, 11, 4), 80.0, "Campanha LA")])
+    r = client.get(url("LA") + "?from=2026-11-01&to=2026-11-11", headers=auth(signer))
+    assert r.status_code == 200, r.text
+    assert r.json()["stats"]["marketing_lexpre_ng_facebook_valor_gasto"] == 80.0
+
+
+def test_conta_da_meta_desligada_fica_de_fora_e_o_resto_segue(client, signer, repo, sources):
+    _pronto(repo, sources)
+    _conta_meta(repo, sources, "NG", "fb_ng_aaa111", [anuncio(date(2026, 11, 2), 300.0)])
+    _conta_meta(repo, sources, "NG", "fb_ng_bbb222", [anuncio(date(2026, 11, 3), 25.0)])
+    sources.disabled.add("fb_ng_aaa111")
+    r = client.get(url("NG") + "?from=2026-11-01&to=2026-11-11", headers=auth(signer))
+    assert r.status_code == 200, r.text
+    s = r.json()["stats"]
+    assert s["marketing_lexpre_ng_facebook_valor_gasto"] == 25.0
+    assert s["marketing_lexpre_ng_total_clientes"] == 2
+
+
+def test_exporta_o_facebook_ads_das_contas_da_meta(client, signer, repo, sources):
+    _pronto(repo, sources)
+    repo.exporters.add(USER_ID)
+    _conta_meta(repo, sources, "NG", "fb_ng_aaa111", [anuncio(date(2026, 11, 2), 300.0, "Meta")])
+    r = client.get(
+        url("NG", "/export")
+        + "?from=2026-11-01&to=2026-11-11&relatorio=facebook&detalhamento=campanha"
+        + "&campos=campanha&campos=valor_gasto",
+        headers=auth(signer),
+    )
+    assert r.status_code == 200, r.text
+    assert _csv(r) == [["Campanha", "Valor Gasto (R$)"], ["Meta", "300.0"]]
+
+
+def test_marketing_ng_le_o_facebook_das_contas_da_meta(client, signer, repo, sources):
+    _ng_com_lexpre(repo, sources)
+    sources.data["facebook_ads"] = [anuncio(date(2026, 10, 5), 999.0)]  # banco ng: não entra
+    _conta_meta(repo, sources, "NG", "fb_ng_aaa111", [anuncio(date(2026, 10, 5), 400.0)])
+    base = "/orgs/lexgroup/units/NG/dashboards/marketing?from=2026-10-01&to=2026-11-11"
+    r = client.get(base, headers=auth(signer))
+    assert r.status_code == 200, r.text
+    s = r.json()["stats"]
+    assert s["marketing_ng_facebook_valor_gasto"] == 400.0
+    assert s["marketing_ng_facebook_cliques"] == 10
+
+
+def test_conta_da_meta_carregando_o_historico_deixa_a_unidade_no_banco_ng(client, signer, repo, sources):
+    # Uma conta pela metade daria o gasto pela metade: enquanto alguma carrega, nenhuma entra.
+    _pronto(repo, sources)
+    _conta_meta(repo, sources, "NG", "fb_ng_aaa111", [anuncio(date(2026, 11, 2), 300.0)])
+    _conta_meta(repo, sources, "NG", "fb_ng_bbb222", [anuncio(date(2026, 11, 3), 25.0)])
+    sources.loading.add("fb_ng_bbb222")
+    r = client.get(url("NG") + "?from=2026-11-01&to=2026-11-11", headers=auth(signer))
+    assert r.status_code == 200, r.text
+    assert r.json()["stats"]["marketing_lexpre_ng_facebook_valor_gasto"] == 150.5  # o banco ng

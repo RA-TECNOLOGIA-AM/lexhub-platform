@@ -6,8 +6,11 @@ fica em app/analyses/NG/marketing_lexpre.py (cópia da v1). Só a entrada mudou:
     escritorio (ESCRITORIO_NGAM/LAAM)          -> int(ctx.unit_ref)             (app.unit_source_refs, lexpre)
     from_date / to_date                        -> ctx.period.start / end
     _f(chave) / _a(chave)                      -> filter_data(chave, linhas, período) / as linhas sem filtro
-    fetch_facebook_ads() (banco ng)            -> ctx.extra_sources["ng"] (só a NG tem o banco ng ligado;
-                                                  na LA a v1 só usava campanhas "[LA]", que não existem: zero)
+    fetch_facebook_ads() (banco ng)            -> as contas da Meta conectadas na unidade (ctx.ads_sources,
+                                                  app/dashboards/anuncios_meta.py), cada unidade com as suas;
+                                                  sem conta conectada, ctx.extra_sources["ng"] como antes (só
+                                                  a NG tem o banco ng ligado; na LA a v1 só usava campanhas
+                                                  "[LA]", que não existem: zero)
     selection_dim / selection_value (pares)    -> um filtro por dimensão (sufixo _marketing; ver FILTROS)
 
 Exportação (v1: /marketing-lexpre/export e /marketing-lexpre-la/export): o relatório "Leads" (principal) e o
@@ -98,6 +101,7 @@ from app.analyses.NG.marketing_lexpre import (
     group_tipo_trafego as group_tipo_trafego_lexpre,
 )
 from app.analyses.v1_dashboard_generico_ng import filter_data
+from app.dashboards import anuncios_meta
 from app.dashboards.base import DashboardContext, DashboardModule, ExportOption, ExportSpec
 from app.database import SourceUnavailable
 
@@ -153,9 +157,23 @@ def _facebook_ads_do_escritorio_marketing_lexpre(
     return rows
 
 
+def _anuncios_do_escritorio(
+    ctx: DashboardContext, rows: list[dict[str, Any]], escritorio_id: int
+) -> list[dict[str, Any]]:
+    """O recorte da v1 por escritório só vale para o banco ng (contas da NG): as contas da Meta conectadas na
+    unidade já são do escritório dela."""
+    if ctx.ads_sources:
+        return rows
+    return _facebook_ads_do_escritorio_marketing_lexpre(rows, escritorio_id)
+
+
 async def _facebook_ads(ctx: DashboardContext) -> list[dict[str, Any]]:
-    """As linhas do Facebook Ads (banco ng), todas as datas. V2: unidade sem o banco ng da NG ligado (LA) ou
-    com ele fora do ar = sem anúncios (os indicadores de anúncio ficam zerados, como a LA já ficava na v1)."""
+    """As linhas do Facebook Ads, todas as datas: as das contas da Meta conectadas na unidade ou, sem conta
+    conectada, as do banco ng. V2: unidade sem o banco ng da NG ligado (LA) ou com ele fora do ar = sem
+    anúncios (os indicadores de anúncio ficam zerados, como a LA já ficava na v1)."""
+    da_meta = await anuncios_meta.linhas_da_unidade(ctx)
+    if da_meta is not None:
+        return da_meta
     fonte = ctx.extra_sources.get("ng")
     # As contas de anúncio são da NG: o RJ, que também lê o banco ng, não leva os anúncios dela.
     if fonte is None or ctx.extra_refs.get("ng") != "NG":
@@ -200,8 +218,8 @@ async def build(ctx: DashboardContext) -> dict[str, Any]:
     stats = get_marketing_lexpre_ng_stats(clientes)
     stats["marketing_lexpre_ng_triados_total_clientes"] = get_total_clientes_lexpre(triados)
     stats["marketing_lexpre_ng_triados_media_idade"] = get_media_idade_lexpre(triados)
-    facebook_ads_rows = _facebook_ads_do_escritorio_marketing_lexpre(
-        _f("facebook_ads"), escritorio_marketing_lexpre
+    facebook_ads_rows = _anuncios_do_escritorio(
+        ctx, _f("facebook_ads"), escritorio_marketing_lexpre
     )
     comercial_rows = _a("comercial_lexpre_ng")
     stats.update(get_facebook_ads_stats_lexpre(facebook_ads_rows))
@@ -317,7 +335,8 @@ DETALHAMENTO_FACEBOOK = {
 async def export_facebook(ctx: DashboardContext) -> list[dict[str, Any]]:
     """v1: _linhas_facebook_ads_marketing_lexpre — período e escritório (não segue o drill-down, como na v1)."""
     escritorio_id = int(ctx.unit_ref)
-    facebook_rows = _facebook_ads_do_escritorio_marketing_lexpre(
+    facebook_rows = _anuncios_do_escritorio(
+        ctx,
         filter_data("facebook_ads", await _facebook_ads(ctx), ctx.period.start, ctx.period.end),
         escritorio_id,
     )
@@ -340,6 +359,7 @@ MODULE = DashboardModule(
     build=build,
     queries=QUERIES,
     extra_queries={"ng": (QUERY_FACEBOOK,)},
+    meta_ads=True,
     filters=dict.fromkeys(FILTROS, str),
     export=ExportSpec(
         fields={slug: slug for slug in CAMPOS_EXPORT_MARKETING_LEXPRE},
