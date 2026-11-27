@@ -11,8 +11,10 @@ import { fmt } from '../../../lib/format.ts'
 import type { ProtocoloResponse } from '../../../types/index.ts'
 import type { ContentProps } from '../types.ts'
 import { CORES_ANO, MESES, diaCurto, diaLongo, mesBarra, mesNome, periodo } from '../setor/datas.ts'
-import { DevolucaoCard, DevolucaoResumo, Velocidade } from '../setor/Devolucao.tsx'
+import { DevolucaoCard, DevolucaoResumo } from '../setor/Devolucao.tsx'
 import { FuncionarioPanel, type PainelLabels } from '../setor/FuncionarioPanel.tsx'
+import { CardDuplo, RitmoDosDois } from '../setor/IndicadoresCards.tsx'
+import { ReajuizamentoResumo } from '../setor/Reajuizamento.tsx'
 import {
     META_POR_FUNCIONARIO_V1,
     devolucoes,
@@ -36,6 +38,8 @@ const PAINEL: PainelLabels = {
 // filtros ficam no DashboardView; clicar numa matéria ou num funcionário liga o filtro.
 export function ProtocoloContent({ data, filters = {}, onToggleFilter }: ContentProps<ProtocoloResponse>) {
     const s = data.stats
+    // Reajuizamento: do LexPre (demandas.reajuizamento) e, quando a página mistura o legado, + o do legado NG/RJ.
+    const reajComLegado = data.fonte_indicadores === 'legado' || data.fonte_indicadores === 'misto'
     const unit = data.meta.unit
     // Linha "Sem matéria"/"Sem funcionário" não vira filtro (a API não teria o que procurar).
     const pick = (key: 'materia' | 'funcionario') =>
@@ -158,60 +162,40 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                             />
                         }
                     />
-                    <HeroStat
-                        label="Média de tempo protocolado"
+                    <CardDuplo
+                        label="Tempo protocolado"
                         icon="clock"
                         tone="info"
-                        value={<CountUp value={s.media_tempo_protocolado} format={fmt.duracao} />}
-                        below={
-                            <DeltaPill
-                                value={s.comparativo_tempo_medio_protocolado}
-                                betterWhenDown
-                                suffix=" vs mês anterior"
-                                plain
+                        hint="Da entrada no Protocolo ao protocolo, nas demandas protocoladas no período. Média e mediana (metade levou até este tempo), com a variação vs mês anterior."
+                        caixas={[
+                            {
+                                label: 'Média',
+                                value: <CountUp value={s.media_tempo_protocolado} format={fmt.duracao} />,
+                                delta: s.comparativo_tempo_medio_protocolado,
+                                betterWhenDown: true,
+                            },
+                            {
+                                label: 'Mediana',
+                                value: <CountUp value={s.mediana_tempo_protocolado} format={fmt.duracao} />,
+                                delta: s.comparativo_mediana_tempo_protocolado,
+                                betterWhenDown: true,
+                            },
+                        ]}
+                        footer={
+                            <FootRow
+                                left={
+                                    <RitmoDosDois
+                                        media={s.comparativo_tempo_medio_protocolado}
+                                        mediana={s.comparativo_mediana_tempo_protocolado}
+                                    />
+                                }
+                                right={<span className="num muted">{data.meta.unit}</span>}
                             />
                         }
-                        hint="Tempo médio entre a entrada no Protocolo e o protocolo, nas demandas protocoladas no período."
-                        footer={<FootRow left={<Velocidade value={s.comparativo_tempo_medio_protocolado} />} />}
                     />
                 </div>
-                <div className="grid grid-stat grid-mini grid-mini-stack">
-                    <MiniStat
-                        label="Protocolados de reajuizamento"
-                        icon="check-circle"
-                        tone="neutral"
-                        value={<CountUp value={s.protocolados_de_reajuizamento ?? 0} format={fmt.int} />}
-                        below={
-                            data.fonte_indicadores === 'legado' || data.fonte_indicadores === 'misto' ? (
-                                <StackedRate text="legado" caption="quando disponível" tone="neutral" />
-                            ) : (
-                                <StackedRate text="—" caption="vs mês anterior" tone="neutral" />
-                            )
-                        }
-                        hint={
-                            s.protocolados_de_reajuizamento != null
-                                ? 'Protocolados de reajuizamento no período (banco legado NG/RJ).'
-                                : 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
-                        }
-                    />
-                    <MiniStat
-                        label="Represados de reajuizamento"
-                        icon="x-circle"
-                        tone="neutral"
-                        value={<CountUp value={s.represados_de_reajuizamento ?? 0} format={fmt.int} />}
-                        below={
-                            data.fonte_indicadores === 'legado' || data.fonte_indicadores === 'misto' ? (
-                                <StackedRate text="legado" caption="fila atual" tone="neutral" />
-                            ) : (
-                                <StackedRate text="—" caption="vs mês anterior" tone="neutral" />
-                            )
-                        }
-                        hint={
-                            s.represados_de_reajuizamento != null
-                                ? 'Represados de reajuizamento agora (banco legado NG/RJ).'
-                                : 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
-                        }
-                    />
+                {/* Ticket médio + o card único de reajuizamento (como no Org. Documentos). */}
+                <div className="grid grid-2 grid-mini grid-mini-stack">
                     <MiniStat
                         label="Ticket médio protocolado"
                         icon="dollar"
@@ -222,20 +206,18 @@ export function ProtocoloContent({ data, filters = {}, onToggleFilter }: Content
                         }
                         hint="Valor de causa protocolado dividido pela quantidade de protocolados no período."
                     />
-                    <MiniStat
-                        label="Mediana de tempo protocolado"
-                        icon="clock"
-                        tone="info"
-                        value={<CountUp value={s.mediana_tempo_protocolado} format={fmt.duracao} />}
-                        below={
-                            <DeltaPill
-                                value={s.comparativo_mediana_tempo_protocolado}
-                                betterWhenDown
-                                suffix=" vs mês anterior"
-                                plain
-                            />
-                        }
-                        hint="Metade das demandas protocoladas no período levou até este tempo no Protocolo."
+                    <ReajuizamentoResumo
+                        setor="Protocolo"
+                        periodo={{
+                            label: 'Protocolados',
+                            value: s.protocolados_de_reajuizamento ?? undefined,
+                            hint: `Protocolados: demandas de reajuizamento protocoladas no período${reajComLegado ? ' (LexPre + banco legado NG/RJ)' : ''}.`,
+                        }}
+                        fila={{
+                            label: 'Represados',
+                            value: s.represados_de_reajuizamento ?? undefined,
+                            hint: `Represados: demandas de reajuizamento no Protocolo agora${reajComLegado ? ' (LexPre + banco legado NG/RJ)' : ''}.`,
+                        }}
                     />
                 </div>
             </DashSection>

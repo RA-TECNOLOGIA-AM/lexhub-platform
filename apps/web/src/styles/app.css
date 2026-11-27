@@ -11181,3 +11181,94 @@ button.mkt-rub-linha:not(:disabled):hover,
     max-height: 280px;
     overflow-y: auto;
 }
+
+/* Org. Documentos (LexPre), seção 01: card "duplo" (Média x Mediana, Manual x Automático), card compacto com
+   selo de alerta e o card único de reajuizamento (separado do total). */
+.duo {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.duo-box {
+    gap: 6px;
+    padding: 12px 14px;
+}
+.duo-l,
+.reaj-l {
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-2);
+}
+.duo-v {
+    font-size: clamp(18px, 2vw, 24px);
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+.split-info {
+    background: var(--c-info);
+}
+.compacto-l {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.mini.compacto.alerta {
+    border: 1px solid color-mix(in srgb, var(--c-danger) 45%, var(--border));
+    background: color-mix(in srgb, var(--c-danger) 5%, var(--surface));
+}
+.reaj-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.reaj-setor {
+    font-size: var(--fs-xs);
+}
+.reaj-cols {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.reaj-l {
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--c-info);
+}
+
+/* .mini é uma grade texto | ícone: estes dois cards empilham os blocos em coluna. */
+.mini.modo,
+.mini.reaj-resumo {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.modo-barra {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.modo-legenda {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: var(--fs-xs);
+    color: var(--text-2);
+}
+
+/* Fileira de 2 cards (ex.: Protocolo LexPre: ticket médio + reajuizamento); 1 coluna no celular. */
+.grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 640px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}

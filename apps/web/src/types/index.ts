@@ -235,8 +235,8 @@ export type ProtocoloResponse = {
         comparativo_mediana_tempo_protocolado: number | null
         // Situação atual: não dependem do período.
         represados: number
-        // Só quando os KPIs vêm do legado NG/RJ (reajuizamento da página antiga).
-        protocolados_de_reajuizamento?: number | null
+        // Reajuizamento (cards próprios): do LexPre (demandas.reajuizamento) + o do legado NG/RJ quando houver.
+        protocolados_de_reajuizamento?: number | null // fora dos totais e da comissão
         represados_de_reajuizamento?: number | null
         devolvido_peticionamento: number
         devolvido_org_doc: number

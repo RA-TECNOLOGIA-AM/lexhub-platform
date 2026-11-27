@@ -41,7 +41,9 @@ QUERIES: dict[str, dict] = {
             d.numero_processo AS "NUMERO_PROCESSO",
             d.data_protocolo AS "DATA_PROTOCOLO",
             c.nome AS "CLIENTE_NOME",
-            c.uf AS "UF"
+            c.uf AS "UF",
+            coalesce(d.reajuizamento, false) AS "REAJUIZAMENTO",
+            d.processo_origem AS "PROCESSO_ORIGEM"
         FROM public.log_setor_demanda l
         LEFT JOIN public.demandas d
             ON d.id = l.demanda_id
@@ -64,7 +66,10 @@ QUERIES: dict[str, dict] = {
         LEFT JOIN public.atendimento at
             ON at.id = d.atendimento_id
         LEFT JOIN public.customer c
-            ON c.id = at.customer_id
+            ON c.id = coalesce(at.customer_id, d.customer_id)
+        -- Reajuizamento fica fora: tem query própria (log_setor_demanda_lexpre_reajuizamento_NG) e cards
+        -- separados; não entra em nenhum total nem comissão.
+        WHERE NOT coalesce(d.reajuizamento, false)
         """,
         # Uma linha por evento de entrada/saída de demanda em setor (log_setor_demanda) —
         # cada movimentação de setor gera duas linhas (saída do setor antigo + entrada no
@@ -169,6 +174,7 @@ QUERIES: dict[str, dict] = {
             ON a.motivo_id = me.id
         LEFT JOIN public.demandas d
             ON d.atendimento_id = a.id
+            AND NOT coalesce(d.reajuizamento, false)  -- reajuizamento: fora do Comercial e da comissão
         LEFT JOIN public.rubricas r
             ON d.rubrica_id = r.id
         LEFT JOIN public.operacao op
@@ -296,6 +302,7 @@ QUERIES: dict[str, dict] = {
             ON me.id = d.motivo_cancelamento_id
         WHERE al.entidade = 'demanda'
           AND al.acao = 'demanda.cancelada'
+          AND NOT coalesce(d.reajuizamento, false)  -- cancelamento de reajuizamento não desconta comissão
         """,
         # Trilha de auditoria (public.audit_log) do momento exato em que cada demanda
         # foi cancelada — usada em app.analyses.NG.comissao_lexpre para descontar, da
@@ -4328,6 +4335,23 @@ QUERIES["andamento_processual_LA"] = {
         "description": "Andamento processual do banco LAADV",
         "params": []
     }
+
+
+# Reajuizamentos do LexPre (demandas.reajuizamento = true): o mesmo log dos setores, só com eles. Base dos
+# cards separados de reajuizamento (Pendências, Org. Documentos, Peticionamento e Protocolo LexPre); a query
+# principal os exclui, então nunca entram em total nem comissão. Hoje só a NG tem (setor "Análise
+# Reajuizamento", id 175); as demandas não têm atendimento, o cliente vem de demandas.customer_id.
+QUERIES["log_setor_demanda_lexpre_reajuizamento_NG"] = {
+    **QUERIES["log_setor_demanda_lexpre_NG"],
+    "query": QUERIES["log_setor_demanda_lexpre_NG"]["query"].replace(
+        "WHERE NOT coalesce(d.reajuizamento, false)", "WHERE d.reajuizamento"
+    ),
+    "description": (
+        "Log de setor (log_setor_demanda) só das demandas de reajuizamento do LexPre — mesmas colunas de "
+        "log_setor_demanda_lexpre_NG, que as exclui. Cards de reajuizamento dos setores LexPre."
+    ),
+}
+assert "WHERE d.reajuizamento" in QUERIES["log_setor_demanda_lexpre_reajuizamento_NG"]["query"]
 
 
 # Agravos fora de toda query do LexFlow que lê processo (regra da v1 de 06/11/2026, que lá rodava no fim do

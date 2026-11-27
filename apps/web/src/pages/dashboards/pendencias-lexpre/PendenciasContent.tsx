@@ -11,7 +11,8 @@ import { fmt } from '../../../lib/format.ts'
 import type { PendenciasResponse } from '../../../types/index.ts'
 import type { ContentProps } from '../types.ts'
 import { CORES_ANO, MESES, diaCurto, diaLongo, mesNome, periodo } from '../setor/datas.ts'
-import { Velocidade } from '../setor/Devolucao.tsx'
+import { CardDuplo, RitmoDosDois } from '../setor/IndicadoresCards.tsx'
+import { ReajuizamentoResumo } from '../setor/Reajuizamento.tsx'
 import { filaTone, isPlaceholder, mesParcial, share } from '../setor/setor.ts'
 import { EquipePanel } from './EquipePanel.tsx'
 
@@ -29,9 +30,10 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
     // Reajuizamento: o LexPre ainda não registra (0, como na v1); o banco legado da NG/RJ tem; o da LA não
     // separa (os campos não vêm e os dois cards somem).
     const lexpre = data.meta.source === 'LexPre'
-    // Pendências LexPre com o legado da unidade somado (NG/RJ/LA): reajuizamento passa a vir do legado.
+    // Pendências LexPre com o legado da unidade somado (NG/RJ/LA).
     const comLegado = data.fonte_indicadores === 'legado' || data.fonte_indicadores === 'misto'
-    const reajSoLexpre = lexpre && !comLegado
+    // Reajuizamento no LexPre: demandas.reajuizamento, fora dos totais e da comissão (+ o do legado, se houver).
+    const origemReaj = comLegado ? ' (LexPre + banco legado)' : ''
     const comReaj = lexpre || s.pendencias_nao_resolvidas_reajuizamento !== undefined
     const porFuncionario =
         onToggleFilter && ((name: string) => void (!isPlaceholder(name) && onToggleFilter('funcionario', name)))
@@ -132,34 +134,44 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                             />
                         }
                     />
-                    <HeroStat
-                        label="Tempo médio resolvidas"
+                    <CardDuplo
+                        label="Tempo de resolução"
                         icon="clock"
                         tone="info"
-                        value={<CountUp value={s.media_tempo_resolvidos_pendencia} format={fmt.duracao} />}
-                        below={
-                            <DeltaPill
-                                value={s.comparativo_tempo_medio_resolvidos_pendencia}
-                                betterWhenDown
-                                suffix="vs mês anterior"
-                                plain
-                            />
-                        }
-                        hint="Tempo médio entre a entrada da pendência e a resolução, nas resolvidas no período."
+                        hint="Da entrada da pendência à resolução, nas resolvidas no período. Média e mediana (metade levou até este tempo), com a variação vs mês anterior."
+                        caixas={[
+                            {
+                                label: 'Média',
+                                value: <CountUp value={s.media_tempo_resolvidos_pendencia} format={fmt.duracao} />,
+                                delta: s.comparativo_tempo_medio_resolvidos_pendencia,
+                                betterWhenDown: true,
+                            },
+                            {
+                                label: 'Mediana',
+                                value: <CountUp value={s.mediana_tempo_resolvidos_pendencia} format={fmt.duracao} />,
+                                delta: s.comparativo_mediana_tempo_resolvidos_pendencia ?? null,
+                                betterWhenDown: true,
+                            },
+                        ]}
                         footer={
                             <FootRow
                                 left={
                                     s.comparativo_tempo_medio_resolvidos_pendencia === null && !lexpre ? (
                                         'Da entrada à resolução'
                                     ) : (
-                                        <Velocidade value={s.comparativo_tempo_medio_resolvidos_pendencia} />
+                                        <RitmoDosDois
+                                            media={s.comparativo_tempo_medio_resolvidos_pendencia}
+                                            mediana={s.comparativo_mediana_tempo_resolvidos_pendencia ?? null}
+                                        />
                                     )
                                 }
+                                right={<span className="num muted">{data.meta.unit}</span>}
                             />
                         }
                     />
                 </div>
-                <div className={`grid ${comReaj ? 'grid-stat-3' : 'grid-stat'} grid-mini grid-mini-stack`}>
+                {/* 3 cards (com atraso, canceladas, triagem) + o de reajuizamento quando a página o tem. */}
+                <div className={`grid ${comReaj ? 'grid-stat' : 'grid-stat-3'} grid-mini grid-mini-stack`}>
                     <MiniStat
                         label="Não resolvidas há mais de 5 dias"
                         icon="clock"
@@ -196,58 +208,26 @@ export function PendenciasContent({ data, filters = {}, onToggleFilter }: Conten
                         below={<StackedRate text="—" caption="aguardando triagem" tone="neutral" />}
                         hint="Demandas na Triagem agora (antes de virar pendência). Não depende do período."
                     />
-                    <MiniStat
-                        label="Mediana de tempo resolvidas"
-                        icon="clock"
-                        tone="info"
-                        value={<CountUp value={s.mediana_tempo_resolvidos_pendencia} format={fmt.duracao} />}
-                        below={
-                            <DeltaPill
-                                value={s.comparativo_mediana_tempo_resolvidos_pendencia ?? null}
-                                betterWhenDown
-                                suffix="vs mês anterior"
-                                plain
-                            />
-                        }
-                        hint="Metade das pendências resolvidas no período levou até este tempo."
-                    />
                     {comReaj && (
-                        <>
-                            <MiniStat
-                                label="Não resolvidas · reajuizamento"
-                                icon="undo"
-                                tone="neutral"
-                                value={
-                                    <CountUp value={s.pendencias_nao_resolvidas_reajuizamento ?? 0} format={fmt.int} />
-                                }
-                                below={
-                                    reajSoLexpre && <StackedRate text="—" caption="vs mês anterior" tone="neutral" />
-                                }
-                                hint={
-                                    comLegado
-                                        ? 'Reajuizamento vem do banco legado (o LexPre ainda não registra).'
-                                        : lexpre
-                                          ? 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
-                                          : 'Pendências de reajuizamento abertas no período e ainda não resolvidas.'
-                                }
-                            />
-                            <MiniStat
-                                label="Resolvidas · reajuizamento"
-                                icon="undo"
-                                tone="neutral"
-                                value={<CountUp value={s.pendencias_resolvidas_reajuizamento ?? 0} format={fmt.int} />}
-                                below={
-                                    reajSoLexpre && <StackedRate text="—" caption="vs mês anterior" tone="neutral" />
-                                }
-                                hint={
-                                    comLegado
-                                        ? 'Reajuizamento vem do banco legado (o LexPre ainda não registra).'
-                                        : lexpre
-                                          ? 'O LexPre ainda não registra reajuizamento: fica 0, como na v1.'
-                                          : 'Pendências de reajuizamento abertas no período e já resolvidas.'
-                                }
-                            />
-                        </>
+                        <ReajuizamentoResumo
+                            setor="Pendências"
+                            periodo={{
+                                label: 'Resolvidas',
+                                value: s.pendencias_resolvidas_reajuizamento,
+                                hint: lexpre
+                                    ? `Resolvidas: pendências de reajuizamento resolvidas no período${origemReaj}.`
+                                    : 'Resolvidas: pendências de reajuizamento abertas no período e já resolvidas.',
+                            }}
+                            fila={{
+                                label: 'Não resolvidas',
+                                value: s.pendencias_nao_resolvidas_reajuizamento,
+                                // No legado (página antiga) é do período: abertas no período e ainda não resolvidas.
+                                quando: lexpre ? 'agora' : 'período',
+                                hint: lexpre
+                                    ? `Não resolvidas: pendências de reajuizamento em aberto agora${origemReaj}.`
+                                    : 'Não resolvidas: pendências de reajuizamento abertas no período e ainda não resolvidas.',
+                            }}
+                        />
                     )}
                 </div>
             </DashSection>

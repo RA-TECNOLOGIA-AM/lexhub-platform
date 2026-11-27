@@ -32,7 +32,7 @@ def test_registrado_com_as_fontes_dos_tres_bancos():
     assert mod.extra_queries == {
         "ng": ("setor_protocolo", "comercial_geral_NG"),
         "laadv": ("setor_protocolo_LA", "comercial_geral_LA"),
-        "lexpre": ("log_setor_demanda_lexpre_NG",),
+        "lexpre": ("log_setor_demanda_lexpre_NG", "log_setor_demanda_lexpre_reajuizamento_NG"),
     }
     assert {"execucao_RJ", "log_subfase_processual_RJ"} <= set(mod.queries)
     assert mod.export is None

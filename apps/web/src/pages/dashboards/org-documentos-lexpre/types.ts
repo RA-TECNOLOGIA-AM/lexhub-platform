@@ -18,6 +18,9 @@ export type OrgDocumentosLexpreResponse = {
         comparativo_mediana_tempo_resolvidos: number | null
         // Acumulados (não dependem do período).
         represados: number
+        // Reajuizamento do LexPre: fora dos totais e da comissão (cards próprios).
+        resolvidos_de_reajuizamento?: number
+        represados_de_reajuizamento?: number
         devolvido_pendencia: number
         comparativo_devolvido_pendencia: number | null // devoluções no período vs mês anterior
     }
