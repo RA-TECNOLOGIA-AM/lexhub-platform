@@ -395,11 +395,17 @@ def get_valor_causa_protocolado(
 ) -> float:
     """
     Soma o valor de causa das demandas já protocoladas (``data_protocolo`` preenchida).
+    Matéria ANP usa DANO_MORAL (regra de todo valor de causa; ver
+    `protocolo_lexpre._valor_causa_protocolado`) — antes somava VALOR_CAUSA e a Meta Anual
+    ficava acima do Protocolo LexPre (LAAM, 26/11/2026: 89 demandas ANP, R$ 958 mil).
 
     Deduplicado por ``ID_DEMANDA`` (uma linha por demanda, já que o join com
     rubrica é 1:1). Se ``ano`` for informado, restringe às demandas protocoladas
     naquele ano civil (base do card "Meta Anual").
     """
+    # Import aqui: protocolo_lexpre importa este módulo (ciclo no topo).
+    from app.analyses.NG.protocolo_lexpre import _valor_causa_protocolado
+
     vistos: set = set()
     total = 0.0
     for row in comercial_lexpre or []:
@@ -414,7 +420,7 @@ def get_valor_causa_protocolado(
             continue
         vistos.add(id_demanda)
 
-        total += _converter_valor(row.get("VALOR_CAUSA"))
+        total += _valor_causa_protocolado(row)
 
     return round(total, 2)
 

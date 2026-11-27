@@ -476,7 +476,9 @@ def get_valor_causa_nao_protocolado_por_atendente_LA(protocolos: List[Dict[str, 
     for p in protocolos_nao_protocolados:
         atendente = p.get("ATENDENTE") or "Sem atendente"
         atendente_formatado = _formatar_nome_atendente(atendente)
-        valor_causa = p.get("VALOR_DA_CAUSA") or p.get("VALOR_CAUSA")
+        materia = str(p.get("MATERIA") or "").strip().upper()
+        # ANP -> DANO_MORAL, mesma regra do protocolado (get_valor_causa_protocolado_LA)
+        valor_causa = p.get("DANO_MORAL") if materia == "ANP" else (p.get("VALOR_DA_CAUSA") or p.get("VALOR_CAUSA"))
 
         if valor_causa is None:
             continue

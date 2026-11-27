@@ -754,15 +754,8 @@ def get_valor_causa_protocolo_nao_protocolado(protocolos: List[Dict[str, Any]]) 
     protocolos_nao_protocolados = _filtrar_protocolos_nao_protocolados(protocolos)
     total = 0.0
     for p in protocolos_nao_protocolados:
-        # Tenta obter o valor da causa
-        valor_causa = p.get("VALOR_DA_CAUSA") or p.get("VALOR_CAUSA")
-        
-        # Se o valor for None, pula para o próximo
-        if valor_causa is None:
-            continue
-        
-        # Converte o valor usando a função auxiliar
-        valor_convertido = _converter_valor_causa(valor_causa)
+        # Valor de causa (ANP -> DANO_MORAL, mesma regra do protocolado)
+        valor_convertido = _valor_causa_row_protocolo(p)
         
         # Soma apenas se o valor for válido e maior que zero
         if valor_convertido > 0:
@@ -778,12 +771,10 @@ def get_valor_causa_protocolo_nao_protocolado_por_atendente(protocolos: List[Dic
         atendente = p.get("ATENDENTE") or "Sem atendente"
         atendente_formatado = _formatar_nome_atendente(atendente)
         
-        # Tenta obter o valor da causa
-        valor_causa = p.get("VALOR_DA_CAUSA") or p.get("VALOR_CAUSA")
-        if valor_causa is not None:
-            valor_convertido = _converter_valor_causa(valor_causa)
-            if valor_convertido > 0:
-                atendente_values[atendente_formatado] += valor_convertido
+        # Valor de causa (ANP -> DANO_MORAL, mesma regra do protocolado)
+        valor_convertido = _valor_causa_row_protocolo(p)
+        if valor_convertido > 0:
+            atendente_values[atendente_formatado] += valor_convertido
     
     return dict(atendente_values)
 
