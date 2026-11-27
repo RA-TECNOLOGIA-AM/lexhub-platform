@@ -85,6 +85,10 @@ BREAKDOWNS: dict[str, tuple[str, ...]] = {
 # Alcance com detalhamento só existe para os últimos 13 meses (Meta, desde 10/06/2025).
 REACH_BREAKDOWN_DAYS = 394
 
+# Tamanhos de página, do maior para o menor: a Meta recusa páginas grandes de itens pesados (o anúncio com
+# o criativo: "reduce the amount of data", código 1) e a lista pede de novo com o próximo.
+PAGE_LIMITS = (500, 100, 25)
+
 BASE_AD_FIELDS = (
     "date_start",
     "account_id",
@@ -351,9 +355,17 @@ def normalize_account(raw: str) -> str | None:
 
 
 class GraphUnavailable(Exception):
-    """A API não alcançou graph.facebook.com (rede, DNS, tempo esgotado)."""
+    """A API não alcançou graph.facebook.com (rede, DNS, tempo esgotado).
+
+    `timeout`: a Meta não respondeu a tempo. No /insights isso é volume (um bloco de 31 dias por anúncio
+    passa de 30 s numa conta grande), e o relatório divide o período como faz com "too_much".
+    """
 
     screen_message = "A API não alcançou graph.facebook.com."
+
+    def __init__(self, *args: object, timeout: bool = False):
+        super().__init__(*args)
+        self.timeout = timeout
 
 
 class GraphError(Exception):
@@ -463,7 +475,8 @@ class GraphClient:
         try:
             resp = await self._http.get(path, params=query, headers=headers)
         except httpx.TransportError as exc:
-            raise GraphUnavailable(type(exc).__name__) from exc
+            timeout = isinstance(exc, httpx.TimeoutException)
+            raise GraphUnavailable(type(exc).__name__, timeout=timeout) from exc
         try:
             body = resp.json()
         except ValueError:
@@ -479,11 +492,22 @@ class GraphClient:
         return body if isinstance(body, dict) else {}
 
     async def pages(self, path: str, params: dict[str, Any]) -> list[dict[str, Any]]:
-        """Todas as páginas de uma lista, pelo cursor `after` (o link `next` não é seguido)."""
+        """Todas as páginas de uma lista, pelo cursor `after` (o link `next` não é seguido).
+
+        Se a Meta pedir menos dados por vez (ex.: anúncios com o criativo, páginas de 500), pede a mesma
+        página de novo, menor (PAGE_LIMITS), do mesmo cursor; as linhas já lidas ficam.
+        """
         rows: list[dict] = []
-        params = {"limit": 500, **params}
+        params = {"limit": PAGE_LIMITS[0], **params}
         while True:
-            body = await self.get(path, params)
+            try:
+                body = await self.get(path, params)
+            except GraphError as exc:
+                smaller = [n for n in PAGE_LIMITS if n < int(params["limit"])]
+                if exc.kind != "too_much" or not smaller:
+                    raise
+                params = {**params, "limit": smaller[0]}
+                continue
             rows.extend(r for r in body.get("data") or [] if isinstance(r, dict))
             paging = body.get("paging") or {}
             after = (paging.get("cursors") or {}).get("after")
@@ -538,7 +562,8 @@ class GraphClient:
     ) -> list[dict[str, Any]]:
         """/insights de um período (`preset` ou `since`..`until`), todas as páginas.
 
-        Se a Meta pedir menos dados por vez, divide o período ao meio (até um dia por chamada).
+        Se a Meta pedir menos dados por vez (mesmo com páginas menores) ou não responder a tempo, divide o
+        período ao meio (até um dia por chamada).
         """
         params: dict[str, Any] = {"level": level, "fields": fields}
         if preset:
@@ -554,8 +579,9 @@ class GraphClient:
         params |= _filter_campaigns("campaign.id", campaigns)
         try:
             return await self.pages(f"/{account_id}/insights", params)
-        except GraphError as exc:
-            if exc.kind != "too_much" or preset or since is None or until is None or since >= until:
+        except (GraphError, GraphUnavailable) as exc:
+            heavy = exc.timeout if isinstance(exc, GraphUnavailable) else exc.kind == "too_much"
+            if not heavy or preset or since is None or until is None or since >= until:
                 raise
         middle = since + timedelta(days=(until - since).days // 2)
         kwargs = {
