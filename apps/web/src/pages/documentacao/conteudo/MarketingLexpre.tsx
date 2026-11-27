@@ -1,15 +1,20 @@
 import {
     Code,
-    DocCard,
+    DocCallout,
+    DocChange,
+    DocChips,
+    DocFeature,
     DocGrid,
     DocPage,
+    DocPanel,
     DocSection,
-    InfoBox,
+    Hl,
     MetricCard,
     type TocItem,
 } from '../components/DocParts.tsx'
 
 // Guia trazido da v1: LexHub/src/pages/documentacao/Marketing_Lexpre.tsx (convertido para as peças da V2).
+// Os números 01–07 são as seções do próprio dashboard (o texto cita "Seção 03"...); as demais seções usam ícone.
 
 const TOC: TocItem[] = [
     { id: 'como-funciona', label: 'Como funciona' },
@@ -29,14 +34,18 @@ export function MarketingLexpreDoc() {
         <DocPage
             title="Marketing (LexPre) — NG e LA"
             tags={['NG', 'LA']}
-            note="Banco lexpre — base nova, em construção"
+            note={
+                <>
+                    Banco <Code>lexpre</Code> — base nova, em construção
+                </>
+            }
             toc={TOC}
             intro={
                 <>
                     Este guia explica cada número e gráfico do dashboard de Marketing a partir da nova base de dados
                     (banco <Code>lexpre</Code>): perfil dos clientes, triagem, investimento em anúncios, fechamento das
-                    campanhas, rastreio de aquisição e indicadores dos canais pago e orgânico. Nenhum conhecimento
-                    técnico é necessário.
+                    campanhas, rastreio de aquisição e indicadores dos canais pago e orgânico.{' '}
+                    <strong>Nenhum conhecimento técnico é necessário.</strong>
                 </>
             }
         >
@@ -44,45 +53,53 @@ export function MarketingLexpreDoc() {
                 id="como-funciona"
                 title="Como o dashboard funciona"
                 subtitle="De onde vêm os dados e o que é um cliente assinado"
+                icon="db"
             >
-                <DocGrid>
-                    {[
-                        {
-                            name: 'Perfil de clientes (Seções 01 e 02)',
-                            desc: 'Atendimentos assinados do lexpre (public.atendimento), com os dados do cliente e as respostas da pesquisa socioeconômica (triagem).',
-                        },
-                        {
-                            name: 'Comercial (Seções 03 a 07)',
-                            desc: 'Atendimentos e demandas do lexpre — a mesma consulta do dashboard Comercial (LexPre). Traz canal de aquisição, campanha, posicionamento, conjunto, criativo, rubrica e valor de causa.',
-                        },
-                        {
-                            name: 'Protocolados (Seções 04, 06 e 07)',
-                            desc: 'Log de movimentação de setor do lexpre — a mesma fonte e as mesmas regras do dashboard Protocolo (LexPre), para os números baterem entre as duas páginas.',
-                        },
-                        {
-                            name: 'Anúncios (Seções 03 e 06)',
-                            desc: 'Tabela de Facebook Ads do banco legado (metrics_ads.facebook_ads): valor gasto, cliques, pageview e leads do anúncio, por dia.',
-                        },
-                    ].map((f) => (
-                        <DocCard>
-                            <p>{f.name}</p>
-                            <p>{f.desc}</p>
-                        </DocCard>
-                    ))}
+                <DocGrid cols={2}>
+                    <DocFeature title="Perfil de clientes" tone="info" badge="Seções 01 e 02">
+                        <p>
+                            Atendimentos assinados do lexpre (<Code>public.atendimento</Code>), com os dados do cliente
+                            e as respostas da pesquisa socioeconômica (triagem).
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Comercial" tone="accent" badge="Seções 03 a 07">
+                        <p>
+                            Atendimentos e demandas do lexpre — a mesma consulta do dashboard Comercial (LexPre). Traz
+                            canal de aquisição, campanha, posicionamento, conjunto, criativo, rubrica e valor de causa.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Protocolados" tone="ok" badge="Seções 04, 06 e 07">
+                        <p>
+                            Log de movimentação de setor do lexpre — a mesma fonte e as mesmas regras do dashboard
+                            Protocolo (LexPre), para os números baterem entre as duas páginas.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Anúncios" tone="violet" badge="Seções 03 e 06">
+                        <p>
+                            Tabela de Facebook Ads do banco legado (<Code>metrics_ads.facebook_ads</Code>): valor gasto,
+                            cliques, pageview e leads do anúncio, por dia.
+                        </p>
+                    </DocFeature>
                 </DocGrid>
-                <InfoBox>
-                    <strong>Cliente assinado</strong> é o atendimento com status "Assinado" e data de assinatura
-                    preenchida — a mesma regra do Comercial (LexPre). O motivo de encerramento <strong>não</strong> é
-                    usado: ele só é preenchido quando o atendimento é encerrado, bem depois da assinatura (em set/2026,
-                    só 14 de 172 assinados do NGAM tinham esse campo preenchido). <strong>Campanha</strong> é o canal de
-                    aquisição "anúncio" — no lexpre não existe mais a separação Campanha RA x Campanha NG do legado.
-                </InfoBox>
+                <DocCallout tone="warn" icon="check" title="O que conta como cliente assinado e como campanha?">
+                    <p>
+                        <strong>Cliente assinado</strong> é o atendimento com status "Assinado" e data de assinatura
+                        preenchida — a mesma regra do Comercial (LexPre). O motivo de encerramento <strong>não</strong>{' '}
+                        é usado: ele só é preenchido quando o atendimento é encerrado, bem depois da assinatura (em
+                        set/2026, só 14 de 172 assinados do NGAM tinham esse campo preenchido).
+                    </p>
+                    <p>
+                        <strong>Campanha</strong> é o canal de aquisição "anúncio" — no lexpre não existe mais a
+                        separação Campanha RA x Campanha NG do legado.
+                    </p>
+                </DocCallout>
             </DocSection>
 
             <DocSection
                 id="perfil"
-                title="01 · Perfil de Clientes"
+                title="01 — Perfil de Clientes"
                 subtitle="Quem são os clientes assinados que entraram no período"
+                badge="Data de entrada"
             >
                 <MetricCard
                     icon="users"
@@ -102,7 +119,7 @@ export function MarketingLexpreDoc() {
                 />
             </DocSection>
 
-            <DocSection id="triados" title="02 · Triados" subtitle="Clientes que responderam a pesquisa socioeconômica">
+            <DocSection id="triados" title="02 — Triados" subtitle="Clientes que responderam a pesquisa socioeconômica">
                 <MetricCard
                     icon="fileText"
                     name="Triados (todos os gráficos da seção)"
@@ -115,12 +132,13 @@ export function MarketingLexpreDoc() {
 
             <DocSection
                 id="facebook"
-                title="03 · Facebook Ads"
+                title="03 — Facebook Ads"
                 subtitle="Investimento, funil do anúncio e origem dos leads"
+                badge="LA: anúncios ainda não integrados"
             >
                 <DocGrid>
                     <MetricCard
-                        icon="trendingUp"
+                        icon="dollar"
                         name="Valor Gasto"
                         what="Quanto foi investido em anúncios no período."
                         counts="Soma do valor gasto na tabela de Facebook Ads, pela data do anúncio."
@@ -129,7 +147,7 @@ export function MarketingLexpreDoc() {
                         caveat="A tabela de anúncios não informa o escritório. No NG entra a tabela inteira; no LA entram só campanhas com prefixo “[LA]”, que ainda não existem nessa tabela (a conta de anúncios do LA não está integrada). Por isso o LA mostra valor gasto, cliques, pageview, CAC, ROAS e CPL zerados."
                     />
                     <MetricCard
-                        icon="trendingUp"
+                        icon="users"
                         name="CAC Campanha / CAC Geral"
                         what="Custo de aquisição por cliente."
                         counts="Clientes assinados de campanha (CAC Campanha) ou de campanha + indicação (CAC Geral) cuja data de entrada está no período."
@@ -146,7 +164,7 @@ export function MarketingLexpreDoc() {
                         caveat="Aqui o protocolado usa a data de protocolo da demanda; a Seção 04 usa o log de setor do dashboard Protocolo (LexPre). Os valores podem diferir um pouco entre as duas seções."
                     />
                     <MetricCard
-                        icon="trendingUp"
+                        icon="filter"
                         name="Funil Anúncio"
                         what="Do clique no anúncio até o cliente assinado."
                         counts="Cliques, pageview e leads vêm da tabela de Facebook Ads; Clientes é o total de clientes da Seção 01."
@@ -155,7 +173,7 @@ export function MarketingLexpreDoc() {
                         caveat="O degrau CLIENTES conta clientes de todos os canais (igual ao legado), não só os vindos do anúncio — para os de campanha, veja o card Clientes de Campanha."
                     />
                     <MetricCard
-                        icon="trendingUp"
+                        icon="users"
                         name="Clientes de Campanha, Leads, Indicação e Retorno (Ativa/Passiva)"
                         what="Quantos clientes vieram do anúncio e quantos leads entraram por cada origem."
                         counts="Clientes de Campanha: assinados via anúncio pela data de assinatura. Leads: atendimentos pela data de entrada. Indicação/Retorno: leads desses canais, separados pela prospecção (ativa ou passiva)."
@@ -163,7 +181,7 @@ export function MarketingLexpreDoc() {
                         interpret="Compara o volume do canal pago com o das indicações e retornos."
                     />
                     <MetricCard
-                        icon="trendingUp"
+                        icon="barChart"
                         name="Investimento x Cliques x Leads"
                         what="A evolução diária do investimento e da resposta do anúncio."
                         counts="Por dia do período: valor gasto (barra), leads (barra fina) e cliques (linha)."
@@ -175,14 +193,18 @@ export function MarketingLexpreDoc() {
 
             <DocSection
                 id="fechamento"
-                title="04 · Fechamento Campanhas"
+                title="04 — Fechamento Campanhas"
                 subtitle="Resultado da campanha comparado ao total do escritório"
+                tone="ok"
+                badge="Campanha × Total"
             >
-                <InfoBox>
-                    No legado esta seção comparava Campanha RA x Campanha NG. No lexpre a campanha é um canal só, então
-                    a seção compara <strong>Campanha x Total</strong>: os cards mostram a campanha, e as roscas mostram
-                    a fatia da campanha ao lado do total do escritório.
-                </InfoBox>
+                <DocCallout tone="info" icon="layers" title="Por que não existe mais Campanha RA × Campanha NG?">
+                    <p>
+                        No legado esta seção comparava Campanha RA x Campanha NG. No lexpre a campanha é um canal só,
+                        então a seção compara <strong>Campanha x Total</strong>: os cards mostram a campanha, e as
+                        roscas mostram a fatia da campanha ao lado do total do escritório.
+                    </p>
+                </DocCallout>
                 <DocGrid>
                     <MetricCard
                         icon="check"
@@ -193,7 +215,7 @@ export function MarketingLexpreDoc() {
                         interpret="Quantos contratos a campanha fechou e com que eficiência."
                     />
                     <MetricCard
-                        icon="check"
+                        icon="dollar"
                         name="Protocolados / Valor de Causa / Ticket Médio"
                         what="O que a campanha já virou em processo protocolado."
                         counts="Demandas protocoladas no período cujo atendimento veio de campanha. Uma demanda conta uma vez, mesmo que seja um pacote de rubricas reunidas."
@@ -202,7 +224,7 @@ export function MarketingLexpreDoc() {
                         caveat="O Total das roscas bate com os cards do dashboard Protocolo (LexPre) no mesmo período (validado em set/2026). Demandas que voltaram ao setor Protocolo depois de protocoladas não contam."
                     />
                     <MetricCard
-                        icon="check"
+                        icon="pieChart"
                         name="Rubrica — Campanha / Rubrica — Protocolado"
                         what="Quais rubricas a campanha trouxe e quais já foram protocoladas."
                         counts="Rubrica — Campanha: ações fechadas de clientes de campanha, por rubrica (pacotes de rubricas reunidas contam cada componente). Rubrica — Protocolado: protocolados de campanha, pelo nome da rubrica da demanda."
@@ -215,15 +237,24 @@ export function MarketingLexpreDoc() {
 
             <DocSection
                 id="aquisicao"
-                title="05 · Análise de Aquisição"
+                title="05 — Análise de Aquisição"
                 subtitle="Rastreio dos leads e dos que fecharam contrato"
             >
-                <InfoBox>
-                    No lexpre não existe uma tabela de trackeamento separada: os dados de rastreio do anúncio (campanha,
-                    posicionamento, conjunto e criativo) ficam no próprio atendimento. Por isso{' '}
-                    <strong>Trackeamento</strong> são os atendimentos que entraram no período, e{' '}
-                    <strong>Fechamento</strong> são os desses que assinaram — a mesma turma de entrada, como no legado.
-                </InfoBox>
+                <DocGrid cols={2}>
+                    <DocFeature title="Trackeamento" tone="info" badge="Data de entrada">
+                        <p>
+                            Os atendimentos que <strong>entraram</strong> no período. No lexpre não existe uma tabela de
+                            trackeamento separada: campanha, posicionamento, conjunto e criativo ficam no próprio
+                            atendimento.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Fechamento" tone="ok" badge="Mesma turma">
+                        <p>
+                            Os atendimentos do Trackeamento que <strong>assinaram</strong> — a mesma turma de entrada,
+                            como no legado.
+                        </p>
+                    </DocFeature>
+                </DocGrid>
                 <MetricCard
                     icon="search"
                     name="Categoria, Posicionamento, Canal de Aquisição e Campanha"
@@ -243,15 +274,23 @@ export function MarketingLexpreDoc() {
 
             <DocSection
                 id="performance"
-                title="06 · Ind. Performance de MKT"
+                title="06 — Ind. Performance de MKT"
                 subtitle="Indicadores consolidados só da campanha (anúncio)"
             >
-                <InfoBox>
-                    Como no legado, esta seção reúne numa só vista números que já aparecem nas seções anteriores: Valor
-                    Gasto, CAC e ROAS vêm da 03; Clientes, % Taxa Fechamento, Valor de Causa e Ticket Médio vêm da 04;
-                    os gráficos de rastreio são os da 05, só com o canal anúncio; Rubricas é o mesmo dado de “Rubrica —
-                    Campanha”.
-                </InfoBox>
+                <DocPanel>
+                    <DocChips
+                        label="Reúne, só com o canal anúncio:"
+                        items={[
+                            { label: 'Valor Gasto · CAC · ROAS ← 03', tone: 'violet' },
+                            { label: 'Clientes · % Fechamento · Valor de Causa · Ticket ← 04', tone: 'ok' },
+                            { label: 'Rastreio ← 05', tone: 'info' },
+                        ]}
+                    />
+                    <p>
+                        Como no legado, esta seção reúne numa só vista números que já aparecem nas seções anteriores;
+                        Rubricas é o mesmo dado de “Rubrica — Campanha”.
+                    </p>
+                </DocPanel>
                 <DocGrid>
                     <MetricCard
                         icon="trendingUp"
@@ -275,9 +314,19 @@ export function MarketingLexpreDoc() {
 
             <DocSection
                 id="organico"
-                title="07 · Ind. Orgânico de MKT"
+                title="07 — Ind. Orgânico de MKT"
                 subtitle="Os mesmos indicadores, para os canais orgânicos"
             >
+                <DocChips
+                    label="Canais orgânicos:"
+                    items={[
+                        { label: 'Facebook', tone: 'info' },
+                        { label: 'Instagram', tone: 'violet' },
+                        { label: 'Site' },
+                        { label: 'Google', tone: 'ok' },
+                        { label: '“Orgânico” genérico', tone: 'accent' },
+                    ]}
+                />
                 <MetricCard
                     icon="layers"
                     name="Indicadores orgânicos"
@@ -289,68 +338,80 @@ export function MarketingLexpreDoc() {
                 />
             </DocSection>
 
-            <DocSection id="filtros" title="Filtros disponíveis" subtitle="Como personalizar a visão do dashboard">
-                <DocGrid>
-                    {[
-                        {
-                            name: 'Período',
-                            desc: 'Cada seção usa a data que faz sentido para ela: entrada do atendimento (perfil, leads, rastreio), assinatura (clientes, ações), protocolo (protocolados) e data do anúncio (Facebook Ads).',
-                        },
-                        {
-                            name: 'Perfil (Seções 01 e 02)',
-                            desc: 'Clicar em faixa etária, gênero, origem, tipo de tráfego, ocupação, prospecção, tipo de residência ou pessoas dependentes filtra os gráficos de perfil.',
-                        },
-                        {
-                            name: 'Rubrica (Seções 04, 06 e 07)',
-                            desc: 'Clicar numa rubrica recorta os números de campanha e orgânico — não mexe no perfil, nos anúncios nem em Valor Gasto/CAC/ROAS, igual ao legado.',
-                        },
-                        {
-                            name: 'Rastreio (Seções 05, 06 e 07)',
-                            desc: 'Clicar em categoria, posicionamento, canal, campanha, conjunto ou criativo filtra os gráficos de rastreio. O filtro de canal também vale para a Origem da Seção 01.',
-                        },
-                        {
-                            name: 'Combinação',
-                            desc: 'Vários valores na mesma dimensão somam (OU); dimensões diferentes se combinam (E). Os filtros ativos aparecem como chips na barra do topo.',
-                        },
-                    ].map((f) => (
-                        <DocCard>
-                            <p>{f.name}</p>
-                            <p>{f.desc}</p>
-                        </DocCard>
-                    ))}
+            <DocSection
+                id="filtros"
+                title="Filtros disponíveis"
+                subtitle="Como personalizar e cruzar a visão do dashboard"
+                icon="filter"
+                tone="info"
+            >
+                <DocGrid cols={3}>
+                    <DocFeature title="Período" badge="Data por seção" badgeTone="accent">
+                        <p>
+                            Cada seção usa a data que faz sentido para ela: <strong>entrada</strong> do atendimento
+                            (perfil, leads, rastreio), <strong>assinatura</strong> (clientes, ações),{' '}
+                            <Hl tone="ok">protocolo</Hl> (protocolados) e data do anúncio (Facebook Ads).
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Perfil" badge="Seções 01 e 02" badgeTone="info">
+                        <p>
+                            Clicar em faixa etária, gênero, origem, tipo de tráfego, ocupação, prospecção, tipo de
+                            residência ou pessoas dependentes filtra os gráficos de perfil.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Rubrica" badge="Seções 04, 06 e 07" badgeTone="ok">
+                        <p>
+                            Clicar numa rubrica recorta os números de campanha e orgânico — não mexe no perfil, nos
+                            anúncios nem em Valor Gasto/CAC/ROAS, igual ao legado.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Rastreio" badge="Seções 05, 06 e 07" badgeTone="violet">
+                        <p>
+                            Clicar em categoria, posicionamento, canal, campanha, conjunto ou criativo filtra os
+                            gráficos de rastreio. O filtro de canal também vale para a Origem da Seção 01.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Combinação" badge="OU · E" badgeTone="neutral" wide>
+                        <p>
+                            Vários valores na mesma dimensão somam (<strong>OU</strong>); dimensões diferentes se
+                            combinam (<strong>E</strong>). Os filtros ativos aparecem como chips na barra do topo.
+                        </p>
+                    </DocFeature>
                 </DocGrid>
             </DocSection>
 
             <DocSection
                 id="limitacoes"
                 title="Diferenças para o dashboard legado (Marketing NG)"
-                subtitle="O que mudou, o que ainda não existe, e por quê"
+                subtitle="O que mudou, o que ainda não existe e o motivo de cada decisão"
+                icon="alert"
+                tone="danger"
             >
-                <DocGrid>
-                    <DocCard title="Campanha única">
+                <DocGrid cols={2}>
+                    <DocChange status="Simplificado" tone="info" area="Canais" title="Campanha única">
                         <p>
-                            A separação Campanha RA x Campanha NG foi descontinuada — a Seção 04 compara Campanha x
-                            Total.
+                            A separação Campanha RA x Campanha NG foi descontinuada — a Seção 04 compara{' '}
+                            <strong>Campanha x Total</strong>.
                         </p>
-                    </DocCard>
-                    <DocCard title="Sem dispositivo">
+                    </DocChange>
+                    <DocChange status="Não existe" tone="danger" area="Perfil" title="Sem dispositivo">
                         <p>
-                            O lexpre não registra o dispositivo do lead, então os gráficos de dispositivo do legado não
-                            existem aqui.
+                            O <Code>lexpre</Code> não registra o dispositivo do lead, então os gráficos de dispositivo
+                            do legado não existem aqui.
                         </p>
-                    </DocCard>
-                    <DocCard title="Ticket médio por protocolado">
+                    </DocChange>
+                    <DocChange status="Regra lexpre" tone="ok" area="Protocolo" title="Ticket médio por protocolado">
                         <p>
-                            O legado dividia o valor de causa pelas ações fechadas; aqui divide pelos protocolados, a
-                            regra dos dashboards lexpre.
+                            O legado dividia o valor de causa pelas ações fechadas; aqui divide pelos{' '}
+                            <strong>protocolados</strong>, a regra dos dashboards lexpre.
                         </p>
-                    </DocCard>
-                    <DocCard title="Anúncios do LA ainda não integrados">
+                    </DocChange>
+                    <DocChange status="Em evolução" area="Anúncios" title="Anúncios do LA ainda não integrados">
                         <p>
                             A tabela de Facebook Ads só tem as contas do NG. Os indicadores de anúncio do LA passam a
                             aparecer quando a conta de anúncios do LA for integrada.
                         </p>
-                    </DocCard>
+                    </DocChange>
                 </DocGrid>
             </DocSection>
         </DocPage>

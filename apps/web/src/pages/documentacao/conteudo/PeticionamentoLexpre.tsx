@@ -1,13 +1,19 @@
 import {
     Code,
     DashLink,
-    DocCard,
+    DocCallout,
+    DocChange,
+    DocFeature,
     DocGrid,
     DocLink,
+    DocMini,
+    DocNote,
     DocPage,
+    DocRelation,
     DocSection,
+    DocTable,
     Formula,
-    InfoBox,
+    Hl,
     MetricCard,
     type TocItem,
 } from '../components/DocParts.tsx'
@@ -27,25 +33,6 @@ const TOC: TocItem[] = [
     { id: 'limitacoes', label: 'Diferenças para o legado' },
 ]
 
-const FILTERS = [
-    {
-        name: 'Período (data de saída)',
-        desc: 'Filtra as demandas confeccionadas pela data do evento de saída do setor. Represados e retornos não são afetados por este filtro.',
-    },
-    {
-        name: 'Funcionário',
-        desc: 'Restringe a visão a um ou mais funcionários específicos — pode ser selecionado pelo filtro no topo da página ou clicando diretamente nos gráficos por funcionário.',
-    },
-    {
-        name: 'Matéria',
-        desc: 'Filtra por rubrica (matéria jurídica) — pode ser selecionado clicando diretamente nos gráficos de Top 10 por Matéria. Não afeta a taxa de resolução usada no comissionamento.',
-    },
-    {
-        name: 'Área de atuação',
-        desc: 'Filtra pela operação vinculada à rubrica da demanda (equivalente à "área de atuação" do dashboard legado).',
-    },
-]
-
 // Faixas de comissão por taxa de resolução (Passo 2A e 2B).
 const MASSA_TIERS: [string, string][] = [
     ['≥ 98%', 'R$ 3,00'],
@@ -61,37 +48,16 @@ const ESPECIFICA_TIERS: [string, string][] = [
     ['< 50%', 'R$ 0,00'],
 ]
 
-function TierTable({ valueLabel, tiers }: { valueLabel: string; tiers: [string, string][] }) {
-    return (
-        <div className="tblwrap">
-            <table className="tbl">
-                <thead>
-                    <tr>
-                        <th>Taxa de resolução</th>
-                        <th>{valueLabel}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {tiers.map(([rate, value], i) => (
-                        <tr key={rate}>
-                            <td>{rate}</td>
-                            <td className={i === tiers.length - 1 ? 'muted' : undefined}>
-                                {i === tiers.length - 1 ? value : <strong>{value}</strong>}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    )
-}
-
 export function PeticionamentoLexpreDoc() {
     return (
         <DocPage
             title="Peticionamento (LexPre)"
             tags={['NG', 'LA']}
-            note="Banco lexpre — base nova, em construção"
+            note={
+                <>
+                    Banco <Code>lexpre</Code> — base nova, em construção
+                </>
+            }
             toc={TOC}
             intro={
                 <>
@@ -100,85 +66,143 @@ export function PeticionamentoLexpreDoc() {
                     confeccionados, comissão por faixas), mas a fonte dos dados mudou: em vez de uma tabela com uma
                     linha por processo, o lexpre registra cada movimentação de setor como um evento de log — exatamente
                     como no dashboard de{' '}
-                    <DocLink to="org-documentos-lexpre">Organização de Documentos (LexPre)</DocLink>. Nenhum
-                    conhecimento técnico é necessário.
+                    <DocLink to="org-documentos-lexpre">Organização de Documentos (LexPre)</DocLink>.{' '}
+                    <strong>Nenhum conhecimento técnico é necessário.</strong>
                 </>
             }
             header={
-                <InfoBox>
-                    Este guia vale para o <DashLink dashboard="peticionamento-lexpre">Peticionamento (LexPre)</DashLink>{' '}
-                    em todas as unidades: mesma query, mesma fórmula de comissão por faixas e as mesmas regras descritas
-                    abaixo — a única diferença entre as unidades é o escritório (<Code>escritorio_id</Code>) pelo qual
-                    os dados são filtrados (troque a unidade no seletor da barra lateral). Cada escritório tem seu
-                    próprio bloco de <Code>setor_id</Code> no log de movimentação (Peticionamento é o id 4 no NGAM e o
-                    id 12 no LAAM) — o backend já reconhece os dois blocos ao montar os números de cada unidade, então
-                    nenhum conceito explicado aqui muda de um escritório pro outro.
-                </InfoBox>
+                <DocCallout caps title="Escopo multi-unidade & fórmula por faixas">
+                    <p>
+                        Este guia vale para o{' '}
+                        <DashLink dashboard="peticionamento-lexpre">Peticionamento (LexPre)</DashLink> em todas as
+                        unidades (troque a unidade no seletor da barra lateral): mesma query, mesma fórmula de comissão
+                        por faixas e as mesmas regras descritas abaixo.
+                    </p>
+                    <DocGrid>
+                        <DocMini label="Única diferença entre unidades">
+                            O escritório (<Code>escritorio_id</Code>) pelo qual os dados são filtrados.
+                        </DocMini>
+                        <DocMini label="Bloco de setor no log">
+                            Peticionamento é o <Hl mono>id 4</Hl> no NGAM, o{' '}
+                            <Hl tone="info" mono>
+                                id 12
+                            </Hl>{' '}
+                            no LAAM e o{' '}
+                            <Hl tone="violet" mono>
+                                id 157
+                            </Hl>{' '}
+                            no LARJ — o backend já reconhece os blocos, então nenhum conceito muda de um escritório pro
+                            outro.
+                        </DocMini>
+                    </DocGrid>
+                </DocCallout>
             }
         >
             <DocSection
                 id="como-funciona"
-                title="Como o dashboard funciona"
+                title="01 — Como o dashboard funciona"
                 subtitle="Da tabela de status (banco antigo) para o log de movimentação (lexpre)"
-                icon="db"
             >
-                <InfoBox>
+                <p>
                     No banco antigo (<Code>ng</Code>), cada processo tinha uma linha só, com colunas{' '}
                     <Code>ENTRADA</Code>, <Code>DATA_CONFECCAO</Code> e <Code>STATUS</Code>. No lexpre não existe mais
                     essa tabela: toda vez que uma demanda entra ou sai de um setor, o sistema grava um evento na tabela{' '}
                     <Code>log_setor_demanda</Code> — o mesmo log usado pelo dashboard de Organização de Documentos, aqui
                     recortado para o setor "Peticionamento". O dashboard reconstrói entradas, saídas e o "estado atual"
                     da demanda a partir desses eventos.
-                </InfoBox>
-                <DocCard title="Como um evento de log é lido">
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
-                        <div className="stack" style={{ gap: 4 }}>
-                            <span className="badge warn">SAÍDA de um setor</span>
-                            <span className="muted small">ex.: sai da Organização de Documentos</span>
-                        </div>
-                        <span className="muted">→</span>
-                        <div className="stack" style={{ gap: 4 }}>
-                            <span className="badge info">ENTRADA no próximo setor</span>
-                            <span className="muted small">ex.: entra em Peticionamento</span>
-                        </div>
-                    </div>
+                </p>
+                <DocRelation
+                    cardinality="→"
+                    caption="como um evento é lido"
+                    left={{
+                        name: 'SAÍDA de um setor',
+                        tone: 'warn',
+                        children: 'ex.: sai da Organização de Documentos',
+                    }}
+                    right={{
+                        name: 'ENTRADA no próximo setor',
+                        tone: 'info',
+                        children: 'ex.: entra em Peticionamento',
+                    }}
+                />
+                <DocGrid cols={3}>
+                    <DocFeature title="Peticionado" tone="ok" icon="check-circle" badge="Destino Protocolo" framed>
+                        <p>
+                            Só conta como <strong>"peticionado"</strong> a saída do setor cujo destino é o{' '}
+                            <strong>Protocolo</strong>.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Devolvida" tone="warn" icon="undo" badge="Pendências / Org Doc" framed>
+                        <p>
+                            Uma demanda pode sair do Peticionamento para <strong>qualquer setor</strong>. Saída para
+                            Pendências ou Organização de Documentos é a demanda sendo <strong>devolvida</strong> (algo
+                            precisa ser resolvido antes), não uma confecção concluída — entra nos cards "Retorno
+                            Pendência" e "Retorno Org Doc" (Seção 02).
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Última saída" tone="info" icon="history" badge="Uma por demanda" framed>
+                        <p>
+                            Uma demanda pode sair do setor mais de uma vez. O dashboard usa sempre a{' '}
+                            <strong>última saída</strong>; se ela voltou e está represada de novo, a saída antiga não
+                            conta nem como peticionada nem como retorno — só aparece em "Não Peticionados".
+                        </p>
+                    </DocFeature>
+                </DocGrid>
+                <DocGrid cols={2}>
+                    <DocFeature title="Peticionados" tone="accent" badge="Filtro de datas">
+                        <p>
+                            Demandas com um evento de <em>saída</em> do setor Peticionamento, com destino Protocolo,
+                            dentro do período selecionado.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Não Peticionados e retornos" tone="info" badge="Sem filtro de datas">
+                        <p>
+                            Olham o estado atual da demanda no banco (ou contam eventos de devolução), não um recorte de
+                            período — por isso não mudam com o filtro de datas.
+                        </p>
+                    </DocFeature>
+                </DocGrid>
+                <DocCallout icon="layers" title="Números somados com o Peticionamento legado">
                     <p>
-                        No sistema, uma demanda pode sair do Peticionamento para <strong>qualquer setor</strong> — não
-                        só para o Protocolo. Uma saída para Pendências ou para Organização de Documentos é a demanda
-                        sendo <strong>devolvida</strong> (algo precisa ser resolvido antes de prosseguir), não uma
-                        confecção concluída. Por isso o dashboard só conta como <strong>"peticionado"</strong> a saída
-                        cujo destino é o Protocolo; saídas para Pendências ou Organização de Documentos entram nos cards
-                        "Retorno Pendência" e "Retorno Org Doc" — ver a seção seguinte.
+                        Os indicadores do período juntam o banco <Code>lexpre</Code> e o Peticionamento legado da
+                        unidade (o subtítulo da seção no dashboard diz qual fonte entrou):
                     </p>
+                    <ul>
+                        <li>
+                            <strong>Sem peticionados no LexPre no período:</strong> os cards vêm inteiros do legado
+                            (volume, fila, tempos e valores); as devoluções continuam do LexPre.
+                        </li>
+                        <li>
+                            <strong>Com peticionados nos dois:</strong> Total, Manual, Automático e Valor Confeccionado{' '}
+                            <strong>somam</strong>; Ticket Médio é refeito (valor somado ÷ peticionados somados) e os
+                            tempos viram a média ponderada pelos peticionados de cada base. Não Peticionados,
+                            Cancelados, Protocolados e devoluções ficam só do LexPre, e os comparativos "vs mês
+                            anterior" também.
+                        </li>
+                        <li>
+                            <strong>Peticionados Mês a Mês:</strong> une as duas séries; no mês em que as duas têm dado,
+                            vale o do LexPre.
+                        </li>
+                    </ul>
                     <p>
-                        Além disso, uma demanda pode sair do setor mais de uma vez ao longo do tempo (ex.: é devolvida,
-                        o problema é resolvido, e ela volta para ser confeccionada de fato). Por isso o dashboard usa
-                        sempre a <strong>última saída</strong> de cada demanda do setor; se a demanda voltou e está
-                        represada de novo no setor, essa saída antiga não conta nem como peticionada nem como retorno —
-                        só aparece em "Não Peticionados".
+                        Os gráficos por funcionário, por matéria e a <strong>comissão</strong> são calculados só com o
+                        LexPre.
                     </p>
-                    <p>
-                        <strong>Peticionados (filtro de datas):</strong> demandas com um evento de <em>saída</em> do
-                        setor Peticionamento, com destino Protocolo, dentro do período selecionado.
-                    </p>
-                    <p>
-                        <strong>Não Peticionados e retornos (não filtrados por data):</strong> olham o estado atual da
-                        demanda no banco (ou contam eventos de devolução), não um recorte de período — por isso não
-                        mudam com o filtro de datas.
-                    </p>
-                </DocCard>
+                </DocCallout>
             </DocSection>
 
             <DocSection
                 id="represados"
-                title="Não Peticionados e retornos (acumulado total)"
+                title="02 — Não Peticionados e retornos (acumulado total)"
                 subtitle="Sempre o total atual — não dependem do filtro de datas"
-                icon="barChart"
+                badge="Foto de agora"
             >
-                <InfoBox>
-                    Esses contadores mostram o estoque atual de trabalho e para onde as demandas foram devolvidas. Eles
-                    não mudam com o filtro de datas — refletem sempre a situação de agora.
-                </InfoBox>
+                <DocCallout icon="info" title="Estoque atual e devoluções">
+                    <p>
+                        Esses contadores mostram o estoque atual de trabalho e para onde as demandas foram devolvidas.
+                        Eles não mudam com o filtro de datas — refletem sempre a situação de agora.
+                    </p>
+                </DocCallout>
                 <DocGrid>
                     <MetricCard
                         name="Não Peticionados (Represados)"
@@ -187,7 +211,7 @@ export function PeticionamentoLexpreDoc() {
                         counts="Demandas (não canceladas) cujo setor atual é Peticionamento, uma por demanda."
                         calc="Contagem direta das demandas ainda no setor. Este contador NÃO é filtrado por data."
                         interpret="Quanto menor, melhor. Representa o estoque de trabalho acumulado."
-                        caveat="É o único indicador que não é afetado pelo filtro de período — mostra sempre o total atual."
+                        caveat="Como os retornos, não é afetado pelo filtro de período — mostra sempre o total atual. Quando o período não tem peticionados no LexPre, o número vem do Peticionamento legado (ver Seção 01)."
                     />
                     <MetricCard
                         name="Retorno Org Doc"
@@ -212,14 +236,17 @@ export function PeticionamentoLexpreDoc() {
 
             <DocSection
                 id="periodo"
-                title="Indicadores do período"
+                title="03 — Indicadores do período"
                 subtitle="O que saiu do setor dentro do intervalo de datas selecionado"
-                icon="check"
+                tone="ok"
+                badge="Data de saída"
             >
-                <InfoBox>
-                    Estes contadores usam a data do evento de saída do setor para filtrar — mostram apenas as demandas
-                    que saíram de Peticionamento dentro do período selecionado no dashboard.
-                </InfoBox>
+                <DocCallout icon="calendar" title="Filtrados pela data do evento de saída">
+                    <p>
+                        Estes contadores usam a data do evento de saída do setor para filtrar — mostram apenas as
+                        demandas que saíram de Peticionamento dentro do período selecionado no dashboard.
+                    </p>
+                </DocCallout>
                 <DocGrid>
                     <MetricCard
                         name="Peticionados Manualmente"
@@ -256,7 +283,7 @@ export function PeticionamentoLexpreDoc() {
                     />
                     <MetricCard
                         name="Taxa de Resolvidos"
-                        icon="barChart"
+                        icon="pieChart"
                         what="Gráfico de pizza com a proporção entre resolvidos e não resolvidos."
                         counts="Resolvidos = Total Peticionados do período; Não Resolvidos = Não Peticionados (demandas atualmente no setor, sem filtro de período)."
                         calc="Resolvidos ÷ (Resolvidos + Não Resolvidos), e o complemento para Não Resolvidos."
@@ -279,184 +306,192 @@ export function PeticionamentoLexpreDoc() {
                         interpret="Útil para entender o perfil de valor das demandas que o setor está confeccionando."
                     />
                 </DocGrid>
-                <InfoBox>
-                    <strong>Card de Revisão substituído por Cancelados (04/09/2026):</strong> o lexpre não tem hoje um
-                    status equivalente a "Revisão" do dashboard legado, então o card placeholder foi substituído por
-                    "Cancelados" (que já existia como conceito, só não tinha um card dedicado até então).
-                </InfoBox>
+                <DocNote date="04/09/2026">
+                    <strong>Card de Revisão substituído por Cancelados:</strong> o lexpre não tem hoje um status
+                    equivalente a "Revisão" do dashboard legado, então o card placeholder foi substituído por
+                    "Cancelados" (que já existia como conceito, só não tinha um card dedicado até então). Exceção:
+                    quando os números do período vêm inteiros do legado, o card volta a ser <strong>Revisão</strong>{' '}
+                    (total atual do legado), como na página antiga.
+                </DocNote>
+                <DocFeature title="Reajuizamento" tone="violet" badge="Cards próprios">
+                    <p>
+                        As demandas marcadas como reajuizamento aparecem só no resumo de reajuizamento do setor —{' '}
+                        <strong>Peticionados</strong> (no período) e <strong>Não peticionados</strong> (agora). Elas{' '}
+                        <strong>não entram</strong> nos totais nem na comissão.
+                    </p>
+                </DocFeature>
             </DocSection>
 
-            <DocSection
-                id="tempo"
-                title="Tempo de confecção"
-                subtitle="Quanto tempo uma demanda fica no setor"
-                icon="trendingUp"
-            >
-                <DocGrid>
-                    <DocCard title="Tempo Médio / Mediana Peticionado">
+            <DocSection id="tempo" title="04 — Tempo de confecção" subtitle="Quanto tempo uma demanda fica no setor">
+                <DocGrid cols={2}>
+                    <DocFeature title="Tempo Médio / Mediana Peticionado" tone="accent" badge="Entrada → saída">
                         <p>
-                            Calculado como a diferença entre o evento de entrada no setor e o evento de saída, para as
-                            demandas confeccionadas (não canceladas) no período. Quando uma demanda entra mais de uma
-                            vez no setor (por causa de um retorno), usa-se sempre a entrada mais recente antes da saída.
+                            Diferença entre o evento de entrada no setor e o evento de saída, para as demandas
+                            confeccionadas (não canceladas) no período. Quando uma demanda entra mais de uma vez no
+                            setor (por causa de um retorno), usa-se sempre a <strong>entrada mais recente</strong> antes
+                            da saída.
                         </p>
-                    </DocCard>
-                    <DocCard title="Comparativo (Tempo Médio)">
+                    </DocFeature>
+                    <DocFeature title="Comparativo (média e mediana)" tone="info" badge="vs mês anterior">
                         <p>
-                            Variação percentual do tempo médio de confecção do período selecionado contra o mesmo
-                            recorte de dias no mês civil anterior.
+                            Variação percentual do tempo médio e da mediana de confecção do período selecionado contra o
+                            mesmo recorte de dias no mês civil anterior — menor tempo é melhor.
                         </p>
-                    </DocCard>
+                    </DocFeature>
                 </DocGrid>
             </DocSection>
 
             <DocSection
                 id="rankings"
-                title="Por funcionário"
+                title="05 — Por funcionário"
                 subtitle="Distribuição do trabalho e atribuição de responsabilidade"
-                icon="users"
             >
-                <InfoBox>
-                    O lexpre registra o responsável no momento em que a demanda <em>entra</em> no setor, não em que ela
-                    sai. Por isso, para todo gráfico "por funcionário" sobre demandas confeccionadas, o dashboard usa o
-                    responsável da última entrada da demanda no setor antes da saída.
-                </InfoBox>
-                <DocGrid>
-                    <DocCard title="Demandas por Funcionário">
+                <DocCallout icon="users" title="De quem é cada demanda confeccionada?">
+                    <p>
+                        O lexpre registra o responsável no momento em que a demanda <em>entra</em> no setor; o evento de
+                        saída normalmente não traz responsável. Por isso, para todo gráfico "por funcionário" (e para a
+                        comissão), o dashboard usa o responsável da <strong>última entrada</strong> da demanda no setor
+                        antes da saída — ou o da própria saída, quando ela traz um.
+                    </p>
+                </DocCallout>
+                <DocGrid cols={3}>
+                    <DocFeature title="Demandas por Funcionário" tone="accent" badge="Empilhado">
                         <p>
-                            Gráfico empilhado com Não Peticionados (estoque atual), Peticionados (saíram do setor no
-                            período, por DATA de saída) e Protocolados (de fato protocolaram no período, por DATA de
-                            protocolo — ajuste de 07/10/2026), por funcionário responsável. Os dois recortes de data são
-                            diferentes, então "Peticionados" e "Protocolados" não necessariamente se referem às mesmas
-                            demandas; o frontend usa <Code>Math.max(0, ...)</Code> ao empilhar para evitar uma fatia
-                            negativa no caso raro de "mais protocolado que peticionado" no mesmo recorte.
+                            Não Peticionados (estoque atual), Peticionados (saíram do setor no período, por DATA de
+                            saída, manuais + automáticos) e Protocolados (confecções <strong>manuais</strong> que de
+                            fato protocolaram no período, por DATA de protocolo — o mesmo critério da comissão, ajuste
+                            de 01/10/2026), por funcionário responsável. Os dois recortes de data são diferentes, então
+                            "Peticionados" e "Protocolados" não necessariamente se referem às mesmas demandas; o
+                            frontend usa <Code>Math.max(0, ...)</Code> ao empilhar para evitar uma fatia negativa no
+                            caso raro de "mais protocolado que peticionado" no mesmo recorte.
                         </p>
-                    </DocCard>
-                    <DocCard title="Média de Peticionado por Funcionário (por dia)">
+                    </DocFeature>
+                    <DocFeature title="Média de Peticionado por Funcionário" tone="info" badge="Por dia">
                         <p>
                             Divide o total de confeccionados pelo número de dias distintos com saídas atribuídas a esse
                             funcionário. Permite comparar produtividade levando em conta dias trabalhados.
                         </p>
-                    </DocCard>
-                    <DocCard title="Valor de Causa por Funcionário">
+                    </DocFeature>
+                    <DocFeature title="Valor de Causa por Funcionário" tone="ok" badge="Empilhado">
                         <p>
-                            Gráfico empilhado: valor de causa das demandas confeccionadas (por DATA de saída) e,
-                            separadamente, a fatia já protocolada (por DATA de protocolo dentro do período — ajuste de
-                            07/10/2026). Para matéria ANP, usa o campo de dano moral; para as demais, usa o valor de
-                            causa da demanda.
+                            Valor de causa das demandas confeccionadas (por DATA de saída) e, separadamente, a fatia já
+                            protocolada (por DATA de protocolo dentro do período — ajuste de 07/10/2026). Para matéria
+                            ANP, usa o campo de dano moral; para as demais, usa o valor de causa da demanda.
                         </p>
-                    </DocCard>
+                    </DocFeature>
                 </DocGrid>
             </DocSection>
 
-            <DocSection id="tendencia" title="Tendência" subtitle="Evolução ao longo do tempo" icon="trendingUp">
-                <DocGrid>
-                    <DocCard title="Produção Diária">
+            <DocSection id="tendencia" title="06 — Tendência" subtitle="Evolução ao longo do tempo">
+                <DocGrid cols={3}>
+                    <DocFeature title="Produção Diária" tone="accent" badge="Dia da saída">
                         <p>
-                            Gráfico de linha com as demandas confeccionadas agrupadas por dia do evento de saída. Útil
-                            para identificar picos e vales de produtividade dentro do período selecionado.
+                            Linha com as demandas confeccionadas agrupadas por dia do evento de saída. Útil para
+                            identificar picos e vales de produtividade dentro do período selecionado.
                         </p>
-                    </DocCard>
-                    <DocCard title="Não Peticionados por Mês">
+                    </DocFeature>
+                    <DocFeature title="Não Peticionados por Mês" tone="info" badge="Mês da entrada">
                         <p>
                             Agrupa as demandas ainda represadas pelo mês em que entraram no setor pela última vez —
                             ajuda a identificar se o estoque parado é recente ou antigo.
                         </p>
-                    </DocCard>
-                    <DocCard title="Peticionados Mês a Mês">
+                    </DocFeature>
+                    <DocFeature title="Peticionados Mês a Mês" tone="ok" badge="Ano a ano">
                         <p>
-                            Visão mensal da produção, comparando ano a ano (uma linha por ano). Usa o histórico
-                            completo, sem recorte de período, para permitir a comparação entre anos.
+                            Visão mensal da produção, uma linha por ano. Usa o histórico completo, sem recorte de
+                            período, para permitir a comparação entre anos.
                         </p>
-                    </DocCard>
+                    </DocFeature>
                 </DocGrid>
             </DocSection>
 
             <DocSection
                 id="materias"
-                title="Por matéria"
+                title="07 — Por matéria"
                 subtitle="Distribuição das demandas por tipo de matéria jurídica"
-                icon="fileText"
             >
-                <InfoBox>
-                    No lexpre, a matéria vem diretamente da rubrica cadastrada na demanda (ex.: "JUROS_ABUSIVOS", "ANP",
-                    "ESPECÍFICA") — já normalizada, sem o sufixo livre que existia no banco antigo. ESPECÍFICA é tratada
-                    separadamente no comissionamento (ver seção seguinte).
-                </InfoBox>
-                <DocGrid>
-                    <DocCard title="Top 10 – Peticionados por Matéria">
+                <DocCallout icon="fileText" title="De onde vem a matéria">
+                    <p>
+                        No lexpre, a matéria vem diretamente da rubrica cadastrada na demanda (ex.:{' '}
+                        <Code>JUROS_ABUSIVOS</Code>, <Code>ANP</Code>, <Code>ESPECÍFICA</Code>) — já normalizada, sem o
+                        sufixo livre que existia no banco antigo. ESPECÍFICA é tratada separadamente no comissionamento
+                        (Seção 08).
+                    </p>
+                </DocCallout>
+                <DocGrid cols={2}>
+                    <DocFeature title="Top 10 – Peticionados por Matéria" tone="accent" badge="No Setor · Protocolados">
                         <p>
-                            Agrupa as demandas confeccionadas no período pela rubrica. Mostra quais tipos de demanda
-                            tiveram maior volume de confecção. O botão de alternância mostra "No Setor" (saíram do
-                            Peticionamento no período, por DATA de saída) ou "Protocolados" (de fato protocolaram no
-                            período, por DATA de protocolo — ver "Comissionamento"); como os dois usam recortes de data
-                            diferentes, uma demanda pode aparecer em um período de "No Setor" e só aparecer em
+                            Agrupa as demandas confeccionadas no período pela rubrica. O botão de alternância mostra "No
+                            Setor" (saíram do Peticionamento no período, por DATA de saída) ou "Protocolados" (de fato
+                            protocolaram no período, por DATA de protocolo — ver Seção 08); como os dois usam recortes
+                            de data diferentes, uma demanda pode aparecer em um período de "No Setor" e só aparecer em
                             "Protocolados" num período posterior (ou nunca).
                         </p>
-                    </DocCard>
-                    <DocCard title="Top 10 – Não Peticionados por Matéria">
                         <p>
-                            Agrupa as demandas represadas (estoque atual, sem filtro de período) pela rubrica. Útil para
-                            priorizar quais tipos de demanda têm maior acúmulo.
+                            Clicar numa matéria filtra a página; clicar num <strong>pacote de rubricas reunidas</strong>{' '}
+                            abre a lista das rubricas de cada demanda do pacote, em vez de filtrar.
                         </p>
-                    </DocCard>
+                    </DocFeature>
+                    <DocFeature title="Top 10 – Não Peticionados por Matéria" tone="info" badge="Estoque atual">
+                        <p>
+                            Agrupa as demandas represadas (sem filtro de período) pela rubrica. Útil para priorizar
+                            quais tipos de demanda têm maior acúmulo.
+                        </p>
+                    </DocFeature>
                 </DocGrid>
             </DocSection>
 
             <DocSection
                 id="comissao"
-                title="Comissionamento"
+                title="08 — Comissionamento"
                 subtitle="Como o sistema calcula a comissão de cada funcionário"
-                icon="dollar"
+                tone="ok"
+                badge="Só confecção manual"
             >
-                <InfoBox>
-                    Mesma fórmula por faixas do dashboard legado — a comissão incide apenas sobre as confecções manuais
-                    (peticionamento automático não gera comissão), separando matérias ESPECÍFICA (e a operação
-                    Administrativo) das demais (chamadas de Massa). O valor unitário de cada faixa depende da{' '}
-                    <strong>taxa de resolução geral</strong> do funcionário — não é filtrado pela matéria selecionada na
-                    página.
-                </InfoBox>
-                <DocCard title="Passo 1 — Taxa de resolução do funcionário">
+                <DocCallout icon="dollar" title="Mesma fórmula por faixas do dashboard legado">
+                    <p>
+                        A comissão incide apenas sobre as <strong>confecções manuais</strong> (peticionamento automático
+                        não gera comissão), separando matérias ESPECÍFICA (e a operação Administrativo) das demais
+                        (chamadas de Massa). O valor unitário de cada faixa depende da{' '}
+                        <strong>taxa de resolução geral</strong> do funcionário — não é filtrado pela matéria
+                        selecionada na página.
+                    </p>
+                </DocCallout>
+                <DocFeature title="Passo 1 — Taxa de resolução do funcionário" tone="accent" badge="Geral">
                     <Formula>
-                        Taxa = Protocolados no período ÷ (Protocolados no período + Represados atuais) × 100
+                        Taxa = Peticionadas no período já protocoladas ÷ (Peticionadas no período já protocoladas +
+                        Represados atuais) × 100
                     </Formula>
                     <p>
                         Essa taxa reflete a produtividade GERAL do funcionário (todas as matérias, manual + automático)
                         — não muda quando a página está filtrada por uma matéria específica.
                     </p>
                     <p>
-                        <strong>Protocolados (desde 04/09/2026):</strong> das demandas que passaram pelo Peticionamento
-                        no período, conta só as que de fato chegaram a ser protocoladas depois (status atual "Aguardando
-                        Despacho Inicial") — mesmo critério de ajuste usado no Org Documentos. Uma demanda pode sair
-                        "peticionada" do setor (rumo ao Protocolo) e nunca chegar a ser protocolada de fato (parada no
-                        Protocolo, cancelada depois, etc.) — essa demanda não entra no numerador da taxa.
+                        <strong>Numerador (desde 04/09/2026):</strong> das demandas que saíram do Peticionamento rumo ao
+                        Protocolo no período (pela <strong>data de saída</strong>), conta só as que de fato chegaram a
+                        ser protocoladas (status atual "Aguardando Despacho Inicial") — mesmo critério usado no Org
+                        Documentos. Uma demanda pode sair "peticionada" do setor e nunca chegar a ser protocolada
+                        (parada no Protocolo, cancelada depois etc.) — essa demanda não entra no numerador.{' '}
+                        <strong>Denominador:</strong> soma as demandas do funcionário que estão hoje represadas no
+                        setor. A taxa continua ancorada na data de saída; só a <em>quantidade paga</em> (Passo 3) usa a
+                        data de protocolo.
                     </p>
-                </DocCard>
-                <DocCard title="Passo 2A — Comissão por ações de Massa (qualquer matéria exceto ESPECÍFICA/Administrativo)">
-                    <TierTable valueLabel="Valor por ação manual (Massa)" tiers={MASSA_TIERS} />
-                </DocCard>
-                <DocCard title="Passo 2B — Comissão por ações ESPECÍFICA">
-                    <p>
-                        Demandas cuja rubrica (normalizada) é <Code>ESPECÍFICA</Code>, ou cuja rubrica pertence à
-                        operação <Code>Administrativo</Code> (ex.: progressões e gratificações de servidor público),
-                        usam esta tabela própria, com valores maiores:
-                    </p>
-                    <TierTable valueLabel="Valor por ação manual (ESPECÍFICA)" tiers={ESPECIFICA_TIERS} />
-                </DocCard>
-                <InfoBox>
-                    <strong>Ajuste de 01/10/2026 — quantidade paga mudou de "peticionado" pra "protocolado":</strong>{' '}
-                    antes, "Qtd de ações Massa/ESPECÍFICA manuais" contava qualquer confecção manual que SAIU do
-                    Peticionamento no período (mesmo que ainda não tivesse protocolado). Agora só conta as que de fato
-                    PROTOCOLARAM — e o período passou a ser definido pela <strong>data de protocolo</strong>, não mais
-                    pela data de saída do Peticionamento. Uma ação peticionada no fim de um mês, mas que só protocola no
-                    mês seguinte, agora é paga no mês em que ela REALMENTE protocolou. Isso é por isso que a soma das
-                    quantidades de comissão de todos os funcionários costuma ser BEM menor do que o card "Protocolados"
-                    da página: esse card conta qualquer demanda (manual <strong>ou automática</strong>) que saiu do
-                    setor no período e já está protocolada hoje — a comissão só paga a fatia manual, com protocolo
-                    dentro do período exato. Em setembro/2026, por exemplo, de ~335 "Protocolados" do card, ~74% eram
-                    confecção automática (nunca gera comissão) e uma fatia pequena protocolou fora do período — sobrando
-                    a quantidade que aparece no PDF.
-                </InfoBox>
-                <DocCard title="Passo 3 — Comissão total do funcionário">
+                </DocFeature>
+                <DocGrid cols={2}>
+                    <DocFeature title="Passo 2A — Ações de Massa" tone="info" icon="layers" badge="Massa" framed>
+                        <p>Qualquer matéria exceto ESPECÍFICA/Administrativo.</p>
+                        <DocTable head={['Taxa de resolução', 'Valor por ação manual']} rows={MASSA_TIERS} />
+                    </DocFeature>
+                    <DocFeature title="Passo 2B — Ações ESPECÍFICA" tone="violet" icon="star" badge="ESPECÍFICA" framed>
+                        <p>
+                            Rubrica (normalizada) <Code>ESPECÍFICA</Code>, ou rubrica da operação{' '}
+                            <Code>Administrativo</Code> (ex.: progressões e gratificações de servidor público) — tabela
+                            própria, com valores maiores.
+                        </p>
+                        <DocTable head={['Taxa de resolução', 'Valor por ação manual']} rows={ESPECIFICA_TIERS} />
+                    </DocFeature>
+                </DocGrid>
+                <DocFeature title="Passo 3 — Comissão total do funcionário" tone="ok" badge="Soma das duas">
                     <Formula>
                         <div>Subtotal Massa = Valor Massa × Qtd de ações Massa manuais</div>
                         <div>Subtotal ESPECÍFICA = Valor ESPECÍFICA × Qtd de ações ESPECÍFICA manuais</div>
@@ -464,10 +499,35 @@ export function PeticionamentoLexpreDoc() {
                     </Formula>
                     <p>
                         Exemplo: funcionário com taxa 90%, 80 ações de Massa e 5 ESPECÍFICA no período → (80 × R$1,50) +
-                        (5 × R$13,00) = R$120,00 + R$65,00 = <strong>R$185,00</strong>.
+                        (5 × R$13,00) = R$120,00 + R$65,00 = <Hl tone="ok">R$185,00</Hl>.
                     </p>
-                </DocCard>
-                <DocCard title='Botão "Gerar comissão (PDF)"'>
+                </DocFeature>
+                <DocNote date="01/10/2026">
+                    <strong>A quantidade paga mudou de "peticionado" para "protocolado":</strong> antes, "Qtd de ações
+                    Massa/ESPECÍFICA manuais" contava qualquer confecção manual que SAIU do Peticionamento no período
+                    (mesmo que ainda não tivesse protocolado). Agora só conta as que de fato PROTOCOLARAM — e o período
+                    passou a ser definido pela <strong>data de protocolo</strong>, não mais pela data de saída do
+                    Peticionamento. Uma ação peticionada no fim de um mês, mas que só protocola no mês seguinte, agora é
+                    paga no mês em que ela REALMENTE protocolou.
+                </DocNote>
+                <DocCallout
+                    tone="warn"
+                    icon="alert"
+                    title='Por que a soma da comissão é bem menor que o card "Protocolados"?'
+                >
+                    <p>
+                        Desde 07/10/2026 o card e a comissão usam o mesmo recorte (data de protocolo dentro do período e
+                        status "Aguardando Despacho Inicial"), mas o card conta confecções manuais{' '}
+                        <strong>e automáticas</strong> — a comissão só paga a fatia manual. Em setembro/2026, por
+                        exemplo, ~74% dos ~335 "Protocolados" do card eram confecção automática (nunca gera comissão).
+                    </p>
+                </DocCallout>
+                <DocFeature
+                    title='Botão "Gerar comissão (PDF)"'
+                    tone="info"
+                    icon="shield"
+                    badge="Gestor e Desenvolvedor"
+                >
                     <p>
                         Gera um PDF com o comissionamento por funcionário do período selecionado (funcionário, taxa de
                         resolução, quantidade e valor de ações Massa/ESPECÍFICA e comissão) — mesmo botão e mesmo
@@ -475,53 +535,95 @@ export function PeticionamentoLexpreDoc() {
                         <strong>Desenvolvedor</strong> — mesma permissão do dashboard legado (mais restrita que o botão
                         "Exportar", que também é liberado para Colaborador).
                     </p>
-                </DocCard>
+                    <p>
+                        Os demais cargos veem só a <strong>própria</strong> linha de comissão, pelo vínculo entre a
+                        pessoa e o funcionário no LexPre; sem esse vínculo cadastrado, a comissão aparece vazia.
+                    </p>
+                </DocFeature>
+                <DocFeature title="Fica de fora da comissão" tone="danger" icon="ban" framed>
+                    <ul>
+                        <li>Peticionamento automático e demandas canceladas.</li>
+                        <li>Confecções manuais que ainda não protocolaram, ou que protocolaram fora do período.</li>
+                        <li>Demandas de reajuizamento (têm cards próprios).</li>
+                        <li>
+                            Peticionados do <strong>banco legado</strong> — a comissão é só do LexPre, mesmo quando os
+                            cards somam as duas bases.
+                        </li>
+                    </ul>
+                </DocFeature>
             </DocSection>
 
             <DocSection
                 id="filtros"
-                title="Filtros disponíveis"
-                subtitle="Como personalizar a visão do dashboard"
-                icon="filter"
+                title="09 — Filtros disponíveis"
+                subtitle="Como personalizar e cruzar a visão do dashboard"
+                tone="info"
             >
-                <DocGrid>
-                    {FILTERS.map((f) => (
-                        <DocCard key={f.name} title={f.name}>
-                            <p>{f.desc}</p>
-                        </DocCard>
-                    ))}
+                <DocGrid cols={2}>
+                    <DocFeature title="Período" badge="Data de saída" badgeTone="accent">
+                        <p>
+                            Filtra as demandas confeccionadas pela data do evento de saída do setor. Represados e
+                            retornos não são afetados por este filtro.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Funcionário" badge="Topo + Clique" badgeTone="info">
+                        <p>
+                            Restringe a visão a um ou mais funcionários — pelo filtro no topo da página ou clicando
+                            diretamente nos gráficos por funcionário.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Matéria" badge="Clique no Top 10" badgeTone="ok">
+                        <p>
+                            Filtra por rubrica (matéria jurídica), pelo seletor no topo ou clicando nos gráficos de Top
+                            10 por Matéria. <strong>Não afeta</strong> a taxa de resolução usada no comissionamento.
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="Área de atuação" badge="public.area_atuacao" badgeTone="neutral">
+                        <p>
+                            Filtra pela operação vinculada à rubrica da demanda (equivalente à "área de atuação" do
+                            dashboard legado).
+                        </p>
+                    </DocFeature>
+                    <DocFeature title="UF" badge="customer.uf" badgeTone="neutral" wide>
+                        <p>
+                            Filtra pelo estado do cliente (<Code>customer.uf</Code>), o mesmo catálogo dos outros
+                            dashboards lexpre. Só aparece quando há clientes com UF preenchida na unidade.
+                        </p>
+                    </DocFeature>
                 </DocGrid>
             </DocSection>
 
             <DocSection
                 id="limitacoes"
-                title="Diferenças para o dashboard legado (banco ng)"
-                subtitle="O que já existe, o que ainda não existe, e por quê"
-                icon="alert"
+                title="10 — Diferenças para o dashboard legado (banco ng)"
+                subtitle="O que já existe, o que ainda não existe e o motivo de cada decisão"
+                tone="danger"
             >
-                <DocGrid>
-                    <DocCard title="Sem Revisão nem Reajuizamento">
+                <DocGrid cols={3}>
+                    <DocChange status="Não existe" tone="danger" area="Status" title="Sem Revisão no LexPre">
                         <p>
-                            O lexpre não tem, hoje, um status equivalente a "Revisão" nem um campo equivalente a
-                            "REAJUIZAMENTO" do banco antigo. O card "Revisão" foi substituído por "Cancelados"
-                            (04/09/2026); os cards de Reajuizamento (Resolvidos/Não Resolvidos e os gauges de taxa)
-                            foram removidos até esse conceito existir na nova base.
+                            O lexpre não tem, hoje, um status equivalente a "Revisão" do banco antigo — o card foi
+                            substituído por "Cancelados" (04/09/2026) e só volta quando os números vêm inteiros do
+                            legado.
                         </p>
-                    </DocCard>
-                    <DocCard title="UF ainda não disponível">
+                    </DocChange>
+                    <DocChange
+                        status="Cards próprios"
+                        tone="violet"
+                        area="Reajuizamento"
+                        title="Reajuizamento separado"
+                    >
                         <p>
-                            O filtro de UF que existe no dashboard legado ainda não tem equivalente aqui — a demanda no
-                            lexpre não carrega essa informação diretamente na consulta atual.
+                            As demandas de reajuizamento ficam fora dos totais e da comissão e aparecem num resumo
+                            próprio (peticionados no período e não peticionados agora).
                         </p>
-                    </DocCard>
-                    <DocCard title="Base de dados nova — números ainda baixos">
+                    </DocChange>
+                    <DocChange status="Híbrido" tone="ok" area="Totais" title="Cards somam com o legado" framed>
                         <p>
-                            Como o banco lexpre está em fase inicial de adoção, ainda há poucas demandas que
-                            efetivamente saíram do setor Peticionamento — por isso os indicadores de "Peticionados"
-                            tendem a aparecer zerados ou baixos até que o fluxo real de trabalho passe a acontecer nessa
-                            base.
+                            Volume, valor e tempos do período somam o Peticionamento legado da unidade (ver Seção 01); a
+                            comissão continua <strong>só do LexPre</strong>.
                         </p>
-                    </DocCard>
+                    </DocChange>
                 </DocGrid>
             </DocSection>
         </DocPage>
