@@ -821,6 +821,9 @@ export type AdsSummary = {
         linkClicks: number
     }[]
     backfill: { done: boolean; coveredUntil: string | null } | null
+    // A atualização automática (Integração Meta): o intervalo e se está pausada para todas as contas.
+    syncEveryMin: number
+    syncPaused: boolean
 }
 
 // Personalização salva: recollect = a coleta vai refazer o histórico.
@@ -835,9 +838,11 @@ export type MetaIntegration = {
     secretUnreadable: boolean // a chave salva não abre com a SOURCE_SECRET_KEY atual (precisa salvar de novo)
     graphVersion: string
     versions: string[] // as versões que a tela oferece
-    syncPaused: boolean // a coleta de todas as contas parada pela tela
+    syncPaused: boolean // a atualização automática de todas as contas pausada pela tela
+    syncIntervalMin: number // de quanto em quanto tempo a atualização automática roda (minutos)
+    intervals: number[] // os intervalos que a tela oferece
     syncAvailable: boolean // a coleta está ligada neste servidor (FACEBOOK_ADS_SYNC_ENABLED)
-    origin: { appId: MetaOrigin; appSecret: MetaOrigin; graphVersion: MetaOrigin }
+    origin: { appId: MetaOrigin; appSecret: MetaOrigin; graphVersion: MetaOrigin; syncInterval: MetaOrigin }
     updatedAt: string | null
     updatedBy: string | null
 }
@@ -847,6 +852,7 @@ export type MetaIntegrationInput = {
     appSecret: string | null
     graphVersion: string
     syncPaused: boolean
+    syncIntervalMin: number
 }
 export type MetaIntegrationTest = { ok: boolean; checks: SourceCheck[]; app: string | null }
 // saved=false = a Meta recusou o app (nada gravado; as checagens dizem o porquê).

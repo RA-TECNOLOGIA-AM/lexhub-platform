@@ -12,6 +12,7 @@ import { LoadingState } from '../../../components/states/LoadingState.tsx'
 import { toDataError } from '../../../services/errors.ts'
 import { useAsync } from '../../../hooks/useAsync.ts'
 import { CheckList } from './CheckList.tsx'
+import { intervalLabel } from './facebookAds.ts'
 import {
     canTest,
     draftFrom,
@@ -240,17 +241,15 @@ export function MetaIntegrationDialog({ load, onTest, onSave, onSaved, onClose }
                         </label>
                     </section>
 
-                    <section className="stack meta-section" aria-label="Coleta">
-                        <h3 className="source-section-title">Coleta</h3>
+                    <section className="stack meta-section" aria-label="Atualização automática">
+                        <h3 className="source-section-title">Atualização automática</h3>
                         <div className={`source-power ${draft.syncPaused ? 'off' : 'on'}`}>
                             <div>
-                                <strong id="meta-sync-label">
-                                    {draft.syncPaused ? 'Coleta pausada' : 'Coleta ligada'}
-                                </strong>
+                                <strong id="meta-sync-label">{draft.syncPaused ? 'Pausada' : 'Ligada'}</strong>
                                 <span className="small muted">
                                     {draft.syncPaused
-                                        ? 'Nenhuma conta é coletada. O que já foi guardado fica; retomar traz os dias que faltaram.'
-                                        : 'A coleta guarda as métricas de todas as contas a cada 10 minutos.'}
+                                        ? 'Nenhuma conta é atualizada. O que já foi guardado fica; retomar traz os dias que faltaram.'
+                                        : `Guarda as métricas de todas as contas a cada ${intervalLabel(draft.syncIntervalMin)}.`}
                                 </span>
                             </div>
                             <button
@@ -259,15 +258,38 @@ export function MetaIntegrationDialog({ load, onTest, onSave, onSaved, onClose }
                                 role="switch"
                                 aria-checked={!draft.syncPaused}
                                 aria-labelledby="meta-sync-label"
-                                title={draft.syncPaused ? 'Retomar a coleta' : 'Pausar a coleta'}
+                                title={
+                                    draft.syncPaused
+                                        ? 'Retomar a atualização automática'
+                                        : 'Pausar a atualização automática'
+                                }
                                 onClick={() => change({ syncPaused: !draft.syncPaused })}
                                 disabled={busy !== null}
                             />
                         </div>
+                        <label>
+                            <span className="lbl">Atualizar a cada</span>
+                            <select
+                                className="field"
+                                value={draft.syncIntervalMin}
+                                onChange={(e) => change({ syncIntervalMin: Number(e.target.value) })}
+                            >
+                                {meta.intervals.map((m) => (
+                                    <option key={m} value={m}>
+                                        {intervalLabel(m)}
+                                    </option>
+                                ))}
+                            </select>
+                            <span className="muted small">
+                                {originNote(meta.origin.syncInterval, 'syncInterval')} Mais curto deixa os números mais
+                                frescos e gasta mais da cota de chamadas da Meta. A fonte só aparece como Atrasada
+                                depois de 2 intervalos sem coletar.
+                            </span>
+                        </label>
                         {!meta.syncAvailable && (
                             <p className="muted small" style={{ margin: 0 }}>
-                                Este servidor não coleta (FACEBOOK_ADS_SYNC_ENABLED desligado): a pausa só vale onde a
-                                coleta está ligada.
+                                Este servidor não coleta (FACEBOOK_ADS_SYNC_ENABLED desligado): a atualização automática
+                                só roda onde essa trava está ligada.
                             </p>
                         )}
                     </section>

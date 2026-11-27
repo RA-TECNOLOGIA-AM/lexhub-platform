@@ -340,3 +340,6 @@ export function accountsWithoutCampaigns(
     if (missing.length === 0) return null
     return `Escolha ao menos uma campanha de: ${missing.map((a) => a.name).join(', ')}.`
 }
+
+// "10 minutos", "1 hora": o intervalo da atualização automática (Integração Meta).
+export const intervalLabel = (min: number): string => (min === 60 ? '1 hora' : `${min} minutos`)

@@ -229,7 +229,7 @@ describe('fontes e integrações', () => {
             }),
         )
         expect(meta).toMatchObject({ kind: 'source', action: 'Configurou integração' })
-        expect(meta.detail).toBe('Meta (Facebook Ads) · ID do app, pausa da coleta · chave do app trocada')
+        expect(meta.detail).toBe('Meta (Facebook Ads) · ID do app, atualização automática · chave do app trocada')
         const keep = toAuditEvent(
             raw({ action: 'integration.updated', metadata: { integration: 'meta', changed: [], secret: 'keep' } }),
         )

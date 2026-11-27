@@ -610,6 +610,11 @@ export function createMockClient(): DataClient {
             requireSession()
             const detail = sourceDetailFor(requireOrg(org) ? sources : onboardingSources, catalog, unit, source)
             if (!detail) throw new DataError(409, 'Esta unidade não usa essa fonte.')
+            // O painel do Facebook Ads mostra o intervalo e a pausa da Integração Meta (como o banco).
+            if (detail.ads) {
+                const meta = metaIntegration.get()
+                detail.ads = { ...detail.ads, syncEveryMin: meta.syncIntervalMin, syncPaused: meta.syncPaused }
+            }
             return copy(detail)
         },
 

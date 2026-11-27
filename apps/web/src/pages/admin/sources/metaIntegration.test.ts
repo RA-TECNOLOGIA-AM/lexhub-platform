@@ -19,8 +19,10 @@ const meta = (over: Partial<MetaIntegration> = {}): MetaIntegration => ({
     graphVersion: 'v26.0',
     versions: ['v24.0', 'v25.0', 'v26.0'],
     syncPaused: false,
+    syncIntervalMin: 10,
+    intervals: [5, 10, 15, 30, 60],
     syncAvailable: true,
-    origin: { appId: 'tela', appSecret: 'tela', graphVersion: 'tela' },
+    origin: { appId: 'tela', appSecret: 'tela', graphVersion: 'tela', syncInterval: 'padrão' },
     updatedAt: null,
     updatedBy: null,
     ...over,
@@ -36,7 +38,14 @@ describe('Integração Meta: rascunho e corpo do PUT', () => {
 
     it('appSecret: null mantém, vazio apaga, texto troca (campo aberto e vazio = manter)', () => {
         const d = draftFrom(meta())
-        expect(inputFrom(d)).toEqual({ appId: '1234567890', appSecret: null, graphVersion: 'v26.0', syncPaused: false })
+        expect(inputFrom(d)).toEqual({
+            appId: '1234567890',
+            appSecret: null,
+            graphVersion: 'v26.0',
+            syncPaused: false,
+            syncIntervalMin: 10,
+        })
+        expect(inputFrom({ ...d, syncIntervalMin: 30 }).syncIntervalMin).toBe(30)
         expect(inputFrom({ ...d, secretChoice: 'remove' }).appSecret).toBe('')
         expect(inputFrom({ ...d, secretChoice: 'replace', secret: '  abc  ' }).appSecret).toBe('abc')
         expect(inputFrom({ ...d, secretChoice: 'replace', secret: ' ' }).appSecret).toBeNull()
@@ -66,6 +75,7 @@ describe('Integração Meta: rascunho e corpo do PUT', () => {
         expect(isDirty(d, meta())).toBe(false)
         expect(isDirty({ ...d, syncPaused: true }, meta())).toBe(true)
         expect(isDirty({ ...d, graphVersion: 'v25.0' }, meta())).toBe(true)
+        expect(isDirty({ ...d, syncIntervalMin: 30 }, meta())).toBe(true)
         expect(isDirty({ ...d, secretChoice: 'replace', secret: '' }, meta())).toBe(false)
         expect(isDirty({ ...d, secretChoice: 'replace', secret: 'nova' }, meta())).toBe(true)
         expect(isDirty({ ...d, secretChoice: 'remove' }, meta())).toBe(true)
@@ -83,6 +93,8 @@ describe('Integração Meta: textos', () => {
     it('aviso depois de salvar: pausa e retomada têm o seu', () => {
         expect(savedNotice(meta(), meta({ syncPaused: true }))).toMatch(/pausada/)
         expect(savedNotice(meta({ syncPaused: true }), meta())).toMatch(/retomada/)
+        expect(savedNotice(meta(), meta({ syncIntervalMin: 60 }))).toMatch(/a cada 1 hora/)
+        expect(savedNotice(meta(), meta({ syncIntervalMin: 30 }))).toMatch(/a cada 30 minutos/)
         expect(savedNotice(meta(), meta({ graphVersion: 'v25.0' }))).toMatch(/salva/)
     })
 

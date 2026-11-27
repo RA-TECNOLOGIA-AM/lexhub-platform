@@ -6,7 +6,7 @@
 
 A chave secreta do app nunca volta em resposta nenhuma: a tela só sabe se ela existe. No PUT, appSecret
 ausente (null) mantém a salva, texto vazio apaga e texto troca (depois do teste). Pausar ou retomar a
-coleta acorda a coleta na hora.
+coleta, ou trocar o intervalo, acorda a coleta na hora.
 """
 
 import re
@@ -19,6 +19,7 @@ from app.config import Settings, get_settings
 from app.connection_check import Check, CheckResult
 from app.meta_config import (
     KEY,
+    SYNC_INTERVALS_MIN,
     AppChecker,
     IntegrationRepo,
     MetaConfig,
@@ -57,6 +58,7 @@ class MetaIn(BaseModel):
     )  # null = manter, "" = apagar, texto = trocar
     graphVersion: str = Field(pattern=VERSION)
     syncPaused: bool = False
+    syncIntervalMin: int = 10  # minutos: 5, 10, 15, 30 ou 60
 
 
 def get_app_checker() -> AppChecker:
@@ -124,6 +126,11 @@ async def save_meta(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT, detail="O ID do app tem só números."
         )
+    if body.syncIntervalMin not in SYNC_INTERVALS_MIN:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Intervalo da atualização: 5, 10, 15, 30 ou 60 minutos.",
+        )
     before = await meta.refresh(force=True)
     new_secret = (body.appSecret or "").strip()
     if body.appSecret is None:
@@ -159,7 +166,11 @@ async def save_meta(
             )
         ciphertext = box.encrypt(new_secret)
 
-    config: dict[str, Any] = {"graph_version": body.graphVersion, "sync_paused": body.syncPaused}
+    config: dict[str, Any] = {
+        "graph_version": body.graphVersion,
+        "sync_paused": body.syncPaused,
+        "sync_interval_min": body.syncIntervalMin,
+    }
     if app_id:
         config["app_id"] = app_id
     try:
@@ -173,6 +184,9 @@ async def save_meta(
 
     meta.invalidate()
     after = await meta.refresh(force=True)
-    if before.sync_paused != after.sync_paused:
+    if (before.sync_paused, before.sync_interval_min) != (
+        after.sync_paused,
+        after.sync_interval_min,
+    ):
         _wake_ads(ads_sync)
     return {"saved": True, "checks": checks, "integration": view(after, settings)}

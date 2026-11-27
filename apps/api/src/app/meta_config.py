@@ -1,13 +1,16 @@
 """A configuração da Meta (Facebook Ads) em uso: a da tela tem prioridade sobre a do .env.
 
 A TI da LexGroup configura em Unidades e fontes > Integração Meta (app/routes/integrations_routes.py):
-o ID e a chave secreta do app, a versão da Graph API e a pausa da coleta. Fica em app.platform_integrations
+o ID e a chave secreta do app, a versão da Graph API e a atualização automática (ligada ou pausada e
+o intervalo). Fica em app.platform_integrations
 (migration 20261127120000_integracao_meta.sql), com a chave secreta cifrada pela SOURCE_SECRET_KEY.
 
 O que vale, campo a campo:
   tela      o que está salvo no banco;
   servidor  o .env da API (FACEBOOK_APP_ID, FACEBOOK_APP_SECRET, FACEBOOK_GRAPH_VERSION), quando a tela não definiu;
-  padrão    a versão v26.0 e a coleta sem pausa.
+  padrão    a versão v26.0 e a atualização automática ligada, a cada 10 minutos.
+O intervalo e a pausa não têm reserva no .env: o banco usa os mesmos números na regra de fonte "atrasada"
+(app_private.ads_sync_every_min e ads_sync_paused).
 A leitura do banco fica guardada por TTL segundos (as rotas e a coleta pedem `refresh()` antes de usar);
 salvar pela tela chama `invalidate()`. Banco fora (ou a migration ainda não aplicada): vale o último lido ou o
 .env, e a API segue funcionando.
@@ -35,6 +38,9 @@ KEY = "meta"
 DEFAULT_GRAPH_VERSION = "v26.0"
 # As versões oferecidas na tela (a Meta mantém cada uma por uns 2 anos; v26.0 é de 29/07/2026).
 GRAPH_VERSIONS = ("v24.0", "v25.0", "v26.0")
+# O intervalo da atualização automática (minutos); a migration aceita os mesmos.
+DEFAULT_SYNC_INTERVAL_MIN = 10
+SYNC_INTERVALS_MIN = (5, 10, 15, 30, 60)
 
 
 @dataclass(frozen=True)
@@ -43,6 +49,7 @@ class MetaSettings:
     app_secret: str = ""
     graph_version: str = DEFAULT_GRAPH_VERSION
     sync_paused: bool = False
+    sync_interval_min: int = DEFAULT_SYNC_INTERVAL_MIN
     # De onde veio cada campo: 'tela', 'servidor', 'padrão' ou 'nenhum'.
     origin: dict[str, str] = field(default_factory=dict)
     updated_at: datetime | None = None
@@ -105,11 +112,17 @@ def resolve(
     if not version and settings.FACEBOOK_GRAPH_VERSION.strip() != DEFAULT_GRAPH_VERSION:
         version, origin["graphVersion"] = settings.FACEBOOK_GRAPH_VERSION.strip(), "servidor"
 
+    interval = config.get("sync_interval_min")
+    if interval not in SYNC_INTERVALS_MIN:
+        interval = None
+    origin["syncInterval"] = "tela" if interval else "padrão"
+
     return MetaSettings(
         app_id=app_id,
         app_secret=secret,
         graph_version=version or DEFAULT_GRAPH_VERSION,
         sync_paused=bool(config.get("sync_paused", False)),
+        sync_interval_min=interval or DEFAULT_SYNC_INTERVAL_MIN,
         origin=origin,
         updated_at=stored.updated_at if stored else None,
         updated_by=stored.updated_by if stored else None,
@@ -171,6 +184,8 @@ def view(meta: MetaSettings, settings: Settings) -> dict[str, Any]:
         "graphVersion": meta.graph_version,
         "versions": versions,
         "syncPaused": meta.sync_paused,
+        "syncIntervalMin": meta.sync_interval_min,
+        "intervals": list(SYNC_INTERVALS_MIN),
         # A trava da máquina (FACEBOOK_ADS_SYNC_ENABLED): sem ela, a pausa da tela não muda nada.
         "syncAvailable": settings.FACEBOOK_ADS_SYNC_ENABLED,
         "origin": meta.origin,

@@ -6,7 +6,7 @@ import { toDataError } from '../../../services/errors.ts'
 import { CheckList } from './CheckList.tsx'
 import { AdsCustomize } from './AdsCustomize.tsx'
 import { AdsTokenView } from './AdsTokenView.tsx'
-import { conversionLabel, describeSettings, settingsFromConfig } from './facebookAds.ts'
+import { conversionLabel, describeSettings, intervalLabel, settingsFromConfig } from './facebookAds.ts'
 
 type ManageSourceProps = {
     org: string
@@ -100,7 +100,9 @@ export function ManageSource({ org, detail, onChanged, onDisconnected }: ManageS
                     <span className="small muted">
                         {isAds
                             ? detail.enabled
-                                ? 'A coleta guarda as métricas desta conta a cada 10 minutos.'
+                                ? detail.ads?.syncPaused
+                                    ? 'Ligada, mas a atualização automática está pausada para todas as contas (Integração Meta).'
+                                    : `A coleta guarda as métricas desta conta a cada ${intervalLabel(detail.ads?.syncEveryMin ?? 10)}.`
                                 : `A coleta está parada; o que já foi guardado fica. ${secretKept}: religar não pede de novo e traz os dias que faltaram.`
                             : detail.enabled
                               ? 'A API lê esta fonte para os dashboards.'

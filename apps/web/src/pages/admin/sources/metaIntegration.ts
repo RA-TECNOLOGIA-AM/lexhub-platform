@@ -1,4 +1,5 @@
 import type { MetaIntegration, MetaIntegrationInput, MetaOrigin } from '../../../types/index.ts'
+import { intervalLabel } from './facebookAds.ts'
 
 // Módulo: as regras da tela Integração Meta, sem React (testadas em metaIntegration.test.ts).
 
@@ -11,6 +12,7 @@ export type MetaDraft = {
     secret: string // só vale com secretChoice 'replace'
     graphVersion: string
     syncPaused: boolean
+    syncIntervalMin: number
 }
 
 export function draftFrom(meta: MetaIntegration): MetaDraft {
@@ -21,6 +23,7 @@ export function draftFrom(meta: MetaIntegration): MetaDraft {
         secret: '',
         graphVersion: meta.graphVersion,
         syncPaused: meta.syncPaused,
+        syncIntervalMin: meta.syncIntervalMin,
     }
 }
 
@@ -33,7 +36,13 @@ export function inputFrom(draft: MetaDraft): MetaIntegrationInput {
     let appSecret: string | null = null
     if (draft.secretChoice === 'remove') appSecret = ''
     else if (draft.secretChoice === 'replace' && draft.secret.trim()) appSecret = draft.secret.trim()
-    return { appId, appSecret, graphVersion: draft.graphVersion, syncPaused: draft.syncPaused }
+    return {
+        appId,
+        appSecret,
+        graphVersion: draft.graphVersion,
+        syncPaused: draft.syncPaused,
+        syncIntervalMin: draft.syncIntervalMin,
+    }
 }
 
 // O que impede salvar (a API confere de novo). null = pode.
@@ -59,13 +68,14 @@ export function isDirty(draft: MetaDraft, meta: MetaIntegration): boolean {
         draft.appId.trim() !== (meta.appId ?? '') ||
         draft.graphVersion !== meta.graphVersion ||
         draft.syncPaused !== meta.syncPaused ||
+        draft.syncIntervalMin !== meta.syncIntervalMin ||
         draft.secretChoice === 'remove' ||
         (draft.secretChoice === 'replace' && draft.secret.trim().length > 0)
     )
 }
 
 // De onde vem o valor em uso, para a linha embaixo do campo.
-export function originNote(origin: MetaOrigin, field: 'appId' | 'appSecret' | 'graphVersion'): string {
+export function originNote(origin: MetaOrigin, field: 'appId' | 'appSecret' | 'graphVersion' | 'syncInterval'): string {
     if (origin === 'tela') return 'Salvo aqui.'
     if (origin === 'servidor') {
         return 'Vem do .env do servidor (reserva). Salvar aqui passa a valer o daqui.'
@@ -78,8 +88,11 @@ export function originNote(origin: MetaOrigin, field: 'appId' | 'appSecret' | 'g
 export function savedNotice(before: MetaIntegration, after: MetaIntegration): string {
     if (before.syncPaused !== after.syncPaused) {
         return after.syncPaused
-            ? 'Coleta do Facebook Ads pausada para todas as contas. O que já foi guardado fica.'
-            : 'Coleta do Facebook Ads retomada: ela traz os dias que faltaram.'
+            ? 'Atualização automática do Facebook Ads pausada para todas as contas. O que já foi guardado fica.'
+            : 'Atualização automática do Facebook Ads retomada: ela traz os dias que faltaram.'
+    }
+    if (before.syncIntervalMin !== after.syncIntervalMin) {
+        return `Atualização automática do Facebook Ads a cada ${intervalLabel(after.syncIntervalMin)}, para todas as contas.`
     }
     return 'Integração Meta salva. Vale na hora para os testes e na próxima rodada da coleta.'
 }

@@ -38,16 +38,35 @@ def test_resolve_tela_tem_prioridade_sobre_o_servidor():
         "appId": "servidor",
         "appSecret": "servidor",
         "graphVersion": "servidor",
+        "syncInterval": "padrão",
     }
     assert only_env.app_token == f"999|{'b' * 32}"
 
     screen = resolve(stored({"app_id": "123", "graph_version": "v26.0"}, SECRET), settings, BOX)
     assert (screen.app_id, screen.app_secret, screen.graph_version) == ("123", SECRET, "v26.0")
-    assert screen.origin == {"appId": "tela", "appSecret": "tela", "graphVersion": "tela"}
+    assert (
+        screen.origin["appId"]
+        == screen.origin["appSecret"]
+        == screen.origin["graphVersion"]
+        == "tela"
+    )
+    assert screen.sync_interval_min == 10 and screen.origin["syncInterval"] == "padrão"
 
     nothing = resolve(None, env(FACEBOOK_APP_ID="", FACEBOOK_APP_SECRET=""), BOX)
     assert nothing.app_token is None and nothing.graph_version == "v26.0"
-    assert nothing.origin == {"appId": "nenhum", "appSecret": "nenhum", "graphVersion": "padrão"}
+    assert nothing.origin == {
+        "appId": "nenhum",
+        "appSecret": "nenhum",
+        "graphVersion": "padrão",
+        "syncInterval": "padrão",
+    }
+
+
+def test_resolve_intervalo_da_tela_e_valor_estranho_cai_no_padrao():
+    s = resolve(stored({"sync_interval_min": 30}), env(), BOX)
+    assert s.sync_interval_min == 30 and s.origin["syncInterval"] == "tela"
+    odd = resolve(stored({"sync_interval_min": 7}), env(), BOX)
+    assert odd.sync_interval_min == 10 and odd.origin["syncInterval"] == "padrão"
 
 
 def test_resolve_chave_que_nao_abre_cai_no_servidor_e_avisa():
@@ -170,7 +189,12 @@ def test_salvar_chave_nova_testa_cifra_e_nao_devolve_a_chave(client, signer, fx)
     assert fx.tested == [("1234567", SECRET, "v26.0")]
     key, config, ciphertext, action = fx.repo.saved[0]
     assert (key, action) == ("meta", "set") and BOX.decrypt(ciphertext) == SECRET
-    assert config == {"graph_version": "v26.0", "sync_paused": False, "app_id": "1234567"}
+    assert config == {
+        "graph_version": "v26.0",
+        "sync_paused": False,
+        "sync_interval_min": 10,
+        "app_id": "1234567",
+    }
     integ = out["integration"]
     assert integ["appId"] == "1234567" and integ["hasAppSecret"]
     assert integ["origin"]["appSecret"] == "tela"
@@ -205,6 +229,26 @@ def test_manter_pausar_trocar_id_e_apagar(client, signer, fx):
     # Chave sem ID: recusado
     body = {"appId": "", "appSecret": SECRET, "graphVersion": "v26.0"}
     assert client.put(URL, json=body, headers=auth(signer)).status_code == 422
+
+
+def test_intervalo_da_atualizacao(client, signer, fx):
+    fx.admin.admins.add(USER_ID)
+    got = client.get(URL, headers=auth(signer)).json()
+    assert got["syncIntervalMin"] == 10 and got["intervals"] == [5, 10, 15, 30, 60]
+    # Trocar o intervalo grava, acorda a coleta e a tela recebe o novo
+    body = {"graphVersion": "v26.0", "syncIntervalMin": 30}
+    out = client.put(URL, json=body, headers=auth(signer)).json()
+    assert out["saved"] and out["integration"]["syncIntervalMin"] == 30 and fx.woke == 1
+    assert fx.repo.saved[-1][1]["sync_interval_min"] == 30
+    assert out["integration"]["origin"]["syncInterval"] == "tela"
+    # Salvar de novo sem mudar nada não acorda
+    client.put(URL, json=body, headers=auth(signer))
+    assert fx.woke == 1
+    # Fora da lista: recusado, nada gravado
+    saved = len(fx.repo.saved)
+    body = {"graphVersion": "v26.0", "syncIntervalMin": 7}
+    assert client.put(URL, json=body, headers=auth(signer)).status_code == 422
+    assert len(fx.repo.saved) == saved
 
 
 def test_testar_app_usa_a_chave_em_uso_quando_nao_vem_outra(client, signer, fx):

@@ -9,6 +9,7 @@ import type {
 
 const VERSIONS = ['v24.0', 'v25.0', 'v26.0']
 const DEFAULT_VERSION = 'v26.0'
+const INTERVALS = [5, 10, 15, 30, 60]
 
 const check = (key: SourceCheck['key'], ok: boolean, message: string): SourceCheck => ({
     key,
@@ -54,6 +55,7 @@ export function createMockMetaIntegration() {
     let secret: string | null = null
     let graphVersion: string | null = null
     let syncPaused = false
+    let syncInterval: number | null = null
     let updatedAt: string | null = null
     let updatedBy: string | null = null
 
@@ -66,11 +68,14 @@ export function createMockMetaIntegration() {
             graphVersion: version,
             versions: VERSIONS.includes(version) ? VERSIONS : [...VERSIONS, version],
             syncPaused,
+            syncIntervalMin: syncInterval ?? 10,
+            intervals: INTERVALS,
             syncAvailable: true,
             origin: {
                 appId: appId ? 'tela' : 'nenhum',
                 appSecret: secret ? 'tela' : 'nenhum',
                 graphVersion: graphVersion ? 'tela' : 'padrão',
+                syncInterval: syncInterval ? 'tela' : 'padrão',
             },
             updatedAt,
             updatedBy,
@@ -92,6 +97,9 @@ export function createMockMetaIntegration() {
     function save(input: MetaIntegrationInput, who: string): MetaIntegrationSaved {
         const id = input.appId.trim()
         if (id && !/^\d{5,25}$/.test(id)) throw new DataError(422, 'O ID do app tem só números.')
+        if (!INTERVALS.includes(input.syncIntervalMin)) {
+            throw new DataError(422, 'Intervalo da atualização: 5, 10, 15, 30 ou 60 minutos.')
+        }
         const fresh = input.appSecret?.trim() ?? ''
         let action: 'keep' | 'set' | 'clear' = input.appSecret === null ? 'keep' : fresh ? 'set' : 'clear'
         if (!id && action !== 'clear' && secret) action = 'clear' // sem app, a chave não serve para nada
@@ -111,6 +119,7 @@ export function createMockMetaIntegration() {
         if (action === 'clear') secret = null
         graphVersion = input.graphVersion
         syncPaused = input.syncPaused
+        syncInterval = input.syncIntervalMin
         updatedAt = new Date().toISOString()
         updatedBy = who
         return { saved: true, checks, integration: get() }

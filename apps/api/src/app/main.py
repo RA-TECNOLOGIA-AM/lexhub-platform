@@ -96,7 +96,7 @@ def _build_ads_sync(app: FastAPI, settings: Settings, meta: MetaConfig) -> AdsSy
         PgAdsRepo(app.state.db_pool),
         box,
         client_factory(meta, settings.FACEBOOK_HTTP_TIMEOUT),
-        interval=settings.FACEBOOK_ADS_SYNC_INTERVAL,
+        interval=lambda: meta.current.sync_interval_min * 60,
         before_run=meta.refresh,
         paused=lambda: meta.current.sync_paused,
     )

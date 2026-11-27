@@ -72,10 +72,9 @@ class Settings(BaseSettings):
     FACEBOOK_APP_ID: str = ""
     FACEBOOK_HTTP_TIMEOUT: float = Field(default=30.0, ge=5.0, le=120.0)
     # Trava da máquina para a coleta que grava as métricas em app.facebook_ads_daily. Desligada por padrão:
-    # uma API local com o banco de produção não coleta sozinha. Em produção, ligar em UMA réplica só. A pausa
-    # do dia a dia (para todas as contas) é na tela.
+    # uma API local com o banco de produção não coleta sozinha. Em produção, ligar em UMA réplica só. Ligar ou
+    # pausar no dia a dia e o intervalo (para todas as contas) são na tela (Integração Meta).
     FACEBOOK_ADS_SYNC_ENABLED: bool = False
-    FACEBOOK_ADS_SYNC_INTERVAL: int = Field(default=600, ge=60, le=3600)
 
     # --- Bancos de origem (iguais à v1). Banco sem variáveis = desligado. ---
     DB_NG_URL: str = ""

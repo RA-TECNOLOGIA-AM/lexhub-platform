@@ -165,7 +165,7 @@ function SourceDetailBody({ detail, source }: { detail: SourceDetail; source: Da
                 {detail.runs.length === 0 ? (
                     <p className="muted small" style={{ margin: 0 }}>
                         {ads
-                            ? 'Nenhuma coleta ainda. Cada coleta (a cada 10 minutos) e cada Testar de novo aparece aqui.'
+                            ? 'Nenhuma coleta ainda. Cada coleta automática e cada Testar de novo aparece aqui.'
                             : 'Nenhum teste ainda. Os testes feitos em Testar de novo ou ao trocar a senha/link/token aparecem aqui.'}
                     </p>
                 ) : (

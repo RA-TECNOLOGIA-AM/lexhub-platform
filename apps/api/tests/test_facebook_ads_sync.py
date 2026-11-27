@@ -259,3 +259,15 @@ def test_pausa_da_tela_para_a_rodada_e_le_a_configuracao_antes():
     paused[0] = False
     asyncio.run(sync.run_once())
     assert calls == ["refresh", "refresh"] and repo.records[0][1] is True
+
+
+def test_intervalo_lido_a_cada_rodada():
+    minutes = [10]
+    sync = AdsSync(
+        FakeRepo([]), BOX, FakeGraph(), interval=lambda: minutes[0] * 60, now=lambda: NOW
+    )
+    assert sync.interval() == 600
+    minutes[0] = 30
+    assert sync.interval() == 1800
+    fixed = AdsSync(FakeRepo([]), BOX, FakeGraph(), interval=900, now=lambda: NOW)
+    assert fixed.interval() == 900

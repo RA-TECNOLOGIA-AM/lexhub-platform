@@ -30,6 +30,11 @@ declare
     cfg   constant jsonb := '{"app_id": "1234567890", "graph_version": "v26.0", "sync_paused": false}';
     v     app.platform_integrations;
 begin
+    -- Sem nada salvo: atualização automática ligada, a cada 10 min
+    if app_private.ads_sync_every_min() <> 10 or app_private.ads_sync_paused() then
+        raise exception 'FALHOU: padrão sem integração salva';
+    end if;
+
     -- Só a TI da LexGroup configura
     begin
         perform app_private.set_platform_integration(owner, 'meta', cfg, 'v1:c2VncmVkbw==', 'set');
@@ -82,7 +87,26 @@ begin
         raise exception 'FALHOU: auditoria da pausa';
     end if;
 
+    -- Atualização automática: sem intervalo salvo, 10 min (a pausa salva acima vale); o intervalo só aceita
+    -- os da tela
+    if app_private.ads_sync_every_min() <> 10 or not app_private.ads_sync_paused() then
+        raise exception 'FALHOU: intervalo padrão ou pausa salva: % %',
+            app_private.ads_sync_every_min(), app_private.ads_sync_paused();
+    end if;
+    perform app_private.set_platform_integration(ti, 'meta', cfg || '{"sync_interval_min": 30}', null, 'keep');
+    if app_private.ads_sync_every_min() <> 30 or app_private.ads_sync_paused() then
+        raise exception 'FALHOU: intervalo da tela';
+    end if;
+    begin
+        perform app_private.set_platform_integration(ti, 'meta', cfg || '{"sync_interval_min": 7}', null, 'keep');
+        raise exception 'FALHOU: intervalo fora da lista';
+    exception when check_violation then null;
+    end;
+
     perform app_private.set_platform_integration(ti, 'meta', cfg, null, 'clear');
+    if app_private.ads_sync_every_min() <> 10 then
+        raise exception 'FALHOU: sem intervalo salvo volta aos 10 min';
+    end if;
     if (select secret_ciphertext from app.platform_integrations where key = 'meta') is not null then
         raise exception 'FALHOU: clear não apagou o segredo';
     end if;
@@ -106,6 +130,11 @@ begin
         perform app_private.set_platform_integration(
             '00000000-0000-4000-8000-0000000fb101', 'meta', '{}', null, 'keep');
         raise exception 'FALHOU: authenticated gravou integração';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+        perform app_private.ads_sync_every_min();
+        raise exception 'FALHOU: authenticated chamou ads_sync_every_min';
     exception when insufficient_privilege then null;
     end;
     raise notice 'OK: todos os casos passaram (o rollback abaixo desfaz tudo)';

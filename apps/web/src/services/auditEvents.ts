@@ -39,7 +39,8 @@ const CHANGED: Record<string, string> = {
     collect_version: 'coleta refeita',
     app_id: 'ID do app',
     graph_version: 'versão da Graph API',
-    sync_paused: 'pausa da coleta',
+    sync_paused: 'atualização automática',
+    sync_interval_min: 'intervalo da atualização',
 }
 const changed = (v: unknown): string | null => {
     const keys = list(v).map((k) => CHANGED[k] ?? k)
