@@ -194,9 +194,13 @@ class AdsSync:
         interval: float,
         now: Callable[[], datetime] = lambda: datetime.now(tz=ZoneInfo("UTC")),
         clock: Callable[[], float] = time.monotonic,
+        before_run: Callable[[], Awaitable[object]] | None = None,
+        paused: Callable[[], bool] | None = None,
     ):
         self._repo, self._box, self._client_for = repo, box, client_for
         self._interval = interval
+        # A configuração da Meta (tela ou .env): lida antes de cada rodada; a tela pode pausar a coleta.
+        self._before_run, self._paused = before_run, paused
         self._now, self._clock = now, clock
         self._last_deep: dict[str, float] = {}
         self._entities_for: dict[str, tuple] = {}  # fonte -> a personalização da última atualização
@@ -208,6 +212,13 @@ class AdsSync:
 
     async def run_once(self) -> int:
         """Uma rodada em todas as fontes ligadas. Devolve as linhas gravadas."""
+        if self._before_run is not None:
+            await self._before_run()
+        if self._paused is not None and self._paused():
+            logger.info(
+                "Facebook Ads: coleta pausada na tela (Unidades e fontes > Integração Meta)"
+            )
+            return 0
         total = 0
         for source in await self._repo.sources():
             total += await self.sync_source(source)

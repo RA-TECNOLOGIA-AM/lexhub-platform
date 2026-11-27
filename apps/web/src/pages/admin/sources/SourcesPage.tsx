@@ -15,6 +15,7 @@ import { SourceDetailDialog } from './SourceDetailDialog.tsx'
 import { UnitFormDialog } from './UnitFormDialog.tsx'
 import { ConnectSourceDialog } from './ConnectSourceDialog.tsx'
 import { DeleteUnitDialog } from './DeleteUnitDialog.tsx'
+import { MetaIntegrationDialog } from './MetaIntegrationDialog.tsx'
 import type { DataSource, ProductKey, UnitInput } from '../../../types/index.ts'
 import { lastFailureLabel, pickUnit, syncNote } from './sourcesView.ts'
 import { withFreshness } from './sourceFreshness.ts'
@@ -42,6 +43,7 @@ export function SourcesPage() {
     const [open, setOpen] = useState<DataSource | null>(null) // a fonte do modal de detalhe
     const [form, setForm] = useState<UnitForm | null>(null)
     const [connecting, setConnecting] = useState(false) // o modal Conectar fonte
+    const [metaOpen, setMetaOpen] = useState(false) // o modal Integração Meta (app da Meta e pausa da coleta)
     const [deleting, setDeleting] = useState<{ code: string; name: string } | null>(null) // o modal Excluir unidade
 
     if (error) return <ErrorState error={error} />
@@ -89,11 +91,20 @@ export function SourcesPage() {
                 badge={fromPlatform ? <span className="badge pro">Plataforma</span> : undefined}
                 description={syncNote()}
                 actions={
-                    connect && (
-                        <button className="btn btn-primary" type="button" onClick={connect}>
-                            <Icon name="plug" size={16} />
-                            Conectar fonte
-                        </button>
+                    data.canManageSources && (
+                        <>
+                            {/* Vale para a plataforma toda (todas as contas de anúncios), não só esta organização */}
+                            <button className="btn" type="button" onClick={() => setMetaOpen(true)}>
+                                <Icon name="settings" size={16} />
+                                Integração Meta
+                            </button>
+                            {connect && (
+                                <button className="btn btn-primary" type="button" onClick={connect}>
+                                    <Icon name="plug" size={16} />
+                                    Conectar fonte
+                                </button>
+                            )}
+                        </>
                     )
                 }
             />
@@ -192,6 +203,15 @@ export function SourcesPage() {
                         )
                     }}
                     onClose={() => setConnecting(false)}
+                />
+            )}
+            {metaOpen && (
+                <MetaIntegrationDialog
+                    load={() => dataClient.getMetaIntegration()}
+                    onTest={(input) => dataClient.testMetaIntegration(input)}
+                    onSave={(input) => dataClient.saveMetaIntegration(input)}
+                    onSaved={setNotice}
+                    onClose={() => setMetaOpen(false)}
                 />
             )}
             {deleting && (

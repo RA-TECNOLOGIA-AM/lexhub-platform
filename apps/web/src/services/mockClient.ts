@@ -71,6 +71,7 @@ import { protocoloLegadoFor } from './mock/protocoloLegado.ts'
 import { sourceDetailFor } from './mock/sourceDetail.ts'
 import { createUnitIn, deleteUnitIn, restoreUnitIn, unitImpactIn, updateUnitIn } from './mock/units.ts'
 import { linkOfficeIn, productOffices } from './mock/offices.ts'
+import { createMockMetaIntegration } from './mock/metaIntegration.ts'
 import {
     adsOptionsIn,
     adsTokenSavedIn,
@@ -152,6 +153,8 @@ function catalogForDev(): DashboardCatalog {
 const mockDevices = createMockDevices()
 // Chaves de API do mock: em memória (voltam ao exemplo no F5).
 const apiKeys = createMockApiKeys()
+// Integração Meta do mock: em memória (começa sem app, como um servidor novo).
+const metaIntegration = createMockMetaIntegration()
 const memberStore = createMembersStore({ name: me.user.name, email: '' })
 // Acesso do mock: grava na mesma loja de Membros.
 const accessStore = createAccessStore(memberStore)
@@ -739,6 +742,24 @@ export function createMockClient(): DataClient {
             return copy(saveAdsSettingsIn(requireOrg(org) ? sources : onboardingSources, source, settings))
         },
 
+        async getMetaIntegration() {
+            await wait()
+            requireSession()
+            return copy(metaIntegration.get())
+        },
+
+        async testMetaIntegration(input) {
+            await wait()
+            requireSession()
+            return copy(metaIntegration.test(input))
+        },
+
+        async saveMetaIntegration(input) {
+            await wait()
+            requireSession()
+            return copy(metaIntegration.save(input, me.user.name))
+        },
+
         async setSourceEnabled(org, source, enabled) {
             await wait()
             requireSession()
@@ -1014,6 +1035,7 @@ const SUPPORT_WRITES = new Set<keyof DataClient>([
     'disconnectSource',
     'setSourceEnabled',
     'saveFacebookAdsSettings',
+    'saveMetaIntegration',
     'closeOrganization',
     'reopenOrganization',
     'uploadMyAvatar',

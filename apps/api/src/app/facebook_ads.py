@@ -3,8 +3,8 @@ métricas, os detalhamentos, as campanhas e os criativos.
 
 O token é o do usuário do sistema do Gerenciador de Negócios, com a permissão ads_read (só leitura de
 relatórios). Ele vai no cabeçalho Authorization, nunca na URL: URL aparece em log e em mensagem de erro.
-Com FACEBOOK_APP_SECRET, cada chamada leva o appsecret_proof (obrigatório se o app exigir "Require App
-Secret" nas configurações avançadas).
+Com a chave secreta do app (Unidades e fontes > Integração Meta; app/meta_config.py), cada chamada leva o
+appsecret_proof (obrigatório se o app exigir "Require App Secret" nas configurações avançadas).
 
 O teste de conexão (o "Testar e salvar" da tela) tem quatro checagens, nesta ordem; a primeira que falha
 para o resto (as seguintes voltam `skipped`), como em app/connection_check.py:
@@ -27,12 +27,11 @@ from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Any, Literal, Protocol, Self
 
 import httpx
 from pydantic import BaseModel, Field
 
-from app.config import Settings
 from app.connection_check import Check, CheckResult
 
 GRAPH_URL = "https://graph.facebook.com"
@@ -597,20 +596,19 @@ ClientFactory = Callable[[str], GraphClient]  # token -> cliente
 AdsChecker = Callable[[str, str], Awaitable[tuple[CheckResult, AccountInfo | None]]]
 
 
-def app_token(settings: Settings) -> str | None:
-    """O token do app ('id|chave'), para o /debug_token. Sem FACEBOOK_APP_ID e a chave: None."""
-    if settings.FACEBOOK_APP_ID.strip() and settings.FACEBOOK_APP_SECRET.strip():
-        return f"{settings.FACEBOOK_APP_ID.strip()}|{settings.FACEBOOK_APP_SECRET.strip()}"
-    return None
+class _MetaSource(Protocol):
+    @property
+    def current(self) -> Any: ...  # MetaSettings (app/meta_config.py)
 
 
-def client_factory(settings: Settings) -> ClientFactory:
-    """token -> cliente da Graph API com a versão, a chave do app e o tempo limite do .env."""
+def client_factory(meta: _MetaSource, timeout: float) -> ClientFactory:
+    """token -> cliente da Graph API com a versão e a chave do app em uso (tela ou .env, app/meta_config.py),
+    lidas na hora de cada cliente: mudou na tela, a próxima chamada já usa."""
     return lambda token: GraphClient(
         token,
-        version=settings.FACEBOOK_GRAPH_VERSION,
-        app_secret=settings.FACEBOOK_APP_SECRET,
-        timeout=settings.FACEBOOK_HTTP_TIMEOUT,
+        version=meta.current.graph_version,
+        app_secret=meta.current.app_secret,
+        timeout=timeout,
     )
 
 
@@ -984,7 +982,7 @@ async def token_info(graph: GraphClient, *, app_token: str | None = None) -> dic
     """Quem é o token, o que ele permite e as contas de anúncios que ele acessa (com o nome).
 
     /me e /me/permissions sempre; /me/adaccounts se puder ler anúncios; /me/businesses com
-    business_management; tipo e validade só com o token do app (FACEBOOK_APP_ID + FACEBOOK_APP_SECRET).
+    business_management; tipo e validade só com o token do app (ID + chave, Integração Meta).
     """
     started = time.perf_counter()
 

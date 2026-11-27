@@ -28,8 +28,8 @@ export function AdsTokenView({ info }: { info: AdsTokenInfo }) {
                 <dd>
                     {info.tokenType ?? (
                         <span className="muted">
-                            A API não sabe (falta FACEBOOK_APP_ID). Token pessoal expira e para de funcionar se a pessoa
-                            sair do negócio: prefira um de usuário do sistema.
+                            A API não sabe (falta o app da Meta em Integração Meta, no topo desta página). Token pessoal
+                            expira e para de funcionar se a pessoa sair do negócio: prefira um de usuário do sistema.
                         </span>
                     )}
                 </dd>

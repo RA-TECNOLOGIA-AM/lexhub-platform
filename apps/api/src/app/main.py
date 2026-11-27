@@ -16,6 +16,7 @@ from app.database import DatabaseManager
 from app.facebook_ads import client_factory
 from app.facebook_ads_sync import AdsSync, PgAdsRepo
 from app.logs import configure_logging, seconds
+from app.meta_config import MetaConfig, build_meta_config
 from app.platform_db import install_error_handlers, keep_warm, open_platform_pool
 from app.registered_sources import PgRegisteredRepo, RegisteredSources
 from app.request_log import RequestLogMiddleware
@@ -27,6 +28,7 @@ from app.routes import (
     facebook_ads_routes,
     health,
     hub,
+    integrations_routes,
     me,
     public_auth,
     public_data,
@@ -77,7 +79,7 @@ async def _log_cache(cache: CacheService, settings: Settings) -> None:
         )
 
 
-def _build_ads_sync(app: FastAPI, settings: Settings) -> AdsSync | None:
+def _build_ads_sync(app: FastAPI, settings: Settings, meta: MetaConfig) -> AdsSync | None:
     """A coleta do Facebook Ads, se ligada e com banco e chave de cifra (app/facebook_ads_sync.py)."""
     if not settings.FACEBOOK_ADS_SYNC_ENABLED:
         logger.info("Coleta do Facebook Ads desligada (FACEBOOK_ADS_SYNC_ENABLED=false)")
@@ -93,8 +95,10 @@ def _build_ads_sync(app: FastAPI, settings: Settings) -> AdsSync | None:
     return AdsSync(
         PgAdsRepo(app.state.db_pool),
         box,
-        client_factory(settings),
+        client_factory(meta, settings.FACEBOOK_HTTP_TIMEOUT),
         interval=settings.FACEBOOK_ADS_SYNC_INTERVAL,
+        before_run=meta.refresh,
+        paused=lambda: meta.current.sync_paused,
     )
 
 
@@ -158,7 +162,9 @@ def create_app() -> FastAPI:
             settings.DASHBOARD_MEMO_MAX_ENTRIES, max_age=settings.SOURCE_CACHE_TTL
         )
         # Coleta do Facebook Ads (desligada por padrão); a rota de conectar chama wake() nela.
-        app.state.ads_sync = _build_ads_sync(app, settings)
+        # Configuração da Meta: a da tela (Integração Meta) tem prioridade sobre o .env (app/meta_config.py).
+        app.state.meta_config = build_meta_config(app.state.db_pool, settings)
+        app.state.ads_sync = _build_ads_sync(app, settings, app.state.meta_config)
         warmer = None
         keeper = None
         ads = None
@@ -254,6 +260,7 @@ def create_app() -> FastAPI:
     app.include_router(source_connections.org)
     app.include_router(facebook_ads_routes.platform)
     app.include_router(facebook_ads_routes.org)
+    app.include_router(integrations_routes.router)
     app.include_router(support.router)
     app.include_router(public_auth.org)
     app.include_router(public_auth.v1)

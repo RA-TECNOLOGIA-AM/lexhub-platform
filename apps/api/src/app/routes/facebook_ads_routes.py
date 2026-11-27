@@ -31,12 +31,12 @@ from app.facebook_ads import (
     GraphError,
     GraphUnavailable,
     account_options,
-    app_token,
     client_factory,
     normalize_account,
     preview,
     token_info,
 )
+from app.meta_config import MetaConfig, get_meta_config
 from app.routes.source_connections import (
     BAD_ACCOUNT,
     Admin,
@@ -75,12 +75,16 @@ class SettingsIn(BaseModel):
     settings: AdsSettingsIn
 
 
-def get_graph_factory(settings: Annotated[Settings, Depends(get_settings)]) -> ClientFactory:
-    return client_factory(settings)
+def get_graph_factory(
+    settings: Annotated[Settings, Depends(get_settings)],
+    meta: Annotated[MetaConfig, Depends(get_meta_config)],
+) -> ClientFactory:
+    return client_factory(meta, settings.FACEBOOK_HTTP_TIMEOUT)
 
 
-def get_app_token(settings: Annotated[Settings, Depends(get_settings)]) -> str | None:
-    return app_token(settings)
+def get_app_token(meta: Annotated[MetaConfig, Depends(get_meta_config)]) -> str | None:
+    """O token do app (tela ou .env), para mostrar o tipo e a validade do token colado."""
+    return meta.current.app_token
 
 
 Graph = Annotated[ClientFactory, Depends(get_graph_factory)]

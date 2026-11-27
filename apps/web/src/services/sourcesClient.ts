@@ -10,6 +10,9 @@ import type {
     ConnectInfo,
     ConnectResult,
     DataSource,
+    MetaIntegration,
+    MetaIntegrationSaved,
+    MetaIntegrationTest,
     ProductOffices,
     SheetTab,
     SourceDetail,
@@ -48,6 +51,9 @@ type SourcesClient = Pick<
     | 'getFacebookAdsOptions'
     | 'previewSavedFacebookAds'
     | 'saveFacebookAdsSettings'
+    | 'getMetaIntegration'
+    | 'testMetaIntegration'
+    | 'saveMetaIntegration'
 >
 
 // Os parâmetros que create_unit e update_unit recebem (mesmos nomes do banco).
@@ -124,5 +130,9 @@ export function createSourcesClient(supabase: SupabaseClient, http: Http): Sourc
             http.put<AdsSettingsSaved>(`/orgs/${enc(org)}/sources/${enc(source)}/facebook-ads/settings`, {
                 settings,
             }),
+        // Integração Meta (app/routes/integrations_routes.py)
+        getMetaIntegration: () => http.get<MetaIntegration>('/sources/integrations/meta'),
+        testMetaIntegration: (input) => http.post<MetaIntegrationTest>('/sources/integrations/meta/test', input),
+        saveMetaIntegration: (input) => http.put<MetaIntegrationSaved>('/sources/integrations/meta', input),
     }
 }
