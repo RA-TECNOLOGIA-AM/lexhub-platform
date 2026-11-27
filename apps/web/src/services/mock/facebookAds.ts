@@ -415,5 +415,7 @@ export function adsSummary(settings: AdsSettings, progress: number, account = 'a
                 }
             }),
         backfill: { done: progress >= 1, coveredUntil: iso(covered) },
+        syncEveryMin: 10,
+        syncPaused: false,
     }
 }

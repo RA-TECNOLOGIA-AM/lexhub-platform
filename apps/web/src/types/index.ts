@@ -731,7 +731,7 @@ export type AdsTokenInfo = {
     ok: boolean // false = token recusado ou sem nenhuma conta de anúncios
     checks: SourceCheck[]
     user: { id: string; name: string | null } | null
-    tokenType: string | null // 'Usuário do sistema'... (só com FACEBOOK_APP_ID na API)
+    tokenType: string | null // 'Usuário do sistema'... (só com o app da Meta configurado: Integração Meta)
     expiresAt: string | null
     neverExpires: boolean | null // null = a API não sabe (sem o ID do app)
     app: string | null
@@ -821,10 +821,42 @@ export type AdsSummary = {
         linkClicks: number
     }[]
     backfill: { done: boolean; coveredUntil: string | null } | null
+    // A atualização automática (Integração Meta): o intervalo e se está pausada para todas as contas.
+    syncEveryMin: number
+    syncPaused: boolean
 }
 
 // Personalização salva: recollect = a coleta vai refazer o histórico.
 export type AdsSettingsSaved = { source: DataSource; recollect: boolean; settings: AdsSettings }
+
+// --- Integração Meta (Unidades e fontes › Integração Meta; app/meta_config.py), só a TI da LexGroup ---
+// De onde vem cada campo: salvo na tela, do .env do servidor (reserva), o padrão da API ou nada.
+export type MetaOrigin = 'tela' | 'servidor' | 'padrão' | 'nenhum'
+export type MetaIntegration = {
+    appId: string | null
+    hasAppSecret: boolean // a chave secreta nunca volta: só se ela existe
+    secretUnreadable: boolean // a chave salva não abre com a SOURCE_SECRET_KEY atual (precisa salvar de novo)
+    graphVersion: string
+    versions: string[] // as versões que a tela oferece
+    syncPaused: boolean // a atualização automática de todas as contas pausada pela tela
+    syncIntervalMin: number // de quanto em quanto tempo a atualização automática roda (minutos)
+    intervals: number[] // os intervalos que a tela oferece
+    syncAvailable: boolean // a coleta está ligada neste servidor (FACEBOOK_ADS_SYNC_ENABLED)
+    origin: { appId: MetaOrigin; appSecret: MetaOrigin; graphVersion: MetaOrigin; syncInterval: MetaOrigin }
+    updatedAt: string | null
+    updatedBy: string | null
+}
+// appSecret: null = manter a salva, '' = apagar, texto = trocar (a API testa antes de gravar).
+export type MetaIntegrationInput = {
+    appId: string
+    appSecret: string | null
+    graphVersion: string
+    syncPaused: boolean
+    syncIntervalMin: number
+}
+export type MetaIntegrationTest = { ok: boolean; checks: SourceCheck[]; app: string | null }
+// saved=false = a Meta recusou o app (nada gravado; as checagens dizem o porquê).
+export type MetaIntegrationSaved = { saved: boolean; checks: SourceCheck[]; integration: MetaIntegration }
 
 export type ConnectInput = DatabaseConnectInput | SheetConnectInput | FacebookAdsConnectInput
 

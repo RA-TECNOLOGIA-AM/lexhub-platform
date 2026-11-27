@@ -235,3 +235,39 @@ def test_wake_antecipa_a_rodada():
         return len(repo.records)
 
     assert asyncio.run(go()) == 2
+
+
+def test_pausa_da_tela_para_a_rodada_e_le_a_configuracao_antes():
+    repo, graph = FakeRepo([source()]), FakeGraph()
+    calls: list[str] = []
+    paused = [True]
+
+    async def before():
+        calls.append("refresh")
+
+    sync = AdsSync(
+        repo,
+        BOX,
+        graph,
+        interval=600,
+        now=lambda: NOW,
+        before_run=before,
+        paused=lambda: paused[0],
+    )
+    assert asyncio.run(sync.run_once()) == 0
+    assert calls == ["refresh"] and repo.records == [] and graph.reports == []
+    paused[0] = False
+    asyncio.run(sync.run_once())
+    assert calls == ["refresh", "refresh"] and repo.records[0][1] is True
+
+
+def test_intervalo_lido_a_cada_rodada():
+    minutes = [10]
+    sync = AdsSync(
+        FakeRepo([]), BOX, FakeGraph(), interval=lambda: minutes[0] * 60, now=lambda: NOW
+    )
+    assert sync.interval() == 600
+    minutes[0] = 30
+    assert sync.interval() == 1800
+    fixed = AdsSync(FakeRepo([]), BOX, FakeGraph(), interval=900, now=lambda: NOW)
+    assert fixed.interval() == 900

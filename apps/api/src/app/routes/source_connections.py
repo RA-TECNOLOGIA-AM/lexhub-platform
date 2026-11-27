@@ -34,6 +34,7 @@ from app.facebook_ads import (
     client_factory,
     normalize_account,
 )
+from app.meta_config import MetaConfig, get_meta_config
 from app.secret_box import SecretBox, SecretKeyMissing, SecretUnreadable
 from app.sheets import InvalidSheetLink, TabInfo, sheet_tabs
 from app.source_admin import (
@@ -166,8 +167,11 @@ def get_sheet_reader() -> SheetReader:
     return sheet_tabs
 
 
-def get_ads_checker(settings: Annotated[Settings, Depends(get_settings)]) -> AdsChecker:
-    client_for = client_factory(settings)
+def get_ads_checker(
+    settings: Annotated[Settings, Depends(get_settings)],
+    meta: Annotated[MetaConfig, Depends(get_meta_config)],
+) -> AdsChecker:
+    client_for = client_factory(meta, settings.FACEBOOK_HTTP_TIMEOUT)
     return lambda account_id, token: check_account(client_for, account_id, token)
 
 

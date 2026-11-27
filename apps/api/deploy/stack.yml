@@ -78,13 +78,10 @@ services:
       # API pública (/v1): chave HS256 que assina os access tokens. Gerada e guardada pelo Vitor;
       # trocar invalida todos os tokens emitidos. Obrigatória: sem ela o deploy da stack falha
       PUBLIC_API_JWT_SECRET: ${PUBLIC_API_JWT_SECRET:?}
-      # Facebook Ads: a coleta grava as métricas das contas conectadas em app.facebook_ads_daily (a cada
-      # 10 min). Ligada só aqui, com 1 réplica. FACEBOOK_APP_SECRET se o app exigir appsecret_proof.
+      # Facebook Ads: trava da máquina para a coleta (a cada 10 min) que grava as métricas no Supabase do
+      # LexHub. Ligada só aqui, com 1 réplica. O app da Meta, a versão da Graph API e a pausa da coleta são
+      # configurados na tela (Unidades e fontes > Integração Meta), não aqui.
       FACEBOOK_ADS_SYNC_ENABLED: ${FACEBOOK_ADS_SYNC_ENABLED:-true}
-      FACEBOOK_GRAPH_VERSION: ${FACEBOOK_GRAPH_VERSION:-v26.0}
-      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
-      # ID do app: com ele e a chave, a tela mostra o tipo e a validade do token
-      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
       # Redis desta stack (L2 do cache, sobrevive a deploy e restart da API)
       CACHE_ENABLED: 'true'
       REDIS_URL: redis://lexhub-redis:6379/0

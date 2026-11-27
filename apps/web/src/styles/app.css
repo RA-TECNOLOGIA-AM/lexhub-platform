@@ -11223,6 +11223,36 @@ button.mkt-rub-linha:not(:disabled):hover,
     letter-spacing: 0.04em;
 }
 
+/* Integração Meta (Unidades e fontes): app da Meta, versão da Graph API e pausa da coleta */
+.meta-dialog {
+    width: min(560px, calc(100vw - 32px));
+}
+.meta-dialog .export-body {
+    gap: 18px;
+}
+.meta-section {
+    gap: 12px;
+}
+.meta-section label:not(.lbl),
+.meta-field {
+    display: grid;
+    gap: 4px;
+}
+.meta-secret {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 36px;
+}
+.meta-undo {
+    justify-self: start;
+    margin-top: 4px;
+}
+.meta-updated {
+    margin: 0;
+}
+
 /* Org. Documentos (LexPre), seção 01: card "duplo" (Média x Mediana, Manual x Automático), card compacto com
    selo de alerta e o card único de reajuizamento (separado do total). */
 .duo {
