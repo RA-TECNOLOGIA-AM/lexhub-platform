@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useParams } from 'react-router'
 import { Icon, type IconName } from '../../../components/ui/Icon.tsx'
 import { PageTransitionLink } from '../../../components/page_transition/PageTransitionLink.tsx'
@@ -17,7 +17,7 @@ type DocPageProps = {
     title: string
     intro: ReactNode // parágrafo abaixo do título
     tags?: string[] // ex.: ['NG', 'LA'] (unidades a que o guia se aplica)
-    note?: string // etiqueta neutra ao lado das unidades (ex.: 'Banco lexpre — base nova')
+    note?: ReactNode // etiqueta neutra ao lado das unidades (ex.: 'Banco lexpre — base nova')
     toc: TocItem[] // "Neste guia": âncoras das seções
     children: ReactNode // seções (DocSection) e avisos (InfoBox) logo abaixo do cabeçalho
     header?: ReactNode // avisos do cabeçalho (antes das seções)
@@ -43,16 +43,33 @@ function TocLinks({ toc, active }: { toc: TocItem[]; active: string | null }) {
     )
 }
 
-// A página: trilha, título, introdução e etiquetas; as seções em texto corrido e o sumário fixo à direita
+// Botão do sumário: abre (ou fecha) de uma vez todas as métricas do guia. Guia sem métricas: some (docs.css).
+function ExpandAll({ article }: { article: RefObject<HTMLElement | null> }) {
+    const [open, setOpen] = useState(false)
+    function toggle() {
+        const list = article.current?.querySelectorAll<HTMLDetailsElement>('details.doc-metric') ?? []
+        const next = !Array.from(list).every((d) => d.open)
+        list.forEach((d) => (d.open = next))
+        setOpen(next)
+    }
+    return (
+        <button type="button" className="doc-aside-btn doc-expand-all" onClick={toggle} aria-pressed={open}>
+            {open ? 'Recolher todos os detalhes' : 'Expandir todos os detalhes'}
+        </button>
+    )
+}
+
+// A página: trilha, etiquetas, título e introdução; as seções em texto corrido e o sumário fixo à direita
 // (no celular, "Neste guia" abre e fecha no topo). Guia de dashboard ganha o atalho para abrir o dashboard.
 export function DocPage({ title, intro, tags = [], note, toc, header, kicker, children }: DocPageProps) {
     const { org = '', slug = '' } = useParams()
     const active = useActiveSection(toc.map((t) => t.id))
     const entry = DOC_ENTRIES.find((d) => d.slug === slug)
+    const article = useRef<HTMLElement>(null)
     return (
         <div className="doc">
             <div className="doc-layout">
-                <article className="doc-article">
+                <article className="doc-article" ref={article}>
                     <header className="doc-head">
                         <nav className="doc-crumb" aria-label="Trilha">
                             <PageTransitionLink to={`/${org}/documentacao`}>Documentação</PageTransitionLink>
@@ -63,8 +80,6 @@ export function DocPage({ title, intro, tags = [], note, toc, header, kicker, ch
                                 </>
                             )}
                         </nav>
-                        <h1 className="h1">{title}</h1>
-                        <p className="doc-intro">{intro}</p>
                         {(tags.length > 0 || note) && (
                             <div className="doc-meta">
                                 {tags.map((t) => (
@@ -75,6 +90,8 @@ export function DocPage({ title, intro, tags = [], note, toc, header, kicker, ch
                                 {note && <span className="doc-tag is-plain">{note}</span>}
                             </div>
                         )}
+                        <h1 className="h1">{title}</h1>
+                        <p className="doc-intro">{intro}</p>
                         {header}
                     </header>
 
@@ -95,13 +112,18 @@ export function DocPage({ title, intro, tags = [], note, toc, header, kicker, ch
                             <TocLinks toc={toc} active={active} />
                         </>
                     )}
-                    {entry && (
-                        <p className="doc-aside-foot">
-                            <DashLink dashboard={entry.dashboards[0]} units={entry.units}>
-                                Abrir o dashboard
+                    <div className="doc-aside-foot">
+                        <ExpandAll article={article} />
+                        {entry && (
+                            <DashLink
+                                className="doc-aside-btn is-primary"
+                                dashboard={entry.dashboards[0]}
+                                units={entry.units}
+                            >
+                                Abrir o dashboard <span aria-hidden="true">↗</span>
                             </DashLink>
-                        </p>
-                    )}
+                        )}
+                    </div>
                 </aside>
             </div>
         </div>
@@ -112,21 +134,33 @@ type DocSectionProps = {
     id: string
     title: string // "01 — Indicadores": o número fica à parte, em cinza
     subtitle?: string
-    icon?: IconName // não aparece mais (texto corrido); mantido para não mexer nos guias
+    icon?: IconName // seção sem número: o ícone vai na caixinha do número
+    tone?: Tone // cor do número da seção
+    badge?: ReactNode // selo à direita do título (ex.: 'Cards clicáveis')
     children: ReactNode
 }
 
-// Uma seção: título e subtítulo, e o conteúdo em texto corrido (o id é a âncora do sumário).
-export function DocSection({ id, title, subtitle, children }: DocSectionProps) {
+// Uma seção: número (ou ícone) em caixinha, título e subtítulo, selo opcional à direita, e o conteúdo (o id é a âncora
+// do sumário).
+export function DocSection({ id, title, subtitle, icon, tone = 'accent', badge, children }: DocSectionProps) {
     const { num, text } = splitNumber(title)
     return (
         <section id={id} className="doc-section">
             <div className="doc-section-head">
-                <h2 className="doc-h2">
-                    {num && <span className="doc-h2-num">{num}</span>}
-                    {text}
-                </h2>
-                {subtitle && <p className="muted">{subtitle}</p>}
+                {(num || icon) && (
+                    <span className="doc-h2-num" data-tone={tone} aria-hidden={num ? undefined : 'true'}>
+                        {num ?? <Icon name={icon!} size={16} />}
+                    </span>
+                )}
+                <div className="doc-section-title">
+                    <h2 className="doc-h2">{text}</h2>
+                    {subtitle && <p className="muted">{subtitle}</p>}
+                </div>
+                {badge && (
+                    <DocPill tone={tone} className="doc-section-badge">
+                        {badge}
+                    </DocPill>
+                )}
             </div>
             {children}
         </section>
@@ -186,9 +220,10 @@ export function MetricCard({ name, icon, what, counts, calc, interpret, caveat }
     )
 }
 
-// Blocos lado a lado (DocCard) ou a lista de métricas (MetricCard).
-export function DocGrid({ children }: { children: ReactNode }) {
-    return <div className="doc-grid">{children}</div>
+// Blocos lado a lado (DocCard, DocFeature...) ou a lista de métricas (MetricCard). cols: colunas fixas
+// (2 ou 3) em telas largas; sem ele, quantas couberem.
+export function DocGrid({ cols, children }: { cols?: 2 | 3; children: ReactNode }) {
+    return <div className={cols ? `doc-grid is-cols-${cols}` : 'doc-grid'}>{children}</div>
 }
 
 // Fórmula em destaque (ex.: "Comissão = R$ 1,00 × Qtd de protocolados").
@@ -303,7 +338,17 @@ export function DocLink({ to, children }: { to: string; children: ReactNode }) {
 
 // Link para o dashboard, na unidade escolhida no seletor (ou na primeira que a pessoa vê).
 // units: só estas servem (ex.: guia do Recursal LA); a escolhida fora delas dá lugar à primeira que a pessoa vê.
-export function DashLink({ dashboard, units, children }: { dashboard: string; units?: string[]; children: ReactNode }) {
+export function DashLink({
+    dashboard,
+    units,
+    className = 'doc-link',
+    children,
+}: {
+    dashboard: string
+    units?: string[]
+    className?: string
+    children: ReactNode
+}) {
     const { org = '' } = useParams()
     const { me } = useAuth()
     const fits = (code: string | null | undefined) => !!code && (!units || units.includes(code))
@@ -312,8 +357,245 @@ export function DashLink({ dashboard, units, children }: { dashboard: string; un
         ? remembered
         : (me?.units.find((u) => fits(u.code))?.code ?? remembered ?? me?.units[0]?.code ?? '')
     return (
-        <PageTransitionLink className="doc-link" to={`/${org}/${unit}/dashboards/${dashboard}`}>
+        <PageTransitionLink className={className} to={`/${org}/${unit}/dashboards/${dashboard}`}>
             {children}
         </PageTransitionLink>
+    )
+}
+
+// ---------- Peças do layout novo (guia do Comercial LexPre em diante) ----------
+
+// Cor de destaque das peças: laranja da marca, azul, verde, vermelho, roxo, amarelo ou neutro (docs.css).
+export type Tone = 'accent' | 'info' | 'ok' | 'danger' | 'violet' | 'warn' | 'neutral'
+
+// Selo pequeno (ex.: '1 por cliente', 'Race Chart · Clicável'). mono: em fonte de código.
+export function DocPill({
+    tone = 'neutral',
+    mono,
+    className,
+    children,
+}: {
+    tone?: Tone
+    mono?: boolean
+    className?: string
+    children: ReactNode
+}) {
+    const cls = ['doc-pill', mono && 'is-mono', className].filter(Boolean).join(' ')
+    return (
+        <span className={cls} data-tone={tone}>
+            {children}
+        </span>
+    )
+}
+
+// Trecho do texto em cor de destaque (ex.: 'total combinado' em verde). mono: valores (R$ 12 mi/trimestre).
+export function Hl({ tone = 'accent', mono, children }: { tone?: Tone; mono?: boolean; children: ReactNode }) {
+    return (
+        <strong className={mono ? 'doc-hl is-mono' : 'doc-hl'} data-tone={tone}>
+            {children}
+        </strong>
+    )
+}
+
+// Quadro de destaque com borda colorida à esquerda: título (caps = versalete, como no aviso do cabeçalho),
+// selo opcional à direita e o texto; DocMini dentro dele vira os quadrinhos lado a lado.
+export function DocCallout({
+    title,
+    badge,
+    tone = 'accent',
+    icon = 'info',
+    caps,
+    children,
+}: {
+    title: ReactNode
+    badge?: ReactNode
+    tone?: Tone
+    icon?: IconName
+    caps?: boolean
+    children: ReactNode
+}) {
+    return (
+        <div className="doc-callout" data-tone={tone}>
+            <div className="doc-callout-head">
+                <Icon name={icon} size={16} />
+                <p className={caps ? 'doc-callout-title is-caps' : 'doc-callout-title'}>{title}</p>
+                {badge && (
+                    <DocPill tone={tone} mono>
+                        {badge}
+                    </DocPill>
+                )}
+            </div>
+            <div className="doc-callout-body">{children}</div>
+        </div>
+    )
+}
+
+// Quadrinho com rótulo em versalete (dentro de um DocCallout ou de uma DocGrid).
+export function DocMini({ label, children }: { label: string; children: ReactNode }) {
+    return (
+        <div className="doc-mini">
+            <p className="doc-mini-label">{label}</p>
+            <div>{children}</div>
+        </div>
+    )
+}
+
+// Moldura que agrupa peças de uma seção (ex.: o modelo de dados + o aviso logo abaixo).
+export function DocPanel({ children }: { children: ReactNode }) {
+    return <div className="doc-panel">{children}</div>
+}
+
+export type DocEntityProps = {
+    name: string // nome da tabela (em fonte de código)
+    badge?: ReactNode // ex.: '1 por cliente'
+    tone?: Tone
+    keyLabel?: string // rodapé: 'Chave temporal (Seção 01):'
+    keyValue?: ReactNode // rodapé: 'Data de Assinatura'
+    children: ReactNode
+}
+
+function DocEntity({ name, badge, tone = 'info', keyLabel, keyValue, children }: DocEntityProps) {
+    return (
+        <div className="doc-entity" data-tone={tone}>
+            <div className="doc-entity-head">
+                <code className="doc-entity-name">{name}</code>
+                {badge && (
+                    <DocPill tone={tone} mono>
+                        {badge}
+                    </DocPill>
+                )}
+            </div>
+            <p>{children}</p>
+            {(keyLabel || keyValue) && (
+                <div className="doc-entity-key">
+                    <span>{keyLabel}</span>
+                    <strong>{keyValue}</strong>
+                </div>
+            )}
+        </div>
+    )
+}
+
+// Duas tabelas lado a lado ligadas pela cardinalidade no meio (ex.: atendimento 1 : N demandas).
+export function DocRelation({
+    left,
+    right,
+    cardinality,
+    caption,
+}: {
+    left: DocEntityProps
+    right: DocEntityProps
+    cardinality: string
+    caption?: string
+}) {
+    return (
+        <div className="doc-relation">
+            <DocEntity {...left} />
+            <div className="doc-relation-link" aria-label={`Relação ${cardinality}${caption ? `, ${caption}` : ''}`}>
+                <span className="doc-relation-card">{cardinality}</span>
+                {caption && <span className="doc-relation-caption">{caption}</span>}
+            </div>
+            <DocEntity {...right} />
+        </div>
+    )
+}
+
+// Nota datada (histórico do card): a data num selo à esquerda, o texto ao lado.
+export function DocNote({ date, children }: { date: string; children: ReactNode }) {
+    return (
+        <div className="doc-note">
+            <DocPill tone="info" mono>
+                {date}
+            </DocPill>
+            <p>{children}</p>
+        </div>
+    )
+}
+
+export type DocChip = { label: string; tone?: Tone }
+
+// Linha de etiquetas com rótulo (ex.: '8 canais rastreados:' Campanha, Redes Sociais...).
+export function DocChips({ label, items }: { label?: string; items: DocChip[] }) {
+    return (
+        <div className="doc-chips">
+            {label && <span className="doc-chips-label">{label}</span>}
+            {items.map((c) => (
+                <span key={c.label} className="doc-chip" data-tone={c.tone ?? 'neutral'}>
+                    {c.label}
+                </span>
+            ))}
+        </div>
+    )
+}
+
+// Quadro com título (colorido pelo tom), selo à direita e texto. framed: borda e fundo no tom (alertas,
+// destaques); wide: ocupa duas colunas da DocGrid.
+export function DocFeature({
+    title,
+    tone,
+    icon,
+    badge,
+    badgeTone,
+    badgeMono = true,
+    framed,
+    wide,
+    children,
+}: {
+    title: ReactNode
+    tone?: Tone
+    icon?: IconName
+    badge?: ReactNode
+    badgeTone?: Tone
+    badgeMono?: boolean
+    framed?: boolean
+    wide?: boolean
+    children: ReactNode
+}) {
+    const cls = ['doc-feature', framed && 'is-framed', wide && 'is-wide'].filter(Boolean).join(' ')
+    return (
+        <div className={cls} data-tone={tone ?? 'neutral'}>
+            <div className="doc-feature-head">
+                <h3 className={tone ? 'doc-feature-title is-toned' : 'doc-feature-title'}>
+                    {icon && <Icon name={icon} size={15} />}
+                    {title}
+                </h3>
+                {badge && (
+                    <DocPill tone={badgeTone ?? tone ?? 'neutral'} mono={badgeMono}>
+                        {badge}
+                    </DocPill>
+                )}
+            </div>
+            <div className="doc-feature-body">{children}</div>
+        </div>
+    )
+}
+
+// Diferença para o legado: situação em selo (ex.: 'Em evolução'), área à direita, título e texto.
+export function DocChange({
+    status,
+    tone = 'accent',
+    area,
+    title,
+    framed,
+    children,
+}: {
+    status: string
+    tone?: Tone
+    area?: string
+    title: string
+    framed?: boolean
+    children: ReactNode
+}) {
+    return (
+        <div className={framed ? 'doc-change is-framed' : 'doc-change'} data-tone={tone}>
+            <div className="doc-change-head">
+                <DocPill tone={tone} mono>
+                    {status}
+                </DocPill>
+                {area && <span className="doc-change-area">{area}</span>}
+            </div>
+            <h3 className="doc-change-title">{title}</h3>
+            <div className="doc-change-body">{children}</div>
+        </div>
     )
 }
