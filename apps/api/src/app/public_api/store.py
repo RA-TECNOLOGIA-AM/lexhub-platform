@@ -70,7 +70,7 @@ class ApiKeyRepo(Protocol):
 
     async def revoke_all(self, key_id: str, now: datetime) -> None: ...
 
-    async def touch_last_used(self, key_id: str, now: datetime) -> None: ...
+    async def touch_last_used(self, key_id: str, now: datetime, ip: str | None) -> None: ...
 
     async def resolve(
         self, key_id: str, org_slug: str, unit_code: str, dashboard_key: str
@@ -106,7 +106,7 @@ _REVOKE_REFRESH_SQL = """
 update app.api_refresh_tokens set revoked_at = $2 where key_id = $1::uuid and revoked_at is null
 """
 _TOKENS_SINCE_SQL = "update app.api_keys set tokens_valid_since = $2 where id = $1::uuid"
-_TOUCH_SQL = "update app.api_keys set last_used_at = $2 where id = $1::uuid"
+_TOUCH_SQL = "update app.api_keys set last_used_at = $2, last_used_ip = $3 where id = $1::uuid"
 
 _RESOLVE_SQL = """
 select o.id::text as org_id,
@@ -167,8 +167,8 @@ class PgApiKeyRepo:
             await con.execute(_REVOKE_REFRESH_SQL, key_id, now)
             await con.execute(_TOKENS_SINCE_SQL, key_id, now)
 
-    async def touch_last_used(self, key_id, now):
-        await self._pool.execute(_TOUCH_SQL, key_id, now)
+    async def touch_last_used(self, key_id, now, ip):
+        await self._pool.execute(_TOUCH_SQL, key_id, now, ip[:64] if ip else None)
 
     async def resolve(self, key_id, org_slug, unit_code, dashboard_key):
         row = await self._pool.fetchrow(_RESOLVE_SQL, key_id, org_slug, unit_code, dashboard_key)

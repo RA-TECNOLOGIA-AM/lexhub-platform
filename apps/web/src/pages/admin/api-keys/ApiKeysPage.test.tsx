@@ -16,6 +16,7 @@ const KEY: ApiKeyInfo = {
     decidedAt: null,
     revokedAt: null,
     lastUsedAt: null,
+    lastUsedIp: null,
     sectors: [
         base,
         {
@@ -39,6 +40,7 @@ const ACTIVE: ApiKeyInfo = {
     status: 'active',
     decidedAt: '2026-11-26T13:00:00Z',
     lastUsedAt: '2026-11-26T14:00:00Z',
+    lastUsedIp: '203.0.113.7',
     sectors: [
         base,
         { ...KEY.sectors[1], status: 'approved' },
@@ -88,5 +90,17 @@ describe('ApiKeysView', () => {
         expect(html.match(/Revogar setor/g)?.length).toBe(1)
         expect(html).toContain('Revogar chave')
         expect(html).not.toContain('Aprovar')
+    })
+
+    it('chave ativa: último uso com o IP, sem nenhum token', () => {
+        const html = render({ tab: 'active', keys: [ACTIVE], selectedId: 'k1' })
+        expect(html).toContain('IP 203.0.113.7')
+        expect(html).not.toMatch(/lxr_|eyJ/)
+    })
+
+    it('chave nunca usada: sem IP', () => {
+        const html = render({ tab: 'active', keys: [{ ...ACTIVE, lastUsedAt: null, lastUsedIp: null }], selectedId: 'k1' })
+        expect(html).toContain('nunca')
+        expect(html).not.toContain('IP ')
     })
 })

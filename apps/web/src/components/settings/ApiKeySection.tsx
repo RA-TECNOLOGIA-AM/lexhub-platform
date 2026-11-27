@@ -227,7 +227,8 @@ export function ApiKeyView(props: ApiKeyViewProps) {
                     </div>
                 )}
                 <p className="muted small">
-                    Último uso: {apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleString('pt-BR') : 'nunca'}.
+                    Último uso: {apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleString('pt-BR') : 'nunca'}
+                    {apiKey.lastUsedAt && apiKey.lastUsedIp ? ` (IP ${apiKey.lastUsedIp})` : ''}.
                     Como usar: <a href={props.guideHref}>guia da API pública</a>.
                 </p>
             </>

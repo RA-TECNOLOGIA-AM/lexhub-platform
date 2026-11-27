@@ -38,6 +38,7 @@ const KEY: ApiKeyInfo = {
     decidedAt: '2026-11-26T13:00:00Z',
     revokedAt: null,
     lastUsedAt: null,
+    lastUsedIp: null,
     sectors: [
         { setor: 'Comercial', base: true, status: 'approved', justificativa: null, expiresAt: null },
         {

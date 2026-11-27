@@ -104,6 +104,7 @@ def test_dados_pagina_1_e_total(client, token, keys, repo):
         {"id_demanda": 2, "materia": "MORA", "data_entrada": "2026-11-03"},
     ]
     assert keys.last_used["k1"] == NOW
+    assert keys.last_ip["k1"] == "testclient"  # request.client.host do TestClient
 
 
 def test_pagina_alem_do_total_vem_vazia(client, token):

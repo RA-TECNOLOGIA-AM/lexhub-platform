@@ -75,6 +75,9 @@ services:
       # chave que cifrou; trocar obriga a salvar tudo de novo. Vazia = planilhas e bancos da tela sem dados
       SOURCE_SECRET_KEY: ${SOURCE_SECRET_KEY:-}
       SOURCE_EGRESS_IP: ${SOURCE_EGRESS_IP:-}
+      # API pública (/v1): chave HS256 que assina os access tokens. Gerada e guardada pelo Vitor;
+      # trocar invalida todos os tokens emitidos. Obrigatória: sem ela o deploy da stack falha
+      PUBLIC_API_JWT_SECRET: ${PUBLIC_API_JWT_SECRET:?}
       # Redis desta stack (L2 do cache, sobrevive a deploy e restart da API)
       CACHE_ENABLED: 'true'
       REDIS_URL: redis://lexhub-redis:6379/0

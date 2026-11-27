@@ -28,6 +28,7 @@ const seed = (now: number): ApiKeyInfo[] => [
         decidedAt: null,
         revokedAt: null,
         lastUsedAt: null,
+        lastUsedIp: null,
         sectors: [
             { setor: 'Comercial', base: true, status: 'approved', justificativa: null, expiresAt: null },
             {
@@ -94,6 +95,7 @@ export function createMockApiKeys(now: () => number = Date.now) {
                     decidedAt: null,
                     revokedAt: null,
                     lastUsedAt: null,
+                    lastUsedIp: null,
                     sectors: [
                         ...BASE.map((setor) => ({
                             setor,

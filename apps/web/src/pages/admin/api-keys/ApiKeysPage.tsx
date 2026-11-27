@@ -79,7 +79,12 @@ function Detail({
                 {!pending && (
                     <>
                         <dt>Último uso</dt>
-                        <dd>{apiKey.lastUsedAt ? fmtDateTime(apiKey.lastUsedAt) : 'nunca'}</dd>
+                        <dd>
+                            {apiKey.lastUsedAt ? fmtDateTime(apiKey.lastUsedAt) : 'nunca'}
+                            {apiKey.lastUsedAt && apiKey.lastUsedIp && (
+                                <span className="muted small"> · IP {apiKey.lastUsedIp}</span>
+                            )}
+                        </dd>
                     </>
                 )}
                 <dt>Setores da pessoa</dt>

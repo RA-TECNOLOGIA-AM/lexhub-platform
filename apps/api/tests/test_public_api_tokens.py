@@ -55,8 +55,11 @@ def test_refresh_token_formato_e_hash():
     assert new_refresh_token() != t
 
 
-def test_config_padroes():
-    s = Settings()
+def test_config_padroes(monkeypatch):
+    # Padrões do código, sem o .env local nem variáveis do ambiente (o .env de dev já traz o segredo).
+    for nome in ("PUBLIC_API_JWT_SECRET", "PUBLIC_API_ACCESS_TOKEN_TTL_SECONDS", "PUBLIC_API_REFRESH_TOKEN_TTL_DAYS"):
+        monkeypatch.delenv(nome, raising=False)
+    s = Settings(_env_file=None)
     assert s.PUBLIC_API_ACCESS_TOKEN_TTL_SECONDS == 604800
     assert s.PUBLIC_API_REFRESH_TOKEN_TTL_DAYS == 30
     assert s.PUBLIC_API_JWT_SECRET == ""

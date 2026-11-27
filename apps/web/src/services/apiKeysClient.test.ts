@@ -25,6 +25,7 @@ const ROW = {
     decided_at: '2026-11-26T13:00:00Z',
     revoked_at: null,
     last_used_at: null,
+    last_used_ip: '10.0.0.5',
     sectors: [
         { setor: 'Comercial', base: true, status: 'approved' },
         {
@@ -85,6 +86,7 @@ describe('createApiKeysClient', () => {
             decidedAt: '2026-11-26T13:00:00Z',
             revokedAt: null,
             lastUsedAt: null,
+            lastUsedIp: '10.0.0.5',
             sectors: [
                 { setor: 'Comercial', base: true, status: 'approved', justificativa: null, expiresAt: null },
                 {

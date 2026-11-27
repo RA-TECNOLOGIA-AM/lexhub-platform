@@ -180,7 +180,7 @@ async def dashboard_data(
         for row in rows[inicio : inicio + tamanho_pagina]
     ]
 
-    await keys.touch_last_used(key.id, now)
+    await keys.touch_last_used(key.id, now, request.client.host if request.client else None)
     await audit.insert_audit(
         audit_entry(
             request,

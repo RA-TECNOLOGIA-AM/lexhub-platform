@@ -35,6 +35,7 @@ type KeyRow = {
     decided_at: string | null
     revoked_at: string | null
     last_used_at: string | null
+    last_used_ip?: string | null
     sectors: SectorRow[]
 }
 type TokensRow = {
@@ -55,6 +56,7 @@ const toKey = (r: KeyRow): ApiKeyInfo => ({
     decidedAt: r.decided_at,
     revokedAt: r.revoked_at,
     lastUsedAt: r.last_used_at,
+    lastUsedIp: r.last_used_ip ?? null,
     sectors: (r.sectors ?? []).map((s) => ({
         setor: s.setor,
         base: s.base,

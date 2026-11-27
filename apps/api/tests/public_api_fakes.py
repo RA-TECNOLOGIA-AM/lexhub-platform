@@ -15,6 +15,7 @@ class FakeApiKeyRepo:
     refresh: dict[str, RefreshRow] = field(default_factory=dict)  # id -> linha
     replaced: dict[str, str] = field(default_factory=dict)
     last_used: dict[str, datetime] = field(default_factory=dict)
+    last_ip: dict[str, str | None] = field(default_factory=dict)
     # (key_id, org_slug, unit_code, dashboard_key) -> KeyAccess
     access: dict[tuple[str, str, str, str], KeyAccess] = field(default_factory=dict)
     reach: dict[str, list[Reachable]] = field(default_factory=dict)
@@ -67,8 +68,9 @@ class FakeApiKeyRepo:
                 self.refresh[rid] = replace(r, revoked_at=now)
         self.keys[key_id] = replace(self.keys[key_id], tokens_valid_since=now)
 
-    async def touch_last_used(self, key_id, now):
+    async def touch_last_used(self, key_id, now, ip):
         self.last_used[key_id] = now
+        self.last_ip[key_id] = ip
 
     async def resolve(self, key_id, org_slug, unit_code, dashboard_key):
         return self.access.get((key_id, org_slug, unit_code, dashboard_key))

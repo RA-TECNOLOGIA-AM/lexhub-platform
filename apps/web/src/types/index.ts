@@ -467,6 +467,7 @@ export type ApiKeyInfo = {
     decidedAt: string | null
     revokedAt: string | null
     lastUsedAt: string | null
+    lastUsedIp: string | null // IP da última leitura (só o último; o histórico fica na Auditoria)
     sectors: ApiKeySector[]
 }
 // validade = AAAA-MM-DD (último dia em que o setor extra vale), entre amanhã e 365 dias.
