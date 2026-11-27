@@ -466,6 +466,14 @@ def _token_routes(perms, accounts=None, debug=None):
             ]
         },
         "/me/businesses": {"data": [{"id": "9", "name": "LexGroup"}]},
+        # O negócio tem mais uma conta, não atribuída ao usuário do token; a de clientes não abre.
+        "/9/owned_ad_accounts": {
+            "data": [
+                {"id": "act_1", "name": "NG Anúncios", "account_status": 1},
+                {"id": "act_3", "name": "RJ Anúncios", "currency": "BRL", "account_status": 1},
+            ]
+        },
+        "/9/client_ad_accounts": error(10, status=403),
     }
     if debug is not None:
         routes["/debug_token"] = debug
@@ -488,10 +496,14 @@ def test_token_mostra_permissoes_possibilidades_e_contas_com_nome():
 
     out = run(go())
     assert out["ok"] and out["user"]["name"] == "Coletor LexHub"
-    assert [a["name"] for a in out["accounts"]] == ["NG Anúncios", "Zeta Parada"]  # ativas primeiro
+    # As que o token lê primeiro (ativas antes), depois as do negócio sem acesso aos relatórios
+    assert [a["name"] for a in out["accounts"]] == ["NG Anúncios", "Zeta Parada", "RJ Anúncios"]
+    assert [a["assigned"] for a in out["accounts"]] == [True, True, False]
     first = out["accounts"][0]
     assert first["id"] == "act_1" and first["business"] == "LexGroup" and first["spent"] == 12345.0
     assert out["accounts"][1]["status"] == "desativada" and not out["accounts"][1]["active"]
+    assert out["accounts"][2]["business"] == "LexGroup" and out["accounts"][2]["businessId"] == "9"
+    assert "1 do negócio sem acesso" in out["checks"][-1]["message"]
     assert out["tokenType"] == "Usuário do sistema" and out["neverExpires"] is True
     assert out["app"] == "LexHub" and out["businesses"] == [{"id": "9", "name": "LexGroup"}]
     caps = {c["key"]: c["status"] for c in out["capabilities"]}

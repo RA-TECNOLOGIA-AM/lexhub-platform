@@ -3,10 +3,10 @@ import type {
     AdsOptions,
     AdsPreview,
     AdsSettings,
-    AdsTokenAccount,
     AdsTokenInfo,
     ConnectResult,
     FacebookAdsConnectInput,
+    SourceCheck,
     Unit,
 } from '../../../types/index.ts'
 import { Modal } from '../../../components/ui/Modal.tsx'
@@ -16,7 +16,15 @@ import { normalizeAdAccount } from './connectSource.ts'
 import { AdsSettingsForm } from './AdsSettingsForm.tsx'
 import { AdsPreviewView } from './AdsPreviewView.tsx'
 import { AdsAccountPicker, AdsTokenView } from './AdsTokenView.tsx'
-import { adsSourceName, DEFAULT_ADS_SETTINGS, defaultConversions, settingsProblem } from './facebookAds.ts'
+import {
+    accountsWithoutCampaigns,
+    adsSourceName,
+    DEFAULT_ADS_SETTINGS,
+    defaultConversions,
+    mergeOptions,
+    settingsForAccount,
+    settingsProblem,
+} from './facebookAds.ts'
 
 export type AdsAccessInput = { adAccountId: string; token: string }
 
@@ -38,12 +46,18 @@ const STAGES: { key: Stage; label: string }[] = [
     { key: 'preview', label: 'Prévia' },
 ]
 
+// Uma conta escolhida e testada: o nome e a moeda que a Meta devolveu e as opções dela.
+type Picked = { id: string; name: string; currency: string; options: AdsOptions }
+// O teste ou a gravação de uma conta que não deu certo (a tela mostra as checagens com o nome da conta).
+type Failure = { id: string; name: string; checks: SourceCheck[]; message?: string }
+
 // O token do usuário do sistema começa com "EAA" e tem dezenas de caracteres; abaixo disso é engano de cópia.
 const MIN_TOKEN = 20
 
 // Módulo: o passo do Facebook Ads, em três etapas. Acesso: o token (a API mostra o que ele permite e as contas
-// que ele acessa, pelo nome) e a conta. Personalizar: o que coletar. Prévia: os últimos 7 dias com essa escolha.
-// O token vai só para a API, que guarda cifrado; nada é gravado antes de "Conectar conta".
+// que ele acessa, pelo nome) e uma ou várias contas. Personalizar: o que coletar (a mesma escolha para todas;
+// as campanhas ficam separadas por conta). Prévia: os últimos 7 dias de cada conta. Cada conta escolhida vira
+// uma fonte. O token vai só para a API, que guarda cifrado; nada é gravado antes de "Conectar".
 export function FacebookAdsStep({
     unit,
     readToken,
@@ -57,22 +71,33 @@ export function FacebookAdsStep({
     const [stage, setStage] = useState<Stage>('access')
     const [token, setToken] = useState('')
     const [tokenInfo, setTokenInfo] = useState<AdsTokenInfo | null>(null)
-    const [account, setAccount] = useState('')
-    const [typing, setTyping] = useState(false) // "Outra conta": digitar o ID
+    const [chosen, setChosen] = useState<string[]>([])
+    const [typed, setTyped] = useState('') // "A conta não está na lista": o ID digitado
+    const [typing, setTyping] = useState(false)
     const [name, setName] = useState(`Facebook Ads ${unit.name}`)
     const [nameTouched, setNameTouched] = useState(false)
-    const [options, setOptions] = useState<AdsOptions | null>(null)
+    const [picked, setPicked] = useState<Picked[]>([])
+    const [failures, setFailures] = useState<Failure[]>([])
     const [settings, setSettings] = useState<AdsSettings>(DEFAULT_ADS_SETTINGS)
-    const [sample, setSample] = useState<AdsPreview | null>(null)
+    const [samples, setSamples] = useState<Record<string, AdsPreview>>({})
+    const [sampleOf, setSampleOf] = useState<string | null>(null)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState<string | null>(null)
-    const [result, setResult] = useState<ConnectResult | null>(null)
 
-    const normalized = normalizeAdAccount(account)
-    const access = { adAccountId: normalized ?? account.trim(), token: token.trim() }
-    const currency = options?.account?.currency || 'BRL'
-    const problem = settingsProblem(settings)
+    const typedId = normalizeAdAccount(typed)
     const accounts = tokenInfo?.accounts ?? []
+    const accountIds = [...new Set([...chosen, ...((typing || accounts.length === 0) && typedId ? [typedId] : [])])]
+    const accountName = (id: string) =>
+        picked.find((p) => p.id === id)?.name ?? accounts.find((a) => a.id === id)?.name ?? id
+    const single = accountIds.length === 1
+    const merged = mergeOptions(picked.map((p) => ({ account: p.name, options: p.options })))
+    const campaignsOf = (p: Picked) => p.options.campaigns.map((c) => c.id)
+    const problem =
+        settingsProblem(settings) ??
+        accountsWithoutCampaigns(
+            settings,
+            picked.map((p) => ({ name: p.name, campaigns: campaignsOf(p) })),
+        )
 
     async function run(action: () => Promise<void>) {
         setBusy(true)
@@ -85,64 +110,113 @@ export function FacebookAdsStep({
         setBusy(false)
     }
 
+    function choose(ids: string[]) {
+        setChosen(ids)
+        setPicked([])
+        setFailures([])
+        // Uma conta só: a fonte ganha o nome dela (enquanto a pessoa não escreve outro).
+        const one = ids.length === 1 ? accounts.find((a) => a.id === ids[0]) : undefined
+        if (one && !nameTouched) setName(adsSourceName(one.name))
+    }
+
     const read = (value = token) =>
         run(async () => {
             if (value.trim().length < MIN_TOKEN) return
             const info = await readToken(value.trim())
             setTokenInfo(info)
-            setOptions(null)
-            // Uma conta só: já escolhida. Várias: a pessoa escolhe na lista.
-            const only = info.accounts.length === 1 ? info.accounts[0] : null
-            if (only) choose(only)
-            else setTyping(false)
+            setPicked([])
+            setFailures([])
+            setTyping(false)
+            // Uma conta livre só: já marcada. Várias: a pessoa marca na lista.
+            const free = info.accounts.filter((a) => a.assigned !== false && !a.connectedTo)
+            const ids = free.length === 1 ? [free[0].id] : []
+            setChosen(ids)
+            if (ids.length === 1 && !nameTouched) setName(adsSourceName(free[0].name))
         })
 
-    function choose(a: AdsTokenAccount) {
-        setAccount(a.id)
-        setTyping(false)
-        setOptions(null)
-        if (!nameTouched) setName(adsSourceName(a.name))
-    }
-
+    // Testa cada conta escolhida, uma por vez. Todas passaram: segue para Personalizar.
     const test = () =>
         run(async () => {
-            const found = await inspect(access)
-            setOptions(found)
-            if (!found.ok) return
-            if (!nameTouched && found.account) setName(adsSourceName(found.account.name))
-            setSettings({ ...DEFAULT_ADS_SETTINGS, conversions: defaultConversions(found.conversions) })
-            setSample(null)
+            const ok: Picked[] = []
+            const bad: Failure[] = []
+            for (const id of accountIds) {
+                const found = await inspect({ adAccountId: id, token: token.trim() })
+                if (found.ok && found.account) {
+                    ok.push({ id, name: found.account.name, currency: found.account.currency, options: found })
+                } else {
+                    bad.push({ id, name: accountName(id), checks: found.checks })
+                }
+            }
+            setPicked(ok)
+            setFailures(bad)
+            if (bad.length > 0) return
+            if (ok.length === 1 && !nameTouched) setName(adsSourceName(ok[0].name))
+            const conversions = mergeOptions(ok.map((p) => ({ account: p.name, options: p.options }))).conversions
+            setSettings({ ...DEFAULT_ADS_SETTINGS, conversions: defaultConversions(conversions) })
+            setSamples({})
             setStage('customize')
         })
 
+    async function loadSample(p: Picked) {
+        setSampleOf(p.id)
+        if (samples[p.id]) return
+        const got = await preview({
+            adAccountId: p.id,
+            token: token.trim(),
+            settings: settingsForAccount(settings, campaignsOf(p)),
+        })
+        setSamples((s) => ({ ...s, [p.id]: got }))
+    }
+
     const showPreview = () =>
         run(async () => {
-            setSample(await preview({ ...access, settings }))
+            await loadSample(picked[0])
             setStage('preview')
         })
 
+    // Uma fonte por conta, uma de cada vez. As que derem certo saem da lista; as que falharem ficam, com o motivo.
     const save = () =>
         run(async () => {
-            const res = await onSave({ connector: 'facebook_ads', name: name.trim(), ...access, settings })
-            setResult(res)
-            if (res.saved) {
-                onSaved()
-                onClose()
+            const left: Picked[] = []
+            const bad: Failure[] = []
+            let saved = 0
+            for (const p of picked) {
+                try {
+                    const res = await onSave({
+                        connector: 'facebook_ads',
+                        name: picked.length === 1 ? name.trim() : adsSourceName(p.name),
+                        adAccountId: p.id,
+                        token: token.trim(),
+                        settings: settingsForAccount(settings, campaignsOf(p)),
+                    })
+                    if (res.saved) {
+                        saved++
+                        continue
+                    }
+                    bad.push({ id: p.id, name: p.name, checks: res.checks })
+                } catch (err) {
+                    bad.push({ id: p.id, name: p.name, checks: [], message: toDataError(err).message })
+                }
+                left.push(p)
             }
+            if (saved > 0) onSaved()
+            if (bad.length === 0) {
+                onClose()
+                return
+            }
+            setPicked(left)
+            setFailures(bad)
         })
 
-    const accountHint =
-        account.trim() === ''
-            ? 'Gerenciador de Anúncios > Configurações da conta: o número abaixo do nome da conta.'
-            : normalized
-              ? `A API vai usar ${normalized}.`
-              : 'Use act_ seguido dos números, ou só os números.'
     const tokenReady = token.trim().length >= MIN_TOKEN
-    const accessReady = normalized !== null && tokenReady && name.trim() !== ''
+    const accessReady = accountIds.length > 0 && tokenReady && (!single || name.trim() !== '')
     const changeSettings = (next: AdsSettings) => {
         setSettings(next)
-        setSample(null)
+        setSamples({})
     }
+    const currentSample = sampleOf ? samples[sampleOf] : undefined
+    const currency = picked.find((p) => p.id === sampleOf)?.currency || picked[0]?.currency || 'BRL'
+    const connectLabel = picked.length > 1 ? `Conectar ${picked.length} contas` : 'Conectar conta'
 
     const footer = (
         <>
@@ -160,13 +234,17 @@ export function FacebookAdsStep({
             </button>
             {stage === 'access' && (
                 <button className="btn btn-primary" type="button" onClick={test} disabled={!accessReady || busy}>
-                    {busy && tokenInfo ? 'Testando na Meta…' : 'Testar e continuar'}
+                    {busy && tokenInfo
+                        ? 'Testando na Meta…'
+                        : accountIds.length > 1
+                          ? `Testar ${accountIds.length} contas e continuar`
+                          : 'Testar e continuar'}
                 </button>
             )}
             {stage === 'customize' && (
                 <>
                     <button className="btn" type="button" onClick={save} disabled={problem !== null || busy}>
-                        Conectar sem prévia
+                        {picked.length > 1 ? `Conectar ${picked.length} sem prévia` : 'Conectar sem prévia'}
                     </button>
                     <button
                         className="btn btn-primary"
@@ -180,20 +258,23 @@ export function FacebookAdsStep({
             )}
             {stage === 'preview' && (
                 <button className="btn btn-primary" type="button" onClick={save} disabled={busy}>
-                    {busy ? 'Conectando…' : 'Conectar conta'}
+                    {busy ? 'Conectando…' : connectLabel}
                 </button>
             )}
         </>
     )
 
+    const subtitle =
+        stage !== 'access' && picked.length > 0
+            ? `Unidade ${unit.name} (${unit.code}) · ${
+                  picked.length === 1 ? `conta ${picked[0].name} (${picked[0].id})` : `${picked.length} contas`
+              }`
+            : `Unidade ${unit.name} (${unit.code})`
+
     return (
         <Modal
             title="Conectar fonte · Facebook Ads"
-            subtitle={
-                options?.account && stage !== 'access'
-                    ? `Unidade ${unit.name} (${unit.code}) · conta ${options.account.name} (${options.account.id})`
-                    : `Unidade ${unit.name} (${unit.code})`
-            }
+            subtitle={subtitle}
             className="connect-dialog ads-dialog"
             onClose={onClose}
             footer={footer}
@@ -241,7 +322,8 @@ export function FacebookAdsStep({
                                     onChange={(e) => {
                                         setToken(e.target.value)
                                         setTokenInfo(null)
-                                        setOptions(null)
+                                        setPicked([])
+                                        setFailures([])
                                     }}
                                     onPaste={(e) => {
                                         const text = e.clipboardData.getData('text')
@@ -268,24 +350,27 @@ export function FacebookAdsStep({
                             </li>
                         )}
                         <li>
-                            <span className="lbl">Conta de anúncios</span>
+                            <span className="lbl">Contas de anúncios</span>
                             {accounts.length > 0 && (
-                                <AdsAccountPicker
-                                    accounts={accounts}
-                                    chosen={typing ? null : (normalized ?? null)}
-                                    onChoose={choose}
-                                    disabled={busy}
-                                />
+                                <>
+                                    <span className="muted small">
+                                        Marque uma ou várias. Cada conta vira uma fonte desta unidade, com a mesma
+                                        personalização.
+                                    </span>
+                                    <AdsAccountPicker
+                                        accounts={accounts}
+                                        chosen={chosen}
+                                        onChange={choose}
+                                        disabled={busy}
+                                    />
+                                </>
                             )}
                             {accounts.length > 0 && !typing && (
                                 <button
                                     className="btn btn-sm btn-ghost"
                                     type="button"
                                     style={{ alignSelf: 'flex-start' }}
-                                    onClick={() => {
-                                        setTyping(true)
-                                        setAccount('')
-                                    }}
+                                    onClick={() => setTyping(true)}
                                 >
                                     A conta não está na lista? Digite o ID
                                 </button>
@@ -294,53 +379,61 @@ export function FacebookAdsStep({
                                 <>
                                     <input
                                         className="field"
-                                        value={account}
+                                        value={typed}
                                         spellCheck={false}
                                         autoComplete="off"
                                         placeholder="act_1234567890"
                                         aria-label="ID da conta de anúncios"
                                         onChange={(e) => {
-                                            setAccount(e.target.value)
-                                            setOptions(null)
+                                            setTyped(e.target.value)
+                                            setPicked([])
                                         }}
                                     />
-                                    <span
-                                        className="muted small"
-                                        role={account.trim() && !normalized ? 'alert' : undefined}
-                                    >
-                                        {tokenInfo === null
-                                            ? `Leia o token para escolher a conta pelo nome, ou digite o ID. ${accountHint}`
-                                            : accountHint}
+                                    <span className="muted small" role={typed.trim() && !typedId ? 'alert' : undefined}>
+                                        {typed.trim() === ''
+                                            ? tokenInfo === null
+                                                ? 'Leia o token para escolher as contas pelo nome, ou digite o ID (Gerenciador de Anúncios > Configurações da conta).'
+                                                : 'Gerenciador de Anúncios > Configurações da conta: o número abaixo do nome da conta.'
+                                            : typedId
+                                              ? `A API vai usar ${typedId}.`
+                                              : 'Use act_ seguido dos números, ou só os números.'}
                                     </span>
                                 </>
                             )}
                         </li>
                     </ol>
-                    <label>
-                        <span className="lbl">Nome da fonte</span>
-                        <input
-                            className="field"
-                            value={name}
-                            onChange={(e) => {
-                                setName(e.target.value)
-                                setNameTouched(true)
-                            }}
-                        />
-                    </label>
+                    {single ? (
+                        <label>
+                            <span className="lbl">Nome da fonte</span>
+                            <input
+                                className="field"
+                                value={name}
+                                onChange={(e) => {
+                                    setName(e.target.value)
+                                    setNameTouched(true)
+                                }}
+                            />
+                        </label>
+                    ) : (
+                        accountIds.length > 1 && (
+                            <p className="ads-note" role="status">
+                                {accountIds.length} fontes vão ser criadas, uma por conta:{' '}
+                                {accountIds.map((id) => adsSourceName(accountName(id))).join('; ')}.
+                            </p>
+                        )
+                    )}
                     {tokenInfo && !tokenInfo.ok && <CheckList checks={tokenInfo.checks} />}
-                    {options && <CheckList checks={options.checks} />}
                 </>
             )}
 
-            {stage === 'customize' && options && (
+            {stage === 'customize' && picked.length > 0 && (
                 <>
-                    <CheckList checks={options.checks} />
                     <AdsSettingsForm
                         settings={settings}
                         onChange={changeSettings}
-                        campaigns={options.campaigns}
-                        conversions={options.conversions}
-                        currency={currency}
+                        campaigns={merged.campaigns}
+                        conversions={merged.conversions}
+                        currency={picked[0].currency || 'BRL'}
                         disabled={busy}
                     />
                     {problem && (
@@ -351,9 +444,30 @@ export function FacebookAdsStep({
                 </>
             )}
 
-            {stage === 'preview' && sample && (
+            {stage === 'preview' && (
                 <>
-                    <AdsPreviewView preview={sample} currency={currency} />
+                    {picked.length > 1 && (
+                        <div className="segmented" role="tablist" aria-label="Prévia de qual conta">
+                            {picked.map((p) => (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={sampleOf === p.id}
+                                    className={sampleOf === p.id ? 'on' : undefined}
+                                    disabled={busy}
+                                    onClick={() => run(() => loadSample(p))}
+                                >
+                                    {p.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {currentSample ? (
+                        <AdsPreviewView preview={currentSample} currency={currency} />
+                    ) : (
+                        <p className="muted small">Buscando na Meta…</p>
+                    )}
                     <p className="muted small" style={{ margin: 0 }}>
                         Ao conectar, o LexHub busca o histórico escolhido e depois atualiza os últimos dias a cada 10
                         minutos. Os dados ficam guardados no LexHub, por anúncio e por dia.
@@ -361,7 +475,28 @@ export function FacebookAdsStep({
                 </>
             )}
 
-            {result && !result.saved && <CheckList checks={result.checks} />}
+            {failures.length > 0 && (
+                <div className="stack" style={{ gap: 8 }}>
+                    {failures.map((f) => (
+                        <div key={f.id} className="stack" style={{ gap: 4 }}>
+                            <strong className="small">
+                                {f.name} ({f.id})
+                            </strong>
+                            {f.checks.length > 0 && <CheckList checks={f.checks} />}
+                            {f.message && (
+                                <p className="invite-error" role="alert" style={{ margin: 0 }}>
+                                    {f.message}
+                                </p>
+                            )}
+                        </div>
+                    ))}
+                    {stage !== 'access' && (
+                        <p className="muted small" style={{ margin: 0 }}>
+                            As contas acima não foram conectadas. As outras já estão na lista de fontes.
+                        </p>
+                    )}
+                </div>
+            )}
             {error && (
                 <p className="invite-error" role="alert" style={{ margin: 0 }}>
                     {error}

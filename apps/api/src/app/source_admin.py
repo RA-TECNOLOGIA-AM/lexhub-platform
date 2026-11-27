@@ -79,11 +79,22 @@ class SourceAdminRepo(Protocol):
 
     async def recompute_results(self, source_id: str, conversions: list[str]) -> None: ...
 
+    async def ad_accounts_in_use(self) -> dict[str, str]: ...
+
 
 _UNIT_SQL = """
 select u.id::text from app.units u
   join app.organizations o on o.id = u.org_id and o.active
  where o.slug = $1 and u.code = $2 and u.active
+"""
+
+# Contas de anúncios já ligadas a uma fonte (em qualquer organização): conta -> 'Organização · UNIDADE'.
+_AD_ACCOUNTS_SQL = """
+select ds.config ->> 'ad_account_id' as account, o.name || ' · ' || coalesce(u.code, '?') as place
+  from app.data_sources ds
+  join app.organizations o on o.id = ds.org_id
+  left join app.units u on u.id = ds.owner_unit_id
+ where ds.connector = 'facebook_ads' and ds.active
 """
 
 _SOURCE_SQL = """
@@ -208,6 +219,9 @@ class PgSourceAdminRepo:
             source_id,
             conversions,
         )
+
+    async def ad_accounts_in_use(self) -> dict[str, str]:
+        return {r["account"]: r["place"] for r in await self._pool.fetch(_AD_ACCOUNTS_SQL)}
 
     async def record_run(self, source_id, kind, ok, checks, ms, error):
         await self._pool.execute(

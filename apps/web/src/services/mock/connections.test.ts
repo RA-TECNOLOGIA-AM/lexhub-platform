@@ -135,3 +135,41 @@ describe('Facebook Ads no mock (mesmas regras da API)', () => {
         expect(adsSummaryIn(id)?.backfill?.done).toBe(false) // acabou de recomeçar o histórico
     })
 })
+
+describe('Facebook Ads no mock: várias contas', () => {
+    const settings = {
+        metrics: ['reach' as const],
+        conversions: ['lead'],
+        campaigns: null,
+        breakdowns: [],
+        backfillDays: 1095 as const,
+        creatives: true,
+    }
+    const token = 'EAAB' + 'z'.repeat(40)
+
+    it('lê o token com a conta do negócio sem acesso e marca a já conectada; a mesma conta não entra duas vezes', () => {
+        const data = fresh()
+        const before = readAdsTokenIn(token)
+        const rj = before.accounts.find((a) => a.id === 'act_4443332221')
+        expect(rj?.assigned).toBe(false)
+        expect(before.accounts.find((a) => a.id === 'act_9876543212')?.connectedTo).toBeNull()
+        connectIn(data, 'LA_AM', {
+            connector: 'facebook_ads',
+            name: 'LA',
+            adAccountId: 'act_9876543212',
+            token,
+            settings,
+        })
+        const after = readAdsTokenIn(token)
+        expect(after.accounts.find((a) => a.id === 'act_9876543212')?.connectedTo).toBe('LexGroup · LA_AM')
+        expect(() =>
+            connectIn(data, 'NG', {
+                connector: 'facebook_ads',
+                name: 'LA de novo',
+                adAccountId: 'act_9876543212',
+                token,
+                settings,
+            }),
+        ).toThrowError(/já está conectada \(LexGroup · LA_AM\)/)
+    })
+})
