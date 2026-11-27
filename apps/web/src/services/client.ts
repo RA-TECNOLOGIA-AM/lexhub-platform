@@ -8,6 +8,10 @@ import { createMockClient } from './mockClient.ts'
 import { createSupabaseAuth } from './supabase.ts'
 import type {
     AccountSession,
+    ApiKeyEligibility,
+    ApiKeyExtraRequest,
+    ApiKeyInfo,
+    ApiKeyTokens,
     Appearance,
     DashboardCatalog,
     DashboardQuery,
@@ -90,6 +94,18 @@ export interface DataClient {
     // Dispositivos: as sessões da própria conta (a atual primeiro) e derrubar uma delas (nunca a atual).
     listMySessions(): Promise<AccountSession[]>
     revokeMySession(id: string): Promise<void>
+
+    // Chave de API (API pública /v1). Pede: Owner, Gestor ou Controller (Configurações → Chave de API).
+    getApiKeyEligibility(org: string): Promise<ApiKeyEligibility>
+    requestApiKey(org: string, note: string | null, extras: ApiKeyExtraRequest[]): Promise<string>
+    getMyApiKey(org: string): Promise<ApiKeyInfo | null> // a mais recente (null = nunca pediu)
+    issueApiKeyTokens(org: string): Promise<ApiKeyTokens> // só com a chave ativa; invalida os anteriores
+    // Desenvolvedor (os outros: 403; a contagem devolve 0).
+    listApiKeys(org: string, status: 'pending' | 'active' | 'closed' | 'all'): Promise<ApiKeyInfo[]>
+    countPendingApiKeys(org: string): Promise<number>
+    decideApiKey(id: string, approve: boolean, sectors: string[], note: string | null): Promise<ApiKeyInfo>
+    revokeApiKey(id: string): Promise<void> // Desenvolvedor ou o dono
+    revokeApiKeySector(id: string, sector: string): Promise<void>
     // E-mail de quem está logado (null = sem sessão). Serve à tela "sem acesso", quando o /me dá 403.
     getSessionEmail(): Promise<string | null>
     getSessionAccessToken(): Promise<string | null>

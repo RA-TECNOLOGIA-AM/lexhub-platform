@@ -714,3 +714,58 @@
         margin-left: 54px;
     }
 }
+
+/* ---------- Chave de API ---------- */
+.apikey-sectors {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+}
+.apikey-sector {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 18px;
+}
+.apikey-sector + .apikey-sector {
+    border-top: 1px solid var(--border);
+}
+.apikey-form {
+    max-width: 560px;
+}
+.apikey-extra {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+    padding: 14px 18px;
+}
+.apikey-label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.apikey-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.apikey-tokens {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px;
+}
+.apikey-token {
+    display: block;
+    padding: 8px 10px;
+    border-radius: var(--r-md);
+    background: var(--surface-2);
+    font-size: 12px;
+    word-break: break-all;
+    user-select: all;
+}
+.apikey-extra > .btn {
+    align-self: flex-start;
+}

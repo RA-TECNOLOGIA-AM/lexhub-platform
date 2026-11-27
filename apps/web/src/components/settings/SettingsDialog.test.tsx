@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { AuthContext, type AuthValue } from '../../contexts/auth-context.ts'
 import type { Me } from '../../types/index.ts'
-import { SettingsDialog } from './SettingsDialog.tsx'
+import { SettingsDialog, visibleSections } from './SettingsDialog.tsx'
 
 const me: Me = {
     user: {
@@ -80,5 +80,12 @@ describe('SettingsDialog', () => {
             </AuthContext>,
         )
         expect(html).toContain('Remover foto')
+    })
+})
+
+describe('visibleSections', () => {
+    it('Chave de API só para quem pode pedir', () => {
+        expect(visibleSections(false).map((s) => s.id)).not.toContain('chave-api')
+        expect(visibleSections(true).map((s) => s.id)).toContain('chave-api')
     })
 })

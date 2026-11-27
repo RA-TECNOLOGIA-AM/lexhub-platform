@@ -1,11 +1,15 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useAuth } from '../../contexts/auth-context.ts'
+import { useAsync } from '../../hooks/useAsync.ts'
+import { dataClient } from '../../services/client.ts'
 import { Icon, type IconName } from '../ui/Icon.tsx'
+import { ApiKeySection } from './ApiKeySection.tsx'
 import { AppearanceSection } from './AppearanceSection.tsx'
 import { DevicesSection } from './DevicesSection.tsx'
 import { ProfileSection } from './ProfileSection.tsx'
 import './settings.css'
 
-export type SettingsSectionId = 'perfil' | 'aparencia' | 'dispositivos'
+export type SettingsSectionId = 'perfil' | 'aparencia' | 'dispositivos' | 'chave-api'
 
 type SettingsSection = {
     id: SettingsSectionId
@@ -14,6 +18,7 @@ type SettingsSection = {
     icon: IconName
     group: string // grupo do menu (ex.: "Minha conta")
     render: () => ReactNode
+    apiKeyOnly?: boolean // só para quem pode pedir chave de API (Owner, Gestor, Controller)
 }
 
 // As seções, na ordem do menu. Seção nova = um item aqui.
@@ -42,7 +47,21 @@ const SECTIONS: SettingsSection[] = [
         group: 'Minha conta',
         render: () => <DevicesSection />,
     },
+    {
+        id: 'chave-api',
+        label: 'Chave de API',
+        title: 'Chave de API',
+        icon: 'key',
+        group: 'Integrações',
+        render: () => <ApiKeySection />,
+        apiKeyOnly: true,
+    },
 ]
+
+// As seções que esta pessoa vê (a de Chave de API só aparece para quem pode pedir).
+export function visibleSections(apiKeyEligible: boolean): SettingsSection[] {
+    return SECTIONS.filter((s) => !s.apiKeyOnly || apiKeyEligible)
+}
 
 type SettingsDialogProps = {
     initialSection?: SettingsSectionId // abre direto numa seção (padrão: Perfil)
@@ -55,11 +74,13 @@ type SettingsDialogProps = {
 export function SettingsDialog({ initialSection = 'perfil', onClose }: SettingsDialogProps) {
     const dialog = useRef<HTMLDialogElement>(null)
     const titleId = useId()
-    const [active, setActive] = useState<SettingsSectionId>(
-        SECTIONS.some((s) => s.id === initialSection) ? initialSection : SECTIONS[0].id,
-    )
-    const section = SECTIONS.find((s) => s.id === active) ?? SECTIONS[0]
-    const groups = [...new Set(SECTIONS.map((s) => s.group))]
+    const org = useAuth().me?.org.slug ?? ''
+    // Falha ao consultar = sem a seção (o banco nega o pedido de quem não pode, de qualquer jeito).
+    const eligibility = useAsync(() => (org ? dataClient.getApiKeyEligibility(org) : Promise.resolve(null)), [org])
+    const sections = visibleSections(!!eligibility.data?.eligible)
+    const [active, setActive] = useState<SettingsSectionId>(initialSection)
+    const section = sections.find((s) => s.id === active) ?? sections[0]
+    const groups = [...new Set(sections.map((s) => s.group))]
 
     useLayoutEffect(() => {
         const element = dialog.current
@@ -87,18 +108,20 @@ export function SettingsDialog({ initialSection = 'perfil', onClose }: SettingsD
                 {groups.map((group) => (
                     <div key={group} className="settings-nav-group">
                         <p className="settings-nav-label">{group}</p>
-                        {SECTIONS.filter((s) => s.group === group).map((s) => (
-                            <button
-                                key={s.id}
-                                type="button"
-                                className="settings-nav-item"
-                                aria-current={s.id === active ? 'page' : undefined}
-                                onClick={() => setActive(s.id)}
-                            >
-                                <Icon name={s.icon} size={17} />
-                                {s.label}
-                            </button>
-                        ))}
+                        {sections
+                            .filter((s) => s.group === group)
+                            .map((s) => (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    className="settings-nav-item"
+                                    aria-current={s.id === section.id ? 'page' : undefined}
+                                    onClick={() => setActive(s.id)}
+                                >
+                                    <Icon name={s.icon} size={17} />
+                                    {s.label}
+                                </button>
+                            ))}
                     </div>
                 ))}
             </nav>

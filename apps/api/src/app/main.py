@@ -25,6 +25,8 @@ from app.routes import (
     health,
     hub,
     me,
+    public_auth,
+    public_data,
     source_connections,
     source_freshness,
     sources,
@@ -221,6 +223,9 @@ def create_app() -> FastAPI:
     app.include_router(source_connections.platform)
     app.include_router(source_connections.org)
     app.include_router(support.router)
+    app.include_router(public_auth.org)
+    app.include_router(public_auth.v1)
+    app.include_router(public_data.router)
     return app
 
 

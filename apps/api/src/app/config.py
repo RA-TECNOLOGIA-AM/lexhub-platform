@@ -54,6 +54,12 @@ class Settings(BaseSettings):
     SOURCE_EGRESS_IP: str = ""
     # Tempo limite de cada etapa do teste de conexão (s).
     SOURCE_TEST_TIMEOUT: float = Field(default=8.0, ge=1.0, le=60.0)
+
+    # --- API pública /v1 (chave de API). Ver app/public_api. ---
+    # Segredo HS256 dos access tokens. Vazio = /v1 responde 503 e "Gerar tokens" fica indisponível.
+    PUBLIC_API_JWT_SECRET: str = ""
+    PUBLIC_API_ACCESS_TOKEN_TTL_SECONDS: int = Field(default=604800, ge=60)  # 1 semana
+    PUBLIC_API_REFRESH_TOKEN_TTL_DAYS: int = Field(default=30, ge=1)
     # Só desenvolvimento: deixa conectar em banco de rede interna (localhost, 10.x...). Em produção, False.
     SOURCE_ALLOW_PRIVATE_HOSTS: bool = False
 

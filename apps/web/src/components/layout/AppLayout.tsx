@@ -22,6 +22,7 @@ import { useAsync } from '../../hooks/useAsync.ts'
 import { useDismiss } from '../../hooks/useDismiss.ts'
 import { useSidebarCollapsed } from '../../hooks/useSidebarCollapsed.ts'
 import { usePendingRequests } from '../../hooks/usePendingRequests.ts'
+import { usePendingApiKeys } from '../../hooks/usePendingApiKeys.ts'
 import { usePresenceHeartbeat } from '../../hooks/usePresenceHeartbeat.ts'
 import { tvSession } from '../../contexts/tvSession.ts'
 import { dataClient } from '../../services/client.ts'
@@ -70,6 +71,8 @@ export function AppLayout() {
         [orgSlug],
     )
     const perms = menuPermissions(permsQuery.data ?? null, permsQuery.error)
+    // Selo de chaves de API pendentes: só o Desenvolvedor busca.
+    const pendingKeys = usePendingApiKeys(orgSlug, permsQuery.data?.api_keys === true)
 
     // Página atual: marca o item do menu.
     const current = me ? activeItem(pathname, me.org.slug) : null
@@ -142,6 +145,11 @@ export function AppLayout() {
                                         {item.badge === 'access-requests' && pending > 0 && (
                                             <span className="count" aria-label={`${pending} pendentes`}>
                                                 {pending}
+                                            </span>
+                                        )}
+                                        {item.badge === 'api-keys' && pendingKeys > 0 && (
+                                            <span className="count" aria-label={`${pendingKeys} pendentes`}>
+                                                {pendingKeys}
                                             </span>
                                         )}
                                     </PageTransitionLink>

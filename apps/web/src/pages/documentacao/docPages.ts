@@ -7,6 +7,7 @@ import { lazyNamed } from '../../lib/lazyNamed.ts'
 // Assim o cabeçalho do dashboard pode perguntar "este guia existe?" sem trazer os textos junto.
 export const DOC_PAGES: Record<string, ComponentType> = {
     'guia-do-usuario': lazyNamed(() => import('./conteudo/GuiaDoUsuario.tsx'), 'GuiaDoUsuarioDoc'),
+    'api-publica': lazyNamed(() => import('./conteudo/ApiPublica.tsx'), 'ApiPublicaDoc'),
     'protocolo-lexpre': lazyNamed(() => import('./conteudo/ProtocoloLexpre.tsx'), 'ProtocoloLexpreDoc'),
     'pendencias-lexpre': lazyNamed(() => import('./conteudo/PendenciasLexpre.tsx'), 'PendenciasLexpreDoc'),
     'org-documentos-lexpre': lazyNamed(() => import('./conteudo/OrgDocumentosLexpre.tsx'), 'OrgDocumentosLexpreDoc'),
