@@ -5,7 +5,12 @@ import { addDays, validateRequest } from './apiKey.ts'
 import type { ApiKeyInfo } from '../../types/index.ts'
 
 const TODAY = '2026-11-26'
-const extra = (over = {}) => ({ setor: 'Protocolo', justificativa: 'Automação de metas', validade: '2027-01-31', ...over })
+const extra = (over = {}) => ({
+    setor: 'Protocolo',
+    justificativa: 'Automação de metas',
+    validade: '2027-01-31',
+    ...over,
+})
 
 describe('validateRequest', () => {
     it('aceita setor base sem extra e extra válido', () => {

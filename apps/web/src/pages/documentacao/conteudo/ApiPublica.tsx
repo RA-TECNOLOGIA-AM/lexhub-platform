@@ -40,15 +40,17 @@ const STEPS: DocStep[] = [
     },
     {
         title: 'Espere a aprovação',
-        body: <>Um Desenvolvedor aprova em Administração → "Chaves de API" e pode aprovar só parte dos setores extras.</>,
+        body: (
+            <>Um Desenvolvedor aprova em Administração → "Chaves de API" e pode aprovar só parte dos setores extras.</>
+        ),
     },
     {
         title: 'Gere os tokens',
         body: (
             <>
                 Volte em "Chave de API" e clique em "Gerar tokens". O <Code>access_token</Code> vale 1 semana e o{' '}
-                <Code>refresh_token</Code> (começa com <Code>lxr_</Code>) vale 30 dias. Eles aparecem uma vez só:
-                guarde como uma senha. Gerar de novo invalida os anteriores.
+                <Code>refresh_token</Code> (começa com <Code>lxr_</Code>) vale 30 dias. Eles aparecem uma vez só: guarde
+                como uma senha. Gerar de novo invalida os anteriores.
             </>
         ),
     },
@@ -134,16 +136,16 @@ export function ApiPublicaDoc() {
             toc={TOC}
             intro={
                 <>
-                    Consulte por API os mesmos dados do "Exportar" dos dashboards, para Power BI, planilhas e scripts.
-                    A API devolve JSON paginado; o arquivo exportado e a API sempre batem.
+                    Consulte por API os mesmos dados do "Exportar" dos dashboards, para Power BI, planilhas e scripts. A
+                    API devolve JSON paginado; o arquivo exportado e a API sempre batem.
                 </>
             }
         >
             <DocSection id="quem" title="01 — Quem pode usar">
                 <p>
                     Owner da organização, e Gestor ou Controller de alguma unidade. A chave é da pessoa: alcança só os
-                    dashboards dos seus setores (e dos setores extras aprovados), nas unidades em que ela tem esse
-                    cargo (Owner: todas). Ver tudo na tela não muda isso: na API vale o setor.
+                    dashboards dos seus setores (e dos setores extras aprovados), nas unidades em que ela tem esse cargo
+                    (Owner: todas). Ver tudo na tela não muda isso: na API vale o setor.
                 </p>
                 <InfoBox>
                     Perdeu o cargo, saiu do setor ou da organização, ou o setor extra venceu: a chave para de alcançar
@@ -178,8 +180,10 @@ export function ApiPublicaDoc() {
 
             <DocSection id="dados" title="05 — Buscar os dados">
                 <p>
-                    <Code>GET {BASE}/orgs/{'{org}'}/units/{'{unidade}'}/dashboards/{'{dashboard}'}</Code>, com o
-                    cabeçalho <Code>Authorization: Bearer {'<access_token>'}</Code>.
+                    <Code>
+                        GET {BASE}/orgs/{'{org}'}/units/{'{unidade}'}/dashboards/{'{dashboard}'}
+                    </Code>
+                    , com o cabeçalho <Code>Authorization: Bearer {'<access_token>'}</Code>.
                 </p>
                 <DocTable head={['Parâmetro', 'O que é']} rows={PARAMS} code={[0]} />
                 <p>Resposta:</p>
@@ -205,8 +209,8 @@ export function ApiPublicaDoc() {
 python api_publica_cliente.py baixar --org lexgroup --unidade NG --dashboard comercial-lexpre \\
     --de 2026-11-01 --ate 2026-11-26 --saida comercial.csv`}</Block>
                 <WatchBox title="Um agendamento por arquivo">
-                    Não rode duas cópias do script ao mesmo tempo com o mesmo arquivo de credenciais: as duas
-                    renovariam o mesmo refresh, e a chave inteira seria revogada.
+                    Não rode duas cópias do script ao mesmo tempo com o mesmo arquivo de credenciais: as duas renovariam
+                    o mesmo refresh, e a chave inteira seria revogada.
                 </WatchBox>
             </DocSection>
 

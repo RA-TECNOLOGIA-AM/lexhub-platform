@@ -116,7 +116,8 @@ function Detail({
                                 )}
                                 <span className="muted small">
                                     {s.expiresAt ? `até ${validUntil(s.expiresAt)}` : ''}
-                                    {!pending && ` · ${s.status === 'approved' ? 'aprovado' : s.status === 'revoked' ? 'revogado' : 'recusado'}`}
+                                    {!pending &&
+                                        ` · ${s.status === 'approved' ? 'aprovado' : s.status === 'revoked' ? 'revogado' : 'recusado'}`}
                                 </span>
                             </div>
                             {s.justificativa && <p className="small">{s.justificativa}</p>}

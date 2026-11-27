@@ -1,10 +1,5 @@
 import { DataError } from '../errors.ts'
-import type {
-    ApiKeyEligibility,
-    ApiKeyExtraRequest,
-    ApiKeyInfo,
-    ApiKeyTokens,
-} from '../../types/index.ts'
+import type { ApiKeyEligibility, ApiKeyExtraRequest, ApiKeyInfo, ApiKeyTokens } from '../../types/index.ts'
 
 // Setores do mock (os mesmos nomes da LexGroup) e os setores de quem está logado no mock.
 const SECTORS = ['Comercial', 'Protocolo', 'Peticionamento', 'Execução', 'Financeiro']

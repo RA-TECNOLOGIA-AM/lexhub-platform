@@ -4,12 +4,7 @@ import { useAsync } from '../../hooks/useAsync.ts'
 import { refreshPendingApiKeys } from '../../hooks/usePendingApiKeys.ts'
 import { DataError } from '../../services/errors.ts'
 import { dataClient } from '../../services/client.ts'
-import type {
-    ApiKeyEligibility,
-    ApiKeyExtraRequest,
-    ApiKeyInfo,
-    ApiKeyTokens,
-} from '../../types/index.ts'
+import type { ApiKeyEligibility, ApiKeyExtraRequest, ApiKeyInfo, ApiKeyTokens } from '../../types/index.ts'
 import { addDays, DEFAULT_DAYS, MAX_DAYS, todayInBrazil, validateRequest, validUntil } from './apiKey.ts'
 
 export type ApiKeyViewProps = {
@@ -51,7 +46,11 @@ function CopyField({ label, value, hint }: { label: string; value: string; hint:
         <div className="settings-field">
             <div className="settings-field-head">
                 <span className="settings-field-label">{label}</span>
-                <button type="button" className="btn btn-sm btn-ghost" onClick={() => void navigator.clipboard?.writeText(value)}>
+                <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => void navigator.clipboard?.writeText(value)}
+                >
                     Copiar
                 </button>
             </div>
@@ -100,7 +99,11 @@ function RequestForm({
                     <legend className="settings-field-label">Setor extra</legend>
                     <label className="apikey-label">
                         <span className="lbl">Setor</span>
-                        <select className="field" value={e.setor} onChange={(ev) => update(i, { setor: ev.target.value })}>
+                        <select
+                            className="field"
+                            value={e.setor}
+                            onChange={(ev) => update(i, { setor: ev.target.value })}
+                        >
                             <option value="">Escolha…</option>
                             {options.map((s) => (
                                 <option key={s} value={s}>
@@ -157,7 +160,12 @@ function RequestForm({
 
             <label className="apikey-label">
                 <span className="lbl">Para que vai usar (opcional)</span>
-                <input className="field" value={note} onChange={(ev) => setNote(ev.target.value)} placeholder="Ex.: Power BI das metas" />
+                <input
+                    className="field"
+                    value={note}
+                    onChange={(ev) => setNote(ev.target.value)}
+                    placeholder="Ex.: Power BI das metas"
+                />
             </label>
             {touched && problem && (
                 <p className="small settings-warn" role="status">
@@ -228,8 +236,8 @@ export function ApiKeyView(props: ApiKeyViewProps) {
                 )}
                 <p className="muted small">
                     Último uso: {apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt).toLocaleString('pt-BR') : 'nunca'}
-                    {apiKey.lastUsedAt && apiKey.lastUsedIp ? ` (IP ${apiKey.lastUsedIp})` : ''}.
-                    Como usar: <a href={props.guideHref}>guia da API pública</a>.
+                    {apiKey.lastUsedAt && apiKey.lastUsedIp ? ` (IP ${apiKey.lastUsedIp})` : ''}. Como usar:{' '}
+                    <a href={props.guideHref}>guia da API pública</a>.
                 </p>
             </>
         )
@@ -273,16 +281,13 @@ export function ApiKeySection() {
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
     const [tokens, setTokens] = useState<ApiKeyTokens | null>(null)
-    const data = useAsync(
-        async () => {
-            const [eligibility, apiKey] = await Promise.all([
-                dataClient.getApiKeyEligibility(org),
-                dataClient.getMyApiKey(org),
-            ])
-            return { eligibility, apiKey }
-        },
-        [org, version],
-    )
+    const data = useAsync(async () => {
+        const [eligibility, apiKey] = await Promise.all([
+            dataClient.getApiKeyEligibility(org),
+            dataClient.getMyApiKey(org),
+        ])
+        return { eligibility, apiKey }
+    }, [org, version])
 
     async function run(action: () => Promise<unknown>, failure: string) {
         setBusy(true)

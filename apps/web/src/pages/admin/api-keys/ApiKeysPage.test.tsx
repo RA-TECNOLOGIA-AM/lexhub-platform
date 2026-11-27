@@ -41,11 +41,7 @@ const ACTIVE: ApiKeyInfo = {
     decidedAt: '2026-11-26T13:00:00Z',
     lastUsedAt: '2026-11-26T14:00:00Z',
     lastUsedIp: '203.0.113.7',
-    sectors: [
-        base,
-        { ...KEY.sectors[1], status: 'approved' },
-        { ...KEY.sectors[2], status: 'rejected' },
-    ],
+    sectors: [base, { ...KEY.sectors[1], status: 'approved' }, { ...KEY.sectors[2], status: 'rejected' }],
 }
 const noop = () => {}
 const props = (over: Partial<ApiKeysViewProps>): ApiKeysViewProps => ({
@@ -99,7 +95,11 @@ describe('ApiKeysView', () => {
     })
 
     it('chave nunca usada: sem IP', () => {
-        const html = render({ tab: 'active', keys: [{ ...ACTIVE, lastUsedAt: null, lastUsedIp: null }], selectedId: 'k1' })
+        const html = render({
+            tab: 'active',
+            keys: [{ ...ACTIVE, lastUsedAt: null, lastUsedIp: null }],
+            selectedId: 'k1',
+        })
         expect(html).toContain('nunca')
         expect(html).not.toContain('IP ')
     })

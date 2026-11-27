@@ -101,8 +101,12 @@ describe('createApiKeysClient', () => {
     })
 
     it('sem chave: getMyApiKey devolve null; elegibilidade vem em camelCase', async () => {
-        expect(await createApiKeysClient(fakeSupabase({ data: null }).supabase, fakeHttp({}).http).getMyApiKey('x')).toBeNull()
-        const { supabase } = fakeSupabase({ data: { eligible: true, base_sectors: ['Comercial'], sectors: ['Comercial', 'Protocolo'] } })
+        expect(
+            await createApiKeysClient(fakeSupabase({ data: null }).supabase, fakeHttp({}).http).getMyApiKey('x'),
+        ).toBeNull()
+        const { supabase } = fakeSupabase({
+            data: { eligible: true, base_sectors: ['Comercial'], sectors: ['Comercial', 'Protocolo'] },
+        })
         expect(await createApiKeysClient(supabase, fakeHttp({}).http).getApiKeyEligibility('x')).toEqual({
             eligible: true,
             baseSectors: ['Comercial'],

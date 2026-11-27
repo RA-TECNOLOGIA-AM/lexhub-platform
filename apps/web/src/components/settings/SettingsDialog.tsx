@@ -76,10 +76,7 @@ export function SettingsDialog({ initialSection = 'perfil', onClose }: SettingsD
     const titleId = useId()
     const org = useAuth().me?.org.slug ?? ''
     // Falha ao consultar = sem a seção (o banco nega o pedido de quem não pode, de qualquer jeito).
-    const eligibility = useAsync(
-        () => (org ? dataClient.getApiKeyEligibility(org) : Promise.resolve(null)),
-        [org],
-    )
+    const eligibility = useAsync(() => (org ? dataClient.getApiKeyEligibility(org) : Promise.resolve(null)), [org])
     const sections = visibleSections(!!eligibility.data?.eligible)
     const [active, setActive] = useState<SettingsSectionId>(initialSection)
     const section = sections.find((s) => s.id === active) ?? sections[0]
@@ -111,18 +108,20 @@ export function SettingsDialog({ initialSection = 'perfil', onClose }: SettingsD
                 {groups.map((group) => (
                     <div key={group} className="settings-nav-group">
                         <p className="settings-nav-label">{group}</p>
-                        {sections.filter((s) => s.group === group).map((s) => (
-                            <button
-                                key={s.id}
-                                type="button"
-                                className="settings-nav-item"
-                                aria-current={s.id === section.id ? 'page' : undefined}
-                                onClick={() => setActive(s.id)}
-                            >
-                                <Icon name={s.icon} size={17} />
-                                {s.label}
-                            </button>
-                        ))}
+                        {sections
+                            .filter((s) => s.group === group)
+                            .map((s) => (
+                                <button
+                                    key={s.id}
+                                    type="button"
+                                    className="settings-nav-item"
+                                    aria-current={s.id === section.id ? 'page' : undefined}
+                                    onClick={() => setActive(s.id)}
+                                >
+                                    <Icon name={s.icon} size={17} />
+                                    {s.label}
+                                </button>
+                            ))}
                     </div>
                 ))}
             </nav>

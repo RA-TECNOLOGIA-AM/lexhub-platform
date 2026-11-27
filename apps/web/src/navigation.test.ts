@@ -4,7 +4,16 @@ import { menuPermissions, NAV_SECTIONS, visibleItems } from './navigation.ts'
 const admin = NAV_SECTIONS.find((s) => s.title === 'Administração')!
 const keys = (perms: Parameters<typeof visibleItems>[1]) => visibleItems(admin, perms).map((i) => i.key)
 
-const ALL = { access: true, members: true, sources: true, audit: true, billing: true, clients: true, support: true, api_keys: true }
+const ALL = {
+    access: true,
+    members: true,
+    sources: true,
+    audit: true,
+    billing: true,
+    clients: true,
+    support: true,
+    api_keys: true,
+}
 const NONE = {
     access: false,
     members: false,
