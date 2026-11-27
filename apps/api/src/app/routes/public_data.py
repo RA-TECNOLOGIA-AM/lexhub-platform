@@ -1,6 +1,6 @@
 """Dados da API pública /v1: os mesmos do "Exportar" de cada dashboard, em JSON e paginados.
 
-A chave vale como o dono dela (Owner, Gestor ou Controller), mas o alcance é o dos setores da chave
+A chave vale como o dono dela (Owner, Desenvolvedor, Gestor ou Controller), mas o alcance é o dos setores da chave
 (`app_private.api_key_scope`), não o do cargo. A rota monta um DashboardAccess com esse alcance e usa as
 mesmas peças da exportação (routes/dashboards.py), então API e arquivo exportado sempre batem.
 """

@@ -170,7 +170,17 @@ describe('actionFilter', () => {
 
 describe('kindOptions', () => {
     it('tipos com evento e Outros, todos em ordem alfabética', () => {
-        expect(kindOptions()).toEqual(['view', 'login', 'export', 'access', 'other', 'account', 'support', 'source'])
+        expect(kindOptions()).toEqual([
+            'api',
+            'view',
+            'login',
+            'export',
+            'access',
+            'other',
+            'account',
+            'support',
+            'source',
+        ])
     })
 })
 
@@ -234,5 +244,54 @@ describe('fontes e integrações', () => {
             raw({ action: 'integration.updated', metadata: { integration: 'meta', changed: [], secret: 'keep' } }),
         )
         expect(keep.detail).toBe('Meta (Facebook Ads)')
+    })
+})
+
+describe('chave de API', () => {
+    it('pedido com setores extras e validade', () => {
+        const e = toAuditEvent(
+            raw({
+                action: 'api_key.requested',
+                metadata: { extras: [{ setor: 'Financeiro', justificativa: 'BI do mês', validade: '2026-12-31' }] },
+            }),
+        )
+        expect(e).toMatchObject({ kind: 'api', action: 'Pediu chave de API', detail: 'extras: Financeiro até 31/12' })
+        expect(toAuditEvent(raw({ action: 'api_key.requested', metadata: { extras: [] } })).detail).toBe('')
+    })
+
+    it('aprovação com setores e nota; recusa e revogação', () => {
+        expect(
+            toAuditEvent(
+                raw({
+                    action: 'api_key.approved',
+                    targetName: 'Gestor API',
+                    metadata: { sectors_approved: ['Financeiro'], note: 'ok' },
+                }),
+            ),
+        ).toMatchObject({
+            kind: 'api',
+            action: 'Aprovou chave de API',
+            detail: 'chave de Gestor API · setores: Financeiro · ok',
+        })
+        expect(toAuditEvent(raw({ action: 'api_key.rejected', metadata: { note: null } })).detail).toBe('')
+        expect(toAuditEvent(raw({ action: 'api_key.revoked' })).action).toBe('Revogou chave de API')
+        expect(toAuditEvent(raw({ action: 'api_key.sector_revoked', metadata: { setor: 'RH' } })).detail).toBe('RH')
+    })
+
+    it('leitura pela API: dashboard, unidade, relatório e período', () => {
+        const e = toAuditEvent(
+            raw({
+                action: 'api.read',
+                targetId: 'protocolo',
+                metadata: { unit: 'AM', relatorio: '', from: '2026-11-01', to: '2026-11-07' },
+            }),
+        )
+        expect(e).toMatchObject({ kind: 'api', action: 'Leu dados pela API', detail: 'protocolo · AM · 01/11 a 07/11' })
+    })
+
+    it('filtro "Chave de API" traz todos os eventos da chave', () => {
+        expect(actionFilter('api').p_actions).toEqual(
+            expect.arrayContaining(['api_key.requested', 'api_key.tokens_issued', 'api.read', 'api.access_denied']),
+        )
     })
 })

@@ -18,7 +18,7 @@ type SettingsSection = {
     icon: IconName
     group: string // grupo do menu (ex.: "Minha conta")
     render: () => ReactNode
-    apiKeyOnly?: boolean // só para quem pode pedir chave de API (Owner, Gestor, Controller)
+    apiKeyOnly?: boolean // só para quem pode pedir chave de API (Owner, Desenvolvedor, Gestor, Controller)
 }
 
 // As seções, na ordem do menu. Seção nova = um item aqui.

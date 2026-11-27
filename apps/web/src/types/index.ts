@@ -445,7 +445,7 @@ export type AccountSession = {
     current: boolean
 }
 
-// Chave de API (API pública /v1). Pede: Owner, Gestor ou Controller; aprova: Desenvolvedor.
+// Chave de API (API pública /v1). Pede: Owner, Desenvolvedor, Gestor ou Controller; aprova: Desenvolvedor.
 export type ApiKeyStatus = 'pending' | 'active' | 'rejected' | 'revoked'
 export type ApiKeySectorStatus = 'pending' | 'approved' | 'rejected' | 'revoked'
 // Setor da chave: base = setor atual da pessoa (sem validade); extra = pedido com justificativa e validade.
@@ -508,7 +508,7 @@ export type MemberAccessUpdate = {
 
 // Auditoria: o que aconteceu na organização (entradas, exportações, acesso, suporte, fontes).
 // source = unidades e fontes (criar/editar unidade, sincronização); other = evento que a tela ainda não conhece
-export type AuditKind = 'login' | 'view' | 'export' | 'access' | 'account' | 'support' | 'source' | 'other'
+export type AuditKind = 'login' | 'view' | 'export' | 'access' | 'account' | 'support' | 'source' | 'api' | 'other'
 
 // Um evento como vem do banco (api.list_audit); services/auditEvents.ts traduz para AuditEvent.
 export type RawAuditEvent = {
