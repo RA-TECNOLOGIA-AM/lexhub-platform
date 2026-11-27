@@ -6,11 +6,14 @@ import { refreshPendingRequests } from '../../hooks/usePendingRequests.ts'
 import { dataClient } from '../../services/client.ts'
 import { timeAgo } from '../../lib/format.ts'
 import { bellCount } from '../../lib/notifications.ts'
+import { alertText, type LimitAlert } from '../../lib/planLimits.ts'
 import type { NotificationsResponse } from '../../types/index.ts'
 
 type NotificationsBellProps = {
     staff: boolean // equipe RA: o painel também mostra os pedidos de acesso pendentes
     pending: number // quantos pedidos pendentes (usePendingRequests)
+    planAlerts?: LimitAlert[] // limites do plano perto de acabar (só quem vê Plano e cobrança)
+    billingPath?: string // para onde o aviso leva ("/lexgroup/admin/plano")
     onNavigate: () => void // ao abrir um item (ex.: fechar o menu do celular)
 }
 
@@ -20,7 +23,13 @@ const EMPTY: NotificationsResponse = { items: [], unread: 0 }
 // - Pedidos de acesso pendentes (equipe RA): uma linha fixa, calculada na hora; some quando ninguém espera.
 // - Notificações guardadas (api.list_my_notifications): clicar marca como lida e leva ao link.
 // Busca ao montar e toda vez que o painel abre (sem ficar consultando o banco em segundo plano).
-export function NotificationsBell({ staff, pending, onNavigate }: NotificationsBellProps) {
+export function NotificationsBell({
+    staff,
+    pending,
+    planAlerts = [],
+    billingPath,
+    onNavigate,
+}: NotificationsBellProps) {
     const [open, setOpen] = useState(false)
     const [data, setData] = useState<NotificationsResponse>(EMPTY)
     const [failed, setFailed] = useState(false)
@@ -86,8 +95,8 @@ export function NotificationsBell({ staff, pending, onNavigate }: NotificationsB
         onNavigate()
     }
 
-    const count = bellCount(data.unread, pending)
-    const empty = pending === 0 && data.items.length === 0
+    const count = bellCount(data.unread, pending, billingPath ? planAlerts.length : 0)
+    const empty = pending === 0 && data.items.length === 0 && !(billingPath && planAlerts.length)
 
     return (
         <div className="notif" ref={root}>
@@ -135,6 +144,28 @@ export function NotificationsBell({ staff, pending, onNavigate }: NotificationsB
                                 </span>
                             </PageTransitionLink>
                         )}
+
+                        {billingPath &&
+                            planAlerts.map((a) => (
+                                <PageTransitionLink
+                                    key={a.key}
+                                    className="notif-item unread"
+                                    to={billingPath}
+                                    onClick={close}
+                                >
+                                    <span className="notif-icon">
+                                        <Icon name="receipt" size={16} />
+                                    </span>
+                                    <span className="notif-text">
+                                        <span className="notif-title">
+                                            {a.level === 'full'
+                                                ? `${a.label} no limite do plano`
+                                                : `${a.label} quase no limite do plano`}
+                                        </span>
+                                        <span className="small muted">{alertText(a)}. Ver plano e cobrança.</span>
+                                    </span>
+                                </PageTransitionLink>
+                            ))}
 
                         {data.items.map((n) => {
                             const content = (

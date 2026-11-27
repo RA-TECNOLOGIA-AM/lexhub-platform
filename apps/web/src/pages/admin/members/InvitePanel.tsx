@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Icon } from '../../../components/ui/Icon.tsx'
+import { PageTransitionLink } from '../../../components/page_transition/PageTransitionLink.tsx'
+import { alertText, type LimitAlert } from '../../../lib/planLimits.ts'
 import { toDataError } from '../../../services/errors.ts'
 import type { InviteRequest, InviteResult, MemberTeam, Unit } from '../../../types/index.ts'
 import { CopyLink } from './CopyLink.tsx'
@@ -10,6 +12,8 @@ type InvitePanelProps = {
     units: Unit[] // as unidades que quem convida gere
     teams: MemberTeam[]
     canInviteAdmin: boolean
+    seatAlert?: LimitAlert | null // assentos perto do limite do plano (só quem vê Plano e cobrança)
+    billingPath?: string // para onde "Ver plano" leva
     onSend: (invite: InviteRequest) => Promise<InviteResult> // quem usa decide como enviar
     onClose: () => void
 }
@@ -20,7 +24,15 @@ const toggle = (list: string[], value: string) =>
 // Módulo: o formulário "Convidar pessoas". Guarda o que foi digitado, mostra os avisos e,
 // depois de enviar, o resultado e o link para mandar à pessoa (não sai e-mail automático).
 // As regras ficam em invite.ts; o envio fica com quem usa o painel (onSend).
-export function InvitePanel({ units, teams, canInviteAdmin, onSend, onClose }: InvitePanelProps) {
+export function InvitePanel({
+    units,
+    teams,
+    canInviteAdmin,
+    seatAlert,
+    billingPath,
+    onSend,
+    onClose,
+}: InvitePanelProps) {
     const [emails, setEmails] = useState('')
     const [role, setRole] = useState<InviteRequest['role']>('colaborador')
     const [chosen, setChosen] = useState<string[]>(units.length === 1 ? [units[0].code] : [])
@@ -70,6 +82,18 @@ export function InvitePanel({ units, teams, canInviteAdmin, onSend, onClose }: I
                         <Icon name="close" size={16} />
                     </button>
                 </div>
+                {seatAlert && (
+                    <div className="invite-preview" role="status">
+                        <strong>
+                            {seatAlert.level === 'full'
+                                ? 'Os assentos do plano acabaram.'
+                                : 'Os assentos do plano estão acabando.'}
+                        </strong>{' '}
+                        {alertText(seatAlert)}.{' '}
+                        {seatAlert.level === 'full' ? 'Novos convites podem passar do limite. ' : ''}
+                        {billingPath && <PageTransitionLink to={billingPath}>Ver plano e cobrança</PageTransitionLink>}
+                    </div>
+                )}
                 <label>
                     <span className="lbl">E-mails</span>
                     <textarea

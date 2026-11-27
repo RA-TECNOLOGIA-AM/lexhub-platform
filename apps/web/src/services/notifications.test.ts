@@ -49,5 +49,7 @@ describe('bellCount', () => {
         expect(bellCount(0, 0)).toBeNull()
         expect(bellCount(1, 2)).toBe('3')
         expect(bellCount(8, 4)).toBe('9+')
+        expect(bellCount(0, 0, 2)).toBe('2')
+        expect(bellCount(0, 0, 0)).toBeNull()
     })
 })
