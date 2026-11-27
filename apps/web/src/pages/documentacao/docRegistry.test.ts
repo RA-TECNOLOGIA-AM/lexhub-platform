@@ -67,9 +67,9 @@ describe('groupDocs e filterDocs', () => {
             'acordos',
         ])
         expect(filterDocs(groups, 'juridico', null).map((g) => g.area)).toEqual(['Jurídico'])
-        expect(filterDocs(groups, '', 'LA').flatMap((g) => g.docs.map((d) => d.slug))).toEqual([
-            'comercial-lexpre',
+        expect(filterDocs(groups, '', 'LARJ').flatMap((g) => g.docs.map((d) => d.slug))).toEqual([
             'execucao',
+            'acordos',
         ])
         expect(filterDocs(groups, 'nada disso', null)).toEqual([])
     })

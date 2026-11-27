@@ -63,17 +63,17 @@ export const DOC_ENTRIES: DocEntry[] = [
         slug: 'execucao',
         title: 'Execução Condenação',
         description:
-            "Diferença entre 'ainda em execução' e 'entrou/saiu no período', entradas por mês com clique para filtrar e a seção de Atividades (Concluídas/Por prazo).",
+            "Diferença entre 'ainda em execução' e 'entrou/saiu no período', entradas e saídas mês a mês, Diligências e a seção de Atividades (Concluídas/Por prazo).",
         dashboards: ['execucao'],
-        offices: ['NG', 'LA'],
+        offices: ['NG', 'LA', 'LARJ'],
     },
     {
         slug: 'acordos',
         title: 'Execução Acordos',
         description:
-            'Processos resolvidos por acordo na fase de Execução, com datas e valor próprios (acordo fechado, pagamento, valor de alçada final) e Judicial x Extrajudicial.',
+            'Processos resolvidos por acordo na fase de Execução, com datas e valor próprios (execução, pagamento, valor de alçada final) e Judicial x Extrajudicial.',
         dashboards: ['acordos'],
-        offices: ['NG'],
+        offices: ['NG', 'LA', 'LARJ'],
     },
     {
         slug: 'recursal-ng',
@@ -212,7 +212,7 @@ export const DOC_ENTRIES: DocEntry[] = [
         description:
             'Classificação de mérito do 1º grau, motivo das extinções, tempo médio até a sentença, embargos e reversão, e por que a maioria dos processos não tem juiz preenchido.',
         dashboards: ['julgados-sentencas'],
-        offices: ['NG', 'LA'],
+        offices: ['NG', 'LA', 'LARJ'],
     },
     {
         slug: 'marketing-lexpre',
@@ -229,6 +229,22 @@ export const DOC_ENTRIES: DocEntry[] = [
             'Banco NG legado somado ao LexPre (escritório NG): perfil e triagem com dispositivo, Facebook Ads e funil de pipeline, campanhas RA × NG, aquisição e indicadores pago e orgânico.',
         dashboards: ['marketing'],
         offices: ['NG'],
+    },
+    {
+        slug: 'publicacoes',
+        title: 'Publicações',
+        description:
+            'Recebidas, pendentes e cumpridas, tempo de tratamento, taxa de resolução, agendamento depois do cumprimento e a comissão dos leitores (certas × erradas).',
+        dashboards: ['publicacoes'],
+        offices: ['NG', 'LA', 'LARJ'],
+    },
+    {
+        slug: 'controle-processos',
+        title: 'Controle de Processos',
+        description:
+            'A esteira da carteira (protocolados, inicial, recursal, trânsito, execução e arquivados), extintos e taxa de provimento, carteira líquida, tempo por fase frente às metas e subfases.',
+        dashboards: ['controle-processos'],
+        offices: ['NG', 'LA', 'LARJ'],
     },
     {
         slug: 'execucao-estrategico',
