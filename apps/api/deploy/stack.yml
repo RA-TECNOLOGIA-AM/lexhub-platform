@@ -100,7 +100,7 @@ services:
         constraints: [node.hostname == worker1]
       labels:
         - 'traefik.enable=true'
-        - 'traefik.http.routers.lexhub-api.rule=Host(`api.hub.lexgroup.com.br`) && (PathPrefix(`/me`) || PathPrefix(`/orgs`) || PathPrefix(`/auth`) || PathPrefix(`/sources`))'
+        - 'traefik.http.routers.lexhub-api.rule=Host(`api.hub.lexgroup.com.br`) && (PathPrefix(`/me`) || PathPrefix(`/orgs`) || PathPrefix(`/auth`) || PathPrefix(`/sources`) || PathPrefix(`/v1`))'
         - 'traefik.http.routers.lexhub-api.entrypoints=websecure'
         - 'traefik.http.routers.lexhub-api.tls.certresolver=letsencryptresolver'
         - 'traefik.http.services.lexhub-api.loadbalancer.server.port=8000'
