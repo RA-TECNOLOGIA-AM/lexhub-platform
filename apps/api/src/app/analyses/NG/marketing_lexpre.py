@@ -41,6 +41,7 @@ from app.analyses.NG.comercial_lexpre import (
     get_taxa_leads_campanha,
 )
 from app.analyses.NG.protocolo_lexpre import _demanda_valida
+from app.analyses.NG.protocolo_lexpre import _valor_causa_protocolado as _valor_causa_protocolado_demanda
 from app.analyses.NG.protocolo_setor_lexpre import (
     SETOR_PROTOCOLO_IDS,
     _filter_saidas_by_date_range,
@@ -550,7 +551,7 @@ def _valor_causa_protocolado(
     to_date: Optional[date],
     ids_permitidos: Optional[Set[Any]] = None,
 ) -> float:
-    """Soma VALOR_CAUSA das demandas com DATA_PROTOCOLO no período.
+    """Soma o valor de causa (ANP -> DANO_MORAL) das demandas com DATA_PROTOCOLO no período.
 
     Deduplica por ID_DEMANDA. Se `ids_permitidos` vier preenchido, só entram
     demandas cujo atendimento está nesse conjunto (cruzamento do ROAS de campanha).
@@ -566,8 +567,8 @@ def _valor_causa_protocolado(
         if id_demanda is None or id_demanda in vistos:
             continue
         vistos.add(id_demanda)
-        valor = _parse_numero(row.get("VALOR_CAUSA"))
-        if valor is not None and valor > 0:
+        valor = _valor_causa_protocolado_demanda(row)
+        if valor > 0:
             total += valor
     return total
 

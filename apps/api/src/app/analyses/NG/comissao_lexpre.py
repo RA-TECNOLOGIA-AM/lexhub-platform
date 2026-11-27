@@ -44,6 +44,7 @@ from app.analyses.NG.comercial_lexpre import (
 from app.analyses.NG.protocolo_lexpre import (
     _demanda_valida,
     _converter_valor,
+    _valor_causa_protocolado,
     get_valor_causa_protocolado,
     get_valor_causa_protocolado_por_atendente,
 )
@@ -143,7 +144,7 @@ def _get_valor_por_estado(
         if id_demanda is None or id_demanda in vistos:
             continue
         vistos.add(id_demanda)
-        total += _converter_valor(row.get("VALOR_CAUSA"))
+        total += _valor_causa_protocolado(row)  # ANP -> DANO_MORAL
     return total
 
 

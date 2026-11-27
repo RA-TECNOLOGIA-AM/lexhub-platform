@@ -582,7 +582,7 @@ def get_valor_causa_por_atendente(
         nome = _formatar_nome_atendente(row.get("ATENDENTE"))
         entry = valores[nome]  # garante a entrada mesmo sem valor de causa ainda
 
-        valor = _converter_valor(row.get("VALOR_CAUSA"))
+        valor = _valor_causa_protocolado(row)  # ANP -> DANO_MORAL, como a barra "protocolado"
         if valor <= 0:
             continue
         entry["nao_protocolado"] += valor
