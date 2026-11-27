@@ -105,11 +105,17 @@ begin
     if c -> 'seats' -> 'total' <> 'null'::jsonb then raise exception 'FALHOU: assentos sem teto em Clientes: %', c; end if;
 end $$;
 
+-- Desde 20261127150000_lexgroup_em_todo_cliente: Owner/Dev da dona é membro automático de todo cliente
+-- (via_lexgroup) e vê tudo dele, inclusive a cobrança; o assento dele não conta para o cliente.
 do $$
+declare b jsonb := api.get_billing('org-teste-plano');
 begin
-    perform api.get_billing('org-teste-plano');
-    raise exception 'FALHOU: Dev da dona não deveria ver a cobrança de outra org';
-exception when insufficient_privilege then null;
+    if b -> 'current' ->> 'plan' <> 'pro' then
+        raise exception 'FALHOU: Dev da dona deveria ver a cobrança do cliente: %', b -> 'current';
+    end if;
+    if b -> 'usage' -> 0 ->> 'used' <> '2' then
+        raise exception 'FALHOU: o Dev da dona não conta assento no cliente: %', b -> 'usage' -> 0;
+    end if;
 end $$;
 
 -- Gestor: não vê a cobrança, nem no menu
